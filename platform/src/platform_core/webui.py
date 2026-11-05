@@ -85,10 +85,12 @@ def overview(runtime: Runtime) -> dict[str, Any]:
     try:
         current = runtime.ontology.current()
         versions = runtime.ontology.list_versions()
+        active = [item for item in versions if item["status"] != "deprecated"]
         ontology = {
             "pointer": current,
-            "versions": len(versions),
-            "latest": versions[0] if versions else None,
+            "versions": len(active),
+            "totalVersions": len(versions),
+            "latest": active[0] if active else None,
         }
     except Exception as exc:  # keep the page usable when metadata is down
         ontology = {"error": str(exc)}

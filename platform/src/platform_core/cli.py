@@ -74,7 +74,24 @@ def _run_ontology(runtime, args) -> int:
             print("E_USAGE ontology deprecate requires --version", file=sys.stderr)
             return EXIT_USAGE
         result = runtime.ontology.deprecate(
-            args.version, actor=args.actor, reason=args.reason, note=args.summary
+            args.version, actor=args.actor, reason=args.reason,
+            note=args.summary, batch=args.batch,
+        )
+    elif action == "deprecate-batch":
+        if not args.ids_file:
+            print("E_USAGE ontology deprecate-batch requires --ids-file", file=sys.stderr)
+            return EXIT_USAGE
+        with open(args.ids_file, encoding="utf-8") as handle:
+            ids = [line.strip() for line in handle if line.strip()]
+        result = runtime.ontology.deprecate_batch(
+            ids, actor=args.actor, reason=args.reason, batch=args.batch,
+        )
+    elif action == "restore-deprecated":
+        if not args.batch:
+            print("E_USAGE ontology restore-deprecated requires --batch", file=sys.stderr)
+            return EXIT_USAGE
+        result = runtime.ontology.restore_deprecated(
+            args.batch, actor=args.actor, reason=args.reason, dry_run=args.dry_run,
         )
     elif action == "rollback":
         if not args.to:
@@ -160,8 +177,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "action",
         choices=[
             "import", "propose", "approve", "publish", "diff", "rollback",
-            "rollback-to", "deprecate", "export", "events", "verify", "proposals",
-            "status", "show",
+            "rollback-to", "deprecate", "deprecate-batch", "restore-deprecated",
+            "export", "events", "verify", "proposals", "status", "show",
         ],
     )
     ontology.add_argument("--config", default="/data/platform.yaml")
@@ -197,6 +214,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     ontology.add_argument("--graph-iri", dest="graph_iri", default=None)
     ontology.add_argument("--out", default=None, help="export output path")
+    ontology.add_argument("--batch", default=None, help="archive batch id recorded on events")
+    ontology.add_argument("--ids-file", dest="ids_file", default=None, help="deprecate-batch: newline-separated version ids")
+    ontology.add_argument("--dry-run", dest="dry_run", action="store_true", help="restore-deprecated: report only")
 
     smoke_s1 = sub.add_parser("smoke-s1", help="run the S1 acceptance suite")
     smoke_s1.add_argument("--config", default="/data/platform.yaml")

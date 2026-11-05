@@ -129,14 +129,16 @@ def run_smoke_s1(runtime: Runtime) -> int:
             suite.fail("import.idempotent", f"result={again}")
 
     # 4. failure path A: invalid Turtle must not create a version or move the pointer
-    before = len(registry.list_versions())
+    # S16: count only non-archived versions so bulk deprecation cannot skew the
+    # before/after invariant; the assertion itself stays an exact equality.
+    before = sum(1 for item in registry.list_versions() if item["status"] != "deprecated")
     pointer_before = registry.current()
     suite.expect_error(
         "invalid_turtle_failfast",
         lambda: registry.import_source(str(TESTS / "bad.ttl"), "9.9.9"),
         ("E_ONTOLOGY_PARSE",),
     )
-    after = len(registry.list_versions())
+    after = sum(1 for item in registry.list_versions() if item["status"] != "deprecated")
     pointer_after = registry.current()
     if after != before or pointer_after != pointer_before:
         suite.fail("invalid_turtle_side_effects", f"versions {before}->{after}, pointer moved")

@@ -1208,11 +1208,16 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # ---- S11 T-Box change governance -------------------------------------
 
     @app.get("/ontology/versions")
-    def ontology_versions() -> dict[str, Any]:
-        versions = runtime.ontology.list_versions()
+    def ontology_versions(includeDeprecated: bool = False) -> dict[str, Any]:
+        all_versions = runtime.ontology.list_versions()
+        versions = all_versions if includeDeprecated else [
+            item for item in all_versions if item["status"] != "deprecated"
+        ]
         return {
             "items": versions,
             "count": len(versions),
+            "total": len(all_versions),
+            "deprecated": len(all_versions) - len(versions),
             "pointer": runtime.ontology.current(),
         }
 
@@ -1934,6 +1939,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ontology = {
                 "pointer": pointer,
                 "versions": len(versions),
+                "activeVersions": sum(1 for v in versions if v["status"] != "deprecated"),
                 "statuses": {v["id"]: v["status"] for v in versions},
             }
         except Exception as exc:

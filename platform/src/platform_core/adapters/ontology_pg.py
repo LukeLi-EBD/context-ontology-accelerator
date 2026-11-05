@@ -1546,10 +1546,13 @@ class OntologyRegistry:
                 raise self._error("E_ONTOLOGY_PARSE", exc.message, key="file") from exc
         content_hash = _content_hash(triples)
 
+        # S16: an archived (deprecated) version is never revived implicitly by a
+        # re-import; only a live version with the same content may be reused.
         existing = self._meta.query(
             """
             SELECT version_id, semver, status FROM platform.ontology_version
-             WHERE content_hash = %s ORDER BY created_at LIMIT 1
+             WHERE content_hash = %s AND status <> 'deprecated'
+             ORDER BY created_at LIMIT 1
             """,
             (content_hash,),
         )
@@ -2925,6 +2928,7 @@ class OntologyRegistry:
         actor: str = "operator",
         reason: str | None = None,
         note: str | None = None,
+        batch: str | None = None,
     ) -> dict[str, Any]:
         """Retire a non-current version without deleting rows or audit events."""
         target = self._require(version_id)
@@ -2949,12 +2953,14 @@ class OntologyRegistry:
                 "WHERE version_id = %s AND status <> 'deprecated'",
                 (version_id,),
             )
+            payload: dict[str, Any] = {
+                "previousStatus": target["status"],
+                "note": note or reason,
+            }
+            if batch:
+                payload["batch"] = batch
             self._append_event(
-                tx, version_id, None, "deprecated", actor, reason,
-                {
-                    "previousStatus": target["status"],
-                    "note": note or reason,
-                },
+                tx, version_id, None, "deprecated", actor, reason, payload,
             )
         return {
             "id": version_id,
@@ -2964,6 +2970,93 @@ class OntologyRegistry:
             "deprecatedBy": actor,
             "note": note or reason,
         }
+
+    def deprecate_batch(
+        self,
+        version_ids: list[str],
+        actor: str = "archive-bot",
+        reason: str | None = None,
+        batch: str | None = None,
+    ) -> dict[str, Any]:
+        """Deprecate many versions one-by-one; each keeps its own audit event."""
+        deprecated = unchanged = 0
+        failed: list[dict[str, Any]] = []
+        for version_id in version_ids:
+            try:
+                result = self.deprecate(
+                    version_id, actor=actor, reason=reason, batch=batch
+                )
+                if result.get("unchanged"):
+                    unchanged += 1
+                else:
+                    deprecated += 1
+            except PortError as exc:
+                failed.append({"id": version_id, "code": exc.provider_code or exc.code})
+        return {
+            "batch": batch,
+            "requested": len(version_ids),
+            "deprecated": deprecated,
+            "unchanged": unchanged,
+            "failed": failed,
+        }
+
+    def restore_deprecated(
+        self,
+        batch: str,
+        actor: str = "operator",
+        reason: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Undo a deprecate batch by reversing the latest event that carries `batch`.
+
+        Statuses are restored to the `previousStatus` recorded on the event and a
+        new `restored` event is appended, so the hash chain stays intact.
+        """
+        rows = self._meta.query(
+            """
+            SELECT DISTINCT ON (version_id) version_id, event_id, payload
+              FROM platform.ontology_event
+             WHERE action = 'deprecated' AND payload->>'batch' = %s
+             ORDER BY version_id, event_id DESC
+            """,
+            (batch,),
+        )
+        targets: list[dict[str, Any]] = []
+        for row in rows:
+            current = self._require(str(row["version_id"]))
+            if current["status"] != "deprecated":
+                continue
+            payload = row["payload"] or {}
+            previous = str(payload.get("previousStatus") or "superseded")
+            if previous == "deprecated":
+                continue
+            targets.append({
+                "id": str(row["version_id"]),
+                "eventId": int(row["event_id"]),
+                "previousStatus": previous,
+            })
+        if dry_run:
+            return {"batch": batch, "dryRun": True, "restorable": len(targets), "items": targets}
+        restored = 0
+        for item in targets:
+            with self._meta.tx() as tx:
+                tx.execute("SELECT pg_advisory_xact_lock(hashtext('platform:ontology:publish'))")
+                tx.execute(
+                    "UPDATE platform.ontology_version SET status = %s "
+                    "WHERE version_id = %s AND status = 'deprecated'",
+                    (item["previousStatus"], item["id"]),
+                )
+                self._append_event(
+                    tx, item["id"], None, "restored", actor, reason,
+                    {
+                        "batch": batch,
+                        "previousStatus": "deprecated",
+                        "restoredTo": item["previousStatus"],
+                        "note": reason,
+                    },
+                )
+            restored += 1
+        return {"batch": batch, "dryRun": False, "restored": restored, "targets": len(targets)}
 
     @staticmethod
     def _term_text(term: dict[str, Any]) -> str:
@@ -3293,12 +3386,14 @@ class OntologyRegistry:
     def get(self, version_id: str) -> dict[str, Any]:
         return _row_to_version(self._require(version_id))
 
-    def list_versions(self) -> list[dict[str, Any]]:
+    def list_versions(self, include_deprecated: bool = True) -> list[dict[str, Any]]:
+        where = "" if include_deprecated else "WHERE status <> 'deprecated'"
         rows = self._meta.query(
-            """
+            f"""
             SELECT version_id, semver, status, content_hash, triple_count, source_format,
                    source_key, graph_iri, rollback_of, label, created_at, published_at
               FROM platform.ontology_version
+              {where}
              ORDER BY created_at
             """
         )
