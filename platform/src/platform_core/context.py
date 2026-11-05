@@ -52,6 +52,7 @@ class ContextResolver:
         search: SearchService,
         graph: Any,
         facts: Any | None = None,
+        termlex: Any | None = None,
     ) -> None:
         self._config = config
         self._ontology = ontology
@@ -59,6 +60,8 @@ class ContextResolver:
         self._search = search
         self._graph = graph
         self._ledger = facts
+        self._termlex = termlex
+        self._lexicon_cache: tuple[str, Any] | None = None
 
     def manifest(self) -> Manifest:
         return Manifest(
@@ -160,6 +163,20 @@ class ContextResolver:
         warnings: list[str] = []
         degraded = False
 
+        lexicon = None
+        if self._config.term_expand:
+            try:
+                lexicon = self._lexicon(version_id, tbox_graph)
+            except PortError as exc:
+                warnings.append(exc.provider_code or exc.code)
+                log.warning(
+                    "context term lexicon unavailable",
+                    extra={"event": {"event": "context_degraded", "code": exc.provider_code}},
+                )
+        guard_before = lexicon.guard_rejected if lexicon else 0
+        query_hits = lexicon.match(query, max_hits=self._config.term_expand_max_hits) if lexicon else []
+        expansions = lexicon.lexical_queries(query_hits, limit=10) if lexicon else []
+
         hints = [str(item) for item in (request.get("entityHints") or [])]
         for hint in hints:
             if not (":" in hint and IRI_RE.match(hint)):
@@ -172,7 +189,7 @@ class ContextResolver:
                 )
 
         try:
-            seeds, seed_ms = self._seeds(query, hints, graphs)
+            seeds, seed_ms = self._seeds(query, hints, graphs, query_hits)
         except PortError as exc:
             degraded = True
             warnings.append(exc.provider_code or exc.code)
@@ -182,7 +199,16 @@ class ContextResolver:
             )
             seeds, seed_ms = [], 0
         steps.append(
-            {"name": "graph.seed", "durationMs": seed_ms, "output": {"seeds": len(seeds)}}
+            {
+                "name": "graph.seed",
+                "durationMs": seed_ms,
+                "output": {
+                    "seeds": len(seeds),
+                    "termExpand": bool(self._config.term_expand),
+                    "termHits": len(query_hits),
+                    "guardRejected": (lexicon.guard_rejected - guard_before) if lexicon else 0,
+                },
+            }
         )
 
         facts: list[dict[str, Any]] = []
@@ -208,7 +234,9 @@ class ContextResolver:
         lexical_only = False
         try:
             search_started = time.monotonic()
-            result = self._search.hybrid_search(query, limit=top_k, mode=strategy)
+            result = self._search.hybrid_search(
+                query, limit=top_k, mode=strategy, expansions=expansions
+            )
             search_ms = int((time.monotonic() - search_started) * 1000)
             lexical_only = bool(result.get("lexicalOnly"))
             if result.get("degraded"):
@@ -343,9 +371,32 @@ class ContextResolver:
             graphs.append(str(pointer["targetGraph"]))
         return graphs
 
-    def _seeds(self, query: str, hints: list[str], graphs: list[str]) -> tuple[list[str], int]:
+    def _lexicon(self, version_id: str, tbox_graph: str) -> Any:
+        """Build the SKOS alias lexicon once per published T-Box version."""
+        if self._termlex is not None:
+            return self._termlex
+        if self._lexicon_cache and self._lexicon_cache[0] == version_id:
+            return self._lexicon_cache[1]
+        from .termlex import TermLexicon
+
+        lexicon = TermLexicon.build(self._graph, tbox_graph)
+        self._lexicon_cache = (version_id, lexicon)
+        return lexicon
+
+    def _seeds(
+        self,
+        query: str,
+        hints: list[str],
+        graphs: list[str],
+        term_hits: list[Any] | None = None,
+    ) -> tuple[list[str], int]:
         if hints:
             return list(dict.fromkeys(hints)), 0
+        if term_hits:
+            # T1: an alias hit names the canonical class directly; the CONTAINS
+            # scan is skipped so before/after share one deterministic path.
+            seeds = list(dict.fromkeys(str(hit.canonical) for hit in term_hits))
+            return seeds[: self._config.seed_limit], 0
         started = time.monotonic()
         from_clause = " ".join(f"FROM <{graph}>" for graph in graphs)
         sparql = (

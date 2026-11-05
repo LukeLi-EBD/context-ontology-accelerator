@@ -352,8 +352,45 @@ class SearchService:
 
     # ---- search ----------------------------------------------------------
 
+    def _merge_lexical(
+        self, text: str, extra: list[str], candidates: int
+    ) -> list[dict[str, Any]]:
+        """Merge term aliases into the single lexical route without demoting the query.
+
+        The original query stays authoritative: its rows keep their ranks and any
+        alias-only row is appended strictly below them (a short alias such as
+        "帐户" matches far more chunks and would otherwise displace the gold
+        chunk). Aliases therefore only add recall when the query itself left
+        slots empty; they never change the top of the list.
+        """
+        base = self._index.search(text, candidates)
+        merged: dict[str, dict[str, Any]] = {row["chunkId"]: row for row in base}
+        room = max(0, candidates - len(base))
+        if extra and room:
+            tail: dict[str, dict[str, Any]] = {}
+            for candidate in extra:
+                for row in self._index.search(candidate, room + len(base)):
+                    if row["chunkId"] in merged:
+                        continue
+                    current = tail.get(row["chunkId"])
+                    if current is None or row["score"] > current["score"]:
+                        tail[row["chunkId"]] = row
+            ordered = sorted(
+                tail.values(), key=lambda item: (-item["score"], item["chunkId"])
+            )
+            floor = min((row["score"] for row in base), default=0.0)
+            gap = max(abs(floor), 1.0) * 1e-6
+            for offset, row in enumerate(ordered[:room]):
+                merged[row["chunkId"]] = {**row, "score": floor - gap * (offset + 1)}
+        ranked = sorted(merged.values(), key=lambda item: (-item["score"], item["chunkId"]))
+        return ranked[:candidates]
+
     def hybrid_search(
-        self, query: str, limit: int | None = None, mode: Mode = "hybrid"
+        self,
+        query: str,
+        limit: int | None = None,
+        mode: Mode = "hybrid",
+        expansions: list[str] | None = None,
     ) -> dict[str, Any]:
         if not self._config.enabled:
             raise PortError(
@@ -402,7 +439,16 @@ class SearchService:
                 )
 
         if mode in ("hybrid", "lexical"):
-            lexical_list = self._index.search(text, candidates)
+            extra: list[str] = []
+            if self._config.lexical_expand and expansions:
+                for item in expansions:
+                    item = (item or "").strip()
+                    if item and item != text and item not in extra:
+                        extra.append(item)
+                extra = extra[: max(0, self._config.lexical_expand_max - 1)]
+            # T2: each alias string is its own lexical query; a chunk keeps its
+            # best score. Still exactly one lexical route into RRF below.
+            lexical_list = self._merge_lexical(text, extra, candidates)
             routes.append("lexical")
 
         fused = self._rrf(

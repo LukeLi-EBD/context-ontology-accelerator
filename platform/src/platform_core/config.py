@@ -170,6 +170,9 @@ class SearchConfig(_Strict):
     # against 23 unrelated chunks (measured 2026-11-05 on 1425 real chunks).
     # 0.10 removes those hits; a meaningful 3-char term scores 0.5+.
     min_similarity: float = Field(default=0.10, ge=0.0, le=1.0)
+    # T2: alias strings merged into the lexical route only (RRF stays two-route).
+    lexical_expand: bool = True
+    lexical_expand_max: int = Field(default=4, ge=1, le=10)
     # S14H-17 chunk-level segmented transactions / checkpoints (see search.py).
     index_commit_chunks: int = Field(default=50, ge=1, le=1000)
     large_doc_chunks: int = Field(default=500, ge=100, le=100000)
@@ -187,6 +190,10 @@ class ContextConfig(_Strict):
     seed_limit: int = Field(default=10, ge=1, le=100)
     # Q4: minimum T-Box term coverage before an answer is considered possible.
     answerable_min_coverage: float = Field(default=0.6, ge=0.0, le=1.0)
+    # T1/T2: SKOS alias expansion over the T-Box (design 24 section 7-1).
+    # Toggle exists so before/after can be measured on the same build.
+    term_expand: bool = True
+    term_expand_max_hits: int = Field(default=5, ge=1, le=20)
 
 
 class LlmConfig(_Strict):

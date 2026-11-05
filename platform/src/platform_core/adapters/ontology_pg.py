@@ -33,6 +33,7 @@ from ..config import OntologyConfig
 from ..errors import EXIT_CONFIG, PortError, PlatformError
 from ..facts import event_hash
 from ..ports import Manifest
+from ..termlex import assert_guards_compilable
 from .graph_oxigraph import OxigraphHttpStore, parse_rdf
 from .metadata_pg import MetadataPg
 from .object_layered import LayeredObjectStore
@@ -1527,13 +1528,13 @@ class OntologyRegistry:
                 f"semver must look like 1.0.0, got {semver!r}",
                 key="semver",
             )
-        if on_conflict not in ("reject", "new_version"):
+        if on_conflict not in ("reject", "new_version", "ignore"):
             raise PortError(
                 code="InvalidArgument",
-                message=f"on_conflict must be reject or new_version, got {on_conflict!r}",
+                message=f"on_conflict must be reject, new_version or ignore, got {on_conflict!r}",
                 provider="platform",
                 provider_code="E_ONTOLOGY_ON_CONFLICT",
-                details={"allowed": ["reject", "new_version"]},
+                details={"allowed": ["reject", "new_version", "ignore"]},
             )
 
         raw, detected_format, triples = self._load_source(path)
@@ -1573,7 +1574,15 @@ class OntologyRegistry:
         conflicts: list[dict[str, Any]] = []
         if pointer:
             conflicts = self._definition_conflicts(triples, pointer["graph"])
-        if conflicts and on_conflict == "reject":
+        if conflicts and on_conflict == "ignore":
+            # Q/T2: an additive annotation layer (skos labels, prov provenance)
+            # lands on top of an explicitly allowed diff; the diff itself is
+            # still reported so the publish gate can show what changed.
+            log.warning(
+                "ontology import overrides IRI diffs on operator request",
+                extra={"event": {"event": "ontology_import", "conflicts": len(conflicts)}},
+            )
+        elif conflicts and on_conflict == "reject":
             raise PortError(
                 code="Conflict",
                 message=(
@@ -1703,13 +1712,13 @@ class OntologyRegistry:
                 f"semver must look like 1.0.0, got {semver!r}",
                 key="semver",
             )
-        if on_conflict not in ("reject", "new_version"):
+        if on_conflict not in ("reject", "new_version", "ignore"):
             raise PortError(
                 code="InvalidArgument",
-                message=f"on_conflict must be reject or new_version, got {on_conflict!r}",
+                message=f"on_conflict must be reject, new_version or ignore, got {on_conflict!r}",
                 provider="platform",
                 provider_code="E_ONTOLOGY_ON_CONFLICT",
-                details={"allowed": ["reject", "new_version"]},
+                details={"allowed": ["reject", "new_version", "ignore"]},
             )
         if raw is None:
             source = Path(path or "")
@@ -1734,6 +1743,10 @@ class OntologyRegistry:
         graph = Graph()
         self._parse_into(graph, raw, rdf_format, public_id="urn:platform:import:root")
         imports, unresolved = self._resolve_imports(graph)
+
+        # T2: any term:guardRegex that does not compile blocks the import; a
+        # pattern that compiles but never matches is only counted at runtime.
+        assert_guards_compilable(graph)
 
         triples = list(graph)
         content_hash = _content_hash(triples)
@@ -1851,7 +1864,15 @@ class OntologyRegistry:
         conflicts: list[dict[str, Any]] = []
         if pointer:
             conflicts = self._definition_conflicts(triples, pointer["graph"])
-        if conflicts and on_conflict == "reject":
+        if conflicts and on_conflict == "ignore":
+            # Q/T2: an additive annotation layer (skos labels, prov provenance)
+            # lands on top of an explicitly allowed diff; the diff itself is
+            # still reported so the publish gate can show what changed.
+            log.warning(
+                "ontology import overrides IRI diffs on operator request",
+                extra={"event": {"event": "ontology_import", "conflicts": len(conflicts)}},
+            )
+        elif conflicts and on_conflict == "reject":
             raise PortError(
                 code="Conflict",
                 message=(

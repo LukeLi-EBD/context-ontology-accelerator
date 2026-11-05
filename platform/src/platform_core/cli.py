@@ -185,7 +185,7 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     ontology.add_argument(
-        "--on-conflict", dest="on_conflict", choices=["reject", "new_version"], default="reject"
+        "--on-conflict", dest="on_conflict", choices=["reject", "new_version", "ignore"], default="reject"
     )
     ontology.add_argument("--graph-iri", dest="graph_iri", default=None)
     ontology.add_argument("--out", default=None, help="export output path")
