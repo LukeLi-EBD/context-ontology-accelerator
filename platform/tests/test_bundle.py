@@ -130,5 +130,43 @@ def _write_manifest(root: Path, manifest: dict) -> dict:
     return manifest
 
 
+class _FakeGraph:
+    def __init__(self) -> None:
+        self.cleared: list[str] = []
+
+    def clear_graph(self, graph_iri: str) -> None:
+        self.cleared.append(graph_iri)
+
+
+class RestoreCleanupTests(unittest.TestCase):
+    """OQ-69 regression: cleanup must only delete urn:platform:graph:restore:*."""
+
+    def test_only_restore_graphs_deleted(self) -> None:
+        restore = [
+            "urn:platform:graph:restore:v1:abox",
+            "urn:platform:graph:restore:v2:abox",
+            "urn:platform:graph:restore:v1:tbox",
+        ]
+        history = [
+            "urn:platform:graph:tbox:ont-f413054a0c72",
+            "urn:platform:inferred:ont-f413054a0c72",
+        ]
+        graph = _FakeGraph()
+        result = bundle.cleanup_restore_graphs(graph, restore + history)
+        self.assertEqual(result["count"], 3)
+        self.assertEqual(sorted(result["deleted"]), sorted(restore))
+        self.assertEqual(sorted(graph.cleared), sorted(restore))
+        self.assertFalse(set(graph.cleared) & set(history))
+
+    def test_keep_list_is_honoured(self) -> None:
+        iris = [
+            "urn:platform:graph:restore:v1:abox",
+            "urn:platform:graph:restore:v2:abox",
+        ]
+        graph = _FakeGraph()
+        result = bundle.cleanup_restore_graphs(graph, iris, keep=iris[:1])
+        self.assertEqual(result["deleted"], iris[1:])
+
+
 if __name__ == "__main__":
     unittest.main()

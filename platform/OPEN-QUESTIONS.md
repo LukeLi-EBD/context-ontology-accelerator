@@ -60,6 +60,7 @@
 | OQ-53 | 窗口导出（`--from/--to/--source`）的 `assertions.ndjson` 只含窗口内断言，而 `events.ndjson` 是完整前缀链；用该文件到空库重放时，窗口外的前缀事实会相对窗口快照报 `extra` | 用户 S12 明确“过滤只作用于视图、链必须完整”；重放语义未要求覆盖窗口导出 | 窗口导出只承诺“可 verify 的完整前缀 + 窗口视图”；只有全量导出（无过滤）承诺 replay 与快照逐条一致。`export.json` 的 `filter/excluded_count` 明示窗口范围 | 需要窗口导出也能精确重放时，增加 `scope=window` 重放模式，或在导出中携带 cutoff 时刻的前缀快照（体积换精度） | open（S12 新增） |
 | OQ-54 | S12 之前 `purge_test` 只删断言行、不写事件；为让老库的导出仍可自证，`export_events` 会把 `urn:platform:test:` 图的孤儿断言补写成 `purged_test_graph`，`reconciled=true` | 「导出必须可复现库状态」+「不伪造正常业务清理」；只有 `purge_test` 会删断言行且只接受 test 图 | 补写事件发生在导出时刻（`createdAt` 为补写时间，非真实清理时间），payload 标 `reconciled=true`；非 test 图的孤儿断言不补写，仍以 `extra` 如实暴露 | 历史数据不再需要兼容，或要求事件时间与真实清理时间一致（无法从现存数据恢复）时，改为一次性离线修复脚本并冻结在线补写 | open（S12 新增） |
 | OQ-55 | pypdfium2（PDFium）非线程安全：`parse_concurrency=2` 并发解析 PDF 时进程 native segfault（corpus 实测 3 秒内崩溃）。但 CLI 仍要求“并发可配”，不能把并发写死为 1 | 用户要求「失败隔离，单文件失败不得中断整批」+「并发可配」；native crash 会杀掉整批，比慢更不可接受 | `parsers.py` 用模块级 `_PDFIUM_LOCK` 串行化 PDF 打开/逐页取文本/关闭；解析池的并发只对 docx/txt/md 有效。代价：PDF 解析吞吐受单核限制 | 出现“PDF 占比高且解析是瓶颈”时，改为多进程解析（每进程独立 PDFium）或换线程安全解析器；不得在无锁情况下恢复并发 |
+| OQ-55 结论（2026-11-05 P0） | **P2，暂不修**。实测平台侧解析仅 **3.1 ms/chunk**，TEI 嵌入 **1.54 s/chunk**，解析占比约 **0.2%**，不是当前瓶颈 | 触发条件：**一次批量导入数百 PDF 且解析时间超过总时长 20%** 时才做 | 选定方案：**改并发模型（2–3 个独立子进程，各加载一份 PDFium），不换库**。否决 PyMuPDF/MuPDF（AGPL，对外提供产品需商业许可）、Tika（额外 Java 容器）、docling（带模型权重，与轻依赖取向冲突） | 真正贵的是扫描件 OCR（1,220 页 / 1,434 s），优先压 OCR |
 | OQ-56 | 批次身份 = 解析后的根目录绝对路径（`import_batch.root_path UNIQUE`）；目录改名/移动后再次导入会生成新批次，旧批次的续跑记录按原路径保留 | 「同一目录再次执行即续跑」最直观；用路径做键不需要额外 ID，且与用户命令一致 | 移动目录 = 新批次（重新扫描、去重仍按 sha 命中已有文档，不会重复解析）；旧批次只读保留 | 需要“移动后继续续跑”时，把批次身份改为“内容指纹（目录清单 sha）+ 可选 name”，或增加 `--batch <id>` 强制指定 |
 | OQ-57 | dry-run 只能预测扫描期失败（空/超限/不可读），无法预测损坏/加密 PDF 的解析失败，因此 `toImport` 与最终 `documentsAdded` 在含坏文件的语料上必然有差额 | 「dry-run 必须快」+「解析失败只有真解析才知道」；为了预测而预解析等于把导入跑两遍 | dry-run 输出 `willFail`（仅扫描期）并额外给出 `toImport`；严格等式验收只在干净语料上做（S13 实测 120=120） | 需要高精度预估时，增加 `--probe`（只解析头部做格式校验），代价是 dry-run 变慢 |
 | OQ-58 | 本机 BGE-M3（CPU/TEI，batch=4）实测入库吞吐 ≈ 0.63–1.30 chunks/s，瓶颈是嵌入而非磁盘；几十 GB 语料全量本地嵌入时间不可接受 | 用户要求给出真实决策数据，而不是估算；S13 实测峰值 RSS 118–121 MB、吞吐如上 | 默认仍 `embedding.provider=local-bge`；大批量导入与全量重建的耗时按 chunk 数外推。换外部 embedding 与模型分区的结构见 S3 设计与 `reindex` 设计 | 引入 GPU、外部 embedding 或增大 TEI batch 后重测；以实测决定默认 provider |
@@ -111,7 +112,8 @@
 - 方案 B（纯排除）：继续把这两类标为已知缺口，不引入依赖；代价是 FS-LDM 少 16 篇（其中 15 篇 PPT 属培训/展示材料，对检索价值中低）。
 - 工作量：A = 镜像层 +0.5d（体积约 +400MB）、批量转换脚本 +0.25d、回归（含转出后无文本层的分支）+0.25d，合计 **1d**；B = 0d（仅文档化）。
 - 加密 PDF：需拿到密码或用 qpdf 离线解密后才可解析；当前**不引入自动破解**，按“不可解析”记账。
-- 状态：open（待用户决定是否引入 LibreOffice；若决定，按 A 执行，且不得重建 embedding 镜像，只重建 platform 镜像）。
+- **结论（2026-11-05 20:09）：采用方案 A，已执行。** 镜像 `agent-platform:0.1-s5` 已加 `libreoffice-impress` + `libreoffice-writer`（与 tesseract 同一次重建，总增重 +460MB / 271.3s）；**16/16 文件转换成功、36.6s**，产出 PDF 共 **857 chunk**，已全部入库并嵌入（remaining=0，无 failureCode）。转换脚本 `_impl/data/tmp/convert-office.sh`，逐条回执 `convert.jsonl`（rc/秒/字节/failureCode），驱动器 `_impl/logs/stage_files.py`。加密 PDF 仍 7 篇不可解析、未破解，见 OQ-67 附录。
+- 状态：**closed（已执行）**；仅剩加密 PDF 7 篇按“不可解析”记账。
 
 ### OQ-67（2026-11-05）扫描件 OCR：现在是 0 chunk，是否补检索能力
 - 事实：375 个 PDF 中 **8 篇无文本层**（real-01/04/05/08/13/14/17/21 = 1,220 页 / 217MB），当前 0 chunk；已全部标 `metadata.noTextLayer=true`，import 走 sha 去重不会反复重试。
@@ -121,4 +123,35 @@
   - 实测方法（装好后）：抽 5 页（大/中/小各覆盖），`tesseract page.png out --psm 3 -l eng+chi_sim` 计时，取中位数代入 1,220 页。
 - 云端 OCR：通用文字识别按页计价，常见 **¥0.005–0.02/页**（Azure Read ≈¥0.011/页、Google Vision ≈¥0.011/页），1,220 页合计 **¥6–24**；不含人工抽检。
 - 结论：**值得 OCR** 的是 real-01（838 页，唯一“大部头”）、real-08（194 页）；其余 6 篇共 188 页但多为表格/样例，可直接标“不可检索”等业务确认。若 OCR，产物仍走同一 chunk+embedding 流程，预计新增 1.0–1.5k chunk（约 0.5–1h）。
-- 状态：open（**只评估未执行**）；待决策项 = 是否安装 OCR 引擎、语言包（chi_sim/eng）、以及是否只跑 real-01/real-08。
+- **结论（2026-11-05 20:09）：采用本地 tesseract，已执行。** 300 DPI、`chi_sim+eng`、4 线程/篇、逐篇串行；实测 **8 篇 / 1,220 页 / 1,434.1s（23.9min，≈51 页/分钟、≈1.18s/页@4线程）**，字符 **1,462,343**，**失败页 0**，产出 **1,465 chunk** 全部嵌入（remaining=0）。
+  - 逐篇：real-01 838p/1010.7s/1184 chunk；real-08 194p/108.8s/157；real-21 57p/37.7s/36；real-04 42p/29.9s/17；real-05 40p/73.6s/57；real-17 27p/11.5s/3；real-14 20p/158.7s/10；real-13 2p/3.2s/1。
+  - 质量：中文封面/版权页/正文（如 CSCO 证据类别与推荐等级）可检索，`hybrid_search` 已真实命中 real-01；英文人名与符号有噪声，未做校对。云端 OCR（¥6–24）未采用。
+- **附录（7 篇，2026-11-05 P0 处置：不解密、不 OCR、不再检测）**：按用户口径标 `skippedReason=content_in_named_md`。已核实的同名 md 对应关系（均已入库）：`Appendices-Book 1.pdf → Teradata FS-LDM 10.00.00 Appendices-Book 1.md`（1,386 chunk）、`Reference Guide-Book 1.pdf → …Reference Guide-Book 1.md`（1,125）、`Reference Guide-Book 2.pdf → …Reference Guide-Book 2.md`（1,263）、`EB6546.pdf → whitepaper.md`（ASCII 的 "The Financial Services Logical Data Model"，2 chunk）。
+  - **未找到同名 md 的 3 篇**：`bench-real/real-19.pdf`（10 页、加密）、`corpus-s13/bad/corrupted.pdf`（29 B、结构损坏）、`corpus-s13/bad/encrypted.pdf`（828 B、加密）。这 3 篇在 `platform.document` 中无记录、仓库内也无对应 md，无法按“同名 md 覆盖”入库；保持 `E_DOC_PDF_ENCRYPTED`/解析失败，需用户提供 md 或原件。**与“7 篇都有同名 md”的口径不一致，此处如实记账。**
+  - 本轮未执行 `qpdf --decrypt`、未做 OCR、未修改任何 PDF 原件；未安装 qpdf（宿主与容器均无），未尝试爆破/猜测密码。
+- 状态：**closed（已执行，非评估）**。
+
+### OQ-68（2026-11-05）音频转写（faster-whisper）：本轮跳过，待下一轮镜像
+- 触发：`s14h-ocr-toolchain` 镜像重建已于 18:29 完成（`tesseract 5.5.0` + `chi_sim/eng` + `LibreOffice 25.2.3.2`，镜像 521MB→981MB，+460MB，271.3s）。"把 CPU 版 faster-whisper 一起装进镜像"的要求在重建完成之后才到；按约定**重建已完成则不为它再重建一次**，本轮跳过。
+- 下一轮方案：镜像 `pip install faster-whisper`；模型用 `small`（约 500MB），**优先**由 compose 挂载 `data/models/whisper-small`（控制镜像体积），镜像内只留 pip 包与 ctranslate2 依赖。
+- 用法（待下一轮在 `RUN.md` 增"音频转写用法"一节）：输入音频 → 输出 `.txt` + `.srt`；`compute_type=int8`、`cpu_threads` 默认 4；转写与 embedding 串行，不与索引抢核。
+- 工作量：镜像层 + compose 挂载 + RUN.md ≈ 0.5d；音频回归（各 1 条 wav/mp3）≈ 0.25d。
+- 状态：open（本轮不做；下一轮镜像一并处理）。
+
+### OQ-69（2026-11-05）restore-test 清理条件过宽：误清历史版本图缓存 938→22 — 已定位，待补清理工具
+- 现象：本轮 bundle 导入验证收尾时，清理脚本按 `urn:platform:graph:tbox:*` / `urn:platform:inferred:ont-*` 且“非 KEEP”模糊条件删图，
+  把 Oxigraph 命名图从 **938 张清到 22 张**（含大量历史版本 T-Box 缓存与历史 inferred 物化图）。
+- 影响与定性：**源图未丢**。T-Box 源内容仍在 CAS（`ontology_version.source_key`），`export_version` / `rollback` 会经
+  `_ensure_graph` 从 CAS **惰性重载**（已抽验 2 个历史上被清空的版本：清理前 0 → 导出后恢复为 3 / 8 三元组，canonical 与
+  `content_hash` 一致）；生产当前指针 `ont-f413054a0c72` 未受影响（图 2,676 三元组、canonical `4c48…` 与 bundle MANIFEST 一致）。
+  唯一真实成本是**历史 inferred 缓存需按需重跑物化**（未重跑全部历史，避免 CPU 占用）。
+- 推荐做法（强约束，写进任何清理脚本/工具）：
+  1. **只允许精确 IRI 前缀白名单** `urn:platform:graph:restore:*`（`import-bundle` 专用），前缀匹配后仍要 `startswith` 且拒绝
+     `restore-lookalike:*` 这类近似名；
+  2. **禁止**按 `tbox:*`、`inferred:*`、`ont-*` 等模糊条件批量 `DROP SILENT GRAPH`；历史版本图属于“可重建缓存”，
+     删除需按 versionId 精确列举并先导出/确认 CAS 存在；
+  3. 清理前先 `SELECT` 候选集合并打印数量 + IRI 清单，干跑（`--dry-run`）确认；清理后核对删除数 = 候选数；
+  4. 回归测试固化：3 张 `restore:` 图 + 2 张历史图 → 只删 3（`tests/test_bundle.py::RestoreCleanupTests`）。
+- 已落地：`bundle.select_restore_graphs` / `bundle.cleanup_restore_graphs` 精确前缀白名单实现 + 2 条单测。
+- 状态：open（清理工具已收口；历史 inferred 缓存按需重跑，不批量回填）。
+

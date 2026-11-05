@@ -249,6 +249,20 @@ def run_smoke_s3(runtime: Runtime, base_url: str, bad_config: str) -> int:
         degraded_runtime.metadata.open(retry_seconds=10.0)
         # S13b: indexing reads the active partition from the pointer table; point it
         # at the degraded runtime's own partition so the dead endpoint is exercised.
+        # S14H-P0: isolation — earlier runs may have left vectors for this fixed
+        # fixture under the real partition model, which would make index_document
+        # skip every chunk (embedded=1, reasons=[]) and never hit the dead endpoint.
+        degraded_model = degraded_runtime.embedding.model_name()
+        degraded_runtime.metadata.execute(
+            """
+            DELETE FROM platform.chunk_embedding e
+             USING platform.document_chunk c
+             WHERE e.chunk_id = c.chunk_id
+               AND c.document_id = %s
+               AND e.model = %s
+            """,
+            (document_id, degraded_model),
+        )
         degraded_runtime.vectors.set_pointer(
             "local-bge",
             degraded_runtime.embedding.model_name(),

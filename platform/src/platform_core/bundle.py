@@ -13,7 +13,7 @@ import json
 import math
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
@@ -44,6 +44,9 @@ REQUIRED_FILES = [
     "ledger/verify.json",
 ]
 
+# OQ-69: restore-test graphs are the only graphs a cleanup may delete.
+RESTORE_GRAPH_PREFIX = "urn:platform:graph:restore:"
+
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -58,6 +61,35 @@ def _err(code: str, message: str, provider: str = "platform", **details: Any) ->
         provider_code=code,
         details=details or None,
     )
+
+
+def select_restore_graphs(
+    graph_iris: Iterable[str], keep: Iterable[str] = ()
+) -> list[str]:
+    """Return the graphs a restore cleanup may delete (OQ-69).
+
+    Matching is an exact prefix whitelist: only ``urn:platform:graph:restore:*``
+    graphs created by ``import-bundle`` qualify. Historical T-Box / A-Box /
+    inferred graphs must never be selected by fuzzy names such as ``tbox:*``.
+    """
+    keep_set = set(keep)
+    return sorted(
+        {
+            iri for iri in graph_iris
+            if iri.startswith(RESTORE_GRAPH_PREFIX) and iri not in keep_set
+        }
+    )
+
+
+def cleanup_restore_graphs(
+    graph: Any, graph_iris: Iterable[str], keep: Iterable[str] = ()
+) -> dict[str, Any]:
+    """Delete restore-only graphs; never touches production/history graphs."""
+    deleted = []
+    for iri in select_restore_graphs(graph_iris, keep):
+        graph.clear_graph(iri)
+        deleted.append(iri)
+    return {"deleted": deleted, "count": len(deleted)}
 
 
 def _json_default(value: Any) -> Any:

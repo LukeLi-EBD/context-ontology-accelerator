@@ -166,12 +166,12 @@ def run_smoke_s6(runtime: Runtime, base_url: str, bad_config: str) -> int:
         )
 
         # 7. structured empty (lexical, no match) is 200-shaped, not an error.
-        # This is deliberately a *short* token: at min_similarity=0.05 one shared
-        # trigram scored 0.077 and returned 23 unrelated real chunks (measured
-        # 2026-11-05). The threshold is now 0.10, so the same token must return
-        # nothing; this guards the fix instead of working around it.
+        # S14H-P0: isolation — a fixed short token shares trigrams with real corpus
+        # rows (measured: 5 hits), so use a per-run random 32-hex token. The strict
+        # assertion (chunks=[] and facts=[] and degraded=false) is unchanged.
+        empty_token = f"zzz{uuid.uuid4().hex}"
         empty = runtime.context.resolve(
-            {"query": "zzzqqqxxxjjj", "strategy": "lexical", "topK": 5}
+            {"query": empty_token, "strategy": "lexical", "topK": 5}
         )
         suite.check(
             "context.empty",

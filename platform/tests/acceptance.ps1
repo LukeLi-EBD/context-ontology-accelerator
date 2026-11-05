@@ -51,10 +51,13 @@ function Get-HttpStatus([string]$url) {
 }
 
 function Get-SparqlCount([string]$query) {
-    $raw = & curl.exe -s -X POST -H "Content-Type: application/x-www-form-urlencoded" `
-        --data-urlencode "query=$query" "http://127.0.0.1:7878/query"
+    # S14H-P0: oxigraph no longer publishes a host port (GSP ban), so counts must
+    # be read through the platform (graph-count), not a direct 127.0.0.1:7878 call.
+    $raw = docker compose exec -T platform platform graph-count --query $query 2>$null | Out-String
     if ($LASTEXITCODE -ne 0 -or -not $raw) { return -1 }
-    try { return [int]($raw | ConvertFrom-Json).results.bindings[0].n.value } catch { return -1 }
+    # graph-count prints one migration log line before the JSON payload.
+    $line = ($raw -split "`n" | Where-Object { $_.Trim() } | Select-Object -Last 1)
+    try { return [int](($line | ConvertFrom-Json).count) } catch { return -1 }
 }
 
 function Wait-Ready([string]$url, [int]$seconds) {

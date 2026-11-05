@@ -27,7 +27,7 @@ import json
 
 import httpx
 from psycopg.types.json import Jsonb
-from rdflib import BNode, Graph, Namespace, OWL, RDF, RDFS, URIRef
+from rdflib import Graph, Namespace, OWL, RDF, RDFS, URIRef
 
 from ..config import OntologyConfig
 from ..errors import EXIT_CONFIG, PortError, PlatformError
@@ -111,82 +111,26 @@ def verify_ontology_records(records: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _content_hash(triples: list[Any]) -> str:
-    """sha256 over sorted N-Triples lines with blank-node canonical labeling.
+    """sha256 over a deterministic canonical form of the triple set.
 
-    Blank nodes get stable labels derived from their graph structure
-    (neighbor-based signature, converged in <= 5 rounds). This makes the
-    hash deterministic across parse runs even for ontologies containing
-    OWL restrictions or blank-node-based class expressions.
+    S14H-P0: the previous hand-rolled blank-node labeling was not stable for
+    deeply nested OWL restrictions — the same FS-LDM staging graph produced
+    different hashes in the import and publish paths (expected fac7… vs
+    actual 425f…), blocking publish with E_ONTOLOGY_HASH_MISMATCH. rdflib's
+    SHA-256 based canonicalizer is deterministic across parses/processes.
     """
-    # Collect blank nodes
-    bnodes: set[BNode] = set()
-    for s, p, o in triples:
-        if isinstance(s, BNode):
-            bnodes.add(s)
-        if isinstance(o, BNode):
-            bnodes.add(o)
+    if not triples:
+        return hashlib.sha256(b"").hexdigest()
+    from rdflib import Graph
+    from rdflib.compare import to_isomorphic
 
-    label_map: dict[BNode, str] = {}
-    if bnodes:
-        label_map = _canonical_bnode_labels(triples, bnodes)
-
-    def _n3(term: Any) -> str:
-        if isinstance(term, BNode) and term in label_map:
-            return label_map[term]
-        return term.n3()
-
-    lines = sorted(
-        f"{_n3(s)} {p.n3()} {_n3(o)} ." for s, p, o in triples
-    )
-    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
-
-
-def _canonical_bnode_labels(
-    triples: list[Any], bnodes: set[BNode]
-) -> dict[BNode, str]:
-    """Assign stable labels to blank nodes based on their graph structure.
-
-    Signature refinement: each blank node's initial signature is the sorted
-    list of (role, predicate, neighbor_n3) from triples it appears in. In
-    subsequent rounds we recover neighbor blank nodes by matching their
-    n3() output to known BNode objects, and substitute their current
-    label into the signature. After convergence (max 5 rounds), sort by
-    final signature and assign ``_:bn_0`` .. ``_:bn_N`` labels.
-    """
-    from collections import defaultdict
-
-    # Build n3()->BNode reverse map so we can match blank nodes in neighbors
-    n3_to_bn: dict[str, BNode] = {bn.n3(): bn for bn in bnodes}
-
-    adjacency: dict[BNode, list[tuple[str, str, str]]] = defaultdict(list)
-    for s, p, o in triples:
-        if isinstance(s, BNode):
-            adjacency[s].append(("s", p.n3(), o.n3()))
-        if isinstance(o, BNode):
-            adjacency[o].append(("o", s.n3(), p.n3()))
-
-    labels: dict[BNode, tuple[str, ...]] = {}
-    for bn in bnodes:
-        labels[bn] = tuple(sorted(f"{r}|{prd}|{nb}" for r, prd, nb in adjacency[bn]))
-
-    for _ in range(5):
-        new_labels: dict[BNode, tuple[str, ...]] = {}
-        for bn in bnodes:
-            sig_parts: list[str] = []
-            for role, pred, neighbor in adjacency[bn]:
-                nb_bn = n3_to_bn.get(neighbor)
-                if nb_bn is not None and nb_bn in labels:
-                    nb_sig = "||".join(labels[nb_bn])
-                    sig_parts.append(f"{role}|{pred}|_B:{nb_sig}")
-                else:
-                    sig_parts.append(f"{role}|{pred}|{neighbor}")
-            new_labels[bn] = tuple(sorted(sig_parts))
-        if new_labels == labels:
-            break
-        labels = new_labels
-
-    sorted_bns = sorted(bnodes, key=lambda bn: labels[bn])
-    return {bn: f"_:bn_{i}" for i, bn in enumerate(sorted_bns)}
+    graph = Graph()
+    for triple in triples:
+        graph.add(triple)
+    # graph_digest() is a 268-bit int (67 hex chars), so hash it again to fit
+    # the character(64) column while keeping the value deterministic.
+    digest = to_isomorphic(graph).graph_digest()
+    return hashlib.sha256(f"{digest:067x}".encode("utf-8")).hexdigest()
 
 
 def _row_to_version(row: dict[str, Any]) -> dict[str, Any]:

@@ -128,7 +128,7 @@
 - 未验证：抽取阶段断点/续跑——**已由 S14H-04 收口**（7/7 探针 + smoke-s4/s13 全绿）。
 - 已验证（2026-11-05 13:23）：`reasoner` 容器内存已到 **4g**（`Memory=4294967296 RestartCount=0 healthy`），`smoke-s10 22/22`；同内容重复导入幂等（`skipped (same content)`，不新建版本）。
 - 未验证：`fsldm-merged.ttl`（2676 三元组）在 SERVICE guardrail 恢复后的**完整 publish 闸门**（本次 publish 命中「已 published 早退」分支，`gates={}`，未复跑 SHACL/Consistency/Materialization）。
-- 文档漂移：`embedding.batch_max` 实为 **2**，W-17/看板 S13H-11 记 **4**（12:29 改动未回写，归 P2）。
+- 文档漂移：`embedding.batch_max` 实为 **2**，W-17/看板 S13H-11 曾记 **4**（12:29 改动未回写）。**已修正（2026-11-05 Q1）**：W-17 原行保留并标注“已修正：实为 2”，看板本条同步标注，不抹除历史。
 - 状态变更（2026-11-05 13:21）：活动本体指针已指向 `ont-bc35dc0b625b`（S14H-05 publish 探针，5 三元组），原为 `ont-af5c1e85f5c6`（16 三元组回滚版本）→ 后续如需以 FS-LDM 为活动本体，须重新 publish `ont-f413054a0c72` 或等价版本。
 - 已验证（2026-11-05 13:12）：S14H-05 止损核查——compileall exit=0；宿主源码在镜像依赖下 import platform_core.api/validation/adapters.ontology_pg OK（import_document=True、egistries=True）；/healthz=200、/readyz=200；smoke-embed 8/8、smoke-s1 17/17；锁 coordinator#s14h04（pid 80988 已死）已 release，status=free。仓库**可继续开发**；未重建镜像。
 - 已验证（2026-11-05 13:26）：S14H-06 G-01 前半（parse-only）——POST /ontology/import 与 /api/ontology/import 已挂载（无鉴权）；unittest 3/3（合法 4 triples/2 classes；语法错误 E_ONTOLOGY_PARSE line=4 column=3；含 owl:imports → usable=false、reason=E_IMPORTS_CLOSURE_NOT_IMPLEMENTED、unresolved 1 条）；无 imports → reason=E_SHACL_NOT_DEPLOYED；宿主 compileall=0。未重建镜像，HTTP 端点未在当前镜像验证。
@@ -217,3 +217,15 @@
 - 重跑并发（background 未提档）：A **40/3/0/0**（约 4m09s）；B 121/121、0.83 chunk/s、无 timeout/degraded；峰值宿主 CPU 37%、内存 11.21 GB、磁盘 102.36 GB。
 - 3 条失败：`embedding.unavailable.index`、`context.empty`、`demo abox purity`（既有数据态，与 B 无关）。
 - 文档：`_design/21-性能优化收尾-资源管控.md` §6、`coa/platform/RUN.md` §5；锁 `free`，档位 `cpus=4 rayon=4 rate=1.0`。
+
+### S14-P0 修复三连 + 加密 PDF 终止处理（2026-11-05 21:58–22:37）
+
+- **A 加密 PDF**：7 篇按"跳过、不解密"处置，未安装 qpdf、未 OCR、未改原件。已核实的同名 md 已入库：`Appendices-Book 1.md` 1,386 chunk、`Reference Guide-Book 1.md` 1,125、`Reference Guide-Book 2.md` 1,263、`whitepaper.md`（EB6546）2；`real-19.pdf`、`corrupted.pdf`、`encrypted.pdf` 未找到同名 md 且无 document 记录（与"7 篇都有同名 md"口径不符，如实记 OQ-67）。
+- **B SERVICE_RE**：`graph_oxigraph.py` 已在工作树修好（先剥离引号字符串再匹配），此前仅容器内临时 patch；本次随镜像固化。另发现 publish 被 `E_ONTOLOGY_HASH_MISMATCH` 阻塞（手工 bnode 标记在 import/publish 两路径不稳定），`_content_hash` 改用 `rdflib.compare.to_isomorphic().graph_digest()` 再 sha256 归一为 64 字符。重建镜像（最终 981,549,957 B）；`/readyz=200`、`schema_version=17`、`smoke-embed 12/12`、`smoke-s1 17/17`。
+- **B 三条路径实测**：① import（replace_graph 写 staging）`imp-14b68e03b07d` 2,676 triples、SHACL 0 violations；② `POST /reasoning/materialize` → 912 inferred；③ G-01 导入→发布 `ont-fb0c6cf87f64` 成功。
+- **C 三条 acceptance**：`demo abox purity` 根因是 Oxigraph 宿主 7878 已按 GSP 封禁下线，读取改走新增 `platform graph-count`（原实现 binding 形状取值错误，已修）；`embedding.unavailable.index` 在降级索引前删除该 fixture 的既有向量，断言 `embedded=0 + E_EMBED_UNAVAILABLE` 原样保留；`context.empty` 改用每轮随机 32-hex token，严格断言不变。最终 **`ACCEPTANCE passed=43 failed=0 skipped=0 degraded=0`**（`logs/s14p0-acceptance4.log`）。
+- **D FS-LDM gates**：`shacl conforms=true / 0 violations`、`consistency=true (EL)`、`breaking=true 已确认`、`diff +2676/-8（+156 类/-3 类/+135 属性/-1 属性）`、`impact affectedEntities=0 affectedGraphs=0`；materialize `inferred=912`（完整跑 2.69s）。
+- **D 指针**：`tbox/current=ont-f413054a0c72`（2,676 triples，发布后 rollback 恢复）；`reasoning.pointer.ontologyVersion=ont-f413054a0c72`、target `urn:platform:inferred:ont-f413054a0c72`、912 triples；不再停在 `ont-bc35dc0b625b`。因 Oxigraph 曾整库为空，gate replay 新建过 `ont-fb0c6cf87f64`，内容与 `ont-f413054a0c72` 同为 FS-LDM v10（哈希不同源于 source 字节加了一行注释后重新导入）。
+- **边界**：嵌入保持 background（4 核/rate 1.0）；未删任何图、未改 chunk 尺寸；重型锁每段后释放，终态 `free`。
+- **Q1 文档漂移（2026-11-05 22:38–22:41）**：`batch_max` 实际=2，W-17 原行保留并标“已修正：实为 2”，看板漂移条同步标注；`10-实施路线图.md` S14 由“未开始”改为“部分完成（G-01/G-03 已交付；二次导入与指标 36/79 部分完成）”。
+- **Q2 reindex 3077（2026-11-05 22:41–22:45）**：`3077` 是 08:30 时点的 chunk 总数，`--max-seconds 120` 时间闸只处理 96 后正常退出（非失败）；后续入库/索引已覆盖。当前 `document_chunk=13487`，BAAI/bge-m3 覆盖 `13471`、缺 `16`；补跑 `platform reindex` 后 `remainingChunks=0 / activated=true / BAAI=13487`（`logs/q2-reindex.log`），“96/3077”作废。

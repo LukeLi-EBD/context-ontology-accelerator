@@ -1,0 +1,212 @@
+# =============================================================================
+# Q6 候选术语 · 度量类型（PROPOSAL ONLY）
+#
+# 状态：提案，未批准、未加载、未参与任何推理或取数。
+# 用途：补足《口径基准 v2》中“公式可写、但现有 code:MetricTypeScheme 缺概念”
+#       的指标。批准前不得写入 fsldm-codes.ttl，不得进入 fsldm-merged.ttl。
+#
+# 约束：
+#   1. 只新增 SKOS 概念，不新增实体类、不改 Metric 元模型。
+#   2. 每个概念必须能指向现有 fsldm:Metric（metricType + metricOf +
+#      observationDate）；不引入新的计量机制。
+#   3. 影响指标见每个概念的 q6:affects；未列入的指标不得借用。
+# =============================================================================
+
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix code: <https://w3id.org/fsldm/codes#> .
+@prefix q6:   <urn:platform:q6:candidate:> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+<urn:platform:q6:candidate:metric-types>
+    a skos:ConceptScheme ;
+    rdfs:label "Q6 候选度量类型（未批准）"@zh ;
+    skos:definition "Q6 口径补全中识别出的度量类型缺口。全部为提案，不参与生产。"@zh ;
+    dct:created "2026-11-05"^^xsd:date ;
+    dct:status "proposed" .
+
+# ---- 银行：集中度 / 迁徙 -----------------------------------------------------
+
+q6:MetricRiskExposure
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "风险暴露"@zh , "Risk Exposure"@en ;
+    skos:notation "EXP" ;
+    skos:definition "表内余额与表外承诺/担保等折算后的暴露合计，按大额风险暴露办法扣减合格缓释。用于集中度分母/分子。"@zh ;
+    q6:affects "FIN-BANK-026-v2, FIN-BANK-027, FIN-BANK-030" ;
+    q6:sourceField "待定：需在 Agreement/Account 余额与表外承诺实体上取数" ;
+    q6:blocker "现有 code:MetricTypeScheme 无此概念" .
+
+q6:MetricTier1Capital
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "一级资本净额"@zh , "Tier 1 Capital"@en ;
+    skos:notation "T1_CAP" ;
+    skos:definition "大额风险暴露办法的集中度分母；与 code:MetricCapitalAdequacyBase（资本净额）不是同一口径，不得互换。"@zh ;
+    q6:affects "FIN-BANK-027, FIN-BANK-030" ;
+    q6:sourceField "待定：需资本类实体（当前 FS-LDM 未建模）" ;
+    q6:blocker "本体缺资本实体；仅有 SKOS 概念不足以计算" .
+
+q6:MetricDisposalAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "不良处置金额"@zh , "NPL Disposal Amount"@en ;
+    skos:notation "NPL_DISP" ;
+    skos:definition "报告期内通过转让、拍卖、重组等方式处置的不良资产账面金额；迁徙率分母“期间减少”的组成部分之一。"@zh ;
+    q6:affects "FIN-BANK-013, FIN-BANK-014, FIN-BANK-015, FIN-BANK-016" ;
+    q6:sourceField "待定：需处置交易/事件实体" ;
+    q6:blocker "现有 MetricTypeScheme 无处置金额；核销/收回已有独立概念" .
+
+# ---- 银行：IFRS 9 -----------------------------------------------------------
+
+q6:MetricEclAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "预期信用损失金额"@zh , "ECL Amount"@en ;
+    skos:notation "ECL" ;
+    skos:definition "按 IFRS 9 三阶段法确认的预期信用损失；与 regulatory 拨备余额不同口径。"@zh ;
+    q6:affects "FIN-BANK-004, FIN-BANK-024" ;
+    q6:sourceField "待定：需 ECL 计量结果实体" ;
+    q6:blocker "现有 MetricTypeScheme 无 ECL；IFRS 9 阶段方案见 02 文件" .
+
+# ---- 保险：保费 / 赔付 / 准备金 / 件数 --------------------------------------
+
+q6:MetricPremiumAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "保费金额"@zh , "Premium Amount"@en ;
+    skos:notation "PREM" ;
+    skos:definition "按承保口径确认的保费金额；具体是原保险/签单/续期/首年，由指标变体决定，不得用本概念笼统代替。"@zh ;
+    q6:affects "FIN-INS-001, FIN-INS-002, FIN-INS-004, FIN-INS-005, FIN-INS-025" ;
+    q6:sourceField "cat:premium-written-account（catalog 有，本体未建模）" ;
+    q6:blocker "保险本体模块未建模保费实体" .
+
+q6:MetricCollectedPremium
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "实收保费"@zh , "Collected Premium"@en ;
+    skos:notation "PREM_CASH" ;
+    skos:definition "实际收到的保费现金；与签单/应收口径不同。"@zh ;
+    q6:affects "FIN-INS-003（证据缺失，仅作候选，不升级）" ;
+    q6:sourceField "待定：需收付费实体" ;
+    q6:blocker "无权威口径，概念本身不足以升级指标" .
+
+q6:MetricClaimPayment
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "已决赔款"@zh , "Claim Payment"@en ;
+    skos:notation "CLAIM_PAID" ;
+    skos:definition "正常结案实际支付的赔款金额；剔除拒赔、零结案、注销。"@zh ;
+    q6:affects "FIN-INS-015, FIN-INS-008, FIN-INS-009, FIN-INS-010" ;
+    q6:sourceField "cat:claim-amount（catalog 有，本体未建模）" ;
+    q6:blocker "保险本体模块未建模理赔金额" .
+
+q6:MetricOutstandingClaimReserve
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "未决赔款准备金"@zh , "Outstanding Claim Reserve"@en ;
+    skos:notation "CLAIM_OS" ;
+    skos:definition "评估时点已报案未决/已发生未报告的估损余额；与未到期责任准备金不同。"@zh ;
+    q6:affects "FIN-INS-014, FIN-INS-016" ;
+    q6:sourceField "cat:claim-amount / cat:reserves-account（catalog 有，本体未建模）" ;
+    q6:blocker "保险本体模块未建模准备金" .
+
+q6:MetricSurrenderAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "退保金"@zh , "Surrender Amount"@en ;
+    skos:notation "SURR" ;
+    skos:definition "退保时支付给保单持有人的金额；含保户储金及投资款、投连独立账户的退保金额时须分项列示。"@zh ;
+    q6:affects "FIN-INS-019, FIN-INS-020" ;
+    q6:sourceField "待定：catalog 未找到独立退保金额实体，需新增" ;
+    q6:blocker "catalog 无独立退保实体" .
+
+q6:MetricPolicyReserveBalance
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "责任准备金余额"@zh , "Policy Reserve Balance"@en ;
+    skos:notation "POL_RSV" ;
+    skos:definition "长期险责任准备金期初/期末余额；退保率分母的一部分。"@zh ;
+    q6:affects "FIN-INS-019, FIN-INS-020" ;
+    q6:sourceField "cat:reserves-account（catalog 有，本体未建模）" ;
+    q6:blocker "保险本体模块未建模准备金" .
+
+q6:MetricPolicyCount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "保单件数"@zh , "Policy Count"@en ;
+    skos:notation "POL_CNT" ;
+    skos:definition "新单/有效保单的件数；用于件均与继续率。必须与有效状态联合使用。"@zh ;
+    q6:affects "FIN-INS-021, FIN-INS-025" ;
+    q6:sourceField "cat:policy（catalog 有，本体未建模）" ;
+    q6:blocker "保险本体模块未建模保单状态快照" .
+
+q6:MetricInforcePolicyCount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "有效保单件数"@zh , "In-force Policy Count"@en ;
+    skos:notation "POL_IF" ;
+    skos:definition "指定时点仍处于有效状态的长期寿险保单件数；继续率分子/分母。与 MetricPolicyCount 的区别是必须带有效状态。"@zh ;
+    q6:affects "FIN-INS-021" ;
+    q6:sourceField "cat:policy + 状态码（catalog 有，本体未建模）" ;
+    q6:blocker "保险本体模块未建模保单状态" .
+
+q6:MetricExpenseAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "业务及管理费"@zh , "Operating Expense"@en ;
+    skos:notation "EXP_AMT" ;
+    skos:definition "承保业务相关费用；综合成本率/综合费用率的分子组成。"@zh ;
+    q6:affects "FIN-INS-011, FIN-INS-027" ;
+    q6:sourceField "cat:expense-account（需确认 catalog 实体）" ;
+    q6:blocker "保险本体模块未建模费用" .
+
+q6:MetricCommissionAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "手续费及佣金"@zh , "Commission"@en ;
+    skos:notation "COMM" ;
+    skos:definition "手续费及佣金支出；综合费用率/手续费占比的分子。"@zh ;
+    q6:affects "FIN-INS-011, FIN-INS-027, FIN-INS-028" ;
+    q6:sourceField "cat:commission-account（需确认 catalog 实体）" ;
+    q6:blocker "保险本体模块未建模手续费" .
+
+# ---- 客户经营 ---------------------------------------------------------------
+
+q6:MetricAum
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "客户资产市值"@zh , "Assets under Management"@en ;
+    skos:notation "AUM" ;
+    skos:definition "客户在本行/集团持有的可计入资产市值；时点值与期内日均是两个变体，不得混用。"@zh ;
+    q6:affects "CUST-012, CUST-013" ;
+    q6:sourceField "待定：需持仓/账户市值实体" ;
+    q6:blocker "catalog 无银行侧持仓市值实体" .
+
+q6:MetricTransactionAmount
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "客户交易金额"@zh , "Customer Transaction Amount"@en ;
+    skos:notation "TXN_AMT" ;
+    skos:definition "客户在统计窗口内的有效交易金额；RFM-M 的度量。"@zh ;
+    q6:affects "CUST-003" ;
+    q6:sourceField "待定：需交易/事件金额属性" ;
+    q6:blocker "现有 Event 无金额属性" .
+
+q6:MetricCustomerSpend
+    a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "客户品类总消费"@zh , "Customer Category Spend"@en ;
+    skos:notation "CUST_SPEND" ;
+    skos:definition "客户在本行以外同品类的总消费（钱包份额分母）；平台无此数据，仅作外部数据占位概念。"@zh ;
+    q6:affects "CUST-011" ;
+    q6:sourceField "外部消费数据（不可得）" ;
+    q6:blocker "外部数据依赖，概念存在也不能升级指标" .
+
+# ---- 未纳入本次提案的缺口（明确不做） ---------------------------------------
+#
+# - 偿付能力资本/最低资本：不是“度量类型”问题，缺的是资本类实体与监管报表，
+#   新增 SKOS 概念会制造“可计算”的假象，故不提案。
+# - M0–M6 六档账龄：现有 DelinquencyBucketScheme 已有 D0/D30/D60/D90 四档，
+#   M0–M6 无权威原文（FIN-BANK-002 证据缺失），不提案。

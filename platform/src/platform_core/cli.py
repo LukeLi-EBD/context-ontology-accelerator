@@ -139,6 +139,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="allow GSP writes/deletes on the default graph even when it is not empty",
     )
 
+    count = sub.add_parser(
+        "graph-count",
+        help="run a SPARQL COUNT query and print the numeric binding (read-only)",
+    )
+    count.add_argument("--config", default="/data/platform.yaml")
+    count.add_argument("--query", required=True)
+    count.add_argument("--var", default="n", help="result variable holding the count")
+
     ontology = sub.add_parser("ontology", help="ontology versions, proposals, publish, rollback")
     ontology.add_argument(
         "action",
@@ -458,11 +466,22 @@ def main(argv: list[str] | None = None) -> int:
         "reindex",
         "smoke-embed",
         "bench-embed",
+        "graph-count",
     ):
         runtime = assemble(bundle)
         try:
             runtime.metadata.open(retry_seconds=10.0)
             runtime.metadata.migrate()
+            if args.command == "graph-count":
+                result = runtime.graph.query(args.query)
+                bindings = result.get("bindings", [])
+                value = (
+                    bindings[0].get("values", {}).get(args.var, {}).get("value")
+                    if bindings
+                    else "0"
+                )
+                print(json.dumps({"count": int(value or 0)}, ensure_ascii=False))
+                return EXIT_OK
             if args.command == "smoke-s1":
                 from .smoke_s1 import run_smoke_s1
 

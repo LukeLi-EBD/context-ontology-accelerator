@@ -1,0 +1,114 @@
+# =============================================================================
+# Q6 候选术语 · 分类方案（PROPOSAL ONLY）
+#
+# 状态：提案，未批准、未加载、未参与任何推理或取数。
+# 用途：补足《口径基准 v2》中需要“分类结果”但没有对应 SKOS 方案的指标。
+# 批准前不得写入 fsldm-codes.ttl，不得进入 fsldm-merged.ttl。
+#
+# 约束：
+#   1. 只新增 SKOS ConceptScheme / Concept，不新增实体类。
+#   2. 分类实例一律通过 agmt:AgreementClassification（或既有 Classification）
+#      挂到业务对象，不引入新的挂载机制。
+#   3. 未获权威原文的阶段/状态定义，不得写成“确定口径”。
+# =============================================================================
+
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix q6:   <urn:platform:q6:candidate:> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+
+# ---- 1. IFRS 9 三阶段 --------------------------------------------------------
+#
+# 权威来源：IFRS 9 第 5.5.3、5.5.5 段（A 级）；财政部《预期信用损失法应用案例（一）》
+# 只作为实施案例（C 级），不作为阶段边界定义。
+# 注意：Stage 2 的“30 天显著增加”原文（B5.5.18）未取得，故本方案不写 30 天阈值。
+
+q6:Ifrs9StageScheme
+    a skos:ConceptScheme ;
+    rdfs:label "IFRS 9 三阶段（候选）"@zh ;
+    skos:definition "按信用风险自初始确认后是否显著增加、是否已发生信用减值划分的三阶段。阶段边界以 IFRS 9 原文为准；本方案不写具体天数阈值。"@zh ;
+    dct:created "2026-11-05"^^xsd:date ;
+    dct:status "proposed" .
+
+q6:Ifrs9Stage1
+    a skos:Concept ;
+    skos:inScheme q6:Ifrs9StageScheme ;
+    skos:prefLabel "阶段 1"@zh , "Stage 1"@en ;
+    skos:notation "S1" ;
+    skos:definition "信用风险自初始确认后未显著增加；按 12 个月预期信用损失计量。"@zh ;
+    q6:affects "FIN-BANK-004, FIN-BANK-024" .
+
+q6:Ifrs9Stage2
+    a skos:Concept ;
+    skos:inScheme q6:Ifrs9StageScheme ;
+    skos:prefLabel "阶段 2"@zh , "Stage 2"@en ;
+    skos:notation "S2" ;
+    skos:definition "信用风险自初始确认后显著增加但尚未发生信用减值；按整个存续期预期信用损失计量。具体触发阈值不由本方案规定。"@zh ;
+    q6:affects "FIN-BANK-004, FIN-BANK-024" ;
+    q6:blocker "Stage 2 触发条件（含 30 天）原文未取得，不得写死" .
+
+q6:Ifrs9Stage3
+    a skos:Concept ;
+    skos:inScheme q6:Ifrs9StageScheme ;
+    skos:prefLabel "阶段 3"@zh , "Stage 3"@en ;
+    skos:notation "S3" ;
+    skos:definition "已发生信用减值；按整个存续期预期信用损失计量。"@zh ;
+    q6:affects "FIN-BANK-004, FIN-BANK-024" .
+
+# ---- 2. 保单状态（继续率/有效件数） ------------------------------------------
+
+q6:PolicyStatusScheme
+    a skos:ConceptScheme ;
+    rdfs:label "保单状态（候选）"@zh ;
+    skos:definition "用于有效保单件数与继续率的时点状态快照。状态定义只覆盖计算所需的最小集合，不代表公司保全细则。"@zh ;
+    dct:created "2026-11-05"^^xsd:date ;
+    dct:status "proposed" .
+
+q6:PolicyInforce
+    a skos:Concept ;
+    skos:inScheme q6:PolicyStatusScheme ;
+    skos:prefLabel "有效"@zh , "In-force"@en ;
+    skos:notation "IF" ;
+    skos:definition "保单在观察时点仍处于保障期间且未失效、未退保、未满期。"@zh ;
+    q6:affects "FIN-INS-021, FIN-INS-025" .
+
+q6:PolicyLapsed
+    a skos:Concept ;
+    skos:inScheme q6:PolicyStatusScheme ;
+    skos:prefLabel "失效"@zh , "Lapsed"@en ;
+    skos:notation "LP" ;
+    skos:definition "因未按期缴费等原因中止效力，且未办理复效。"@zh ;
+    q6:affects "FIN-INS-021" .
+
+q6:PolicySurrendered
+    a skos:Concept ;
+    skos:inScheme q6:PolicyStatusScheme ;
+    skos:prefLabel "退保"@zh , "Surrendered"@en ;
+    skos:notation "SR" ;
+    skos:definition "保单持有人主动解除合同并领取退保金。"@zh ;
+    q6:affects "FIN-INS-019, FIN-INS-021" .
+
+q6:PolicyMatured
+    a skos:Concept ;
+    skos:inScheme q6:PolicyStatusScheme ;
+    skos:prefLabel "满期"@zh , "Matured"@en ;
+    skos:notation "MT" ;
+    skos:definition "保障期间届满且已给付满期保险金。"@zh ;
+    q6:affects "FIN-INS-021" .
+
+q6:PolicySuspended
+    a skos:Concept ;
+    skos:inScheme q6:PolicyStatusScheme ;
+    skos:prefLabel "中止"@zh , "Suspended"@en ;
+    skos:notation "SP" ;
+    skos:definition "合同效力中止但保留复效权；不计入有效件数，也不等同于退保。"@zh ;
+    q6:affects "FIN-INS-021" .
+
+# ---- 3. 明确不提案的分类方案 -------------------------------------------------
+#
+# - 逾期 M0–M6：无权威原文，且现有 DelinquencyBucketScheme 已覆盖四档，
+#   再建一套会造成两套账龄口径并存。
+# - 重组观察期：可复用现有 RestructureTypeScheme + Classification 的
+#   validFrom/validTo 表达，不需要新方案；真正缺的是 PaymentSchedule。
+# - 五级分类：已有 code:LoanClassificationScheme，不重复建。

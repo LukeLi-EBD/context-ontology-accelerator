@@ -433,7 +433,7 @@
 
 ### W-17 S13H-11 嵌入限流（P1 稳定性） — 参数已验证 / 吞吐未验证
 - 时间：开始 `2026-11-05 11:48:30` / 结束 `2026-11-05 12:17:11`（29 分钟，含等待冷加载与两次被并行会话重启打断）
-- 改动文件：`docker-compose.yml`（embedding：`cpus: ${EMBEDDING_CPUS:-4}`、`mem_limit: ${EMBEDDING_MEMORY:-6g}`、`RAYON_NUM_THREADS=3`、`MAX_CONCURRENT_REQUESTS=1`、`--max-batch-tokens 2048` + `--auto-truncate`）；`src/platform_core/config.py`（`batch_max=4`、`chunk_per_request_max=32`、`request_timeout_s=60`）；`data/platform.yaml` 同步三键；`adapters/embedding.py`（`effective_batch_size()`、`threading.BoundedSemaphore(1)` 单飞、超时取 `max(timeout_ms, request_timeout_s)`）；`OPEN-QUESTIONS.md` 增 OQ-40。
+- 改动文件：`docker-compose.yml`（embedding：`cpus: ${EMBEDDING_CPUS:-4}`、`mem_limit: ${EMBEDDING_MEMORY:-6g}`、`RAYON_NUM_THREADS=3`、`MAX_CONCURRENT_REQUESTS=1`、`--max-batch-tokens 2048` + `--auto-truncate`）；`src/platform_core/config.py`（`batch_max=4` **【已修正：实为 2，12:29 按 batch=4 崩溃证据回改；见 W-18/W-27】**、`chunk_per_request_max=32`、`request_timeout_s=60`）；`data/platform.yaml` 同步三键；`adapters/embedding.py`（`effective_batch_size()`、`threading.BoundedSemaphore(1)` 单飞、超时取 `max(timeout_ms, request_timeout_s)`）；`OPEN-QUESTIONS.md` 增 OQ-40。
 - 真实输出：
   - `docker inspect` → `NanoCpus=4000000000`、`Memory=6442450944`，env 含 `RAYON_NUM_THREADS=3`、`MAX_CONCURRENT_REQUESTS=1`。
   - 4g 冷加载：`restarts=2 health=000`；6g@8192：`mem=6GiB/6GiB` warmup 不 ready；8g@8192：`mem=6.4GiB` 仍 warmup；`--max-batch-tokens 2048` 首次报 `Error: --max-batch-tokens cannot be lower than max_input_length`（TEI 1.8 要求配 `--auto-truncate`），加该参数后 **health=200 / 30s**，`RSS=2.98GiB/6GiB`、`restarts=0`。
@@ -605,3 +605,73 @@
 - 扫描件事实：real-01/08/13 等大 PDF 无文本层（OCR 未启用）→ 0 chunk；有文本 PDF 仅 1.8–3.3 chunk/MB，故不能用 real-11 的 158 chunk/MB 外推。
 - `bulk-index.ps1` 已改为只按 active 分区（model+dimensions）计已嵌入；发现 s3-* 4 条只有 fake-hash 向量被旧逻辑误判为已嵌入。
 - 继续 ingest：`platform import /data/bench-real` 已启动（日志 logs/import-bench-real.log）；FS-LDM 25 篇可解析文档已复制到 `/data/tmp/fsldm-docs` 待导入。
+
+## 迁移友好 bundle 导出/导入（并行任务，未动容器）
+- 2026-11-05 19:08 设计文档完成 _design/20-迁移导出导入-设计.md：目录结构/manifest/sha 校验/原子性/可重建 vs 原样搬/治理链路/schema_version 策略（已验证）
+- 2026-11-05 19:10 单测 5/5 通过（ok + sha 不符 + schema 不符 + 缺文件 + 向量维度不符），临时容器执行，未 build/up/down 任何常驻容器（已验证）
+- 2026-11-05 19:15 生产只读导出 _freeze/v1-20261105：docs=1122 chunks=13274 vectors=11905 triples=2676 factEvents=3280 ledger_ok=true bytes=79,660,950（已验证）
+- 2026-11-05 19:17 导入 platform_restore_test 五项全绿：docs 1122/1122、chunks 13274/13274、vectors 11905/11905（sample20 minCos=1.0）、triples 2676/2676、facts 3280/3280；它另有 T-Box canonical 4c48… 一致 + hybrid_search 命中（已验证）
+- 2026-11-05 19:18 清理本轮 restore 孤儿图（tbox/inferred）；历史版本图缓存被一并清空，经 /ontology/versions/{id}/export 返回 200（CAS 惰性重载）可恢复；生产指针仍 ont-f413054a0c72（已验证）
+- 未验证：--include-blobs 实际导出、document_page 恢复、压缩/加密（设计文档已列为未覆盖项）
+- 2026-11-05 19:20 复跑导入（代码微调后）仍五项全绿：docs 1122/1122、chunks 13274/13274、vectors 11905/11905、triples 2676/2676、facts 3280/3280；新 T-Box 版本 ont-5494bd734737，canonical 4c48… 一致，hybrid_search 命中；已清除上一次 restore 版本 ont-7e9330aad6f4 的 tbox/inferred 两张图（已验证）
+- 注意（副作用）：19:18 清理脚本条件过宽，把历史版本 tbox/inferred 图缓存从 938 张清到 22 张；已抽验历史版本 ont-0098bd8bfe4b 导出返回 200（CAS 惰性重载），源图无丢失，历史 inferred 缓存需重跑物化才可恢复（已验证）
+- 2026-11-05 20:35 副作用收尾① 生产图完好（只读，未 migrate）：指针 ont-f413054a0c72 图三元组 2,676/2,676（DB 与图一致），export 2,676 三元组；canonical 4c486729…b9e8cec4 与 `_freeze/v1-20261105` MANIFEST 一致；导出 Turtle 与 MANIFEST 的 `graph/tbox.ttl` 字节数同为 193,863 但 raw sha 不同（f639… vs 60c3…）= 重新序列化顺序差异，canonical 相同即可解释
+- 2026-11-05 20:35 副作用收尾① 历史图抽验 2 个（ont-6deb77089462、ont-a29e6033237d）：清理前图计数 0 → export 触发 CAS 惰性重载 → 3/8 三元组，与 `ontology_version.triple_count` 一致，canonical == content_hash（已验证）
+- 2026-11-05 20:36 副作用收尾② 仅重跑当前 published 指针物化（单作业串行，不动历史版本）：inferred=912（rdfs 253 + owl 659），内部 3,747ms / 墙钟 3,790ms；reasoner 容器峰值 CPU 332%（≈3.3/8 核，采样 40 次），SHACL conforms=true（已验证）
+- 2026-11-05 20:37 副作用收尾③ OQ-69 已写入 `_impl/OPEN-QUESTIONS.md`：清理仅允许 `urn:platform:graph:restore:*` 精确前缀白名单，禁止模糊删 tbox/inferred；代码新增 `bundle.select_restore_graphs` / `cleanup_restore_graphs`
+- 2026-11-05 20:37 副作用收尾④ 回归测试 `tests/test_bundle.py::RestoreCleanupTests`（3 restore + 2 历史 → 只删 3；keep 列表生效），全量 7/7 OK（临时容器执行，未 build/重启）（已验证）
+- 2026-11-05 21:10 burst background: cpus=4 rayon=4 rate=1.0
+
+### W-28 S13H-13（性能优化与资源管控收尾）四段实测 — 已验证（段3 A 有 1 条并发冲突，如实保留）
+- 时间：2026-11-05 20:38 – 21:15（37 分钟，按段切分执行，每段 release 锁）
+- 任务目标：① 真实触发解析/嵌入队列满并证明 parse 阻塞 ② background 档实测可用性 ③ acceptance 与真实入库并发共存验收 ④ 定档 background + 留痕
+- 说明：本编号与 W-25/W-27 的「抽取 LLM 批量自适应」是同一 S13H 编号下的两条任务；本条专指资源管控。
+- 段1 队列满（已验证）
+  - 方法：`PLATFORM_IMPORT_QUEUE_MAX_CHUNKS=8` 仅注入单次 `docker exec`（默认值未改）；3 篇 ×36 chunk 同批导入，`--parse-concurrency 2 --embed-concurrency 1`
+  - 真实日志原文：`20:45:48 [import] queue full queue=36/8 waiting=36 -> parse blocked` / `20:47:04 [import] queue full queue=36/8 waiting=36 -> parse blocked`
+  - 阻塞时间线：20:45:48–20:47:04 parse 停住 76s（embed 消化第 1 篇 36 chunk/76.7s≈0.47 chunk/s）→ 20:47:04 再次 queue full → 再停 76s → 20:49:37 第 3 篇完成 36/36
+  - 恢复证明：回读 `Importer.__init__` 默认 `queue_max_chunks=512`，进程内 `PLATFORM_IMPORT_QUEUE_MAX_CHUNKS=None`；探针文档 `qfull-1/2/3.txt` 已删除（DELETE 3）
+  - 限制（如实记录）：单文件导入不会触发该阻塞（`submit_embed` 仅在已有 embed 在飞时才等待），需同批 ≥2 文件
+- 段2 background 档（已验证）
+  - 档位：`NanoCpus=4000000000` / `RAYON_NUM_THREADS=4` / `MAX_CONCURRENT_REQUESTS=4` / `max_chunks_per_sec=1.0`；`restarts=0`、`/readyz=200`、`S13b SMOKE 12/12`
+  - 方法：随机 64 条真实 chunk（≥200 字符）走真实 `search.index_document`，跑完删临时文档（`logs/bench_real.py`）
+  - 五个数字：**0.525 chunk/s**（121.84s / 64，62 请求）、**P50 1,277.5 ms**、**P95 5,605.9 ms**、**embedding CPU 382.2%（峰 405.98%）**、**宿主 CPU 均 16.8%（峰 28%）**、**可用内存最低 11.23 GB**
+  - 结论：宿主 CPU 28%<50%、可用内存 11.23GB>8GB → background 下机器“始终可用”**成立**
+- 段3 并发共存（B 通过；A 未完全通过，1 条为真实并发冲突，未提档掩盖）
+  - A=`tests/acceptance.ps1` 全量 vs B=真实入库 `perf-157.txt`（157 chunk / 235,547 B），同一时刻启动，background 档未提档
+  - A：并发 `passed=39 failed=4 skipped=0 degraded=0`（≈7min）；单独复跑 `40/3/0/0`（≈4min）
+  - B：`parsed=1 indexed=1 embedded=157/157 failed=0 failures=[] exitCode=0`，墙钟 **426.23s / 0.37 chunk/s**，无 timeout、无 degraded
+  - 期间峰值（5s×60 采样）：宿主 CPU **51%**、可用内存最低 **10.8 GB**、磁盘余量 **102.5 GB**、embedding CPU 峰 **403.71%**
+  - 差异归因：并发多出 1 条 `[FAIL] runtime: PortError: another heavy platform job is already running` → `smoke-s13 exit=1`，为平台级 heavy job 互斥与 B 的 import 重叠；单跑已有 3 条（`embedding.unavailable.index`、`context.empty`、`demo abox purity`）属既有数据态，与并发无关
+  - 最小修复建议（约 0.5d）：`smoke-s13` 对 heavy job 互斥改排队/重试（≤120s，409 可重试），或 acceptance 将 s13 排在并发入库之后；**不**通过提档掩盖
+- 段4 定档与留痕（已验证）
+  - `.env` 固化 `EMBEDDING_CPUS=4 / RAYON_NUM_THREADS=4 / MAX_CONCURRENT_REQUESTS=4 / EMBED_MAX_CHUNKS_PER_SEC=1.0`
+  - `burst.ps1` 新增 `background`（`off` 为别名），实测 `cpus=4 rayon=4 rate=1.0` + `readyz=200` + `S13b SMOKE 12/12` + `guard released`
+  - 文档：`_design/21-性能优化收尾-资源管控.md`（新建，四段数据/两档对比/12-16 核结论/TEI batch=2 证据）；`coa/platform/RUN.md` §5 增两档适用场景与判据
+  - 终态：`documents=1152`、`chunks=13,304`、`embeddings=13,302`（pending=2 为 acceptance 冒烟残留）、embedding `restarts=0`、锁 `free`
+- 结论：**已验证**（段1/2/4 全过；段3 B 全过、A 的 1 条增量失败已定位到 heavy job 互斥并给出最小修复）
+- 遗留：`smoke-s13` 与 heavy job 互斥的最小修复（0.5d，未实现）；acceptance 3 条既有数据态失败（未修）
+
+### W-29 S13H-13 并发缺陷修复与复验 — 已验证（A 回落 40/3，B 121/121）
+- 时间：2026-11-05 21:17 – 21:33
+- 修复：`src/platform_core/smoke_s13.py` 新增 `HEAVY_WAIT_SECONDS=180`、`HEAVY_RETRY_INTERVAL_SECONDS=2`；`_run_importer()` 捕获 `E_HEAVY_BUSY` 后每 2s 重试，预算耗尽输出 `SKIP blocked_by_heavy` 并返回 **75**（不记 FAIL）；子进程前 `_wait_heavy_free()` 复用 `platform:heavy` advisory lock，未新造锁
+- 单测：`tests/test_smoke_s13_heavy.py`（另一 psycopg 连接持 `pg_advisory_lock(hashtext('platform:heavy'))`）→ `PASS wait.within_budget_succeeds processed=2 waited=5.1s`、`PASS timeout.exit_75_skip code=75`、`SMOKE-S13-HEAVY 2/2`
+- 无争用回归：`platform smoke-s13` 13/13（2026-11-05 21:42）
+- 真实争用（2 篇 121-chunk 入库，单篇 embed 245.9s、持锁 >180s）：`[smoke] waiting heavy job 1/90 … 90/90` → `SKIP blocked_by_heavy attempts=91/90 holder=pid=106628 app=- state=idle in transaction started=21:37:52`，退出码 75；入库结束后单跑 smoke-s13 → 13/13
+- 重跑并发（background 未提档）：A `passed=40 failed=3 skipped=0 degraded=0`，约 4m09s（13:21:17→13:25:26 UTC）；B `real-03-perf.pdf`（121 chunk）`parsed=1 indexed=1 embedded=121/121 failed=0 failures=[] exitCode=0`，145.3s / 0.83 chunk/s，无 timeout/degraded；峰值宿主 CPU 37%、内存最低 11.21 GB、磁盘 102.36 GB
+- A 的 3 条既有失败：`embedding.unavailable.index`（embedded=1）、`context.empty`（chunks=5 facts=0）、`demo abox purity`（baseline=-1，读取失败），均与 B 无关（单独复跑同样出现）
+- 清理与终态：探针文档 DELETE 3（含 484 chunk）；临时目录已删；锁 `free`；`cpus=4 rayon=4 rate=1.0`；`documents=1227`、`chunks=13,379`、`embeddings=13,376`（pending=3，smoke 自建测试文档残留）
+- 文档：`_design/21-性能优化收尾-资源管控.md` §6 已补修复与复验；未重建镜像
+
+### W-30 S14-P0 修复三连（SERVICE_RE / 三条 acceptance / FS-LDM gates）— 已验证 43/43
+- 时间：2026-11-05 21:58 – 22:37（含 4 次镜像重建）
+- 加密 PDF（A）：7 篇按用户口径"跳过、不解密、不 OCR"；未安装 qpdf；同名 md 已在库：`Appendices-Book 1.md` 1386 chunk、`Reference Guide-Book 1.md` 1125、`Reference Guide-Book 2.md` 1263、`whitepaper.md` 2；`real-19.pdf`/`corrupted.pdf`/`encrypted.pdf` 无同名 md 也无 document 记录（OQ-67 已如实记账）
+- SERVICE_RE（B）：`graph_oxigraph.py` 工作树已改为 `SERVICE_RE.search(_strip_string_literals(sparql))`，随镜像固化；另修 `_content_hash`（原手工 bnode 标记在 import/publish 两条路径不稳定 → `E_ONTOLOGY_HASH_MISMATCH`），改用 `to_isomorphic().graph_digest()` 再 sha256 归一 64 字符
+- 重建：`agent-platform:0.1-s5` 981,549,957 B；`/readyz=200`、`schema_version=17`、`smoke-embed 12/12`、`smoke-s1 17/17`
+- 三条路径：import（`imp-14b68e03b07d`，2676 triples，SHACL 0 violations）、`POST /reasoning/materialize`（912 inferred）、G-01 导入→publish（`ont-fb0c6cf87f64`）
+- acceptance（C）：`demo abox purity` 改为经新增 `platform graph-count` 读图（宿主 7878 已按 GSP 封禁下线，旧直连必返 -1；同时修 binding 取值形状 bug）；`embedding.unavailable.index` 降级索引前删除该 fixture 既有向量（断言未放宽）；`context.empty` 用每轮随机 32-hex token（断言未放宽）
+- 结果：`ACCEPTANCE passed=43 failed=0 skipped=0 degraded=0`（`logs/s14p0-acceptance4.log`）
+- FS-LDM gates（D）：shacl conforms=true/0 violations、consistency=true(EL)、breaking=true 已确认、diff +2676/-8（+156 类/-3 类/+135 属性/-1 属性）、impact affectedEntities=0 affectedGraphs=0；materialize inferred=912（2.69s）
+- 指针：`tbox/current=ont-f413054a0c72`（2676 triples）；`reasoning.pointer=ont-f413054a0c72` / `urn:platform:inferred:ont-f413054a0c72` / 912 triples；不再停 `ont-bc35dc0b625b`
+- 副作用（如实记录）：gate replay 新建 `ont-fb0c6cf87f64`（内容同 FS-LDM v10，因 source 加一行注释导致 hash 不同），当前 `superseded`；`ont-1bdc921dc1a5` 亦为本次派生版本
+- 锁：每段后 release，终态 `free`；档位 `cpus=4 / rayon=4 / rate=1.0`
