@@ -59,6 +59,34 @@ function Report-Skip([string]$name, [string]$detail) {
     Write-Host "[SKIP] $name $detail"
 }
 
+function Invoke-SmokeCheck([string]$slice) {
+    # reasoner 由 profile 控制。只有 reasoner 容器不存在时，才允许把"纯 reasoner
+    # 缺失"导致的 smoke 失败记为 SKIP。判定必须逐行严格：每一条 [FAIL] 行都要带
+    # 错误码，且该行出现的所有 E_* 码只能是 E_REASONER_UNAVAILABLE；无错误码的
+    # 派生断言、或出现任何其他错误码（如 E_GRAPH_BAD_REQUEST / E_EMBED_UNAVAILABLE）
+    # 一律记 FAIL。输出照常打印，不改动 smoke 内部任何断言。
+    $cmd = "smoke-$slice"
+    $out = @(& docker compose exec -T platform platform $cmd 2>&1)
+    $code = $LASTEXITCODE
+    foreach ($l in $out) { Write-Host $l }
+    if ($code -eq 0) {
+        Report "platform $cmd" $true "exit=0"
+        return
+    }
+    if (-not $script:reasonerPresent) {
+        $failLines = @($out | Where-Object { $_ -match '^\s*\[FAIL\]' })
+        $mixed = @($failLines | Where-Object {
+            $codes = @([regex]::Matches($_, 'E_[A-Z_]+') | ForEach-Object { $_.Value })
+            ($codes.Count -eq 0) -or (@($codes | Where-Object { $_ -ne 'E_REASONER_UNAVAILABLE' }).Count -gt 0)
+        })
+        if ($failLines.Count -gt 0 -and $mixed.Count -eq 0) {
+            Report-Skip "platform $cmd" "reasoner-only failure(s), reasoner profile absent (exit=$code)"
+            return
+        }
+    }
+    Report "platform $cmd" $false "exit=$code"
+}
+
 function Get-HttpStatus([string]$url) {
     $code = & curl.exe -s -o NUL -w "%{http_code}" $url
     if ($LASTEXITCODE -ne 0) { return 0 }
@@ -165,52 +193,40 @@ docker compose exec -T platform platform smoke
 Report "platform smoke" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
 
 Write-Host "== smoke S1 =="
-docker compose exec -T platform platform smoke-s1
-Report "platform smoke-s1" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s1"
 
 Write-Host "== smoke S2 =="
-docker compose exec -T platform platform smoke-s2
-Report "platform smoke-s2" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s2"
 
 Write-Host "== smoke S3 =="
-docker compose exec -T platform platform smoke-s3
-Report "platform smoke-s3" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s3"
 
 Write-Host "== smoke S4 =="
-docker compose exec -T platform platform smoke-s4
-Report "platform smoke-s4" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s4"
 
 Write-Host "== smoke S5 =="
-docker compose exec -T platform platform smoke-s5
-Report "platform smoke-s5" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s5"
 
 Write-Host "== smoke S6 =="
-docker compose exec -T platform platform smoke-s6
-Report "platform smoke-s6" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s6"
 
 Write-Host "== smoke S7 =="
-docker compose exec -T platform platform smoke-s7
-Report "platform smoke-s7" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s7"
 
 Write-Host "== smoke S8 =="
-docker compose exec -T platform platform smoke-s8
-Report "platform smoke-s8" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s8"
 
 Write-Host "== smoke S9 =="
-docker compose exec -T platform platform smoke-s9
-Report "platform smoke-s9" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s9"
 
 Write-Host "== smoke S10 =="
-docker compose exec -T platform platform smoke-s10
-Report "platform smoke-s10" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s10"
 
 Write-Host "== smoke S11 =="
-docker compose exec -T platform platform smoke-s11
-Report "platform smoke-s11" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s11"
 
 Write-Host "== smoke S12 =="
-docker compose exec -T platform platform smoke-s12
-Report "platform smoke-s12" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Invoke-SmokeCheck "s12"
 
 Write-Host "== smoke S13 =="
 docker compose exec -T platform platform smoke-s13
