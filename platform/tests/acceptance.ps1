@@ -1,7 +1,14 @@
 ﻿# S0 acceptance: happy path + two failure paths.
 # Usage: powershell -ExecutionPolicy Bypass -File .\tests\acceptance.ps1 [-OnlyPreflight]
+#        [-ApiBaseUrl http://127.0.0.1:8080] [-PgPort 5432] [-OxigraphPort 7878]
+# 可选端口参数默认值与默认栈一致；用于在独立栈（如 platform-b 8082/5433/7881）上整跑。
 # 互斥：全量验收属长任务，运行期间持 heavy.lock；容器启动一律先过 compose-guard（R1 技术拦截）。
-param([switch]$OnlyPreflight)
+param(
+    [switch]$OnlyPreflight,
+    [string]$ApiBaseUrl = 'http://127.0.0.1:8080',
+    [int]$PgPort = 5432,
+    [int]$OxigraphPort = 7878
+)
 $ErrorActionPreference = "Continue"
 Set-Location (Split-Path -Parent $PSScriptRoot)
 # Runtime data lives outside the repo (compose binds D:/agentABC/data -> /data);
@@ -45,6 +52,11 @@ function Report-Smoke([string]$name, [int]$exitCode, [string]$detail) {
     } else {
         Report $name ($exitCode -eq 0) $detail
     }
+}
+
+function Report-Skip([string]$name, [string]$detail) {
+    $script:skipped++
+    Write-Host "[SKIP] $name $detail"
 }
 
 function Get-HttpStatus([string]$url) {
@@ -93,6 +105,8 @@ foreach ($s in $services) {
 }
 $lockNow = Get-HeavyLock
 $busyByOther = ($lockNow -and $lockNow.owner -ne $script:owner)
+# reasoner 由 profile 控制；独立栈（如 platform-b）不启动它时，相关生命周期断言应记为 SKIP
+$script:reasonerPresent = $cstate.ContainsKey('reasoner')
 
 if ($busyByOther) {
     Write-Host "skipped: heavy lock busy (owner=$($lockNow.owner), purpose=$($lockNow.purpose))"
@@ -117,7 +131,7 @@ if ($unhealthy.Count -gt 0) {
 }
 
 if ($OnlyPreflight) {
-    Write-Host "preflight: heavy_lock=$lockState services=$($services.Count) not_running=$($notRunning.Count) unhealthy=$($unhealthy.Count)"
+    Write-Host "preflight: heavy_lock=$lockState services=$($services.Count) not_running=$($notRunning.Count) unhealthy=$($unhealthy.Count) api=$ApiBaseUrl pg=$PgPort oxigraph=$OxigraphPort"
     exit 0
 }
 
@@ -128,7 +142,7 @@ if (-not $script:lockHeld) { Write-Host "warn: heavy lock busy (another task hol
 
 try {
 
-$base = "http://127.0.0.1:8080"
+$base = $ApiBaseUrl
 if (-not (Wait-Ready "$base/healthz" 120)) {
     Report "healthz 200" $false "timeout waiting for $base/healthz"
     docker compose logs --tail 40 platform
@@ -274,8 +288,12 @@ docker compose exec -T platform platform check-config --config /app/tests/bad_co
 Report "check-config bad context budget" ($LASTEXITCODE -eq 78) "exit=$LASTEXITCODE expected=78"
 
 Write-Host "== failure path: reasoner container stopped =="
-docker compose stop reasoner *> $null
-Report "stop reasoner" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+if ($script:reasonerPresent) {
+    docker compose stop reasoner *> $null
+    Report "stop reasoner" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+} else {
+    Report-Skip "stop reasoner" "reasoner profile not started in this stack"
+}
 
 $healthStatus = Get-HttpStatus "$base/healthz"
 Report "healthz 200 with reasoner down" ($healthStatus -eq 200) "status=$healthStatus"
@@ -287,13 +305,18 @@ $matCode = & curl.exe -s -o $matOut -w "%{http_code}" -X POST -H "Content-Type: 
 $matText = Get-Content $matOut -Raw -ErrorAction SilentlyContinue
 Report "materialize 503 E_REASONER_UNAVAILABLE" ([int]$matCode -eq 503 -and ($matText -match "E_REASONER_UNAVAILABLE")) "status=$matCode"
 
-docker compose start reasoner *> $null
-Report "start reasoner" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+if ($script:reasonerPresent) {
+    docker compose start reasoner *> $null
+    Report "start reasoner" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
 
-if (Wait-Ready "http://127.0.0.1:7879/healthz" 120) {
-    Report "reasoner recovers to 200" $true ""
+    if (Wait-Ready "http://127.0.0.1:7879/healthz" 120) {
+        Report "reasoner recovers to 200" $true ""
+    } else {
+        Report "reasoner recovers to 200" $false "timeout"
+    }
 } else {
-    Report "reasoner recovers to 200" $false "timeout"
+    Report-Skip "start reasoner" "reasoner profile not started in this stack"
+    Report-Skip "reasoner recovers to 200" "reasoner profile not started in this stack"
 }
 
 Write-Host "== failure path: graph unavailable =="
