@@ -18,6 +18,13 @@ SERVICE_RE = re.compile(r"\bSERVICE\b", re.IGNORECASE)
 IRI_RE = re.compile(r"^[^<>\"{}|^`\\\s]+$")
 PROBE = "urn:platform:selfcheck:graph"
 
+# Q7-b: only platform-managed graphs may appear in a dataset clause or a
+# GRAPH <iri> pattern. Any other IRI (another product's store, an external
+# dataset) is rejected with a dedicated code instead of being forwarded.
+DEFAULT_ALLOWED_GRAPH_PREFIXES = ("urn:platform:",)
+_FROM_RE = re.compile(r"\bFROM\s+(?:NAMED\s+)?<([^>]+)>", re.IGNORECASE)
+_GRAPH_RE = re.compile(r"\bGRAPH\s*<([^>]+)>", re.IGNORECASE)
+
 # Strip RDF/SPARQL string literals (quoted strings + optional lang/datatype)
 # so that the SERVICE guardrail only fires on the SPARQL SERVICE keyword, not
 # on the word "Service" inside a literal such as "Legal Service Address"@en.
@@ -65,10 +72,19 @@ def parse_rdf(data: bytes, rdf_format: str) -> list[Any]:
 class OxigraphHttpStore:
     port = "GraphStore"
 
-    def __init__(self, endpoint: str, timeout_ms: int = 30000, max_rows: int = 10000) -> None:
+    def __init__(
+        self,
+        endpoint: str,
+        timeout_ms: int = 30000,
+        max_rows: int = 10000,
+        allowed_graph_prefixes: tuple[str, ...] = DEFAULT_ALLOWED_GRAPH_PREFIXES,
+        allowed_graphs: tuple[str, ...] = (),
+    ) -> None:
         self._endpoint = endpoint.rstrip("/")
         self._timeout_ms = timeout_ms
         self._max_rows = max_rows
+        self._allowed_prefixes = tuple(allowed_graph_prefixes)
+        self._allowed_graphs = tuple(allowed_graphs)
         self._client = httpx.Client(
             base_url=self._endpoint,
             timeout=httpx.Timeout(max(timeout_ms / 1000, 1.0)),
@@ -120,6 +136,11 @@ class OxigraphHttpStore:
                 "property_path": {"sequence": True, "plus": True, "inverse": True},
                 "from_clause": True,
                 "from_named": True,
+                "graph_whitelist": {
+                    "prefixes": list(self._allowed_prefixes),
+                    "graphs": list(self._allowed_graphs),
+                    "error": "E_GRAPH_GRAPH_NOT_ALLOWED",
+                },
                 "update": {"insert_data": True, "clear_graph": True, "drop_graph": True},
             },
         )
@@ -158,6 +179,26 @@ class OxigraphHttpStore:
             )
         return response
 
+    def _assert_allowed_graphs(self, sparql: str) -> None:
+        """Reject dataset clauses / GRAPH patterns outside the platform whitelist."""
+        stripped = _strip_string_literals(sparql)
+        for iri in _FROM_RE.findall(stripped) + _GRAPH_RE.findall(stripped):
+            if iri in self._allowed_graphs:
+                continue
+            if any(iri.startswith(prefix) for prefix in self._allowed_prefixes):
+                continue
+            raise PortError(
+                code="PermissionDenied",
+                message=f"graph {iri} is outside the platform whitelist",
+                provider="oxigraph-http",
+                provider_code="E_GRAPH_GRAPH_NOT_ALLOWED",
+                details={
+                    "graph": iri,
+                    "allowedPrefixes": list(self._allowed_prefixes),
+                    "allowedGraphs": list(self._allowed_graphs),
+                },
+            )
+
     def _run_query(self, sparql: str) -> dict[str, Any]:
         if SERVICE_RE.search(_strip_string_literals(sparql)):
             raise PortError(
@@ -166,6 +207,7 @@ class OxigraphHttpStore:
                 provider="oxigraph-http",
                 provider_code="E_SPARQL_SERVICE",
             )
+        self._assert_allowed_graphs(sparql)
         response = self._request(
             "POST",
             "/query",

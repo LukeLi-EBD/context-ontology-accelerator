@@ -268,6 +268,76 @@ class EmbeddingClient:
                 continue
         return False
 
+    def service_info(self) -> dict[str, Any]:
+        """What model does the endpoint actually serve? (Q7-b startup identity).
+
+        TEI exposes ``/info``; OpenAI-compatible servers expose ``/v1/models``.
+        Only a missing identity is an error - an unreachable endpoint is
+        reported separately so serve can decide between 78 and degraded.
+        """
+        provider = self._config.provider
+        if provider == "fake":
+            return {
+                "provider": "fake",
+                "model": FAKE_MODEL,
+                "dimensions": self._config.dimensions,
+            }
+        if not self._http_provider():
+            raise PortError(
+                code="Unsupported",
+                message=f"embedding.provider={provider} has no service identity",
+                provider=provider,
+                provider_code="E_EMBED_DISABLED",
+            )
+        base = self._endpoint(provider).rstrip("/")
+        root = base[:-3] if base.endswith("/v1") else base
+        probes = [f"{root}/info", f"{base}/models"]
+        for url in probes:
+            try:
+                response = self._client().get(url, headers=self._headers(provider))
+            except httpx.HTTPError as exc:
+                raise PortError(
+                    code="Unavailable",
+                    message=f"cannot reach embedding endpoint {base}: {exc}",
+                    provider=provider,
+                    provider_code="E_EMBED_UNAVAILABLE",
+                    retryable=True,
+                ) from exc
+            if response.status_code == 404:
+                continue
+            if response.status_code >= 400:
+                raise PortError(
+                    code="Unavailable",
+                    message=f"embedding identity probe returned HTTP {response.status_code}",
+                    provider=provider,
+                    provider_code="E_EMBED_UNAVAILABLE",
+                    details={"url": url},
+                )
+            try:
+                body = response.json()
+            except ValueError:
+                body = {}
+            info: dict[str, Any] = {"provider": provider, "source": url}
+            if isinstance(body, dict):
+                if body.get("model_id"):
+                    info["model"] = str(body["model_id"])
+                elif body.get("model"):
+                    info["model"] = str(body["model"])
+                data = body.get("data")
+                if "model" not in info and isinstance(data, list) and data:
+                    first = data[0] if isinstance(data[0], dict) else {}
+                    if first.get("id"):
+                        info["model"] = str(first["id"])
+            if info.get("model"):
+                return info
+        raise PortError(
+            code="Unavailable",
+            message=f"embedding endpoint exposes no model identity at {probes}",
+            provider=provider,
+            provider_code="E_EMBED_UNAVAILABLE",
+            details={"probes": probes},
+        )
+
     # ---- internals -------------------------------------------------------
 
     def _endpoint(self, provider: str) -> str:

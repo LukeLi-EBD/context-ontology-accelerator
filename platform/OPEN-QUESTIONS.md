@@ -156,3 +156,23 @@
 - 已落地：`bundle.select_restore_graphs` / `bundle.cleanup_restore_graphs` 精确前缀白名单实现 + 2 条单测。
 - 状态：open（清理工具已收口；历史 inferred 缓存按需重跑，不批量回填）。
 
+### OQ-70 ~ OQ-80（2026-11-06）契约-实现偏差“明确不修”清单（Q7-d 只记档，不动手）
+
+> 口径：契约（_design/04）中列出但代码未实现的端口方法/能力。统一记为“不修”，原因是当前无调用方或替代路径已覆盖；触发条件满足时再开工。每项一行。
+
+| 编号 | 项 | 契约位置 | 现状 | 为何暂不做 | 触发条件 |
+|---|---|---|---|---|---|
+| OQ-70 | `Cache` 端口空壳 | 04 §4.x CachePort | `adapters/cache_memory.py` 仅最小实现，无语义缓存策略 | 无调用方；查询链路未依赖缓存命中率 | 出现 P95 延迟要求或重复查询占比 >30% |
+| OQ-71 | `LLMClient` 缺 `chat` / `stream` / `countTokens` | 04 §4.6 | 仅实现抽取所需的单轮 `complete` | 抽取/归一不要求流式与 token 计数；`countTokens` 无服务端口径 | 上在线问答或需要预算精确计费 |
+| OQ-72 | `SearchIndex` 缺 `index` / `delete` / `reindex` 独立方法 | 04 §4.3 | 索引写入内联在 documents/reindex 编排里 | 无外部调用方；编排层已覆盖 | 需要第三方写入索引或局部删除索引 |
+| OQ-73 | `GraphStore` 缺 `describe` / `neighbors` / `subgraph` / `impact` / `upsert` / `listStatements` / `snapshot` | 04 §4.2 | 以 `query`/`ask`/`update`/replace/export/probe 为共同子集 | 上层用 SPARQL 模板覆盖；独立方法会扩大双后端差异面 | Q8 双跑证明共同子集足够且上层出现明确性能瓶颈 |
+| OQ-74 | `ObjectStore.copy` 返回 `Unsupported` | 04 §4.4 | 抛出 `Unsupported` | 当前无跨 bucket 复制调用方；可读+写替代 | 需要服务端复制以省流量/保原子性 |
+| OQ-75 | `OntologyRegistry` 缺 `review` / `supersede` / `checkCompatibility` / `deprecate` | 04 §4.7 | 只有 propose/approve/publish/rollback 状态机 | 治理流程以现状态机 + gates 覆盖；缺的是 API 表面方法 | 需要多级评审或弃用生命周期 |
+| OQ-76 | `MetadataStore.records.*` 缺 CRUD 子方法 | 04 §4.8 | 仅文档/对象/本体所需的最小读写 | 无独立元数据 API 需求 | 需要通用元数据表或外部集成 |
+| OQ-77 | `ContextResolver.explain` / `warm` | 04 §5.3 | 只有 `resolve` | 无 UI/调试消费方 | 需要解释上下文选材或预热缓存 |
+| OQ-78 | 存储 GC 未实现 | 03 §8.2 / 07 §4.5 | 仅删除宽限字段 `gc_grace_hours`，无回收作业 | 单机容量充足，删除即标记 | 磁盘可用 <20% 或孤儿 blob 审计发现增长 |
+| OQ-79 | D6 进程内 RDFS 规则引擎未实现 | 03 D6 | 推理统一走 ROBOT/ELK 容器 | 容器路径已可用；进程内会引入第二套语义 | lean 档要求无 JVM 常驻且需 RDFS 闭包 |
+| OQ-80 | D25 Fuseki 后端未装配 | 03 D25 / 04 §4.2 | `graph.provider=fuseki` 被 `E_PROVIDER_UNSUPPORTED` 拒绝 | 默认 Oxigraph 已满足；Fuseki 需双跑证据才可标 usable | Q8-b 完成 `adapters/graph_fuseki.py` 且七项双跑通过 |
+
+- 状态：open（**明确不修**；OQ-80 在 Q8 中转为“实现中”，其余保持不修）。
+

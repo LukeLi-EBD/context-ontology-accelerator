@@ -50,6 +50,7 @@ def run_self_check(runtime: Runtime, retry_seconds: float = 60.0) -> list[CheckR
     _check_graph(runtime, retry_seconds, checks)
     _check_storage(runtime, checks)
     _check_parser(runtime, checks)
+    _check_embedding_identity(runtime, checks)
     _check_capabilities(runtime, checks)
 
     summary = {
@@ -132,6 +133,19 @@ def _check_db(runtime: Runtime, retry_seconds: float, checks: list[CheckResult])
         ) from exc
     try:
         migration = runtime.metadata.migrate()
+    except Exception as exc:
+        # Q7-a: a failed schema migration is a deployment/config problem (78),
+        # never a transient "try again" (69).
+        raise PlatformError(
+            code="E_DB_MIGRATION_FAILED",
+            detail=f"database migration failed: {exc}",
+            stage="db",
+            key="database.url",
+            provider="postgres",
+            hint="inspect postgres logs; verify the role can create schema and the migration set is complete",
+            exit_code=EXIT_CONFIG,
+        ) from exc
+    try:
         runtime.metadata.health()
         shapes_loaded = runtime.shapes.load_directory(
             runtime.config.reasoning.shapes_dir
@@ -141,7 +155,7 @@ def _check_db(runtime: Runtime, retry_seconds: float, checks: list[CheckResult])
     except Exception as exc:
         raise PlatformError(
             code="E_DB_UNAVAILABLE",
-            detail=f"database migration/health failed: {exc}",
+            detail=f"database health/shapes check failed: {exc}",
             stage="db",
             key="database.url",
             provider="postgres",
@@ -284,6 +298,113 @@ def _check_parser(runtime: Runtime, checks: list[CheckResult]) -> None:
     )
 
 
+def _model_key(value: str) -> str:
+    text = (value or "").strip().rstrip("/")
+    return text.rsplit("/", 1)[-1].lower() if text else ""
+
+
+def _check_embedding_identity(runtime: Runtime, checks: list[CheckResult]) -> None:
+    """Q7-b: the served model and vector width must match the config.
+
+    A mismatch would silently mix vector spaces, so it blocks startup (78) with
+    E_EMBED_MODEL_MISMATCH. An unreachable endpoint stays 'degraded' - that is
+    an availability problem, not an identity problem.
+    """
+    cfg = runtime.config.embedding
+    if cfg.provider in ("disabled", "fake"):
+        checks.append(
+            CheckResult(
+                stage="embedding",
+                status="skipped",
+                detail=f"provider={cfg.provider} (no external model identity)",
+            )
+        )
+        return
+    if not runtime.embedding.available():
+        checks.append(
+            CheckResult(
+                stage="embedding",
+                status="degraded",
+                detail="embedding endpoint unreachable; model/dimension identity not verified",
+                code="E_EMBED_UNAVAILABLE",
+            )
+        )
+        return
+    try:
+        info = runtime.embedding.service_info()
+    except PortError as exc:
+        checks.append(
+            CheckResult(
+                stage="embedding",
+                status="degraded",
+                detail=f"identity probe failed: {exc.message}",
+                code=exc.provider_code or "E_EMBED_UNAVAILABLE",
+            )
+        )
+        return
+
+    reported = str(info.get("model") or "")
+    expected = runtime.embedding.model_name()
+    if reported and _model_key(reported) != _model_key(expected):
+        raise PlatformError(
+            code="E_EMBED_MODEL_MISMATCH",
+            detail=f"embedding model mismatch: config={expected} service={reported}",
+            stage="embedding",
+            key="embedding.model",
+            provider=cfg.provider,
+            hint=(
+                "align embedding.model/embedding.endpoint with the served model, "
+                "or re-embed the corpus; refusing to mix vector spaces"
+            ),
+            exit_code=EXIT_CONFIG,
+        )
+
+    try:
+        vectors = runtime.embedding.embed(["platform embedding identity probe"])
+    except PortError as exc:
+        if exc.provider_code == "E_EMBED_DIM_MISMATCH":
+            raise PlatformError(
+                code="E_EMBED_MODEL_MISMATCH",
+                detail=exc.message,
+                stage="embedding",
+                key="embedding.dimensions",
+                provider=cfg.provider,
+                hint="align embedding.dimensions with the served model or re-embed the corpus",
+                exit_code=EXIT_CONFIG,
+            ) from exc
+        checks.append(
+            CheckResult(
+                stage="embedding",
+                status="degraded",
+                detail=f"dimension probe failed: {exc.message}",
+                code=exc.provider_code or "E_EMBED_UNAVAILABLE",
+            )
+        )
+        return
+
+    got = len(vectors[0]) if vectors else 0
+    if got != runtime.embedding.dimensions():
+        raise PlatformError(
+            code="E_EMBED_MODEL_MISMATCH",
+            detail=(
+                f"embedding dimension mismatch: service={got} "
+                f"config={runtime.embedding.dimensions()}"
+            ),
+            stage="embedding",
+            key="embedding.dimensions",
+            provider=cfg.provider,
+            hint="align embedding.dimensions with the served model or re-embed the corpus",
+            exit_code=EXIT_CONFIG,
+        )
+    checks.append(
+        CheckResult(
+            stage="embedding",
+            status="ok",
+            detail=f"model={reported} dimensions={got}",
+        )
+    )
+
+
 def _check_capabilities(runtime: Runtime, checks: list[CheckResult]) -> None:
     available: set[str] = set()
     for adapter in (runtime.metadata, runtime.graph, runtime.objects):
@@ -299,6 +420,7 @@ def _check_capabilities(runtime: Runtime, checks: list[CheckResult]) -> None:
     available.update(runtime.reasoner.manifest().capabilities)
     available.update(runtime.reasoning.manifest().capabilities)
     available.update(runtime.context.manifest().capabilities)
+    available.update(runtime.answerable.manifest().capabilities)
 
     requirements: dict[str, list[str]] = runtime.config.requirements
     deny = set(runtime.config.degradation.get("deny", []))

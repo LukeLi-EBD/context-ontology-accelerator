@@ -681,7 +681,12 @@ def main(argv: list[str] | None = None) -> int:
         from .api import create_app
         from .ontology_init import start as start_ontology, stop as stop_ontology
 
-        start_ontology(runtime)
+        try:
+            start_ontology(runtime)
+        except PlatformError as exc:
+            runtime.close()
+            print(exc.render(), file=sys.stderr)
+            return exc.exit_code
         app = create_app(runtime, checks)
         try:
             uvicorn.run(

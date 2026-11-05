@@ -56,6 +56,7 @@ class LayeredObjectStore:
                 "object.head",
                 "object.delete",
                 "object.list",
+                "object.range_read",
             ],
             notes={
                 "presign": False,
@@ -64,7 +65,7 @@ class LayeredObjectStore:
                 "small_object_provider": self._config.small_object_provider,
                 "large_object_provider": self._config.large_object_provider,
                 "small_object_max_bytes": self._threshold,
-                "range_read": {"fs": True, "pg": False},
+                "range_read": {"fs": "native", "pg": False},
             },
         )
 
@@ -348,6 +349,65 @@ class LayeredObjectStore:
                 details={"expected": row["hash"], "actual": actual},
             )
         return data, self._object_meta(row, bucket, key)
+
+    def range_read(
+        self, bucket: str, key: str, start: int, end: int
+    ) -> tuple[bytes, dict[str, Any]]:
+        """Read bytes ``[start, end]`` (inclusive, HTTP Range semantics).
+
+        fs tier: true seek/read, the blob is never fully materialized.
+        pg tier: not supported (``E_OBJECT_RANGE_UNSUPPORTED``), matching the
+        contract's ``range_read=false`` for bytea.
+        """
+        row = self._row(bucket, key)
+        if row is None:
+            raise PortError(
+                code="NotFound",
+                message=f"object not found: {bucket}/{key}",
+                provider="layered",
+                provider_code="E_OBJECT_NOT_FOUND",
+            )
+        size = int(row["size"])
+        if start < 0 or end < start:
+            raise PortError(
+                code="InvalidArgument",
+                message=f"invalid byte range {start}-{end} for {bucket}/{key}",
+                provider="layered",
+                provider_code="E_OBJECT_RANGE_INVALID",
+                details={"start": start, "end": end, "size": size},
+            )
+        if size and start >= size:
+            raise PortError(
+                code="InvalidArgument",
+                message=f"range start {start} is past object size {size}",
+                provider="layered",
+                provider_code="E_OBJECT_RANGE_UNSATISFIABLE",
+                details={"start": start, "end": end, "size": size},
+            )
+
+        stop = min(end, size - 1) if size else -1
+        if row["tier"] != "fs":
+            # bytea has no range API; the contract marks pg range_read=false
+            # rather than materializing the whole object behind a Range call.
+            raise PortError(
+                code="Unsupported",
+                message=f"range_read is not supported for tier={row['tier']}",
+                provider="pg",
+                provider_code="E_OBJECT_RANGE_UNSUPPORTED",
+                details={"tier": row["tier"], "bucket": bucket, "key": key},
+            )
+        data = b"" if size == 0 else self._fs.read_range(row["hash"], start, stop - start + 1)
+
+        meta = self._object_meta(row, bucket, key)
+        meta["range"] = {
+            "start": 0 if size == 0 else start,
+            "end": stop,
+            "length": len(data),
+            "size": size,
+            "unit": "bytes",
+            "tier": row["tier"],
+        }
+        return data, meta
 
     def head(self, bucket: str, key: str) -> dict[str, Any]:
         row = self._row(bucket, key)

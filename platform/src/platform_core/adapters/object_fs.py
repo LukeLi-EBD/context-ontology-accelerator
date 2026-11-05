@@ -110,6 +110,29 @@ class FsCasBackend:
                 retryable=True,
             ) from exc
 
+    def read_range(self, hash_hex: str, start: int, length: int) -> bytes:
+        """True byte range: seek into the blob instead of materializing it."""
+        path = self.path_for(hash_hex)
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(start)
+                return handle.read(length)
+        except FileNotFoundError as exc:
+            raise PortError(
+                code="DataLoss",
+                message=f"blob row exists but file is missing: {path}",
+                provider="fs",
+                provider_code="E_STORAGE_BLOB_MISSING",
+            ) from exc
+        except OSError as exc:
+            raise PortError(
+                code="Unavailable",
+                message=f"cannot read blob range: {exc}",
+                provider="fs",
+                provider_code="E_STORAGE_READ",
+                retryable=True,
+            ) from exc
+
     def _fsync_dir(self, directory: Path) -> None:
         """fsync a directory where the OS supports it; Windows does not."""
         try:
