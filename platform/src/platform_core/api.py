@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -255,8 +256,27 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return runtime.metrics.get(metric_id)
 
     @app.get("/metrics/{metric_id}/output")
-    def metric_output(metric_id: str, internal: bool = False) -> dict[str, Any]:
-        return runtime.metrics.output(metric_id, internal=internal)
+    def metric_output(
+        metric_id: str,
+        internal: bool = False,
+        compute: bool = False,
+        as_of: date | None = Query(None, alias="asOf"),
+        period_start: date | None = Query(None, alias="periodStart"),
+        period_end: date | None = Query(None, alias="periodEnd"),
+        entity_key: str | None = Query(None, alias="entityKey"),
+        institution: str | None = None,
+    ) -> dict[str, Any]:
+        if not compute:
+            return runtime.metrics.output(metric_id, internal=internal)
+        return runtime.metrics.compute(
+            metric_id,
+            internal=internal,
+            as_of=as_of,
+            period_start=period_start,
+            period_end=period_end,
+            entity_key=entity_key,
+            institution=institution,
+        )
 
     # ---- S4 extraction ---------------------------------------------------
 

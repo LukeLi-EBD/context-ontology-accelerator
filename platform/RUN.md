@@ -111,8 +111,8 @@ docker compose up -d
 docker compose ps
 ```
 
-迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V17__import_batch_stale.sql`，
-**当前最新为 V17**（历史任务描述里的 V16 已过时）。
+迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V19__metric_observation.sql`，
+**当前最新为 V19**（历史任务描述里的 V16/V17 已过时）。
 
 期望返回：
 

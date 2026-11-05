@@ -1,0 +1,10 @@
+[
+  {"metricId": "FIN-BANK-001", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "L001", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 90, "denominator": null, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-BANK-001", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "L002", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 0, "denominator": null, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-BANK-025", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "C001", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 12, "denominator": 100, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-BANK-025", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "C002", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 5, "denominator": 100, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-BANK-025", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "ZERO", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 5, "denominator": 0, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-BANK-030", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "C001", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 3.75, "denominator": 100, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-BANK-030", "definitionVersion": "v3.0", "institution": "BANK-A", "entityKey": "C002", "asOf": "2025-12-31", "windowStart": "2025-12-31", "windowEnd": "2025-12-31", "numerator": 2, "denominator": 100, "dataSource": "fixture", "fixture": true},
+  {"metricId": "FIN-INS-021", "definitionVersion": "v3.0", "product": "长期寿险", "entityKey": "长期寿险", "periodStart": "2025-01-01", "periodEnd": "2025-12-31", "windowStart": "2025-01-01", "windowEnd": "2025-12-31", "numerator": 3, "denominator": 4, "dataSource": "fixture", "fixture": true}
+]

@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 18
+SUPPORTED_SCHEMA_VERSION = 19
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -37,6 +37,7 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (16, "V16__shapes_registry.sql", "G-03 shapes registry: versioned SHACL deployment"),
     (17, "V17__import_batch_stale.sql", "bulk import lease timeout: running -> stale"),
     (18, "V18__metric_definition.sql", "v3 metric registry: evidence_basis + publishable"),
+    (19, "V19__metric_observation.sql", "metric observations + definition-driven calculator fields"),
 ]
 
 
