@@ -171,3 +171,19 @@
 - 整篇完成速率：real-11 `1844/3084.7s = 0.598`；real-12 `138/213.3s = 0.647`（增量口径）；real-18 `3/3.3s = 0.916`（仅 3 块，不作代表）。
 - 27.6 万 chunk 外推（按实测，不用乐观口径）：real-11 口径 1.673s/块 → **128h**；real-12 口径 1.546s → **119h**；按当前库长块占比 63.2%（3008/4756）分档加权 → **133–188h**；若全为 1198 字长块 → **276h**；333h 只在全窗口 0.23 时成立，已证明是长块+启动窗口，不是语料稳态。
 - `rollback-to` 当发布用的设计债已留痕：`_impl/OPEN-QUESTIONS.md` **OQ-65**（方案 = `publish` 增 `resumeFromVersion`/允许已有 `versionId`，写 `publishedAt/publishedBy/previousVersionId`，diff 标 `canonicalEqual`；工作量 1.5d；本段不改代码）。
+
+- BURST-SAMPLE 2026-11-05 16:38 | 应嵌入 4756 / 已嵌入 4678 / 待嵌入 78 | 本批次 +901（自 16:04） | real-22 0.777 chunk/s（565/726.9s） | 41% | 10.6 | 33.7 | 102.6 | 593%
+- 当前队列收尾（16:37）：real-22 `565/565/remaining=0/degraded=false/726.9s/0.777`；s13h11-corpus `333/333/1239.7s/0.269`；real-18 `3/3.3s/0.916`。剩余 78 条 = 范围外测试件 74 + `s3-*` 4（后者只有 `fake-hash` 向量，旧脚本按“任意模型”计数误判为已嵌入；`bulk-index.ps1` 已改为只认 active 分区 model+dimensions）。
+- **基数复核（16:35，替代“28 万”）**：语料 `D:\FS-LDM` + `_impl/data/{bench-real,bench-real-hold,corpus-s13,corpus-s13-clean}` 按 sha256 去重 = **443 文件 / 488.6MB**；可解析（pdf/docx/txt/md）**427 篇**，已 ingest **6 篇**，剩余 **421 篇**（明细 `_impl/logs/corpus-all.csv` / `corpus-remaining.csv`）。
+- 抽样实测 20 篇（10 bench-real PDF + 4 FS-LDM PDF + 3 md + 2 txt + 1 生成 PDF；17 成功 / 3 加密）= **1,920 chunk / 1.55M 字符 / 285.96MB**，平均 **96 chunk/篇**、**1.24 chunk/千字符**；长块 1,415（**73.7%**）/ 短块 505。脚本与原始输出 `_impl/logs/sample_chunks.py`。
+- 关键发现：bench-real 大 PDF 多为**扫描件**（real-01 92MB/838 页、real-08 19MB/194 页、real-13 10MB 均 0 字符 → 0 chunk；OCR 未启用），有文本 PDF 仅 1.8–3.3 chunk/MB；不能用 real-11（158 chunk/MB）外推。
+- 复核结论：剩余 ≈**6,900 chunk**，全语料 ≈**1.0–1.2 万 chunk** → **“28 万”高估约 25 倍**，新基数 **≈1.1 万（0.9–1.3 万）**；ETA 剩余 **3.0–3.2h**（长块占比 73.7% 时保守 **6.4h**），全语料从零 4.7–5.1h。已写入 `_design/19-burst窗口-复盘.md` 的“基数复核与 ETA”节（含当前队列/全语料两行）。
+- 长/短块占比：当前库 4,756 chunk 中长块 **3,008（63.2%）**、短块 1,748（36.8%）；新语料抽样长块 **73.7%** → ETA 取上限更稳。
+- `bulk-index.ps1` 的“已嵌入”统计已改为 active 分区口径（`model`+`dimensions` 取自 `platform.embedding_pointer`），避免非 active 模型的假向量被当成已嵌入。
+
+- **S14H-BURST 总结**：基数从 **28 万** 修正为 **1.1 万**（0.9–1.3 万，依据 443 文件/488.6MB/427 篇盘点 + 20 篇实切抽样 + 375 个 PDF 文本层逐篇检查），ETA 从 **5.4 天** 修正为 **3–6.4 小时**（剩余 6,900 chunk，0.598–0.647 chunk/s，长块 73.7% 取上限）。
+- 文本层审计（16:50）：375 个 PDF → **有文本层 360 篇 / 2,587 页 / 222.9MB / 3,340 chunk**；**0 文本层 8 篇 / 1,220 页 / 217MB / 0 chunk**（real-01 838p、real-08 194p、real-21 57p、real-04 42p、real-05 40p、real-17 27p、real-14 20p、real-13 2p）；**7 篇失败**（5 加密：real-19 + FS-LDM 4 篇；2 损坏/加密：corpus-s13 的 corrupted.pdf / encrypted.pdf）。
+- 扫描件判定（8/8）：每页字符数 0；渲染墨迹比 0.035–0.999（非空白）；多数页 1 个 image 对象（real-04 每页 24 个），real-17 无 image 但墨迹 0.17 → 真扫描/无文本层，非解析失败。已写 `metadata.noTextLayer=true` + `noTextLayerPages`。
+- OCR 只评估未执行：环境无 Tesseract/PaddleOCR（无法实测，不编造）；公开基准 Tesseract 1–2s/页/核、PaddleOCR 3–6s/页/核 → 1,220 页 8 核约 3–15min；云端 ¥6–24。建议 OCR real-01/real-08，其余 6 篇标“不可检索”。
+- 缺口留痕：`.ppt` 15 + `.doc` 1 + 5 篇加密 PDF → `_impl/OPEN-QUESTIONS.md` **OQ-66**；扫描件 OCR 决策 → **OQ-67**。
+- 继续 ingest：bench-real 导入完成（19/21 新增、1 failed=real-19 加密、alreadyDone 3、embedded +677）；FS-LDM 25 篇导入已接续启动（日志 `logs/import-fsldm.log`）；corpus-s13 / clean 两目录待其后。

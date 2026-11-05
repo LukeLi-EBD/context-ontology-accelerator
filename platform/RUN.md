@@ -165,3 +165,66 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
 - 平台面 GSP（Graph Store Protocol）**只读返回 405、写入返回 403 `E_GSP_GOVERNANCE_REQUIRED`**；
   后端 Oxigraph 仅容器内网访问，调试需 `docker compose exec platform ...`。
 - 外部 embedding（如火山方舟）为实验性适配器，默认不装配；默认仅本机 BGE-M3。
+
+## 8. 迁移与固化（bundle）
+
+bundle 是跨环境迁移用的只读包（清单 + 数据文件 + 校验和）。**本体不入库**（`_freeze/v1-20261105` 约 79 MB，
+含 `vectors/embeddings.npz`）；仓库只保留清单副本 `platform/freeze-manifests/v1-20261105.json`。
+
+### 8.1 导出（只读，不写生产库）
+
+```powershell
+docker compose -f platform/docker-compose.yml exec -T platform `
+  python -m platform_core.cli export-bundle --config /data/platform.yaml `
+  --out /data/freeze --tag v1-20261105
+# 默认只导元数据；连 CAS 原文一起打包加 --include-blobs（体积显著增大）
+```
+
+产物落在宿主 `platform/data/freeze/v1-20261105/`（`data/` 已在 `.gitignore` 中）。
+
+### 8.2 目录结构
+
+```
+v1-20261105/
+  MANIFEST.json                # bundleVersion=1 / schemaVersion=17 / tag / totals / files[]
+  graph/tbox.ttl               # T-Box（owl:imports 已内联展开）
+  graph/abox.ttl               # A-Box（本 bundle 为空）
+  graph/shapes.ttl             # 已部署的 SHACL shapes
+  ledger/fact_events.jsonl     # 事实事件账本
+  ledger/verify.json           # 哈希链校验结果
+  meta/documents.jsonl         # 1122 条
+  meta/chunks.jsonl            # 13274 条
+  meta/ontology_import.jsonl   # 15 条
+  vectors/embeddings.npz       # 11905 × 1024（BGE-M3）
+  vectors/README
+  blobs/<aa>/<sha256>          # 仅 --include-blobs 时存在
+```
+
+### 8.3 导入（恢复到一次性测试库，绝不写 `platform`）
+
+```powershell
+docker compose -f platform/docker-compose.yml exec -T platform `
+  python -m platform_core.cli import-bundle --config /data/platform.yaml `
+  --bundle /data/freeze/v1-20261105 --database platform_restore_test --replace
+```
+
+- 目标库名等于生产库名会被拒（`E_BUNDLE_PROD_TARGET`）；库已存在需 `--replace`
+- 导入前先 `verify_bundle`：清单、每个文件的 sha256/大小/行数、NPZ 维度、账本哈希链
+- 失败保留现场加 `--keep-db-on-failure`；CLI 打印 `checks[]`，任一项 `ok=false` 退出码非 0
+
+### 8.4 五项核对表
+
+| 项 | 期望（本 bundle） |
+| --- | --- |
+| documents | 与 `totals.documents` 相等（1122） |
+| chunks | 与 `totals.chunks` 相等（13274） |
+| vectors | 行数 = `totals.embeddings`（11905），chunk_id 集合一致；抽 20 条余弦 ≥ 0.999 |
+| triples | T-Box + restore A-Box 合计 = `totals.triples`（2676） |
+| facts | `fact_event` = `totals.factEvents`（3280），`fact_assertion` = 0 |
+
+### 8.5 两条硬约束
+
+- **`schemaVersion` 必须与代码完全匹配**（`manifest.schemaVersion == SUPPORTED_SCHEMA_VERSION`，当前 17）；
+  不一致直接 `E_BUNDLE_SCHEMA_MISMATCH`，不做隐式升级/降级 —— 先把库迁到对应版本再导。
+- **blobs 不在 bundle 内**（`totals.blobs.included=false`）。要完整还原原文下载/预览，需单独同步
+  `data/blobs/`（CAS 目录）；只缺 blobs 时元数据仍可恢复，但 `/documents/{id}/source` 会 404。

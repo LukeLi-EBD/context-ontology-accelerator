@@ -52,6 +52,14 @@ class Tx:
     def execute_returning(self, sql: str, params: tuple | list = ()) -> list[dict[str, Any]]:
         return self._conn.execute(sql, params).fetchall()
 
+    def executemany(self, sql: str, params: list[tuple | list]) -> int:
+        """Bulk insert/update inside the caller's transaction."""
+        if not params:
+            return 0
+        with self._conn.cursor() as cursor:
+            cursor.executemany(sql, params)
+            return cursor.rowcount
+
 
 class MetadataPg:
     port = "MetadataStore"

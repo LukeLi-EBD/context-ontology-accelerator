@@ -322,6 +322,30 @@ def _build_parser() -> argparse.ArgumentParser:
     replay.add_argument("--dry-run", dest="dry_run", action="store_true")
     replay.add_argument("--keep-db", dest="keep_db", action="store_true")
 
+    bundle_export = sub.add_parser(
+        "export-bundle",
+        help="export a migration-friendly bundle to _freeze/<tag> (read-only)",
+    )
+    bundle_export.add_argument("--config", default="/data/platform.yaml")
+    bundle_export.add_argument("--out", required=True, help="bundle root, e.g. /freeze")
+    bundle_export.add_argument("--tag", required=True, help="bundle tag, e.g. v1-20261105")
+    bundle_export.add_argument(
+        "--include-blobs", dest="include_blobs", action="store_true",
+        help="copy referenced CAS blobs into bundle/blobs (default: metadata only)",
+    )
+
+    bundle_import = sub.add_parser(
+        "import-bundle",
+        help="restore a bundle into a throw-away test database",
+    )
+    bundle_import.add_argument("--config", default="/data/platform.yaml")
+    bundle_import.add_argument("--bundle", required=True)
+    bundle_import.add_argument("--database", default="platform_restore_test")
+    bundle_import.add_argument("--replace", action="store_true")
+    bundle_import.add_argument(
+        "--keep-db-on-failure", dest="keep_db_on_failure", action="store_true"
+    )
+
     smoke = sub.add_parser("smoke", help="run the S0 acceptance smoke suite")
     smoke.add_argument("--config", default="/data/platform.yaml")
     smoke.add_argument("--base-url", default="http://127.0.0.1:8080")
@@ -380,6 +404,34 @@ def main(argv: list[str] | None = None) -> int:
             keep_db=args.keep_db,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
+        return EXIT_OK if result.get("ok") else 1
+
+    if args.command == "export-bundle":
+        from .bundle import export_bundle
+
+        runtime = assemble(bundle)
+        try:
+            # Read-only: no migrate(), no advisory DDL on the production DB.
+            runtime.metadata.open(retry_seconds=10.0)
+            result = export_bundle(runtime, args.out, args.tag, args.include_blobs)
+        except (PortError, PlatformError) as exc:
+            return _report_error(exc)
+        finally:
+            runtime.close()
+        print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+        return EXIT_OK
+
+    if args.command == "import-bundle":
+        from .bundle import import_bundle
+
+        result = import_bundle(
+            bundle,
+            args.bundle,
+            database=args.database,
+            replace=args.replace,
+            keep_db_on_failure=args.keep_db_on_failure,
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
         return EXIT_OK if result.get("ok") else 1
 
     # Ontology/verification commands only need PG + graph + CAS; skip the 11MB
