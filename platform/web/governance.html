@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 治理控制台</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="governance">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+      <a href="governance.html" data-nav="governance">治理控制台</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>操作人 <span class="sub">所有写操作必填 actor，审计链会记录 actor 与理由</span></h2>
+      <div class="toolbar">
+        <label>actor <input id="actor" type="text" value="operator" style="width:150px"></label>
+        <span class="hint">清空 actor 再提交，可直接验证后端返回 E_GOVERNANCE_ACTOR_REQUIRED。</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>1. 提案 <span class="sub">创建 / 列表 / 详情（diff + impact）</span></h2>
+      <form id="proposal-form" class="toolbar">
+        <input id="proposal-version" type="text" placeholder="版本 ID（如 ont-xxxx）" required style="min-width:200px">
+        <input id="proposal-against" type="text" placeholder="对比版本（可空，默认当前指针）" style="min-width:220px">
+        <input id="proposal-summary" type="text" placeholder="变更说明（必填）" required style="min-width:260px">
+        <button class="primary" type="submit">创建提案</button>
+      </form>
+      <div class="toolbar">
+        <button id="proposal-refresh" type="button">刷新提案</button>
+      </div>
+      <div id="proposal-list" class="list empty">加载中…</div>
+      <div id="proposal-detail" class="empty" style="margin-top:10px">点击“详情”查看 diff 与 impact</div>
+    </section>
+
+    <section class="panel">
+      <h2>2. 审批 <span class="sub">approve / reject 必须带 actor 与理由</span></h2>
+      <div class="toolbar">
+        <button id="approval-refresh" type="button">刷新待审批</button>
+        <span class="hint">理由在弹窗中填写，空理由会被后端拒绝。</span>
+      </div>
+      <div id="approval-list" class="list empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>3. 发布 <span class="sub">dry-run gates → 二次确认 → 真发布</span></h2>
+      <div class="toolbar">
+        <label>版本 <select id="publish-version" style="min-width:250px"></select></label>
+        <label>提案 <select id="publish-proposal" style="min-width:220px"></select></label>
+        <label><input id="publish-ack" type="checkbox"> 确认 breaking</label>
+        <label><input id="publish-existing" type="checkbox"> publishExisting</label>
+        <button id="publish-dryrun" type="button">dry-run 看 gates</button>
+        <button id="publish-run" type="button" class="primary">发布</button>
+      </div>
+      <div id="publish-gates" class="empty" style="margin-top:10px">尚未 dry-run</div>
+      <div id="publish-result" class="empty" style="margin-top:10px"></div>
+    </section>
+
+    <section class="panel">
+      <h2>4. 回滚 <span class="sub">操作前显示将被替换的版本</span></h2>
+      <div class="toolbar">
+        <label>目标版本 <select id="rollback-version" style="min-width:250px"></select></label>
+        <input id="rollback-reason" type="text" placeholder="理由（可选）" style="min-width:200px">
+        <button id="rollback-plan" type="button">预览影响</button>
+        <button id="rollback-to" type="button" class="danger">回滚指针（rollback-to）</button>
+        <button id="rollback-new" type="button" class="danger">回滚并新建版本（rollback）</button>
+      </div>
+      <div id="rollback-plan-box" class="empty">尚未预览</div>
+      <div id="rollback-result" class="empty" style="margin-top:10px"></div>
+    </section>
+
+    <section class="panel">
+      <h2>5. 迁移 <span class="sub">export-bundle / import-bundle：只填路径与参数，不上传文件</span></h2>
+      <form id="export-form" class="toolbar">
+        <input id="export-out" type="text" placeholder="导出根目录（如 /data/freeze）" required style="min-width:240px">
+        <input id="export-tag" type="text" placeholder="tag（如 v1-20261106）" required style="min-width:180px">
+        <label><input id="export-blobs" type="checkbox"> include blobs</label>
+        <button class="primary" type="submit">export-bundle</button>
+      </form>
+      <form id="inspect-form" class="toolbar">
+        <input id="inspect-path" type="text" placeholder="bundle 目录（检查清单与计数）" required style="min-width:340px">
+        <button type="submit">检查 bundle</button>
+      </form>
+      <form id="import-form" class="toolbar">
+        <input id="import-path" type="text" placeholder="bundle 目录（导入到 throw-away 库）" required style="min-width:340px">
+        <input id="import-database" type="text" value="platform_restore_test" style="width:190px">
+        <label><input id="import-replace" type="checkbox"> replace</label>
+        <label><input id="import-keep" type="checkbox"> keepDbOnFailure</label>
+        <button type="submit" class="danger">import-bundle</button>
+      </form>
+      <div id="migration-result" class="empty" style="margin-top:10px">尚未操作</div>
+    </section>
+
+    <section class="panel">
+      <h2>6. 审计事件 <span class="sub">只读；published / rolled_back / superseded 分类展示</span></h2>
+      <div class="toolbar">
+        <input id="audit-version" type="text" placeholder="按版本过滤（可空）" style="min-width:240px">
+        <select id="audit-action">
+          <option value="">全部动作</option>
+          <option value="published">published</option>
+          <option value="rolled_back">rolled_back</option>
+          <option value="superseded">superseded</option>
+          <option value="proposed">proposed</option>
+          <option value="approved">approved</option>
+          <option value="rejected">rejected</option>
+        </select>
+        <button id="audit-load" type="button">加载事件</button>
+        <span id="audit-counts" class="sub"></span>
+      </div>
+      <div id="audit-list" class="list empty" style="margin-top:10px">尚未加载</div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="governance.js"></script>
+</body>
+</html>

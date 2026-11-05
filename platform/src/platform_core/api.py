@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +142,234 @@ def _metric_json(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
         )
     return payload
 
+
+# ---- governance console helpers ----------------------------------------
+
+ACTOR_REQUIRED = "E_GOVERNANCE_ACTOR_REQUIRED"
+REASON_REQUIRED = "E_GOVERNANCE_REASON_REQUIRED"
+
+
+def _governance_rejection(code: str, message: str, field: str | None = None) -> PortError:
+    return PortError(
+        code="InvalidArgument",
+        message=message,
+        provider="platform",
+        provider_code=code,
+        details={"field": field} if field else {},
+    )
+
+
+def _governance_field(body: dict[str, Any], field: str, code: str) -> str:
+    value = body.get(field) if isinstance(body, dict) else None
+    if not isinstance(value, str) or not value.strip():
+        raise _governance_rejection(code, f"{field} is required", field)
+    return value.strip()
+
+
+def _governance_actor(body: dict[str, Any]) -> str:
+    return _governance_field(body, "actor", ACTOR_REQUIRED)
+
+
+def _governance_reason(body: dict[str, Any]) -> str:
+    return _governance_field(body, "reason", REASON_REQUIRED)
+
+
+def _governance_impact(diff: dict[str, Any]) -> dict[str, Any]:
+    summary = diff.get("summary") or {}
+    return {
+        "addedTriples": summary.get("addedTriples", 0),
+        "removedTriples": summary.get("removedTriples", 0),
+        "addedClasses": len(summary.get("addedClasses") or []),
+        "removedClasses": len(summary.get("removedClasses") or []),
+        "addedProperties": len(summary.get("addedProperties") or []),
+        "removedProperties": len(summary.get("removedProperties") or []),
+        "domainChanges": len(summary.get("domainChanges") or []),
+        "rangeChanges": len(summary.get("rangeChanges") or []),
+        "removedClassInstances": sum(
+            int(item.get("instances") or 0)
+            for item in summary.get("removedClassInstances") or []
+        ),
+        "breakingItems": len(diff.get("breakingItems") or []),
+    }
+
+
+def _governance_publish_dry_run(
+    runtime: Runtime,
+    version_id: str,
+    proposal_id: str | None,
+    acknowledge_breaking: bool,
+    publish_existing: bool,
+) -> dict[str, Any]:
+    """Re-run publish's own gates without writing anything.
+
+    The gate helpers below are the exact ones ``publish`` calls; this function
+    only translates their typed errors into a per-gate report, so a dry-run
+    cannot diverge from the real publish or open a bypass path.
+    """
+    version = runtime.ontology.get(version_id)
+    current = runtime.ontology.current()
+    result: dict[str, Any] = {
+        "dryRun": True,
+        "versionId": version_id,
+        "versionStatus": version.get("status"),
+        "currentVersionId": (current or {}).get("versionId"),
+        "publishExisting": publish_existing,
+        "wouldPublish": False,
+        "unchanged": False,
+        "governed": False,
+        "implicit": False,
+        "breaking": False,
+        "acknowledgeBreaking": acknowledge_breaking,
+        "impact": {},
+        "gates": {},
+        "blockers": [],
+    }
+
+    def block(gate: str, code: str, message: str, details: Any = None) -> None:
+        result["blockers"].append(
+            {"gate": gate, "code": code, "message": message, "details": details or {}}
+        )
+
+    if (
+        not proposal_id
+        and version.get("status") == "published"
+        and current
+        and current.get("versionId") == version_id
+    ):
+        result.update(
+            {
+                "wouldPublish": True,
+                "unchanged": True,
+                "gates": {"pointer": {"ok": True, "current": version_id}},
+            }
+        )
+        return result
+
+    declared = int(version.get("tripleCount") or 0)
+    count = runtime.ontology.graph_count(version_id)
+    integrity_ok = count == declared
+    result["gates"]["integrity"] = {"ok": integrity_ok, "triples": count, "declared": declared}
+    if not integrity_ok:
+        block(
+            "integrity",
+            "E_ONTOLOGY_TRIPLE_MISMATCH",
+            "graph triple count differs from the version record",
+            {"graphTriples": count, "declared": declared},
+        )
+
+    proposal: dict[str, Any] | None = None
+    if proposal_id:
+        try:
+            proposal = runtime.ontology.get_proposal(proposal_id)
+        except PortError as exc:
+            block("proposal", exc.provider_code or exc.code, exc.message)
+    elif version.get("status") in ("proposed", "approved"):
+        items = runtime.ontology.list_proposals(version_id).get("items") or []
+        pending = [item for item in items if item.get("status") in ("proposed", "approved")]
+        proposal = pending[0] if pending else None
+
+    governed = proposal is not None
+    implicit = proposal is None and not proposal_id
+    result["governed"] = governed
+    result["implicit"] = implicit
+    diff: dict[str, Any] = {}
+    if governed:
+        if proposal.get("versionId") != version_id:
+            block(
+                "proposal",
+                "E_ONTOLOGY_PROPOSAL_VERSION_MISMATCH",
+                "proposal does not belong to the requested version",
+            )
+        if version.get("status") != "approved":
+            block(
+                "status",
+                "E_ONTOLOGY_NOT_APPROVED",
+                f"version is {version.get('status')}; an approved proposal is required",
+            )
+        if proposal.get("status") != "approved":
+            block(
+                "proposal",
+                "E_ONTOLOGY_PROPOSAL_NOT_APPROVED",
+                f"proposal is {proposal.get('status')}; approve it before publish",
+            )
+        diff = proposal.get("diff") or {}
+        breaking = bool(proposal.get("breaking"))
+        acknowledged = bool(
+            acknowledge_breaking or proposal.get("acknowledgedBreaking")
+        )
+        result["impact"] = proposal.get("impact") or _governance_impact(diff)
+    elif implicit:
+        if version.get("status") not in ("draft", "approved", "superseded"):
+            block(
+                "status",
+                "E_ONTOLOGY_STATUS",
+                f"version is {version.get('status')}; publish requires draft/approved/superseded",
+            )
+        try:
+            diff = runtime.ontology.diff((current or {}).get("versionId"), version_id)
+        except PortError as exc:
+            block("diff", exc.provider_code or exc.code, exc.message)
+        breaking = bool(diff.get("breaking"))
+        acknowledged = bool(acknowledge_breaking)
+        result["impact"] = _governance_impact(diff) if diff else {}
+    else:
+        breaking = False
+        acknowledged = False
+
+    result["breaking"] = breaking
+    result["gates"]["breaking"] = {
+        "ok": not breaking or acknowledged,
+        "breaking": breaking,
+        "acknowledged": acknowledged,
+    }
+    if breaking and not acknowledged:
+        block(
+            "breaking",
+            "E_ONTOLOGY_BREAKING",
+            "breaking changes require acknowledgeBreaking=true",
+            {"breakingItems": diff.get("breakingItems", [])},
+        )
+
+    graph_iri = str(version.get("graph") or "")
+    nt = b""
+    try:
+        nt = runtime.graph.export_graph(graph_iri)
+        result["gates"]["graph"] = {
+            "ok": True, "graph": graph_iri, "bytes": len(nt),
+        }
+    except PortError as exc:
+        result["gates"]["graph"] = {
+            "ok": False, "code": exc.provider_code or exc.code, "message": exc.message,
+        }
+        block("graph", exc.provider_code or exc.code, exc.message)
+
+    if nt:
+        try:
+            shacl = runtime.ontology._gate_shacl(nt, graph_iri)
+            result["gates"]["shacl"] = {"ok": True, "conforms": shacl.get("conforms", True)}
+        except PortError as exc:
+            result["gates"]["shacl"] = {
+                "ok": False, "code": exc.provider_code or exc.code,
+                "message": exc.message, "details": exc.details or {},
+            }
+            block("shacl", exc.provider_code or exc.code, exc.message, exc.details)
+        try:
+            consistency = runtime.ontology._gate_consistency(nt)
+            result["gates"]["consistency"] = {
+                "ok": True,
+                "consistent": consistency.get("consistent", True),
+                "profile": consistency.get("profile"),
+            }
+        except PortError as exc:
+            result["gates"]["consistency"] = {
+                "ok": False, "code": exc.provider_code or exc.code,
+                "message": exc.message, "details": exc.details or {},
+            }
+            block("consistency", exc.provider_code or exc.code, exc.message, exc.details)
+
+    result["wouldPublish"] = not result["blockers"]
+    result["changed"] = bool((current or {}).get("versionId") != version_id)
+    return result
 
 
 def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
@@ -1085,6 +1313,266 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.get("/ontology/verify")
     def ontology_verify() -> dict[str, Any]:
         return runtime.ontology.verify_events()
+
+    # ---- governance console: controlled write endpoints -------------------
+    # Every write reuses the ontology service method the CLI calls, so SHACL,
+    # consistency, breaking and approval gates are unchanged. New code here is
+    # limited to actor/reason validation and a read-only publish dry-run.
+
+    @app.post("/governance/proposals")
+    def governance_create_proposal(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        actor = _governance_actor(body)
+        version_id = _governance_field(body, "versionId", "E_ONTOLOGY_VERSION_REQUIRED")
+        summary = _governance_field(body, "changeSummary", "E_ONTOLOGY_SUMMARY_REQUIRED")
+        against = body.get("againstVersion")
+        if against is not None and not isinstance(against, str):
+            raise _governance_rejection(
+                "E_GOVERNANCE_BAD_FIELD", "againstVersion must be a string", "againstVersion"
+            )
+        result = runtime.ontology.propose(
+            version_id, summary, actor=actor, against_version=against or None
+        )
+        return {**result, "current": runtime.ontology.current()}
+
+    @app.get("/governance/proposals")
+    def governance_list_proposals(
+        versionId: str | None = Query(default=None),
+        status: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        data = runtime.ontology.list_proposals(versionId)
+        statuses = {item["id"]: item["status"] for item in runtime.ontology.list_versions()}
+        items = [
+            {**item, "versionStatus": statuses.get(item["versionId"])}
+            for item in data["items"]
+            if status is None or item.get("status") == status
+        ]
+        return {
+            "items": items[:limit],
+            "count": len(items),
+            "returned": len(items[:limit]),
+            "current": runtime.ontology.current(),
+        }
+
+    @app.get("/governance/proposals/{proposal_id}")
+    def governance_get_proposal(proposal_id: str) -> dict[str, Any]:
+        proposal = runtime.ontology.get_proposal(proposal_id)
+        version = runtime.ontology.get(proposal["versionId"])
+        return {
+            "proposal": proposal,
+            "version": version,
+            "versionStatus": version["status"],
+            "current": runtime.ontology.current(),
+            "diff": proposal.get("diff") or {},
+            "impact": proposal.get("impact") or {},
+        }
+
+    @app.post("/governance/proposals/{proposal_id}/approve")
+    def governance_approve_proposal(
+        proposal_id: str, body: dict[str, Any] = Body(...)
+    ) -> dict[str, Any]:
+        actor = _governance_actor(body)
+        reason = _governance_reason(body)
+        return runtime.ontology.approve(proposal_id, actor=actor, reason=reason)
+
+    @app.post("/governance/proposals/{proposal_id}/reject")
+    def governance_reject_proposal(
+        proposal_id: str, body: dict[str, Any] = Body(...)
+    ) -> dict[str, Any]:
+        actor = _governance_actor(body)
+        reason = _governance_reason(body)
+        proposal = runtime.ontology.get_proposal(proposal_id)
+        status = proposal.get("status")
+        if status == "published":
+            raise PortError(
+                code="Conflict",
+                message=f"proposal {proposal_id} is already published",
+                provider="platform",
+                provider_code="E_ONTOLOGY_PROPOSAL_STATUS",
+                details={"status": status},
+            )
+        if status != "proposed":
+            raise PortError(
+                code="Conflict",
+                message=f"proposal {proposal_id} is {status}, not proposed",
+                provider="platform",
+                provider_code="E_ONTOLOGY_PROPOSAL_STATUS",
+                details={"status": status},
+            )
+        version_id = proposal["versionId"]
+        # Proposal.status admits only proposed/approved/published (V10), so a
+        # rejection is recorded on the version (status='rejected') plus one
+        # audit event. Re-approving the same proposal is the explicit recovery.
+        with runtime.metadata.tx() as tx:
+            tx.execute(
+                "UPDATE platform.ontology_version SET status = 'rejected' "
+                "WHERE version_id = %s AND status IN ('draft', 'proposed')",
+                (version_id,),
+            )
+            runtime.ontology._append_event(
+                tx, version_id, proposal_id, "rejected", actor, reason,
+                {
+                    "changeSummary": proposal.get("changeSummary"),
+                    "previousStatus": status,
+                },
+            )
+        return {
+            "proposalId": proposal_id,
+            "versionId": version_id,
+            "status": "rejected",
+            "versionStatus": "rejected",
+            "rejectedBy": actor,
+            "rejectedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.post("/governance/publish")
+    def governance_publish(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        actor = _governance_actor(body)
+        version_id = _governance_field(body, "versionId", "E_ONTOLOGY_VERSION_REQUIRED")
+        proposal_id = body.get("proposalId") or None
+        if proposal_id is not None and not isinstance(proposal_id, str):
+            raise _governance_rejection(
+                "E_GOVERNANCE_BAD_FIELD", "proposalId must be a string", "proposalId"
+            )
+        acknowledge = bool(body.get("acknowledgeBreaking", False))
+        publish_existing = bool(body.get("publishExisting", False))
+        if bool(body.get("dryRun", False)):
+            return _governance_publish_dry_run(
+                runtime, version_id, proposal_id, acknowledge, publish_existing
+            )
+        result = runtime.ontology.publish(
+            version_id,
+            proposal_id=proposal_id,
+            acknowledge_breaking=acknowledge,
+            actor=actor,
+            reason=body.get("reason"),
+            activate_existing=publish_existing,
+        )
+        return {"ok": True, **result}
+
+    @app.get("/governance/rollback/plan")
+    def governance_rollback_plan(versionId: str = Query(...)) -> dict[str, Any]:
+        target = runtime.ontology.get(versionId)
+        current = runtime.ontology.current()
+        current_id = (current or {}).get("versionId")
+        return {
+            "target": target,
+            "replacedVersion": current,
+            "targetTriples": runtime.ontology.graph_count(versionId),
+            "wouldChangePointer": bool(current_id and current_id != versionId),
+        }
+
+    @app.post("/governance/rollback-to")
+    def governance_rollback_to(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        actor = _governance_actor(body)
+        version_id = _governance_field(body, "versionId", "E_ONTOLOGY_VERSION_REQUIRED")
+        before = runtime.ontology.current()
+        result = runtime.ontology.rollback_to(
+            version_id, actor=actor, reason=body.get("reason")
+        )
+        return {
+            "ok": True,
+            "replacedVersionId": (before or {}).get("versionId"),
+            "targetTriples": result.get("triples"),
+            "publishedBy": actor,
+            **result,
+        }
+
+    @app.post("/governance/rollback")
+    def governance_rollback(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        actor = _governance_actor(body)
+        version_id = _governance_field(body, "versionId", "E_ONTOLOGY_VERSION_REQUIRED")
+        before = runtime.ontology.current()
+        result = runtime.ontology.rollback(version_id)
+        # Legacy rollback creates a new version and does not append audit
+        # events; record the reason here so the console's audit view is complete.
+        with runtime.metadata.tx() as tx:
+            runtime.ontology._append_event(
+                tx, result["id"], None, "rolled_back", actor, body.get("reason"),
+                {
+                    "mode": "new_version",
+                    "rollbackOf": version_id,
+                    "previous": (before or {}).get("versionId"),
+                    "publishedBy": actor,
+                },
+            )
+        return {
+            "ok": True,
+            "replacedVersionId": (before or {}).get("versionId"),
+            "publishedBy": actor,
+            **result,
+        }
+
+    @app.post("/governance/bundle/export")
+    def governance_bundle_export(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        from .bundle import export_bundle
+
+        actor = _governance_actor(body)
+        out = _governance_field(body, "out", "E_BUNDLE_OUT_REQUIRED")
+        tag = _governance_field(body, "tag", "E_BUNDLE_TAG_REQUIRED")
+        result = export_bundle(runtime, out, tag, bool(body.get("includeBlobs", False)))
+        return {"ok": True, "actor": actor, **result}
+
+    @app.get("/governance/bundle/inspect")
+    def governance_bundle_inspect(path: str = Query(...)) -> dict[str, Any]:
+        from .bundle import verify_bundle
+
+        manifest = verify_bundle(path)
+        return {
+            "ok": True,
+            "path": path,
+            "tag": manifest.get("tag"),
+            "totals": manifest.get("totals") or {},
+            "tbox": (manifest.get("source") or {}).get("tbox") or {},
+            "files": len(manifest.get("files") or []),
+        }
+
+    @app.post("/governance/bundle/import")
+    def governance_bundle_import(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        from .bundle import import_bundle
+
+        actor = _governance_actor(body)
+        path = _governance_field(body, "bundle", "E_BUNDLE_PATH_REQUIRED")
+        database = body.get("database") or "platform_restore_test"
+        if not isinstance(database, str) or not database.strip():
+            raise _governance_rejection(
+                "E_GOVERNANCE_BAD_FIELD", "database must be a non-empty string", "database"
+            )
+        result = import_bundle(
+            runtime.bundle,
+            path,
+            database=database.strip(),
+            replace=bool(body.get("replace", False)),
+            keep_db_on_failure=bool(body.get("keepDbOnFailure", False)),
+        )
+        return {"actor": actor, **result}
+
+    @app.get("/governance/events")
+    def governance_events(
+        versionId: str | None = Query(default=None),
+        action: str | None = Query(default=None),
+        limit: int = Query(default=200, ge=1, le=1000),
+    ) -> dict[str, Any]:
+        data = runtime.ontology.events(versionId, limit=limit)
+        categories = {"published": 0, "rolled_back": 0, "superseded": 0, "other": 0}
+        items = []
+        for item in data["items"]:
+            category = (
+                item["action"]
+                if item["action"] in ("published", "rolled_back", "superseded")
+                else "other"
+            )
+            if action is not None and item["action"] != action:
+                continue
+            items.append({**item, "category": category})
+            categories[category] += 1
+        return {
+            "items": items,
+            "count": len(items),
+            "categories": categories,
+            "filter": {"versionId": versionId, "action": action},
+            "current": runtime.ontology.current(),
+        }
 
     # ---- G-01: versioned TTL import --------------------------------------
 
