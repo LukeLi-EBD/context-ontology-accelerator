@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from platform_core import bundle
+from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
 from platform_core.errors import PortError
 
 
@@ -51,7 +52,7 @@ def _write_bundle(root: Path, *, dim: int = 1024, rows: int = 1) -> dict:
     ]
     manifest = {
         "bundleVersion": 1,
-        "schemaVersion": 17,
+        "schemaVersion": SUPPORTED_SCHEMA_VERSION,
         "tag": "v1-test",
         "generatedAt": "2026-11-05T00:00:00+08:00",
         "source": {

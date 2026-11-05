@@ -1,0 +1,3 @@
+policy_no,product,installment_no,due_date,due_amount,payment_status,policy_status,status_as_of
+H04-B1,H04-LIFE-A,13,2024-07-15,1000,paid,in_force,2024-07-15
+H04-B2,H04-LIFE-A,13,2024-08-15,1000,paid,unknown,2024-08-15

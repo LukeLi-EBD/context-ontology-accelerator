@@ -392,12 +392,19 @@ def _build_parser() -> argparse.ArgumentParser:
         "--keep-db-on-failure", dest="keep_db_on_failure", action="store_true"
     )
 
-    metrics = sub.add_parser("metrics", help="metric facts: load external observations")
-    metrics.add_argument("action", choices=["load"])
+    metrics = sub.add_parser(
+        "metrics",
+        help="metric facts: load observations, load entity facts, project them",
+    )
+    metrics.add_argument("action", choices=["load", "facts-load", "project"])
     metrics.add_argument("--config", default="/data/platform.yaml")
-    metrics.add_argument("--file", required=True, help="source facts (.csv or .parquet)")
-    metrics.add_argument("--metric", required=True, help="target metric id")
-    metrics.add_argument("--mapping", required=True, help="column mapping YAML")
+    metrics.add_argument("--file", help="source facts (.csv or .parquet)")
+    metrics.add_argument("--kind", choices=["insurance_payment", "loan_installment"],
+                         help="entity fact kind for facts-load")
+    metrics.add_argument("--metric", help="target metric id")
+    metrics.add_argument("--mapping", help="column mapping YAML for load")
+    metrics.add_argument("--window-start", help="observation window start (YYYY-MM-DD)")
+    metrics.add_argument("--window-end", help="observation window end (YYYY-MM-DD)")
     metrics.add_argument(
         "--apply", action="store_true",
         help="write the batch (default is dry-run validation only)",
@@ -652,16 +659,57 @@ def main(argv: list[str] | None = None) -> int:
 
                 return run_bench_embed(runtime, args.short, args.long)
             if args.command == "metrics":
+                from datetime import date
+
+                from .metric_facts import FactLoader, MetricProjector
                 from .metric_loader import MetricLoader
 
-                result = MetricLoader(runtime.metadata).load(
-                    file=args.file,
-                    metric_id=args.metric,
-                    mapping_path=args.mapping,
-                    apply=args.apply,
-                    data_source=args.data_source,
-                    fixture=args.fixture == "true",
-                )
+                if args.action == "load":
+                    if not (args.file and args.metric and args.mapping):
+                        print(
+                            "metrics load requires --file, --metric and --mapping",
+                            file=sys.stderr,
+                        )
+                        return EXIT_USAGE
+                    result = MetricLoader(runtime.metadata).load(
+                        file=args.file,
+                        metric_id=args.metric,
+                        mapping_path=args.mapping,
+                        apply=args.apply,
+                        data_source=args.data_source,
+                        fixture=args.fixture == "true",
+                    )
+                elif args.action == "facts-load":
+                    if not (args.file and args.kind):
+                        print("metrics facts-load requires --file and --kind", file=sys.stderr)
+                        return EXIT_USAGE
+                    result = FactLoader(runtime.metadata).load(
+                        kind=args.kind,
+                        file=args.file,
+                        apply=args.apply,
+                        data_source=args.data_source,
+                        fixture=args.fixture == "true",
+                    )
+                else:
+                    if not (args.metric and args.window_start and args.window_end):
+                        print(
+                            "metrics project requires --metric, --window-start and --window-end",
+                            file=sys.stderr,
+                        )
+                        return EXIT_USAGE
+                    try:
+                        start = date.fromisoformat(args.window_start)
+                        end = date.fromisoformat(args.window_end)
+                    except ValueError as exc:
+                        print(f"invalid window date: {exc}", file=sys.stderr)
+                        return EXIT_USAGE
+                    result = MetricProjector(runtime.metadata).project(
+                        metric_id=args.metric,
+                        window_start=start,
+                        window_end=end,
+                        data_source=args.data_source,
+                        apply=args.apply,
+                    )
                 print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return EXIT_OK if result.get("ok") else 1
             if args.command == "facts-export":
