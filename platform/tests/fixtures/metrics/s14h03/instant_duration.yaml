@@ -1,0 +1,7 @@
+columns:
+  entity_key: entity_key
+  numerator: numerator
+  window_start: window_start
+  window_end: window_end
+  institution: institution
+  product: product

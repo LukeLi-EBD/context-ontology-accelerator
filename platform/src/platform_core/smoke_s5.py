@@ -371,7 +371,10 @@ def run_smoke_s5(runtime: Runtime, base_url: str, bad_config: str) -> int:
     finally:
         if bad_client is not None:
             bad_client.close()
-        runtime.graph.update(f"DROP GRAPH <{abox}>")
+        # SILENT: a clean abort may leave the abox uncreated; a plain DROP would
+        # raise Oxigraph HTTP 500 ("The graph ... does not exist") and mask the
+        # real reason (e.g. E_REASONER_UNAVAILABLE on a reasoner-less stack).
+        runtime.graph.update(f"DROP SILENT GRAPH <{abox}>")
         runtime.facts.purge_test(abox)
 
     total = len(suite.results)
