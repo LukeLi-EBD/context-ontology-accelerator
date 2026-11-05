@@ -9,6 +9,7 @@ chain verification and in-memory reconstruction.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -174,18 +175,22 @@ def _insert_replay(meta: MetadataPg, records: list[dict[str, Any]],
                    facts: dict[str, dict[str, Any]]) -> None:
     with meta.tx() as tx:
         for record in records:
+            created_at = record.get("createdAt")
+            if created_at:
+                created_at = datetime.fromisoformat(str(created_at))
             tx.execute(
                 """
                 INSERT INTO platform.fact_event
                   (event_id, fact_id, action, actor, reason, batch_id, payload,
-                   prev_event, hash)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   prev_event, hash, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s,
+                        COALESCE(%s::timestamptz, now()))
                 """,
                 (
                     int(record["eventId"]), record["factId"], record["action"],
                     record.get("actor"), record.get("reason"), record.get("batchId"),
                     Jsonb(record.get("payload") or {}), record.get("prevEvent"),
-                    record.get("hash"),
+                    record.get("hash"), created_at,
                 ),
             )
         for fact_id, fact in facts.items():
