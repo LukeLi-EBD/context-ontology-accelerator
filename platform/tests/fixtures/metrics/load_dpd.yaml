@@ -1,0 +1,6 @@
+metric_id: FIN-BANK-001
+columns:
+  entity_key: agreement_id
+  numerator: dpd_days
+  window_start: as_of
+  window_end: as_of

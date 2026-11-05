@@ -1,0 +1,8 @@
+metric_id: FIN-BANK-025
+columns:
+  entity_key: customer_id
+  numerator: numerator
+  denominator: denominator
+  window_start: as_of
+  window_end: as_of
+  institution: institution
