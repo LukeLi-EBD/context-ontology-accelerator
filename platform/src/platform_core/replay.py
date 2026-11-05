@@ -212,6 +212,18 @@ def _insert_replay(meta: MetadataPg, records: list[dict[str, Any]],
                     Jsonb(merged_from) if merged_from else None,
                 ),
             )
+        # A restore inserts explicit event ids, which leaves the bigserial
+        # sequence at 1. Without this, the first fact written after a restore
+        # collides with the imported ledger (duplicate key on fact_event_pkey).
+        tx.execute(
+            """
+            SELECT setval(
+                pg_get_serial_sequence('platform.fact_event', 'event_id'),
+                COALESCE((SELECT MAX(event_id) FROM platform.fact_event), 0),
+                true
+            )
+            """
+        )
 
 
 def replay_file(
