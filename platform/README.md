@@ -8,14 +8,14 @@
 ### 前置条件
 
 - Windows + Docker Desktop（含 Compose v2），默认 5 个端口空闲：`8080 5432 7878 8081 7879`。
-- 本地已有 BGE-M3 权重：`_impl/data/models/bge-m3/`（12 个文件，约 2.3 GB，必须有 `pytorch_model.bin`）。
+- 本地已有 BGE-M3 权重：`D:\agentABC\data\models\bge-m3\`（12 个文件，约 2.3 GB，必须有 `pytorch_model.bin`）。
   首次拿不到可先跳过 embedding，系统会以词法检索降级运行（`degraded=true`）。
 - 内存建议 ≥ 8 GB（TEI 加载模型约 2 GB）。
 
 ### 步骤
 
 ```powershell
-cd D:\agentABC\_impl
+cd D:\agentABC\coa\platform
 powershell -ExecutionPolicy Bypass -File .\scripts\up.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\seed.ps1
 ```
@@ -129,18 +129,18 @@ docker compose exec -T platform python -c "import urllib.request as u; r=u.Reque
 
 | 路径 | 内容 |
 |---|---|
-| `_impl/data/platform.yaml` | 运行配置（容器内 `/data/platform.yaml`） |
-| `_impl/data/models/bge-m3/` | BGE-M3 权重（只读挂载到 TEI） |
-| `_impl/data/ontology/bootstrap.ttl` | 启动引导本体（`init_semver=0.0.0`；用户发布更高 semver 后不会被覆盖） |
-| `_impl/data/documents/` | 大对象 CAS（`storage.large_object_provider=fs`） |
-| `_impl/data/shapes/` | SHACL 形状（`reasoning.shapes_dir`） |
-| `_impl/data/backups/` | 备份落点 |
-| `_impl/examples/` | 示例本体与文档（镜像内 `/app/examples`） |
-| `_impl/web/` | 静态前端（镜像内 `/app/web`） |
+| `D:\agentABC\data\platform.yaml` | 运行配置（容器内 `/data/platform.yaml`） |
+| `D:\agentABC\data\models\bge-m3\` | BGE-M3 权重（只读挂载到 TEI） |
+| `D:\agentABC\data\ontology\bootstrap.ttl` | 启动引导本体（`init_semver=0.0.0`；用户发布更高 semver 后不会被覆盖） |
+| `D:\agentABC\data\documents\` | 大对象 CAS（`storage.large_object_provider=fs`） |
+| `D:\agentABC\data\shapes\` | SHACL 形状（`reasoning.shapes_dir`） |
+| `D:\agentABC\data\backups\` | 备份落点 |
+| `examples\` | 示例本体与文档（镜像内 `/app/examples`） |
+| `web\` | 静态前端（镜像内 `/app/web`） |
 
 ## 4. 怎么换实现
 
-所有配置都在 `_impl/data/platform.yaml`，也可用环境变量覆盖：
+所有配置都在 `D:\agentABC\data\platform.yaml`，也可用环境变量覆盖：
 `PLATFORM__<SECTION>__<KEY>`（**双下划线**分隔），如 `PLATFORM__SEARCH__ENABLED=false`。
 改完配置后必须重建 platform 容器：`docker compose up -d --force-recreate platform`（配置只在启动时读取）。
 
@@ -154,7 +154,7 @@ docker compose exec -T platform python -c "import urllib.request as u; r=u.Reque
 | 火山方舟 | `llm.base_url: https://ark.cn-beijing.volces.com/api/v3`；`llm.model: <接入点ID>` |
 | Ollama（本机） | `llm.base_url: http://host.docker.internal:11434/v1`；`llm.model: qwen2.5:7b`；key 可留空 |
 
-密钥放在 `_impl/.env`（Compose 会注入 platform 容器），键名与 `llm.api_key_env` 一致。改后重启 platform。
+密钥放在 `coa/platform/.env`（Compose 会注入 platform 容器），键名与 `llm.api_key_env` 一致。改后重启 platform。
 Ollama 在 Linux 上需把 `host.docker.internal` 换成宿主 IP 或加 `extra_hosts`。
 
 ### 4.2 Embedding

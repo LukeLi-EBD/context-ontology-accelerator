@@ -4,6 +4,9 @@
 param([switch]$OnlyPreflight)
 $ErrorActionPreference = "Continue"
 Set-Location (Split-Path -Parent $PSScriptRoot)
+# Runtime data lives outside the repo (compose binds D:/agentABC/data -> /data);
+# host-side assertions on exported files must use the bind source, not ./data.
+$dataRoot = if ($env:PLATFORM_DATA_DIR) { $env:PLATFORM_DATA_DIR } else { 'D:\agentABC\data' }
 
 $script:passed = 0
 $script:failed = 0
@@ -216,7 +219,7 @@ $exportRaw = docker compose exec -T platform platform facts-export --out /data/t
 $exportCode = $LASTEXITCODE
 $exportMatch = [regex]::Match($exportRaw, '"count":\s*(\d+)')
 $exportCount = if ($exportMatch.Success) { [int]$exportMatch.Groups[1].Value } else { -1 }
-$exportFile = "data/tmp/s9-export/events.ndjson"
+$exportFile = Join-Path $dataRoot 'tmp\s9-export\events.ndjson'
 $exportLines = if (Test-Path $exportFile) { @(Get-Content $exportFile | Where-Object { $_.Trim() }).Count } else { -1 }
 Report "facts-export count" ($exportCode -eq 0 -and $exportCount -ge 0 -and $exportLines -eq $exportCount) "exit=$exportCode count=$exportCount lines=$exportLines"
 

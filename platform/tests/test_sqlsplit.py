@@ -1,6 +1,6 @@
 """Unit tests for the migration-statement splitter (no database required).
 
-Run from ``_impl``: ``python -m unittest discover -s tests -p "test_*.py"``
+Run from ``coa/platform``: ``python -m unittest discover -s tests -p "test_*.py"``
 with ``PYTHONPATH=src``.
 """
 

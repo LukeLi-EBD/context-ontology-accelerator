@@ -1,7 +1,15 @@
-# 运行手册（platform）
+﻿# 运行手册（platform）
 
-面向"另一台机器 clone 后能跑起来"。所有命令以仓库根为工作目录，compose 文件为
-`platform/docker-compose.yml`；也可 `cd platform` 后省略 `-f`。
+面向"另一台机器 clone 后能跑起来"。`platform/` 是独立项目：所有命令都在
+**`coa/platform`** 目录下执行，无需 `-f` 指定 compose 文件。
+
+三行起（已装 Docker Desktop，且 `D:\agentABC\data` 已就位）：
+
+```powershell
+git clone <repo> coa && cd coa\platform
+Copy-Item .env.example .env        # 填 POSTGRES_PASSWORD、ARK_API_KEY
+docker compose up -d --wait        # 首次构建 reasoner 需联网下载 robot.jar（见 §2）
+```
 
 ## 1. 前置条件
 
@@ -12,19 +20,22 @@
   - `7878` Oxigraph **不映射宿主**（无鉴权，暴露即可绕过 GSP 治理）
 - 模型与镜像：`agent-platform:0.1-s5`、`agent-reasoner:0.1-s5`、`agent-rdfs:0.1-s5`、pgvector、oxigraph、TEI 均由本地构建或拉取。
 
-## 2. 目录准备
+## 2. 目录准备（数据不在 git 里）
+
+运行时数据统一放在 **`D:\agentABC\data`**（compose 以绝对路径 bind 到容器 `/data`），
+仓库里只有占位 `platform/data/README.md`。首次在新机器部署：
 
 ```powershell
-cd platform
-Copy-Item .env.example .env                # 填 POSTGRES_PASSWORD、ARK_API_KEY
-Copy-Item platform.example.yaml data\platform.yaml   # 填 database.url 中的口令（须与 .env 一致）
-New-Item -ItemType Directory -Force data\blobs, data\tmp, data\shapes | Out-Null
+Copy-Item .env.example .env                            # 放 coa/platform/.env（gitignored）
+New-Item -ItemType Directory -Force D:\agentABC\data
+Copy-Item platform.example.yaml D:\agentABC\data\platform.yaml   # 填 database.url 口令（与 .env 一致）
+New-Item -ItemType Directory -Force D:\agentABC\data\blobs,D:\agentABC\data\tmp,D:\agentABC\data\shapes | Out-Null
 ```
 
-- `data/models/bge-m3/`：BGE-M3 模型约 **2.14 GB**（含 `pytorch_model.bin` 2.17 GB），目录固定，只读挂载给 TEI。
-  离线拷贝：`robocopy <源>\models data\models /E`。不放入时 embedding 容器无法启动，检索退化为仅词法（响应标注 `lexicalOnly`）。
+- `D:\agentABC\data\models\bge-m3\`：BGE-M3 模型约 **2.14 GB**（含 `pytorch_model.bin` 2.17 GB），目录固定，只读挂载给 TEI。
+  离线拷贝：`robocopy <源>\models D:\agentABC\data\models /E`。不放入时 embedding 容器无法启动，检索退化为仅词法（响应标注 `lexicalOnly`）。
 - `reasoner/robot.jar`（93 MB）**不需要手工放置**：`reasoner` 镜像构建时自动下载并校验，见下节。
-- `data/` 全部内容被 `.gitignore` 忽略，只保留 `data/README.md`。
+- `D:\agentABC\data\` 全部内容不进 git；`coa/.gitignore` 已排除 `platform/data/`、`platform/logs/`、`platform/models/`、`platform/.env`。
 
 ### robot.jar（reasoner，构建时自动下载）
 
@@ -35,14 +46,14 @@ New-Item -ItemType Directory -Force data\blobs, data\tmp, data\shapes | Out-Null
 联网构建（标准）：
 
 ```powershell
-docker compose -f platform/docker-compose.yml build reasoner
+docker compose build reasoner
 # 等价：docker build -t agent-reasoner:0.1-s5 -f platform/reasoner/Dockerfile platform/reasoner
 ```
 
 换版本或换源（两个 build-arg）：
 
 ```powershell
-docker compose -f platform/docker-compose.yml build reasoner `
+docker compose build reasoner `
   --build-arg ROBOT_JAR_URL=https://github.com/ontodev/robot/releases/download/v1.9.6/robot.jar `
   --build-arg ROBOT_JAR_SHA256=3d112f47a5c2e82fd96c2bc40e582a86d1e6ad24f67648ef103ec5f21985ba5e
 # 内网镜像若提供的是不同的构建，传 ROBOT_JAR_SHA256= 可关闭校验（不建议）
@@ -60,8 +71,8 @@ docker compose -f platform/docker-compose.yml build reasoner `
    运行时把本机 jar 挂到 `/opt/robot/robot.jar`：
 
 ```powershell
-docker compose -f platform/docker-compose.yml build reasoner --build-arg ROBOT_JAR_URL=
-docker run --rm -v D:\agentABC\_impl\reasoner\robot.jar:/opt/robot/robot.jar:ro `
+docker compose build reasoner --build-arg ROBOT_JAR_URL=
+docker run --rm -v D:\agentABC\coa\platform\reasoner\robot.jar:/opt/robot/robot.jar:ro `
   agent-reasoner:0.1-s5 java -jar /opt/robot/robot.jar --version
 ```
 
@@ -95,9 +106,9 @@ docker run --rm agent-reasoner:0.1-s5 java -jar /opt/robot/robot.jar --version
 ## 3. 启动顺序
 
 ```powershell
-docker compose -f platform/docker-compose.yml build      # 首次构建；reasoner 会联网下载 robot.jar（见上节）
-docker compose -f platform/docker-compose.yml up -d
-docker compose -f platform/docker-compose.yml ps
+docker compose build      # 首次构建；reasoner 会联网下载 robot.jar（见上节）
+docker compose up -d
+docker compose ps
 ```
 
 迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V17__import_batch_stale.sql`，
@@ -124,7 +135,7 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
 | --- | --- |
 | `docker compose exec -T platform platform smoke-s1` | 逐项 `[PASS]`，退出码 0 |
 | `docker compose exec -T platform platform smoke-embed` | 8/8 `[PASS]`（含 `E_EMBED_MODEL_MISMATCH` 守卫断言） |
-| `powershell -File platform/tests/acceptance.ps1` | 逐项输出 `[PASS] name detail` / `[FAIL] name detail`，末尾统计；**退出码 0 = 全部通过**，非 0 = 有失败项 |
+| `powershell -File tests/acceptance.ps1` | 逐项输出 `[PASS] name detail` / `[FAIL] name detail`，末尾统计；**退出码 0 = 全部通过**，非 0 = 有失败项 |
 
 `acceptance.ps1` 覆盖 `docker compose config`、各 smoke-sN、演示库纯净性等；单项失败不中断，最后汇总。
 所有 smoke 写入独立命名图并在结束时清理，不污染演示库。
@@ -186,13 +197,13 @@ bundle 是跨环境迁移用的只读包（清单 + 数据文件 + 校验和）�
 ### 8.1 导出（只读，不写生产库）
 
 ```powershell
-docker compose -f platform/docker-compose.yml exec -T platform `
+docker compose exec -T platform `
   python -m platform_core.cli export-bundle --config /data/platform.yaml `
   --out /data/freeze --tag v1-20261105
 # 默认只导元数据；连 CAS 原文一起打包加 --include-blobs（体积显著增大）
 ```
 
-产物落在宿主 `platform/data/freeze/v1-20261105/`（`data/` 已在 `.gitignore` 中）。
+产物落在宿主 `D:\agentABC\data\freeze/v1-20261105/`（`data/` 已在 `.gitignore` 中）。
 
 ### 8.2 目录结构
 
@@ -215,7 +226,7 @@ v1-20261105/
 ### 8.3 导入（恢复到一次性测试库，绝不写 `platform`）
 
 ```powershell
-docker compose -f platform/docker-compose.yml exec -T platform `
+docker compose exec -T platform `
   python -m platform_core.cli import-bundle --config /data/platform.yaml `
   --bundle /data/freeze/v1-20261105 --database platform_restore_test --replace
 ```

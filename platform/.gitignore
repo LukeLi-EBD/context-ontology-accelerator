@@ -16,4 +16,5 @@ __pycache__/
 .pytest_cache/
 
 # --- oversized model binaries (place locally, not in git) ---
+models/
 reasoner/robot.jar

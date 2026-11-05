@@ -1,0 +1,48 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix coastal: <https://example.org/coastal#> .
+@prefix rel:  <urn:platform:rel:> .
+
+coastal: a owl:Ontology ;
+    rdfs:label "海岸带监测示例本体" .
+
+coastal:Facility a owl:Class ;
+    rdfs:label "设施" .
+
+coastal:MonitoringSite a owl:Class ;
+    rdfs:label "监测点" ;
+    rdfs:subClassOf coastal:Facility .
+
+coastal:Office a owl:Class ;
+    rdfs:label "办公点" ;
+    rdfs:subClassOf coastal:Facility .
+
+coastal:Region a owl:Class ;
+    rdfs:label "行政区" .
+
+coastal:Pollutant a owl:Class ;
+    rdfs:label "污染物" .
+
+coastal:WaterBody a owl:Class ;
+    rdfs:label "水体" .
+
+rel:locatedIn a owl:ObjectProperty ;
+    rdfs:label "位于" ;
+    rdfs:domain coastal:MonitoringSite ;
+    rdfs:range coastal:Region .
+
+rel:capitalOf a owl:ObjectProperty ;
+    rdfs:label "是首都" ;
+    rdfs:domain coastal:Region ;
+    rdfs:range coastal:Region .
+
+coastal:name a owl:DatatypeProperty ;
+    rdfs:label "名称" ;
+    rdfs:range xsd:string .
+
+coastal:monitors a owl:ObjectProperty ;
+    rdfs:label "监测" ;
+    rdfs:domain coastal:MonitoringSite ;
+    rdfs:range coastal:Pollutant .

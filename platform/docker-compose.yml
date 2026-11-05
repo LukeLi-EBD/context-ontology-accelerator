@@ -83,7 +83,9 @@ services:
       - "2048"
       - "--auto-truncate"
     volumes:
-      - ./data/models:/data/models:ro
+      # Integration: runtime data (incl. embedding models) lives outside git at
+      # D:/agentABC/data and is bind-mounted at the container's /data.
+      - D:/agentABC/data/models:/data/models:ro
     ports:
       - "127.0.0.1:${EMBEDDING_PORT:-8081}:80"
     environment:
@@ -147,7 +149,7 @@ services:
     container_name: agent-platform-rdfs
     profiles: ["job"]
     volumes:
-      - ./data:/data
+      - D:/agentABC/data:/data
     command: ["/data/jobs/rdfs/in.ttl", "/data/jobs/rdfs/out.nt"]
     mem_limit: 1g
     restart: "no"
@@ -167,6 +169,7 @@ services:
         condition: service_started
     env_file:
       # Runtime-only injection: provider secrets live here, never in the image.
+      # .env sits next to this compose file (coa/platform/.env), gitignored.
       - .env
     environment:
       PLATFORM__DATABASE__URL: "postgresql://platform:${POSTGRES_PASSWORD:-platform_dev}@postgres:5432/platform"
@@ -176,7 +179,7 @@ services:
     ports:
       - "127.0.0.1:${PLATFORM_PORT:-8080}:8080"
     volumes:
-      - ./data:/data
+      - D:/agentABC/data:/data
     healthcheck:
       test:
         [
