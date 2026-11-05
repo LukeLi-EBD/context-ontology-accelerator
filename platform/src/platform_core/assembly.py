@@ -24,6 +24,7 @@ from .context import ContextResolver
 from .documents import DocumentService
 from .extraction import ExtractionService
 from .facts import FactLedger
+from .metrics import MetricService
 from .parsers import LocalDocumentParser
 from .ports import EnvSecretProvider, UnsupportedPort
 from .reasoning import ReasoningService
@@ -47,6 +48,7 @@ class Runtime:
     vectors: PgVectorStore
     search_index: PgSearchIndex
     search: SearchService
+    metrics: MetricService
     llm: LlmClient
     facts: FactLedger
     extraction: ExtractionService
@@ -108,6 +110,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     vectors = PgVectorStore(metadata, cfg.embedding)
     search_index = PgSearchIndex(metadata, cfg.search)
     search = SearchService(cfg.search, metadata, embedding, vectors, search_index)
+    metrics = MetricService(metadata)
     llm = LlmClient(cfg.llm, secrets)
     facts = FactLedger(metadata, graph)
     extraction = ExtractionService(cfg.extraction, metadata, graph, llm, facts)
@@ -175,6 +178,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         vectors=vectors,
         search_index=search_index,
         search=search,
+        metrics=metrics,
         llm=llm,
         facts=facts,
         extraction=extraction,

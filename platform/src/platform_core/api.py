@@ -244,6 +244,20 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             min_coverage=body.get("minCoverage"),
         )
 
+    # ---- v3 metric registry / publishability guard -----------------------
+
+    @app.get("/metrics")
+    def metrics_list(domain: str | None = None) -> dict[str, Any]:
+        return {"metrics": runtime.metrics.list(domain=domain)}
+
+    @app.get("/metrics/{metric_id}")
+    def metric_get(metric_id: str) -> dict[str, Any]:
+        return runtime.metrics.get(metric_id)
+
+    @app.get("/metrics/{metric_id}/output")
+    def metric_output(metric_id: str, internal: bool = False) -> dict[str, Any]:
+        return runtime.metrics.output(metric_id, internal=internal)
+
     # ---- S4 extraction ---------------------------------------------------
 
     @app.post("/documents/{document_id}/extract")
