@@ -964,7 +964,7 @@ def verify_bundle(bundle_dir: str | Path, expected_schema: int | None = None) ->
     if declared_terms:
         graph = Graph()
         try:
-            graph.parse(root / "graph/tbox.ttl", format="nt")
+            graph.parse(root / "graph/tbox.ttl", format="turtle")
         except Exception as exc:  # noqa: BLE001 - report parse failure explicitly
             raise _err("E_BUNDLE_TBOX", f"cannot parse graph/tbox.ttl: {exc}") from exc
         actual_terms = _term_entry_count(graph)
