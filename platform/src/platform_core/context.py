@@ -232,6 +232,7 @@ class ContextResolver:
         chunks: list[dict[str, Any]] = []
         search_ms = 0
         lexical_only = False
+        result: dict[str, Any] = {}
         try:
             search_started = time.monotonic()
             result = self._search.hybrid_search(
@@ -250,7 +251,15 @@ class ContextResolver:
                 extra={"event": {"event": "context_degraded", "code": exc.provider_code}},
             )
         steps.append(
-            {"name": "search.hybrid", "durationMs": search_ms, "output": {"hits": len(chunks)}}
+            {
+                "name": "search.hybrid",
+                "durationMs": search_ms,
+                "output": {
+                    "hits": len(chunks),
+                    "timingMs": result.get("timingMs"),
+                    "embeddingCache": result.get("embeddingCache"),
+                },
+            }
         )
 
         cut_started = time.monotonic()

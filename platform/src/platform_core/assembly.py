@@ -81,6 +81,9 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         url=cfg.database.url,
         pool_max=cfg.database.pool_max,
         statement_timeout_ms=cfg.database.statement_timeout_ms,
+        # S16: keep the pg_trgm operator threshold aligned with search.min_similarity
+        # so `q.raw <% c.text` can use the trigram GIN index.
+        trgm_word_similarity_threshold=cfg.search.min_similarity,
     )
     # Q8-a: graph.provider selects the assembled adapter; config rejected any
     # known-but-missing provider before we get here.

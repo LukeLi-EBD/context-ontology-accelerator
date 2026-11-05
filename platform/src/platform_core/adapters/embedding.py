@@ -128,8 +128,14 @@ class EmbeddingClient:
         model: str,
         texts: list[str],
         dimensions: int,
+        rate_limit: bool = True,
     ) -> list[list[float]]:
-        """Embed against an explicit partition (used by reindex and the pointer)."""
+        """Embed against an explicit partition (used by reindex and the pointer).
+
+        `rate_limit` is the indexing throttle (max_chunks_per_sec). Interactive
+        query embeddings pass False: a one-chunk request paid the same ~1 s
+        sleep as a 50-chunk batch, which dominated /context/resolve latency.
+        """
         if not texts:
             return []
         if provider == "disabled":
@@ -191,7 +197,7 @@ class EmbeddingClient:
                     timeout_s = min(timeout_s * 1.5, float(self._config.timeout_max_s))
             done += len(batch)
             # 保底限速：给同机的 API/PG/文件 IO 留时间。0 表示不限。
-            if limit > 0:
+            if limit > 0 and rate_limit:
                 ahead = done / limit - (time.monotonic() - started)
                 if ahead > 0:
                     time.sleep(min(ahead, 5.0))

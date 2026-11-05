@@ -1,4 +1,10 @@
-"""SearchIndex adapter (S3): PostgreSQL FTS + pg_trgm. No ranking code in Python."""
+"""SearchIndex adapter (S3): PostgreSQL FTS + pg_trgm. No ranking code in Python.
+
+S16: the trigram predicate uses the indexable operator `q.raw <% c.text`
+(word_similarity(q.raw, c.text) >= pg_trgm.word_similarity_threshold). The
+threshold is set on the connection (see MetadataPg) to search.min_similarity;
+using `word_similarity(...) >= x` in WHERE forced a 14k-row seq scan (~1.8 s).
+"""
 
 from __future__ import annotations
 
@@ -50,11 +56,11 @@ class PgSearchIndex:
               FROM platform.document_chunk c
               CROSS JOIN q
              WHERE c.text_search @@ q.tsq
-                OR word_similarity(q.raw, c.text) >= %(min)s
+                OR q.raw <%% c.text
              ORDER BY score DESC, c.chunk_id
              LIMIT %(limit)s
             """,
-            {"q": text, "min": self._config.min_similarity, "limit": limit},
+            {"q": text, "limit": limit},
         )
         return [
             {

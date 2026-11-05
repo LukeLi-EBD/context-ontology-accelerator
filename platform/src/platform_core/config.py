@@ -170,6 +170,8 @@ class SearchConfig(_Strict):
     # against 23 unrelated chunks (measured 2026-11-05 on 1425 real chunks).
     # 0.10 removes those hits; a meaningful 3-char term scores 0.5+.
     min_similarity: float = Field(default=0.10, ge=0.0, le=1.0)
+    # S16: LRU cache for query-string embeddings (interactive repeats only).
+    query_embedding_cache_size: int = Field(default=256, ge=0, le=4096)
     # T2: alias strings merged into the lexical route only (RRF stays two-route).
     lexical_expand: bool = True
     lexical_expand_max: int = Field(default=4, ge=1, le=10)

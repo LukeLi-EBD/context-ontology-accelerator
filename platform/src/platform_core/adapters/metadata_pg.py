@@ -66,10 +66,19 @@ class Tx:
 class MetadataPg:
     port = "MetadataStore"
 
-    def __init__(self, url: str, pool_max: int = 10, statement_timeout_ms: int | None = None) -> None:
+    def __init__(
+        self,
+        url: str,
+        pool_max: int = 10,
+        statement_timeout_ms: int | None = None,
+        trgm_word_similarity_threshold: float | None = None,
+    ) -> None:
         self._url = url
         self._pool_max = pool_max
         self._statement_timeout_ms = statement_timeout_ms
+        # S16: `q.raw <% c.text` (pg_trgm word similarity) is GIN-indexable only
+        # at a lowered threshold. The session value must equal search.min_similarity.
+        self._trgm_threshold = trgm_word_similarity_threshold
         self._pool: ConnectionPool | None = None
 
     def manifest(self) -> Manifest:
@@ -85,8 +94,13 @@ class MetadataPg:
         if self._pool is not None:
             return
         kwargs: dict[str, Any] = {"row_factory": dict_row}
+        options: list[str] = []
         if self._statement_timeout_ms:
-            kwargs["options"] = f"-c statement_timeout={self._statement_timeout_ms}"
+            options.append(f"statement_timeout={self._statement_timeout_ms}")
+        if self._trgm_threshold is not None:
+            options.append(f"pg_trgm.word_similarity_threshold={self._trgm_threshold}")
+        if options:
+            kwargs["options"] = "-c " + " -c ".join(options)
         self._pool = ConnectionPool(
             conninfo=self._url,
             min_size=1,

@@ -10,7 +10,10 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
+import threading
 import time
+from collections import OrderedDict
 from typing import Any, Literal
 
 from .adapters.embedding import EmbeddingClient
@@ -24,6 +27,11 @@ from .ports import Manifest
 log = logging.getLogger(__name__)
 
 Mode = Literal["hybrid", "vector", "lexical"]
+_CJK = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _has_cjk(text: str) -> bool:
+    return bool(_CJK.search(text))
 
 
 class SearchService:
@@ -42,6 +50,12 @@ class SearchService:
         self._embedding = embedding
         self._vectors = vectors
         self._index = index
+        # S16: query-string embedding cache. The pointer/model/dimension tuple is
+        # part of the key so a partition switch never serves a stale vector.
+        self._query_cache: OrderedDict[tuple[str, str, int, str], list[float]] = OrderedDict()
+        self._cache_lock = threading.Lock()
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def manifest(self) -> Manifest:
         return Manifest(
@@ -415,17 +429,26 @@ class SearchService:
         reasons: list[str] = []
         vector_list: list[dict[str, Any]] = []
         lexical_list: list[dict[str, Any]] = []
+        cache_hit = False
+        pointer_ms = embed_ms = vector_ms = lexical_ms = rrf_ms = 0.0
+        total_started = time.monotonic()
 
         if mode in ("hybrid", "vector"):
             try:
+                pointer_started = time.monotonic()
                 partition = self._vectors.pointer()
-                vector = self._embedding.embed_with(
-                    partition["provider"], partition["model"], [text],
-                    partition["dimensions"],
-                )[0]
+                pointer_ms = (time.monotonic() - pointer_started) * 1000.0
+                embed_started = time.monotonic()
+                vector, cache_hit = self._embed_query(
+                    partition["provider"], partition["model"],
+                    partition["dimensions"], text,
+                )
+                embed_ms = (time.monotonic() - embed_started) * 1000.0
+                vector_started = time.monotonic()
                 vector_list = self._vectors.search(
                     vector, partition["model"], candidates
                 )
+                vector_ms = (time.monotonic() - vector_started) * 1000.0
                 routes.append("vector")
                 if not vector_list:
                     reasons.append("E_NO_VECTOR_INDEX")
@@ -445,17 +468,26 @@ class SearchService:
                     item = (item or "").strip()
                     if item and item != text and item not in extra:
                         extra.append(item)
+                # S16: non-CJK synonyms (e.g. "Account") match ~70% of the Chinese
+                # corpus at the 0.1 trigram threshold, costing seconds for rows that
+                # are floored below the base route anyway. Drop them for CJK queries.
+                if _has_cjk(text):
+                    extra = [item for item in extra if _has_cjk(item)]
                 extra = extra[: max(0, self._config.lexical_expand_max - 1)]
             # T2: each alias string is its own lexical query; a chunk keeps its
             # best score. Still exactly one lexical route into RRF below.
+            lexical_started = time.monotonic()
             lexical_list = self._merge_lexical(text, extra, candidates)
+            lexical_ms = (time.monotonic() - lexical_started) * 1000.0
             routes.append("lexical")
 
+        rrf_started = time.monotonic()
         fused = self._rrf(
             [vector_list, lexical_list],
             k=self._config.rrf_k,
             limit=top_k,
         )
+        rrf_ms = (time.monotonic() - rrf_started) * 1000.0
         # S14H-17: explicit flag instead of a silent lexical fallback (hybrid/vector only).
         lexical_only = mode != "lexical" and "vector" not in routes
         if lexical_only and "lexicalOnly" not in reasons:
@@ -470,6 +502,15 @@ class SearchService:
             "degraded": bool(reasons) or lexical_only,
             "reasons": reasons,
             "results": fused,
+            "timingMs": {
+                "pointer": round(pointer_ms, 3),
+                "embed": round(embed_ms, 3),
+                "vector": round(vector_ms, 3),
+                "lexical": round(lexical_ms, 3),
+                "rrf": round(rrf_ms, 3),
+                "total": round((time.monotonic() - total_started) * 1000.0, 3),
+            },
+            "embeddingCache": {**self.cache_stats(), "hit": cache_hit},
         }
         log.info(
             "search",
@@ -486,6 +527,51 @@ class SearchService:
         return result
 
     # ---- helpers ---------------------------------------------------------
+
+    def _embed_query(
+        self, provider: str, model: str, dimensions: int, text: str
+    ) -> tuple[list[float], bool]:
+        """Return the query vector, reusing the LRU cache when available.
+
+        Only the query string is cached (interactive, repeated across turns);
+        document chunks are never served from here. Returns (vector, cacheHit).
+        """
+        key = (provider, model, dimensions, text)
+        capacity = self._config.query_embedding_cache_size
+        if capacity > 0:
+            with self._cache_lock:
+                cached = self._query_cache.get(key)
+                if cached is not None:
+                    self._query_cache.move_to_end(key)
+                    self._cache_hits += 1
+                    return cached, True
+        with self._cache_lock:
+            self._cache_misses += 1
+        # Interactive path: no indexing throttle (see EmbeddingClient.embed_with).
+        vector = self._embedding.embed_with(
+            provider, model, [text], dimensions, rate_limit=False
+        )[0]
+        if capacity > 0:
+            with self._cache_lock:
+                self._query_cache[key] = vector
+                self._query_cache.move_to_end(key)
+                while len(self._query_cache) > capacity:
+                    self._query_cache.popitem(last=False)
+        return vector, False
+
+    def cache_stats(self) -> dict[str, Any]:
+        with self._cache_lock:
+            hits = self._cache_hits
+            misses = self._cache_misses
+            entries = len(self._query_cache)
+        total = hits + misses
+        return {
+            "hits": hits,
+            "misses": misses,
+            "entries": entries,
+            "hitRate": round(hits / total, 4) if total else 0.0,
+            "capacity": self._config.query_embedding_cache_size,
+        }
 
     def counts(self) -> dict[str, Any]:
         rows = self._meta.query(
@@ -514,6 +600,7 @@ class SearchService:
             "activeProvider": pointer["provider"],
             "partitions": self._vectors.partitions(),
             "available": self._embedding.available(),
+            "queryCache": self.cache_stats(),
         }
 
     def _document(self, document_id: str) -> dict[str, Any]:
