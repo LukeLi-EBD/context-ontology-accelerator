@@ -69,6 +69,13 @@ def _run_ontology(runtime, args) -> int:
             print("E_USAGE ontology diff requires --version (to)", file=sys.stderr)
             return EXIT_USAGE
         result = runtime.ontology.diff(args.against, args.version)
+    elif action == "deprecate":
+        if not args.version:
+            print("E_USAGE ontology deprecate requires --version", file=sys.stderr)
+            return EXIT_USAGE
+        result = runtime.ontology.deprecate(
+            args.version, actor=args.actor, reason=args.reason, note=args.summary
+        )
     elif action == "rollback":
         if not args.to:
             print("E_USAGE ontology rollback requires --to", file=sys.stderr)
@@ -153,7 +160,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "action",
         choices=[
             "import", "propose", "approve", "publish", "diff", "rollback",
-            "rollback-to", "export", "events", "verify", "proposals", "status", "show",
+            "rollback-to", "deprecate", "export", "events", "verify", "proposals",
+            "status", "show",
         ],
     )
     ontology.add_argument("--config", default="/data/platform.yaml")

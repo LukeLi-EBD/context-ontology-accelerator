@@ -2919,6 +2919,52 @@ class OntologyRegistry:
 
     # ---- diff / export ---------------------------------------------------
 
+    def deprecate(
+        self,
+        version_id: str,
+        actor: str = "operator",
+        reason: str | None = None,
+        note: str | None = None,
+    ) -> dict[str, Any]:
+        """Retire a non-current version without deleting rows or audit events."""
+        target = self._require(version_id)
+        pointer = self._pointer()
+        if pointer and pointer["versionId"] == version_id:
+            raise PortError(
+                code="Conflict",
+                message=f"version {version_id} is the current pointer; roll back first",
+                provider="platform",
+                provider_code="E_ONTOLOGY_ACTIVE_VERSION",
+                details={"versionId": version_id},
+            )
+        if target["status"] == "deprecated":
+            return {
+                "id": version_id, "status": "deprecated", "unchanged": True,
+                "previousStatus": "deprecated",
+            }
+        with self._meta.tx() as tx:
+            tx.execute("SELECT pg_advisory_xact_lock(hashtext('platform:ontology:publish'))")
+            tx.execute(
+                "UPDATE platform.ontology_version SET status = 'deprecated' "
+                "WHERE version_id = %s AND status <> 'deprecated'",
+                (version_id,),
+            )
+            self._append_event(
+                tx, version_id, None, "deprecated", actor, reason,
+                {
+                    "previousStatus": target["status"],
+                    "note": note or reason,
+                },
+            )
+        return {
+            "id": version_id,
+            "semver": target["semver"],
+            "previousStatus": target["status"],
+            "status": "deprecated",
+            "deprecatedBy": actor,
+            "note": note or reason,
+        }
+
     @staticmethod
     def _term_text(term: dict[str, Any]) -> str:
         if term.get("kind") == "iri":

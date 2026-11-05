@@ -51,7 +51,9 @@ section.panel {
   border-radius: var(--radius);
   padding: 16px 18px;
   margin-bottom: 16px;
+  scroll-margin-top: 68px;
 }
+section.panel button { scroll-margin-top: 68px; }
 section.panel > h2 {
   font-size: 14px;
   margin: 0 0 12px;
