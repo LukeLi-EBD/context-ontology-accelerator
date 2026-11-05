@@ -1,9 +1,11 @@
 """Migration-friendly bundle export / import (20-迁移导出导入-设计).
 
 Export is strictly read-only on the production database, Oxigraph and CAS.
-Import always targets a throw-away restore database; the production ``platform``
-database is never written. T-Box restore goes through the same governance
-pipeline as G-01 (``import_document`` -> ``publish``); GSP is never used.
+Import defaults to a throw-away restore database. The only exception is the
+explicit ``--into-empty-platform`` migration path, which is refused unless the
+target database holds no documents, fact events or metric observations.
+T-Box restore goes through the same governance pipeline as G-01
+(``import_document`` -> ``publish``); GSP is never used.
 """
 
 from __future__ import annotations
@@ -43,6 +45,68 @@ REQUIRED_FILES = [
     "ledger/fact_events.jsonl",
     "ledger/verify.json",
 ]
+
+# S17: the metric registry, its observations and the two entity fact tables
+# travel with the bundle. They are optional on read so bundles exported before
+# S17 still verify; every new export always writes all four.
+METRIC_DEFINITIONS_FILE = "meta/metric_definitions.jsonl"
+METRIC_OBSERVATIONS_FILE = "meta/metric_observations.jsonl"
+METRIC_ENTITY_FILE = "meta/metric_entity_facts.jsonl"
+
+ENTITY_TABLES = {
+    "platform.ins_payment_record": "insPaymentRecord",
+    "platform.loan_installment_plan": "loanInstallmentPlan",
+}
+
+_METRIC_DEF_COLUMNS = (
+    "metric_id", "name_zh", "domain", "evidence_basis", "publishable",
+    "inference", "formula_disabled", "missing", "evidence_status", "note",
+    "definition_version", "metric_kind", "formula_expr", "numerator_agg",
+    "denominator_agg", "window_kind", "min_window_days", "grain", "unit",
+    "fact_function", "updated_at",
+)
+_METRIC_DEF_UPSERT = f"""
+INSERT INTO platform.metric_definition ({", ".join(_METRIC_DEF_COLUMNS)})
+VALUES ({", ".join(["%s"] * len(_METRIC_DEF_COLUMNS))})
+ON CONFLICT (metric_id) DO UPDATE SET
+{", ".join(f"{name} = EXCLUDED.{name}" for name in _METRIC_DEF_COLUMNS[1:])}
+"""
+
+_METRIC_OBS_COLUMNS = (
+    "metric_id", "definition_version", "institution", "product", "entity_key",
+    "as_of", "period_start", "period_end", "numerator", "denominator",
+    "window_start", "window_end", "data_source", "fixture", "computed_at",
+)
+_METRIC_OBS_UPSERT = f"""
+INSERT INTO platform.metric_observation ({", ".join(_METRIC_OBS_COLUMNS)})
+VALUES ({", ".join(["%s"] * len(_METRIC_OBS_COLUMNS))})
+ON CONFLICT ON CONSTRAINT metric_observation_window_key DO UPDATE SET
+{", ".join(f"{name} = EXCLUDED.{name}" for name in _METRIC_OBS_COLUMNS[7:])}
+"""
+
+_INS_COLUMNS = (
+    "policy_no", "product", "installment_no", "due_date", "due_amount",
+    "paid_amount", "paid_date", "payment_status", "policy_status",
+    "status_as_of", "institution", "data_source", "fixture",
+)
+_INS_UPSERT = f"""
+INSERT INTO platform.ins_payment_record ({", ".join(_INS_COLUMNS)})
+VALUES ({", ".join(["%s"] * len(_INS_COLUMNS))})
+ON CONFLICT ON CONSTRAINT ins_payment_record_key DO UPDATE SET
+{", ".join(f"{name} = EXCLUDED.{name}" for name in ("product", "due_date", "due_amount", "paid_amount", "paid_date", "payment_status", "policy_status", "institution", "fixture"))}
+"""
+
+_LOAN_COLUMNS = (
+    "agreement_id", "installment_no", "due_date", "due_amount", "paid_amount",
+    "paid_date", "overdue_days", "status_as_of", "institution",
+    "data_source", "fixture",
+)
+_LOAN_UPSERT = f"""
+INSERT INTO platform.loan_installment_plan ({", ".join(_LOAN_COLUMNS)})
+VALUES ({", ".join(["%s"] * len(_LOAN_COLUMNS))})
+ON CONFLICT ON CONSTRAINT loan_installment_plan_key DO UPDATE SET
+{", ".join(f"{name} = EXCLUDED.{name}" for name in ("due_date", "due_amount", "paid_amount", "paid_date", "overdue_days", "institution", "fixture"))}
+"""
 
 # OQ-69: restore-test graphs are the only graphs a cleanup may delete.
 RESTORE_GRAPH_PREFIX = "urn:platform:graph:restore:"
@@ -93,13 +157,120 @@ def cleanup_restore_graphs(
 
 
 def _json_default(value: Any) -> Any:
+    from datetime import date
+    from decimal import Decimal
+
     if isinstance(value, datetime):
         return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return str(value)
     raise TypeError(f"not JSON serializable: {type(value).__name__}")
 
 
 def _dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=_json_default)
+
+
+def _as_date(value: Any) -> Any:
+    from datetime import date
+
+    if value in (None, ""):
+        return None
+    return value if isinstance(value, date) else date.fromisoformat(str(value))
+
+
+def _as_datetime(value: Any) -> Any:
+    if value in (None, ""):
+        return None
+    return datetime.fromisoformat(str(value))
+
+
+def _as_decimal(value: Any) -> Any:
+    from decimal import Decimal
+
+    if value in (None, ""):
+        return None
+    return value if isinstance(value, Decimal) else Decimal(str(value))
+
+
+def _metric_def_hash(rows: list[dict[str, Any]]) -> str:
+    """Stable fingerprint of the registry (timestamps excluded).
+
+    Row counts alone cannot tell a restored registry from the migration seed,
+    so the bundle also carries this content hash.
+    """
+
+    lines = []
+    for row in rows:
+        values = [
+            "" if row.get(name) is None else str(row.get(name))
+            for name in _METRIC_DEF_COLUMNS[:-1]
+        ]
+        lines.append("|".join(values))
+    return hashlib.sha256("\n".join(sorted(lines)).encode("utf-8")).hexdigest()
+
+
+def _term_entry_count(graph: Graph) -> int:
+    from rdflib import URIRef
+
+    return len(
+        list(
+            graph.subjects(
+                predicate=URIRef("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                object=URIRef("https://w3id.org/fsldm/terms#TermEntry"),
+            )
+        )
+    )
+
+
+def _metric_def_params(row: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        row["metric_id"], row["name_zh"], row["domain"], row["evidence_basis"],
+        bool(row["publishable"]), bool(row["inference"]), bool(row["formula_disabled"]),
+        row.get("missing"), row["evidence_status"], row.get("note"),
+        row.get("definition_version") or "v3.0", row.get("metric_kind"),
+        row.get("formula_expr"), row.get("numerator_agg"),
+        row.get("denominator_agg"), row.get("window_kind"),
+        int(row["min_window_days"]) if row.get("min_window_days") is not None else None,
+        row.get("grain"), row.get("unit"), row.get("fact_function"),
+        _as_datetime(row.get("updated_at")),
+    )
+
+
+def _metric_obs_params(row: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        row["metric_id"], row.get("definition_version") or "v3.0",
+        row.get("institution"), row.get("product"), row["entity_key"],
+        _as_date(row.get("as_of")), _as_date(row.get("period_start")),
+        _as_date(row.get("period_end")), _as_decimal(row["numerator"]),
+        _as_decimal(row.get("denominator")),
+        _as_date(row["window_start"]), _as_date(row["window_end"]),
+        row["data_source"], bool(row.get("fixture")),
+        _as_datetime(row.get("computed_at")),
+    )
+
+
+def _ins_params(row: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        row["policy_no"], row["product"], int(row["installment_no"]),
+        _as_date(row["due_date"]), _as_decimal(row["due_amount"]),
+        _as_decimal(row.get("paid_amount")), _as_date(row.get("paid_date")),
+        row["payment_status"], row["policy_status"], _as_date(row["status_as_of"]),
+        row.get("institution"), row["data_source"], bool(row.get("fixture")),
+    )
+
+
+def _loan_params(row: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        row["agreement_id"], int(row["installment_no"]), _as_date(row["due_date"]),
+        _as_decimal(row["due_amount"]), _as_decimal(row.get("paid_amount")),
+        _as_date(row.get("paid_date")),
+        int(row["overdue_days"]) if row.get("overdue_days") is not None else None,
+        _as_date(row["status_as_of"]), row.get("institution"),
+        row["data_source"], bool(row.get("fixture")),
+    )
 
 
 def _canonical_hash(graph: Graph) -> str:
@@ -202,6 +373,31 @@ def _database_exists(url: str, name: str) -> bool:
     with psycopg.connect(_admin_url(url), autocommit=True, connect_timeout=10) as conn:
         row = conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (name,)).fetchone()
     return row is not None
+
+
+def _target_is_empty(url: str) -> bool:
+    """True when the target database holds no business rows.
+
+    Used only for the opt-in ``--into-empty-platform`` restore path. A stack
+    that has merely run its migrations (and optionally auto-imported the
+    bootstrap T-Box) still counts as empty; any document or fact event means
+    the database is in use and the restore is refused.
+    """
+
+    probes = (
+        "platform.document",
+        "platform.fact_event",
+        "platform.metric_observation",
+    )
+    with psycopg.connect(url, autocommit=True, connect_timeout=10) as conn:
+        for table in probes:
+            try:
+                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except psycopg.errors.UndefinedTable:
+                return True
+            if int(count) > 0:
+                return False
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +590,54 @@ def export_bundle(
             "SELECT COUNT(*) AS n FROM platform.fact_assertion"
         )
 
+        # ---- metric registry, observations and entity facts -------------
+        metric_defs = runtime.metadata.query(
+            """
+            SELECT metric_id, name_zh, domain, evidence_basis, publishable,
+                   inference, formula_disabled, missing, evidence_status, note,
+                   definition_version, metric_kind, formula_expr, numerator_agg,
+                   denominator_agg, window_kind, min_window_days, grain, unit,
+                   fact_function, updated_at
+              FROM platform.metric_definition
+             ORDER BY metric_id
+            """
+        )
+        metric_obs = runtime.metadata.query(
+            """
+            SELECT metric_id, definition_version, institution, product, entity_key,
+                   as_of, period_start, period_end, numerator, denominator,
+                   window_start, window_end, data_source, fixture, computed_at
+              FROM platform.metric_observation
+             ORDER BY metric_id, definition_version, entity_key, window_start, window_end
+            """
+        )
+        ins_payments = runtime.metadata.query(
+            """
+            SELECT policy_no, product, installment_no, due_date, due_amount,
+                   paid_amount, paid_date, payment_status, policy_status,
+                   status_as_of, institution, data_source, fixture
+              FROM platform.ins_payment_record
+             ORDER BY policy_no, installment_no, status_as_of, data_source
+            """
+        )
+        loan_plans = runtime.metadata.query(
+            """
+            SELECT agreement_id, installment_no, due_date, due_amount, paid_amount,
+                   paid_date, overdue_days, status_as_of, institution,
+                   data_source, fixture
+              FROM platform.loan_installment_plan
+             ORDER BY agreement_id, installment_no, status_as_of, data_source
+            """
+        )
+        entity_rows = [
+            dict(row, table="platform.ins_payment_record") for row in ins_payments
+        ] + [
+            dict(row, table="platform.loan_installment_plan") for row in loan_plans
+        ]
+        _write_jsonl(bundle_dir / METRIC_DEFINITIONS_FILE, metric_defs)
+        _write_jsonl(bundle_dir / METRIC_OBSERVATIONS_FILE, metric_obs)
+        _write_jsonl(bundle_dir / METRIC_ENTITY_FILE, entity_rows)
+
         # ---- optional blobs ----------------------------------------------
         blob_entries: list[dict[str, Any]] = []
         blob_missing: list[str] = []
@@ -428,6 +672,9 @@ def export_bundle(
             _file_entry(bundle_dir, "vectors/README", "text"),
             _file_entry(bundle_dir, "ledger/fact_events.jsonl", "jsonl", len(events)),
             _file_entry(bundle_dir, "ledger/verify.json", "json"),
+            _file_entry(bundle_dir, METRIC_DEFINITIONS_FILE, "jsonl", len(metric_defs)),
+            _file_entry(bundle_dir, METRIC_OBSERVATIONS_FILE, "jsonl", len(metric_obs)),
+            _file_entry(bundle_dir, METRIC_ENTITY_FILE, "jsonl", len(entity_rows)),
         ]
         files.extend(blob_entries)
 
@@ -448,6 +695,7 @@ def export_bundle(
                     "canonicalHash": tbox_canonical,
                     "graph": pointer["graph"],
                     "triples": tbox_triples,
+                    "termEntries": _term_entry_count(tbox_graph),
                 },
                 "embedding": {
                     "provider": embedding_pointer["provider"],
@@ -470,6 +718,13 @@ def export_bundle(
                 "factAssertions": int(fact_assertion_rows[0]["n"]),
                 "ontologyImports": len(imports),
                 "shapes": len(shapes_entries),
+                "metricDefinitions": len(metric_defs),
+                "metricDefinitionsHash": _metric_def_hash(metric_defs),
+                "metricObservations": len(metric_obs),
+                "metricEntityFacts": {
+                    "insPaymentRecord": len(ins_payments),
+                    "loanInstallmentPlan": len(loan_plans),
+                },
                 "blobs": {
                     "included": bool(include_blobs),
                     "count": len(blob_entries),
@@ -667,6 +922,60 @@ def verify_bundle(bundle_dir: str | Path, expected_schema: int | None = None) ->
     if not declared_verify.get("ok"):
         raise _err("E_BUNDLE_LEDGER_CHAIN", "ledger/verify.json reports ok=false")
 
+    # ---- metric registry / observations / entity facts (optional) -------
+    for rel, key in (
+        (METRIC_DEFINITIONS_FILE, "metricDefinitions"),
+        (METRIC_OBSERVATIONS_FILE, "metricObservations"),
+    ):
+        if rel not in listed:
+            continue
+        rows = read_ndjson(root / rel)
+        if len(rows) != int(totals.get(key) or 0):
+            raise _err(
+                "E_BUNDLE_METRIC_COUNT",
+                f"metric count mismatch for {rel}: file={len(rows)} "
+                f"manifest={totals.get(key)}",
+                path=rel,
+            )
+    if METRIC_DEFINITIONS_FILE in listed:
+        rows = read_ndjson(root / METRIC_DEFINITIONS_FILE)
+        declared_hash = totals.get("metricDefinitionsHash")
+        if declared_hash and _metric_def_hash(rows) != declared_hash:
+            raise _err(
+                "E_BUNDLE_METRIC_HASH",
+                "metric definition content hash does not match the manifest",
+                path=METRIC_DEFINITIONS_FILE,
+            )
+    if METRIC_ENTITY_FILE in listed:
+        from collections import Counter
+
+        rows = read_ndjson(root / METRIC_ENTITY_FILE)
+        counts = Counter(str(row.get("table") or "") for row in rows)
+        declared_entities = totals.get("metricEntityFacts") or {}
+        for table, key in ENTITY_TABLES.items():
+            if counts.get(table, 0) != int(declared_entities.get(key) or 0):
+                raise _err(
+                    "E_BUNDLE_METRIC_COUNT",
+                    f"entity fact count mismatch for {table}: "
+                    f"file={counts.get(table, 0)} manifest={declared_entities.get(key)}",
+                    path=METRIC_ENTITY_FILE,
+                )
+    declared_terms = int((manifest.get("source") or {}).get("tbox", {}).get("termEntries") or 0)
+    if declared_terms:
+        graph = Graph()
+        try:
+            graph.parse(root / "graph/tbox.ttl", format="nt")
+        except Exception as exc:  # noqa: BLE001 - report parse failure explicitly
+            raise _err("E_BUNDLE_TBOX", f"cannot parse graph/tbox.ttl: {exc}") from exc
+        actual_terms = _term_entry_count(graph)
+        if actual_terms != declared_terms:
+            raise _err(
+                "E_BUNDLE_TERMS",
+                f"term entry count mismatch: manifest={declared_terms} actual={actual_terms}",
+                expected=declared_terms,
+                actual=actual_terms,
+            )
+
     return manifest
 
 
@@ -681,16 +990,32 @@ def import_bundle(
     database: str = "platform_restore_test",
     replace: bool = False,
     keep_db_on_failure: bool = False,
+    into_empty_target: bool = False,
 ) -> dict[str, Any]:
-    """Restore a bundle into a throw-away database. Never writes ``platform``."""
+    """Restore a bundle into a throw-away database. Never writes ``platform``.
+
+    ``into_empty_target`` is the explicit migration path: it allows the target
+    to be the configured database itself, but only while that database holds no
+    documents, fact events or metric observations (a freshly started stack).
+    """
 
     cfg = bundle.config
-    if database == urlsplit(cfg.database.url).path.lstrip("/"):
-        return {
-            "ok": False,
-            "error": "refusing to import into the production database",
-            "providerCode": "E_BUNDLE_PROD_TARGET",
-        }
+    prod_name = urlsplit(cfg.database.url).path.lstrip("/")
+    if database == prod_name:
+        if not into_empty_target:
+            return {
+                "ok": False,
+                "error": "refusing to import into the production database "
+                "(use --into-empty-platform on a freshly started stack)",
+                "providerCode": "E_BUNDLE_PROD_TARGET",
+            }
+        if not _target_is_empty(cfg.database.url):
+            return {
+                "ok": False,
+                "error": f"database {database} already holds business data; "
+                "an in-place restore is only allowed on an empty stack",
+                "providerCode": "E_BUNDLE_TARGET_NOT_EMPTY",
+            }
 
     step = "verify"
     runtime: Runtime | None = None
@@ -703,7 +1028,10 @@ def import_bundle(
 
         # ---- create the restore database -------------------------------
         step = "create-database"
-        if _database_exists(cfg.database.url, database):
+        if database == prod_name:
+            # Opt-in in-place restore: keep the configured database as-is.
+            pass
+        elif _database_exists(cfg.database.url, database):
             if not replace:
                 raise _err(
                     "E_BUNDLE_DB_EXISTS",
@@ -711,7 +1039,8 @@ def import_bundle(
                     database=database,
                 )
             _drop_database(cfg.database.url, database)
-        _create_database(cfg.database.url, database)
+        if database != prod_name:
+            _create_database(cfg.database.url, database)
 
         # ---- restore runtime: same graph, separate metadata -----------
         step = "assemble"
@@ -912,6 +1241,45 @@ def import_bundle(
             raise _err("E_BUNDLE_LEDGER_REPLAY", error)
         _insert_replay(runtime.metadata, records, facts)
 
+        # ---- metric registry, observations and entity facts -------------
+        step = "metrics"
+        root = Path(bundle_dir)
+        definitions = (
+            read_ndjson(root / METRIC_DEFINITIONS_FILE)
+            if (root / METRIC_DEFINITIONS_FILE).is_file() else []
+        )
+        observations = (
+            read_ndjson(root / METRIC_OBSERVATIONS_FILE)
+            if (root / METRIC_OBSERVATIONS_FILE).is_file() else []
+        )
+        entity_facts = (
+            read_ndjson(root / METRIC_ENTITY_FILE)
+            if (root / METRIC_ENTITY_FILE).is_file() else []
+        )
+        with runtime.metadata.tx() as tx:
+            if definitions:
+                tx.executemany(
+                    _METRIC_DEF_UPSERT,
+                    [_metric_def_params(row) for row in definitions],
+                )
+            if observations:
+                tx.executemany(
+                    _METRIC_OBS_UPSERT,
+                    [_metric_obs_params(row) for row in observations],
+                )
+            insurance = [
+                _ins_params(row) for row in entity_facts
+                if row.get("table") == "platform.ins_payment_record"
+            ]
+            loans = [
+                _loan_params(row) for row in entity_facts
+                if row.get("table") == "platform.loan_installment_plan"
+            ]
+            if insurance:
+                tx.executemany(_INS_UPSERT, insurance)
+            if loans:
+                tx.executemany(_LOAN_UPSERT, loans)
+
         # ---- consistency checks -----------------------------------------
         step = "checks"
         checks = _verify_restored(
@@ -1102,11 +1470,63 @@ def _verify_restored(
         f"assertions={fact_assertions}",
     )
 
+    if "metricDefinitions" in totals:
+        metric_count = int(
+            runtime.metadata.query("SELECT COUNT(*) AS n FROM platform.metric_definition")[0]["n"]
+        )
+        restored_defs = runtime.metadata.query(
+            f"SELECT {', '.join(_METRIC_DEF_COLUMNS)} FROM platform.metric_definition"
+        )
+        defs_ok = (
+            metric_count == int(totals["metricDefinitions"])
+            and _metric_def_hash(restored_defs) == str(totals.get("metricDefinitionsHash") or "")
+        )
+        add(
+            "metricDefinitions",
+            totals["metricDefinitions"],
+            metric_count,
+            defs_ok,
+            f"hash={_metric_def_hash(restored_defs)[:12]}",
+        )
+    if "metricObservations" in totals:
+        obs_count = int(
+            runtime.metadata.query(
+                "SELECT COUNT(*) AS n FROM platform.metric_observation"
+            )[0]["n"]
+        )
+        add(
+            "metricObservations",
+            totals["metricObservations"],
+            obs_count,
+            obs_count == int(totals["metricObservations"]),
+        )
+    declared_entities = totals.get("metricEntityFacts") or {}
+    if declared_entities:
+        for table, key in ENTITY_TABLES.items():
+            entity_count = int(
+                runtime.metadata.query(f"SELECT COUNT(*) AS n FROM {table}")[0]["n"]
+            )
+            add(
+                f"entity:{table.split('.')[-1]}",
+                int(declared_entities.get(key) or 0),
+                entity_count,
+                entity_count == int(declared_entities.get(key) or 0),
+            )
+
     restored_graph = Graph()
     nt = runtime.graph.export_graph(pointer["graph"])
     if nt.strip():
         restored_graph.parse(data=nt.decode("utf-8"), format="nt")
     restored_canonical = _canonical_hash(restored_graph)
+    declared_terms = int(manifest["source"]["tbox"].get("termEntries") or 0)
+    if declared_terms:
+        actual_terms = _term_entry_count(restored_graph)
+        add(
+            "termEntries",
+            declared_terms,
+            actual_terms,
+            actual_terms == declared_terms,
+        )
     expected_canonical = manifest["source"]["tbox"].get("canonicalHash") or manifest["source"]["tbox"][
         "contentHash"
     ]

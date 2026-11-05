@@ -391,6 +391,11 @@ def _build_parser() -> argparse.ArgumentParser:
     bundle_import.add_argument(
         "--keep-db-on-failure", dest="keep_db_on_failure", action="store_true"
     )
+    bundle_import.add_argument(
+        "--into-empty-platform", dest="into_empty_platform", action="store_true",
+        help="restore into the configured database; refused unless it is empty "
+             "(migration / disaster recovery path)",
+    )
 
     metrics = sub.add_parser(
         "metrics",
@@ -503,6 +508,7 @@ def main(argv: list[str] | None = None) -> int:
             database=args.database,
             replace=args.replace,
             keep_db_on_failure=args.keep_db_on_failure,
+            into_empty_target=args.into_empty_platform,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
         return EXIT_OK if result.get("ok") else 1
