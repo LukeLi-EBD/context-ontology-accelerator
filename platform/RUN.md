@@ -23,13 +23,79 @@ New-Item -ItemType Directory -Force data\blobs, data\tmp, data\shapes | Out-Null
 
 - `data/models/bge-m3/`：BGE-M3 模型约 **2.14 GB**（含 `pytorch_model.bin` 2.17 GB），目录固定，只读挂载给 TEI。
   离线拷贝：`robocopy <源>\models data\models /E`。不放入时 embedding 容器无法启动，检索退化为仅词法（响应标注 `lexicalOnly`）。
-- `reasoner/robot.jar`（93 MB）不在仓库内，构建 reasoner 前必须放置，见 `reasoner/README.md`。
+- `reasoner/robot.jar`（93 MB）**不需要手工放置**：`reasoner` 镜像构建时自动下载并校验，见下节。
 - `data/` 全部内容被 `.gitignore` 忽略，只保留 `data/README.md`。
+
+### robot.jar（reasoner，构建时自动下载）
+
+`platform/reasoner/Dockerfile` 默认在构建时从 ROBOT 官方 release 拉取 `robot.jar`
+（v1.9.6，93,636,279 字节），并用 `ROBOT_JAR_SHA256` 校验；下载失败或文件为空时**构建直接失败**，
+不会静默留下空文件。
+
+联网构建（标准）：
+
+```powershell
+docker compose -f platform/docker-compose.yml build reasoner
+# 等价：docker build -t agent-reasoner:0.1-s5 -f platform/reasoner/Dockerfile platform/reasoner
+```
+
+换版本或换源（两个 build-arg）：
+
+```powershell
+docker compose -f platform/docker-compose.yml build reasoner `
+  --build-arg ROBOT_JAR_URL=https://github.com/ontodev/robot/releases/download/v1.9.6/robot.jar `
+  --build-arg ROBOT_JAR_SHA256=3d112f47a5c2e82fd96c2bc40e582a86d1e6ad24f67648ef103ec5f21985ba5e
+# 内网镜像若提供的是不同的构建，传 ROBOT_JAR_SHA256= 可关闭校验（不建议）
+```
+
+> 本机实测（2026-11-05）：GitHub 直链约 **32 KB/s**（93.6 MB 约需 50 分钟）。
+> 已验证的替代源：`https://gh-proxy.com/https://github.com/ontodev/robot/releases/download/v1.9.6/robot.jar`
+> （约 21 MB/s，完整 93,636,279 字节；构建内 `sha256sum -c` 通过，证明与官方字节一致）。
+> 这是第三方代理，只作加速示例，正式环境优先用内网制品库。
+
+离线 / 内网（两种替代路径）：
+
+1. **内网制品库（推荐）**：`--build-arg ROBOT_JAR_URL=<内网直链>`，sha 校验照常生效。
+2. **完全无网络**：`--build-arg ROBOT_JAR_URL=` 构建出不含 jar 的镜像（会打印 WARNING），
+   运行时把本机 jar 挂到 `/opt/robot/robot.jar`：
+
+```powershell
+docker compose -f platform/docker-compose.yml build reasoner --build-arg ROBOT_JAR_URL=
+docker run --rm -v D:\agentABC\_impl\reasoner\robot.jar:/opt/robot/robot.jar:ro `
+  agent-reasoner:0.1-s5 java -jar /opt/robot/robot.jar --version
+```
+
+   用 compose 时加一个 override 文件（如 `platform/reasoner.local.yml`）：
+
+```yaml
+services:
+  reasoner:
+    volumes:
+      - ./reasoner/robot.jar:/opt/robot/robot.jar:ro
+```
+
+校验（容器内，跑完即删，不占端口）：
+
+```powershell
+docker run --rm agent-reasoner:0.1-s5 java -jar /opt/robot/robot.jar --version
+# 实测输出：ROBOT version 1.9.6
+```
+
+本机实测（2026-11-05，Docker Desktop 29.9.2）：
+
+- 构建耗时 **104.3 s**（robot.jar 走上表的代理源，Jena 走本地镜像；pip 走清华源）
+- 镜像 **383 MB**，其中 jar 层 **93.6 MB**
+- `java -jar /opt/robot/robot.jar --version` → **`ROBOT version 1.9.6`**
+- 反例：`--build-arg ROBOT_JAR_URL=https://github.com/ontodev/robot/releases/download/v9.9.9/robot.jar`
+  构建退出码 **1**，不产镜像（`curl` 重试耗尽后失败），证明不会静默留空
+- 离线：`--build-arg ROBOT_JAR_URL=` 构建退出码 0，镜像内 `/opt/robot/robot.jar` 不存在，需运行时挂载
+- Jena 官方 `archive.apache.org` 在本机仅约 **20 KB/s**（23.6 MB 约 20 分钟）；同样可用
+  `--build-arg JENA_URL=<内网镜像直链>` 指到快源（实测用本地 HTTP 镜像）
 
 ## 3. 启动顺序
 
 ```powershell
-docker compose -f platform/docker-compose.yml build      # 首次构建；无 robot.jar 时 reasoner 会失败
+docker compose -f platform/docker-compose.yml build      # 首次构建；reasoner 会联网下载 robot.jar（见上节）
 docker compose -f platform/docker-compose.yml up -d
 docker compose -f platform/docker-compose.yml ps
 ```
@@ -85,6 +151,9 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
 | `E_EMBED_MODEL_MISMATCH` | 查询/写入的向量模型与分区指针不一致。检查 `embedding.active_model` 与 `dim`，不要混用模型向量；切回旧模型需 `platform reindex --provider` |
 | embedding 容器反复重启，日志含 `queue.rs` `Full(..)` panic | `MAX_CONCURRENT_REQUESTS` 过低（=1 必崩）。compose 默认 4，回退不要低于 4 |
 | PowerShell 报 `MissingSwitchStatementClause` / 脚本乱码 | `.ps1` 必须以 **UTF-8 BOM** 保存（Windows PowerShell 5.1 按 ANSI 读取无 BOM 文件） |
+| `docker compose build` 在 `pip install` 处很慢或 `Read timed out` | 默认 `PIP_INDEX_URL=https://pypi.org/simple`；国内改用 `--build-arg PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple`（或设同名环境变量） |
+| `docker compose build` 卡在 Jena 下载（RUN 里的 `curl ... "$JENA_URL" \| tar`） | 官方 `archive.apache.org` 实测仅约 20 KB/s（23.6 MB）；用 `--build-arg JENA_URL=<内网/快源直链>` |
+| reasoner 构建在下载 robot.jar 处失败（`curl` 非 0） | GitHub release 不可达；改 `--build-arg ROBOT_JAR_URL=<内网镜像直链>`，或 `ROBOT_JAR_URL=` 后运行时挂载 jar（见 §2） |
 | `/readyz` 中 `storage.status=fail` | `data/blobs` 目录缺失或磁盘可用低于 10% |
 | reasoner 相关接口 `E_REASONER_UNAVAILABLE` | reasoner 容器未起（缺 `robot.jar` 或 profile 未开）；平台其余功能不受影响 |
 
