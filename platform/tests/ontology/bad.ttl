@@ -1,0 +1,4 @@
+@prefix ex: <http://example.org/tbox#> .
+
+ex:Broken a ex:Thing ;
+    ex:label "missing closing bracket"

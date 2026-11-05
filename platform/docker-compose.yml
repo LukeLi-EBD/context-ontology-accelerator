@@ -1,0 +1,196 @@
+# S0 skeleton: 3 long-running containers (lean shape).
+# learn/lean are both 3 containers in S0; learn-only services (embedding/reasoner)
+# are appended in S3/S5. Keep COMPOSE_PROFILES=learn in .env to pin the intent.
+name: agent-platform
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18-trixie
+    container_name: agent-platform-postgres
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform_dev}
+      POSTGRES_DB: platform
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      TZ: Asia/Shanghai
+    # Pigsty-style single-node tuning; values stay conservative for a 12-16GB host.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - max_connections=50
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_compression=on
+      - -c
+      - log_min_duration_statement=1000
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18+ images expect a single mount at /var/lib/postgresql
+      # (PGDATA lives in /var/lib/postgresql/18/docker).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  oxigraph:
+    image: oxigraph/oxigraph:0.5.7
+    container_name: agent-platform-oxigraph
+    # Image is distroless (no shell/curl), so no in-container healthcheck.
+    # Real graph readiness is proven by platform self-check and /readyz.
+    command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7878"]
+    # S14H-16: NO host port mapping on purpose. Oxigraph has no auth, so any
+    # host-side mapping (even 127.0.0.1) lets local processes bypass the
+    # platform's GSP governance (measured: POST /store -> 204). The platform
+    # reaches it in-network as http://oxigraph:7878. Debugging must go through
+    # `docker compose exec platform python ...`, not a published port.
+    volumes:
+      - oxigraph-data:/data
+    restart: unless-stopped
+
+  # learn profile only (05 section 1.6): local BGE-M3 served by TEI (CPU, OpenAI
+  # compatible /v1/embeddings). platform does NOT depend_on it: if the container
+  # is down, hybrid search degrades to lexical and says so.
+  embedding:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
+    container_name: agent-platform-embedding
+    profiles: ["learn", "embedding"]
+    command:
+      - "--model-id"
+      - "/data/models/bge-m3"
+      - "--port"
+      - "80"
+      # TEI 要求 max-batch-tokens >= 模型 max_input_length(8192)，除非开
+      # auto-truncate。2048 + auto-truncate 把 warmup/请求峰值压到 6g 以内
+      # （实测 8192 时 6g/8g 均在 warmup 顶满，2026-11-05 11:56/11:57）。
+      - "--max-batch-tokens"
+      - "2048"
+      - "--auto-truncate"
+    volumes:
+      - ./data/models:/data/models:ro
+    ports:
+      - "127.0.0.1:${EMBEDDING_PORT:-8081}:80"
+    environment:
+      # R5/S13H-11: 3 个计算线程（rayon），留 1 核给 API/PG/文件 IO。
+      RAYON_NUM_THREADS: "${RAYON_NUM_THREADS:-3}"
+      # 单飞不在 TEI 侧做：TEI cpu-1.8 设 MAX_CONCURRENT_REQUESTS=1 后，任何请求
+      # 都会触发 queue.rs 的 `Full(..)` panic 并退出（2026-11-05 12:22 实测，
+      # restarts 递增、/v1/embeddings 与 /embed 都 Server disconnected）。
+      # 平台侧 EmbeddingClient 已有 BoundedSemaphore(1) 保证同一时刻只有一个批量
+      # 请求在途，效果等价且不依赖镜像参数。见 W-18 / OQ-41。
+      MAX_CONCURRENT_REQUESTS: "${MAX_CONCURRENT_REQUESTS:-4}"
+    # R5: 限制 4 核，避免批量索引时与 reasoner/宿主抢核（EMBEDDING_CPUS 可覆盖）。
+    # 注意：仅在容器重建后生效（docker compose up -d embedding），见 WORKLOG W-17。
+    cpus: "${EMBEDDING_CPUS:-4}"
+    # 模型常驻约 2.3 GB。实测：4g 冷加载直接重启（RestartCount=2）；
+    # 8192 max-batch-tokens 时 6g/8g 均在 warmup 顶满仍不 ready（2026-11-05
+    # 11:52 / 11:56 / 12:16）。改为 2048 tokens 后按 6g 定值；Docker VM 共
+    # 11.7 GiB，余量留给 API/PG/Oxigraph。
+    mem_limit: ${EMBEDDING_MEMORY:-6g}
+    restart: unless-stopped
+
+  # learn profile only (05 section 1.6): ROBOT/ELK wrapped by a thin HTTP service.
+  # platform never depends_on it: if it is down, reasoning endpoints fail with
+  # E_REASONER_UNAVAILABLE while the rest of the platform keeps working.
+  reasoner:
+    build:
+      context: ./reasoner
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: agent-reasoner:0.1-s5
+    container_name: agent-platform-reasoner
+    profiles: ["learn", "reasoning"]
+    environment:
+      ROBOT_JAR: /opt/robot/robot.jar
+      JAVA_OPTS: "-Xmx2g"
+    ports:
+      - "127.0.0.1:${REASONER_PORT:-7879}:7879"
+    # 4g = java -Xmx2g + 2g 留给 JVM 元空间/线程栈/uvicorn 本体（原 3g 并发推理易 OOM）
+    mem_limit: 4g
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:7879/healthz', timeout=5).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 20
+      start_period: 90s
+    restart: unless-stopped
+
+  # OQ-34: one-shot RDFS closure job (Apache Jena riot --rules=RDFS).
+  # NOT a long-running service: profile "job" only, started with
+  #   docker compose --profile job run --rm rdfs
+  # Reads /data/jobs/rdfs/in.ttl and writes /data/jobs/rdfs/out.nt.
+  rdfs:
+    build: ./rdfs
+    image: agent-rdfs:0.1-s5
+    container_name: agent-platform-rdfs
+    profiles: ["job"]
+    volumes:
+      - ./data:/data
+    command: ["/data/jobs/rdfs/in.ttl", "/data/jobs/rdfs/out.nt"]
+    mem_limit: 1g
+    restart: "no"
+
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: agent-platform:0.1-s5
+    container_name: agent-platform-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oxigraph:
+        condition: service_started
+    env_file:
+      # Runtime-only injection: provider secrets live here, never in the image.
+      - .env
+    environment:
+      PLATFORM__DATABASE__URL: "postgresql://platform:${POSTGRES_PASSWORD:-platform_dev}@postgres:5432/platform"
+      PLATFORM__RUNTIME__MODE: "${PLATFORM_RUNTIME_MODE:-learn}"
+      # S14H-17 burst tier: scripts/burst.ps1 on sets 0 (unlimited), off restores 1.0.
+      PLATFORM__EMBEDDING__MAX_CHUNKS_PER_SEC: "${EMBED_MAX_CHUNKS_PER_SEC:-1.0}"
+    ports:
+      - "127.0.0.1:${PLATFORM_PORT:-8080}:8080"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).status == 200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  oxigraph-data:

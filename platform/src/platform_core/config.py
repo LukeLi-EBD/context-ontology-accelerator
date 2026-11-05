@@ -1,0 +1,621 @@
+"""Configuration schema, loading and fail-fast validation.
+
+Source of truth: _design/03 section 8 (defaults + validation), _design/04 section 10.1.
+Priority: CLI (not exposed in S0) < environment < platform.yaml < built-in defaults.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from .errors import EXIT_CONFIG, PlatformError
+
+SUPPORTED_CONFIG_VERSION = 1
+ENV_PREFIX = "PLATFORM__"
+
+
+class _Strict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class HttpConfig(_Strict):
+    port: int = Field(default=8080, ge=1, le=65535)
+    bind: str = "0.0.0.0"
+
+
+class DatabaseConfig(_Strict):
+    url: str
+    pool_max: int = Field(default=10, ge=1, le=100)
+    statement_timeout_ms: int | None = Field(default=None, ge=0)
+
+
+class GraphConfig(_Strict):
+    provider: Literal["oxigraph-http", "pyoxigraph", "pyoxigraph-memory", "fuseki", "age"] = (
+        "oxigraph-http"
+    )
+    endpoint: str = "http://oxigraph:7878"
+    data_dir: str | None = None
+    default_graph: str | None = None
+    readonly: bool = False
+    allow_service: bool = False
+    allow_update: bool = False
+    timeout_ms: int = Field(default=30000, ge=0, le=300000)
+    max_rows: int = Field(default=10000, ge=1)
+    max_construct_triples: int = Field(default=200000, ge=1)
+
+
+class StorageConfig(_Strict):
+    small_object_provider: Literal["pg", "fs"] = "pg"
+    large_object_provider: Literal["fs", "pg", "silo"] = "fs"
+    provider: Literal["fs", "pg", "silo", "in-memory"] | None = None
+    root: str = "/data"
+    tmp_dir: str = "/data/tmp"
+    min_free_pct: int = Field(default=10, ge=0, le=100)
+    gc_grace_hours: int = Field(default=48, ge=0)
+    pg_blob_max_file_mb: int = Field(default=10, ge=1)
+    pg_blob_max_total_pct: int = Field(default=20, ge=0, le=100)
+    pg_blob_max_count: int = Field(default=100000, ge=1)
+    fs_hard_max_file_mb: int = Field(default=256, ge=1)
+    pg_mode: Literal["auto", "bytea", "lo"] = "auto"
+    require_range_read: bool = True
+    endpoint: str | None = None
+    bucket: str | None = None
+    access_key_ref: str | None = None
+    secret_key_ref: str | None = None
+    routing: dict[str, Any] | None = None
+
+
+class RuntimeConfig(_Strict):
+    mode: Literal["learn", "lean"] = "learn"
+
+
+class OntologyConfig(_Strict):
+    """S1 ontology bootstrap settings (03 section 8.2)."""
+
+    init_mode: Literal["off", "once", "watch"] = "watch"
+    init_source: str = "/data/ontology/bootstrap.ttl"
+    init_semver: str = "0.0.0"
+    watch_interval_seconds: int = Field(default=30, ge=5, le=3600)
+    max_source_bytes: int = Field(default=5 * 1024 * 1024, ge=1024)
+    # G-01: owl:imports closure. Local mirror wins over the network so offline
+    # boxes can resolve imports; unresolved IRIs are reported, never dropped.
+    import_dir: str = "/data/ontology-imports"
+    import_fetch_enabled: bool = True
+    import_fetch_timeout_ms: int = Field(default=5000, ge=500, le=60000)
+    import_max_depth: int = Field(default=4, ge=1, le=10)
+    import_max_imports: int = Field(default=50, ge=1, le=200)
+
+
+class OcrConfig(_Strict):
+    """D22: OCR stays off in the single-node build (S2 ships no OCR engine)."""
+
+    enabled: bool = False
+    engine: Literal["paddleocr", "tesseract"] = "paddleocr"
+    lang: str = "chi_sim+en"
+    min_chars_per_page: int = Field(default=20, ge=1, le=500)
+
+
+class DocumentsConfig(_Strict):
+    """S2 ingest settings (10 section 3)."""
+
+    bucket: str = Field(default="documents", min_length=1)
+    max_upload_bytes: int = Field(default=200 * 1024 * 1024, ge=1024 * 1024, le=2 * 1024**3)
+    chunk_max_chars: int = Field(default=1200, ge=100, le=20000)
+    chunk_overlap_chars: int = Field(default=200, ge=0, le=19999)
+    min_chunk_chars: int = Field(default=1, ge=1, le=100)
+    extract_tables: bool = True
+    parser: Literal["local"] = "local"
+
+
+class EmbeddingConfig(_Strict):
+    """S3 embedding client (04 section 4.4; 03 section 3.5 pins 1024 dims)."""
+
+    provider: Literal["local-bge", "openai-compatible", "ark", "fake", "disabled"] = "local-bge"
+    model: str = "BAAI/bge-m3"
+    dimensions: int = Field(default=1024, ge=1, le=4096)
+    endpoint: str = "http://embedding:80/v1"
+    timeout_ms: int = Field(default=30000, ge=1000, le=300000)
+    # R5/S13H-11 CPU tier. 2026-11-05 12:35 实测：TEI cpu-1.8 (candle CPU)
+    # 单请求 batch>=4 会触发 core/src/queue.rs 的 `Full(..)` panic 并退出
+    # （batch=4: 14/16 请求 `Server disconnected`；batch=8: 7/8 失败）。
+    # batch=2 稳定、batch=1 反而最快（2.19 vs 1.87 chunk/s），故默认取 2。
+    batch_size: int = Field(default=2, ge=1, le=32)
+    batch_max: int = Field(default=2, ge=1, le=32)
+    chunk_per_request_max: int = Field(default=32, ge=1, le=256)
+    # 单请求总字符预算：TEI --max-batch-tokens=2048，超预算会走 split 路径并
+    # 触发 queue.rs panic（2026-11-05 12:44 110-chunk 真实文档实测 restarts+1）。
+    request_max_chars: int = Field(default=1600, ge=200, le=8000)
+    # Platform-side single-flight gate is fixed at 1; this is the HTTP timeout.
+    request_timeout_s: int = Field(default=60, ge=1, le=600)
+    # 保底限速：默认约为实测上限（2.19 chunk/s）的 60% 取整。0 表示不限。
+    max_chunks_per_sec: float = Field(default=1.0, ge=0.0, le=1000.0)
+    # S14H-17 大文档修复：自适应超时 = base(timeout_ms) + perChar * 批内最长块字符数，
+    # 上限 timeout_max_s；仅 E_EMBED_TIMEOUT 重试 retry_max 次（线性退避）。
+    adaptive_timeout_per_char_s: float = Field(default=0.02, ge=0.0, le=1.0)
+    timeout_max_s: int = Field(default=120, ge=10, le=600)
+    retry_max: int = Field(default=2, ge=0, le=5)
+    retry_backoff_s: float = Field(default=1.0, ge=0.1, le=10.0)
+    # 长块单独发（不与任何块合批）；短块仍按 batch_size<=2 合批。
+    long_chunk_chars: int = Field(default=900, ge=200, le=20000)
+    # 分段提交/断点：普通文档每 50 chunk 提交；>500 chunk 的大文档每批 100。
+    index_commit_chunks: int = Field(default=50, ge=1, le=1000)
+    large_doc_chunks: int = Field(default=500, ge=100, le=100000)
+    large_doc_batch_chunks: int = Field(default=100, ge=1, le=1000)
+    service_enabled: bool = True
+    api_key_env: str = "EMBEDDING_API_KEY"
+    # Ark is used for the non-default partition only (platform reindex --provider=ark).
+    # The probe on 2026-11-05 returned 2048 dims, so it cannot share vectors with BGE-M3.
+    ark_base_url: str = "https://ark.cn-beijing.volces.com/api/coding/v3"
+    ark_model: str = "doubao-embedding-vision"
+    ark_dimensions: int = Field(default=2048, ge=1, le=4096)
+    ark_api_key_env: str = "PLATFORM__LLM__API_KEY"
+
+
+class SearchConfig(_Strict):
+    """S3 hybrid search (03 D19: RRF k=60)."""
+
+    enabled: bool = True
+    top_k: int = Field(default=10, ge=1, le=100)
+    candidate_k: int = Field(default=30, ge=1, le=500)
+    rrf_k: int = Field(default=60, ge=1, le=1000)
+    # 0.05 let one shared trigram through: a random 13-char token scored 0.077
+    # against 23 unrelated chunks (measured 2026-11-05 on 1425 real chunks).
+    # 0.10 removes those hits; a meaningful 3-char term scores 0.5+.
+    min_similarity: float = Field(default=0.10, ge=0.0, le=1.0)
+    # S14H-17 chunk-level segmented transactions / checkpoints (see search.py).
+    index_commit_chunks: int = Field(default=50, ge=1, le=1000)
+    large_doc_chunks: int = Field(default=500, ge=100, le=100000)
+    large_doc_batch_chunks: int = Field(default=100, ge=1, le=1000)
+
+
+class ContextConfig(_Strict):
+    """S6 context assembly (04 section 5.3). Orchestration only; no in-app ranking."""
+
+    enabled: bool = True
+    default_token_budget: int = Field(default=2048, ge=64, le=32768)
+    max_token_budget: int = Field(default=8192, ge=64, le=65536)
+    default_top_k: int = Field(default=10, ge=1, le=50)
+    graph_limit: int = Field(default=50, ge=1, le=500)
+    seed_limit: int = Field(default=10, ge=1, le=100)
+
+
+class LlmConfig(_Strict):
+    """S4 OpenAI-compatible LLM client (04 section 4.6). Empty base_url/model = unconfigured."""
+
+    # `ark` = Volcengine Ark coding plan, which speaks the OpenAI-compatible
+    # protocol but bills/limits differently (base URL must end with /coding/v3).
+    provider: Literal["openai-compatible", "ark", "disabled"] = "openai-compatible"
+    base_url: str = ""
+    model: str = ""
+    timeout_ms: int = Field(default=30000, ge=1000, le=300000)
+    max_retries: int = Field(default=1, ge=0, le=3)
+    temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    api_key_env: str = "LLM_API_KEY"
+
+
+class ExtractionRule(_Strict):
+    name: str = Field(min_length=1, max_length=64)
+    pattern: str = Field(min_length=1)
+    predicate: str = Field(min_length=1)
+    subject: str = Field(min_length=1)
+    object: str = Field(min_length=1)
+
+
+class ExtractionConfig(_Strict):
+    """S4 rule/LLM extraction settings."""
+
+    enabled: bool = True
+    max_candidates_per_chunk: int = Field(default=10, ge=1, le=100)
+    # Legacy floor for the adaptive LLM batch size (kept for existing configs).
+    llm_max_chunks: int = Field(default=20, ge=1, le=1000)
+    # Explicit override: when set it wins over the adaptive batch size.
+    max_chunks: int | None = Field(default=None, ge=1, le=5000)
+    rules: list[ExtractionRule] = Field(default_factory=list)
+
+
+class ReasoningConfig(_Strict):
+    """S5 SHACL + EL materialization (04 section 4.5, 05 section 2)."""
+
+    mode: Literal["off", "rdfs", "materialize", "validate"] = "materialize"
+    profile: Literal["RDFS", "EL", "OWL2EL", "OWL2QL", "OWL2RL", "OWL2DL"] = "EL"
+    engine: Literal["robot"] = "robot"
+    service_enabled: bool = True
+    endpoint: str = "http://reasoner:7879"
+    timeout_ms: int = Field(default=300000, ge=1000, le=3600000)
+    inferred_graph_prefix: str = "urn:platform:inferred:"
+    abox_graphs: list[str] = Field(
+        default_factory=lambda: ["urn:platform:graph:abox:main"]
+    )
+    shapes_dir: str = "/data/shapes"
+    consistency_first: bool = True
+    max_violations: int = Field(default=200, ge=1, le=5000)
+    max_input_bytes: int = Field(default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024)
+
+
+class LogConfig(_Strict):
+    level: Literal["debug", "info", "warning", "error"] = "info"
+    format: Literal["json", "text"] = "json"
+
+
+class PlatformConfig(_Strict):
+    mode: Literal["dev", "single", "test"] = "single"
+    config_version: int = 1
+    data_dir: str = "/data"
+    http: HttpConfig = Field(default_factory=HttpConfig)
+    database: DatabaseConfig
+    graph: GraphConfig = Field(default_factory=GraphConfig)
+    storage: StorageConfig = Field(default_factory=StorageConfig)
+    runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    log: LogConfig = Field(default_factory=LogConfig)
+    # Declared but not assembled in S0 (see S0 design section 4.2).
+    llm: LlmConfig = Field(default_factory=LlmConfig)
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    ocr: OcrConfig = Field(default_factory=OcrConfig)
+    documents: DocumentsConfig = Field(default_factory=DocumentsConfig)
+    ontology: OntologyConfig = Field(default_factory=OntologyConfig)
+    reasoning: ReasoningConfig = Field(default_factory=ReasoningConfig)
+    search: SearchConfig = Field(default_factory=SearchConfig)
+    context: ContextConfig = Field(default_factory=ContextConfig)
+    extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
+    jobs: dict[str, Any] = Field(default_factory=dict)
+    server: dict[str, Any] = Field(default_factory=dict)
+    requirements: dict[str, list[str]] = Field(
+        default_factory=lambda: {
+            "sparql_query": ["graph.sparql"],
+            "fact_write": ["graph.update"],
+            "object_put": ["object.put"],
+            "object_get": ["object.get"],
+            "document_ingest": ["document.ingest"],
+        }
+    )
+    degradation: dict[str, list[str]] = Field(
+        default_factory=lambda: {
+            "allow": [],
+            "deny": [
+                "sparql_query",
+                "fact_write",
+                "object_put",
+                "object_get",
+                "document_ingest",
+            ],
+        }
+    )
+
+
+@dataclass
+class ConfigBundle:
+    config: PlatformConfig
+    path: Path
+    sources: dict[str, str] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
+
+    def source_of(self, dotted_key: str) -> str:
+        return self.sources.get(dotted_key, "default")
+
+
+def _deep_merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    out = dict(base)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(out.get(key), dict):
+            out[key] = _deep_merge(out[key], value)
+        else:
+            out[key] = value
+    return out
+
+
+def _flatten(value: Any, prefix: str = "") -> dict[str, Any]:
+    flat: dict[str, Any] = {}
+    if isinstance(value, dict):
+        for key, item in value.items():
+            child = f"{prefix}.{key}" if prefix else str(key)
+            flat.update(_flatten(item, child))
+    else:
+        flat[prefix] = value
+    return flat
+
+
+def _parse_env_scalar(raw: str) -> Any:
+    try:
+        parsed = yaml.safe_load(raw)
+    except yaml.YAMLError:
+        return raw
+    if isinstance(parsed, (dict, list)):
+        return raw
+    return parsed
+
+
+def _env_overrides(environ: dict[str, str]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, raw in environ.items():
+        if not key.startswith(ENV_PREFIX):
+            continue
+        parts = key[len(ENV_PREFIX) :].lower().split("__")
+        if len(parts) < 2:
+            continue
+        # Secrets are read by the SecretProvider, never merged into the config
+        # document (so they cannot leak through /status, logs or repr()).
+        if parts[-1] == "api_key":
+            continue
+        node = result
+        for part in parts[:-1]:
+            existing = node.get(part)
+            if not isinstance(existing, dict):
+                existing = {}
+                node[part] = existing
+            node = existing
+        node[parts[-1]] = _parse_env_scalar(raw)
+    return result
+
+
+def _config_error(code: str, detail: str, key: str | None = None, hint: str = "") -> PlatformError:
+    return PlatformError(
+        code=code,
+        detail=detail,
+        stage="config",
+        key=key,
+        hint=hint,
+        exit_code=EXIT_CONFIG,
+    )
+
+
+def load_config(path: str | Path, environ: dict[str, str] | None = None) -> ConfigBundle:
+    """Load, merge and validate configuration. Raises PlatformError (exit 78)."""
+
+    config_path = Path(path)
+    if not config_path.is_file():
+        raise _config_error(
+            "E_CONFIG_FILE",
+            f"configuration file not found: {config_path}",
+            key="config",
+            hint="mount ./data:/data and pass --config /data/platform.yaml",
+        )
+
+    try:
+        yaml_doc = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise _config_error("E_CONFIG_YAML", f"invalid YAML: {exc}", key="config") from exc
+    if not isinstance(yaml_doc, dict):
+        raise _config_error("E_CONFIG_YAML", "top-level YAML value must be a mapping", key="config")
+
+    environ = environ if environ is not None else dict(os.environ)
+    env_doc = _env_overrides(environ)
+    merged = _deep_merge(yaml_doc, env_doc)
+
+    try:
+        model = PlatformConfig.model_validate(merged)
+    except ValidationError as exc:
+        first = exc.errors()[0]
+        location = ".".join(str(part) for part in first.get("loc", ())) or "config"
+        raise _config_error(
+            "E_CONFIG_SCHEMA",
+            f"{first.get('msg', 'invalid value')} (got {first.get('input')!r})",
+            key=location,
+            hint="fix the value or remove the key; unknown keys are rejected",
+        ) from exc
+
+    warnings = _apply_semantics(model, merged)
+    sources = {key: "yaml" for key in _flatten(yaml_doc)}
+    sources.update({key: "env" for key in _flatten(env_doc)})
+    sources["config.file"] = "yaml"
+    return ConfigBundle(config=model, path=config_path, sources=sources, warnings=warnings)
+
+
+def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
+
+    if model.mode == "test":
+        raise _config_error(
+            "E_MODE_TEST_UNSUPPORTED",
+            "mode=test requires memory doubles which S0 does not implement",
+            key="mode",
+            hint="use mode=single",
+        )
+    if model.config_version > SUPPORTED_CONFIG_VERSION:
+        raise _config_error(
+            "E_CONFIG_VERSION",
+            f"config_version {model.config_version} is newer than supported {SUPPORTED_CONFIG_VERSION}",
+            key="config_version",
+        )
+
+    storage_raw = merged.get("storage", {}) if isinstance(merged.get("storage"), dict) else {}
+
+    if "provider" in storage_raw and model.storage.provider is not None:
+        shorthand = model.storage.provider
+        if shorthand == "in-memory":
+            raise _config_error(
+                "E_STORAGE_IN_MEMORY",
+                "in-memory object storage is only allowed in mode=test",
+                key="storage.provider",
+            )
+        if shorthand == "silo":
+            raise _config_error(
+                "E_PROVIDER_UNSUPPORTED",
+                "storage.provider=silo is P1 and not implemented",
+                key="storage.provider",
+            )
+        if "small_object_provider" not in storage_raw:
+            model.storage.small_object_provider = shorthand  # type: ignore[assignment]
+        if "large_object_provider" not in storage_raw:
+            model.storage.large_object_provider = shorthand  # type: ignore[assignment]
+
+    if (
+        model.storage.large_object_provider == "pg"
+        and model.storage.require_range_read
+        and model.storage.pg_mode == "bytea"
+    ):
+        raise _config_error(
+            "E_CONFIG_E011",
+            "range_read requires pg_mode=lo (or set require_range_read=false)",
+            key="storage.require_range_read",
+        )
+    if model.storage.large_object_provider == "pg":
+        raise _config_error(
+            "E_PROVIDER_UNSUPPORTED",
+            "large_object_provider=pg is not implemented in S0",
+            key="storage.large_object_provider",
+            hint="use large_object_provider=fs",
+        )
+    if model.storage.large_object_provider == "silo":
+        raise _config_error(
+            "E_PROVIDER_UNSUPPORTED",
+            "large_object_provider=silo is P1 and not implemented",
+            key="storage.large_object_provider",
+            hint="use large_object_provider=fs",
+        )
+
+    if model.graph.provider != "oxigraph-http":
+        raise _config_error(
+            "E_PROVIDER_UNSUPPORTED",
+            f"graph.provider={model.graph.provider} is not assembled in S0",
+            key="graph.provider",
+            hint="use graph.provider=oxigraph-http; fuseki/age adapters arrive later",
+        )
+    if not model.graph.endpoint:
+        raise _config_error("E_CONFIG_REQUIRED", "graph.endpoint is required", key="graph.endpoint")
+
+    if model.storage.pg_blob_max_file_mb > 1024:
+        warnings.append(
+            "storage.pg_blob_max_file_mb > 1024 exceeds bytea single-value guidance; "
+            "objects will be routed to fs"
+        )
+    if model.storage.small_object_provider == "fs":
+        warnings.append("storage.small_object_provider=fs: all objects are stored in the fs CAS")
+
+    if model.documents.chunk_overlap_chars >= model.documents.chunk_max_chars:
+        raise _config_error(
+            "E_CONFIG_CHUNK_OVERLAP",
+            (
+                f"documents.chunk_overlap_chars={model.documents.chunk_overlap_chars} must be "
+                f"smaller than documents.chunk_max_chars={model.documents.chunk_max_chars}"
+            ),
+            key="documents.chunk_overlap_chars",
+            hint="lower chunk_overlap_chars or raise chunk_max_chars; the chunker must advance",
+        )
+
+    if model.ocr.enabled:
+        raise _config_error(
+            "E_OCR_UNSUPPORTED",
+            "ocr.enabled=true is not supported: the single-node S2 build ships no OCR engine (D22)",
+            key="ocr.enabled",
+            hint="set ocr.enabled=false; scanned PDFs are reported as degraded with NO_OCR_ENABLED",
+        )
+
+    if model.search.candidate_k < model.search.top_k:
+        raise _config_error(
+            "E_CONFIG_SEARCH_RANGE",
+            (
+                f"search.candidate_k={model.search.candidate_k} must be >= "
+                f"search.top_k={model.search.top_k}"
+            ),
+            key="search.candidate_k",
+            hint="candidate_k is the per-route candidate pool; it cannot be smaller than top_k",
+        )
+
+    if model.context.default_token_budget > model.context.max_token_budget:
+        raise _config_error(
+            "E_CONFIG_CONTEXT",
+            (
+                f"context.default_token_budget={model.context.default_token_budget} must be <= "
+                f"context.max_token_budget={model.context.max_token_budget}"
+            ),
+            key="context.default_token_budget",
+            hint="lower the default budget or raise max_token_budget",
+        )
+
+    if model.embedding.provider in ("local-bge", "openai-compatible") and not model.embedding.endpoint:
+        raise _config_error(
+            "E_CONFIG_REQUIRED",
+            "embedding.endpoint is required for the HTTP embedding providers",
+            key="embedding.endpoint",
+        )
+    if model.embedding.provider == "fake":
+        warnings.append(
+            "embedding.provider=fake: deterministic test vectors only, never index production data"
+        )
+    if model.embedding.provider == "disabled":
+        warnings.append("embedding.provider=disabled: semantic search falls back to lexical (FTS)")
+
+    for rule in model.extraction.rules:
+        try:
+            compiled = re.compile(rule.pattern)
+        except re.error as exc:
+            raise _config_error(
+                "E_CONFIG_EXTRACTION_RULE",
+                f"extraction rule {rule.name!r} has an invalid regex: {exc}",
+                key="extraction.rules",
+                hint="fix the pattern or remove the rule",
+            ) from exc
+        missing = {"subject", "object"} - set(compiled.groupindex)
+        if missing:
+            raise _config_error(
+                "E_CONFIG_EXTRACTION_RULE",
+                (
+                    f"extraction rule {rule.name!r} must define named groups "
+                    f"{sorted(missing)}"
+                ),
+                key="extraction.rules",
+                hint="use (?P<subject>...) and (?P<object>...) in the pattern",
+            )
+    if not model.extraction.enabled:
+        warnings.append("extraction:disabled")
+    if model.llm.provider == "disabled":
+        warnings.append("llm.provider=disabled: extraction uses rules only")
+    elif not (model.llm.base_url and model.llm.model):
+        warnings.append("llm.base_url/model are empty: extraction uses rules only (auto mode)")
+
+    # ---- S5 reasoning semantics -----------------------------------------
+    if model.reasoning.mode != "off":
+        # ROBOT's `reason` offers ELK/HermiT/JFact only: there is no RDFS
+        # reasoner to delegate to, and S5 never implements one in-process.
+        if model.reasoning.profile in ("RDFS", "OWL2QL", "OWL2RL", "OWL2DL"):
+            raise _config_error(
+                "E_CONFIG_REASONING",
+                (
+                    f"reasoning.profile={model.reasoning.profile} is not implemented: "
+                    "the S5 reasoner is ROBOT/ELK (OWL 2 EL only)"
+                ),
+                key="reasoning.profile",
+                hint=(
+                    "use profile=EL or profile=OWL2EL for ELK; RDFS closure is the "
+                    "one-shot Jena job (docker compose --profile job run --rm rdfs), "
+                    "not an in-process reasoner"
+                ),
+            )
+        if not model.reasoning.inferred_graph_prefix:
+            raise _config_error(
+                "E_CONFIG_REASONING",
+                "reasoning.inferred_graph_prefix is required when reasoning.mode != off",
+                key="reasoning.inferred_graph_prefix",
+                hint="e.g. urn:platform:inferred:",
+            )
+        if (
+            model.graph.default_graph
+            and model.reasoning.inferred_graph_prefix == model.graph.default_graph
+        ):
+            raise _config_error(
+                "E_CONFIG_REASONING",
+                "reasoning.inferred_graph_prefix must not equal graph.default_graph",
+                key="reasoning.inferred_graph_prefix",
+                hint="materialization must never overwrite the source graph (04 section 10.1 #8)",
+            )
+        if model.reasoning.service_enabled and not model.reasoning.endpoint:
+            raise _config_error(
+                "E_CONFIG_REQUIRED",
+                "reasoning.endpoint is required when reasoning.service_enabled=true",
+                key="reasoning.endpoint",
+            )
+    if model.reasoning.mode == "off":
+        warnings.append("reasoning:off(NO_OWL_DL)")
+    elif not model.reasoning.service_enabled:
+        warnings.append("reasoner:offline_only")
+    if model.runtime.mode == "lean" and model.reasoning.mode != "off":
+        warnings.append("reasoner:profile_required(lean)")
+
+    return warnings

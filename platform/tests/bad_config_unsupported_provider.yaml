@@ -1,0 +1,5 @@
+mode: single
+config_version: 1
+graph:
+  provider: fuseki
+  endpoint: http://fuseki:3030

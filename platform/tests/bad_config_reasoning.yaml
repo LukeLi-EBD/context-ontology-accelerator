@@ -1,0 +1,6 @@
+mode: single
+database:
+  url: postgres://platform:***MASKED***@postgres:5432/platform
+reasoning:
+  mode: materialize
+  profile: OWL2DL

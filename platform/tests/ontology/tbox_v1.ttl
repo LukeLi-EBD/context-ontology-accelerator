@@ -1,0 +1,25 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/tbox#> .
+
+ex:Thing a owl:Class ;
+    rdfs:label "Thing" .
+
+ex:Person a owl:Class ;
+    rdfs:subClassOf ex:Thing ;
+    rdfs:label "Person" .
+
+ex:Organization a owl:Class ;
+    rdfs:subClassOf ex:Thing ;
+    rdfs:label "Organization" .
+
+ex:worksFor a owl:ObjectProperty ;
+    rdfs:domain ex:Person ;
+    rdfs:range ex:Organization ;
+    rdfs:label "works for" .
+
+ex:name a owl:DatatypeProperty ;
+    rdfs:domain ex:Thing ;
+    rdfs:range xsd:string ;
+    rdfs:label "name" .

@@ -1,0 +1,6 @@
+mode: single
+config_version: 1
+http:
+  port: 99999
+database:
+  url: postgres://platform:***MASKED***@postgres:5432/platform

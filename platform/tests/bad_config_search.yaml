@@ -1,0 +1,11 @@
+# S3 fail-fast fixture: candidate_k must be >= top_k.
+mode: single
+config_version: 1
+database:
+  url: postgres://platform:***MASKED***@postgres:5432/platform
+graph:
+  provider: oxigraph-http
+  endpoint: http://oxigraph:7878
+search:
+  top_k: 20
+  candidate_k: 10
