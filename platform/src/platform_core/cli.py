@@ -62,6 +62,7 @@ def _run_ontology(runtime, args) -> int:
             args.version, proposal_id=args.proposal,
             acknowledge_breaking=args.acknowledge_breaking,
             actor=args.actor, reason=args.reason,
+            activate_existing=bool(args.publish_existing),
         )
     elif action == "diff":
         if not args.version:
@@ -173,6 +174,15 @@ def _build_parser() -> argparse.ArgumentParser:
     ontology.add_argument("--reason", default=None)
     ontology.add_argument(
         "--acknowledge-breaking", dest="acknowledge_breaking", action="store_true"
+    )
+    ontology.add_argument(
+        "--existing",
+        dest="publish_existing",
+        action="store_true",
+        help=(
+            "publish: forward-publish the existing version with the same canonical "
+            "hash (OQ-65); full gates still run"
+        ),
     )
     ontology.add_argument(
         "--on-conflict", dest="on_conflict", choices=["reject", "new_version"], default="reject"

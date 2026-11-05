@@ -829,6 +829,27 @@ def _import_version_id(import_id: str) -> str:
     return "ont-" + hashlib.sha256(f"g01-import:{import_id}".encode("utf-8")).hexdigest()[:12]
 
 
+def _find_version_by_hash(meta: Any, content_hash: str) -> dict[str, Any] | None:
+    """Latest version whose canonical hash equals ``content_hash`` (OQ-65).
+
+    Prefer the currently published one, then the most recent superseded/approved
+    version, then a draft, so a forward publish targets a stable historical row.
+    """
+    rows = meta.query(
+        """
+        SELECT version_id, status, content_hash, graph_iri, triple_count, semver
+        FROM platform.ontology_version
+        WHERE content_hash = %s
+        ORDER BY created_at DESC
+        """,
+        (content_hash,),
+    )
+    if not rows:
+        return None
+    priority = {"published": 0, "superseded": 1, "approved": 2, "draft": 3}
+    return min(rows, key=lambda row: (priority.get(row["status"], 9),))
+
+
 def _compact_diff(diff: dict[str, Any], example_limit: int = 5) -> dict[str, Any]:
     summary = diff.get("summary") or {}
     return {
@@ -900,6 +921,7 @@ def publish_import(
     change_summary: str | None = None,
     acknowledge_breaking: bool = False,
     abox_graphs: list[str] | None = None,
+    publish_existing: bool = False,
 ) -> dict[str, Any]:
     """G-01 publish: dry-run diff/impact, then a governed version publish.
 
@@ -943,6 +965,24 @@ def publish_import(
             details={"importId": import_id, "stagingGraph": staging},
         )
 
+    # Canonical hash is computed before the diff so `publish_existing` can look
+    # up a version that already holds exactly this content (OQ-65 forward publish).
+    triples = parse_rdf(staging_nt, "nt")
+    content_hash = _content_hash(list(triples))
+    canonical_version: dict[str, Any] | None = None
+    if publish_existing:
+        canonical_version = _find_version_by_hash(meta, content_hash)
+        if canonical_version is None:
+            raise PortError(
+                code="NotFound",
+                message=(
+                    "publishExisting=true but no version has the same canonical content hash"
+                ),
+                provider="platform",
+                provider_code="E_ONTOLOGY_EXISTING_NOT_FOUND",
+                details={"importId": import_id, "canonicalHash": content_hash},
+            )
+
     diff = registry.diff_graphs(
         previous_graph, staging,
         from_version_id=previous_version, to_version_id=version_id,
@@ -958,9 +998,15 @@ def publish_import(
         "impact": impact,
         "usable": bool(record["usable"]),
         "reason": record["reason"],
+        "canonicalEqualTo": canonical_version["version_id"] if canonical_version else None,
     }
     if dry_run:
-        return {**base, "published": False, "publishedAt": None}
+        return {
+            **base,
+            "published": False,
+            "publishedAt": None,
+            "publishExisting": bool(publish_existing),
+        }
 
     if not record["usable"]:
         raise PortError(
@@ -981,6 +1027,36 @@ def publish_import(
                 retryable=True,
                 details={"importId": import_id},
             )
+
+        if publish_existing:
+            # OQ-65: activate the version that already holds this canonical
+            # content. Same governance path: SHACL + consistency + breaking +
+            # materialization all run; only the version/graph are reused.
+            target_id = canonical_version["version_id"]
+            summary = change_summary or f"G-01 import {import_id} (publish existing)"
+            published = registry.publish(
+                target_id,
+                None,
+                acknowledge_breaking=acknowledge_breaking,
+                actor=actor,
+                reason=summary,
+                activate_existing=True,
+            )
+            return {
+                **base,
+                "versionId": target_id,
+                "canonicalEqualTo": target_id,
+                "previousVersionId": published.get("previousVersionId"),
+                "pointer": published.get("graph"),
+                "published": True,
+                "publishedAt": published.get("publishedAt"),
+                "publishedBy": actor,
+                "mode": "activate_existing",
+                "proposalId": published.get("proposalId"),
+                "gates": published.get("gates") or {},
+                "idempotent": bool(published.get("idempotent")),
+                "unchanged": bool(published.get("unchanged")),
+            }
 
         existing = registry._fetch(version_id)
         if existing and existing["status"] in ("published", "superseded"):
@@ -1003,8 +1079,6 @@ def publish_import(
                 "idempotent": True,
             }
 
-        triples = parse_rdf(staging_nt, "nt")
-        content_hash = _content_hash(list(triples))
         source_key = f"sources/{content_hash}.ttl"
         if not existing:
             objects.put(
@@ -1262,6 +1336,21 @@ class OntologyRegistry:
         }
 
     # ---- audit chain -----------------------------------------------------
+
+    def _last_publish_previous(self, version_id: str) -> str | None:
+        """Previous version recorded on this version's latest published event."""
+        rows = self._meta.query(
+            "SELECT payload FROM platform.ontology_event "
+            "WHERE version_id = %s AND action = 'published' "
+            "ORDER BY event_id DESC LIMIT 1",
+            (version_id,),
+        )
+        if not rows:
+            return None
+        payload = rows[0]["payload"]
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+        return payload.get("previousVersionId") or payload.get("previous")
 
     def _append_event(
         self, tx: Any, version_id: str, proposal_id: str | None, action: str,
@@ -2320,6 +2409,7 @@ class OntologyRegistry:
         acknowledge_breaking: bool = False,
         actor: str = "operator",
         reason: str | None = None,
+        activate_existing: bool = False,
     ) -> dict[str, Any]:
         row = self._require(version_id)
         # Graph integrity is checked before any governance branch so a damaged or
@@ -2385,6 +2475,10 @@ class OntologyRegistry:
                     "proposalId": None,
                     "governed": True,
                     "unchanged": True,
+                    "idempotent": True,
+                    "mode": "activate_existing" if activate_existing else "publish",
+                    "previousVersionId": self._last_publish_previous(version_id),
+                    "publishedBy": actor,
                     "gates": {},
                     "publishedAt": _now(),
                 }
@@ -2497,6 +2591,40 @@ class OntologyRegistry:
 
         with self._meta.tx() as tx:
             tx.execute("SELECT pg_advisory_xact_lock(hashtext('platform:ontology:publish'))")
+            # Two concurrent publishes (e.g. the same import pushed twice) must
+            # not both append a "published" event. Re-read state after the lock;
+            # the loser returns the same idempotent payload as a repeat call.
+            lock_rows = tx.query(
+                "SELECT status FROM platform.ontology_version WHERE version_id = %s",
+                (version_id,),
+            )
+            lock_ptr = tx.query(
+                "SELECT version_id FROM platform.graph_pointer WHERE name = %s",
+                (POINTER_NAME,),
+            )
+            locked_previous = lock_ptr[0]["version_id"] if lock_ptr else None
+            if (
+                lock_rows
+                and lock_rows[0]["status"] == "published"
+                and locked_previous == version_id
+            ):
+                return {
+                    "id": version_id,
+                    "semver": row["semver"],
+                    "graph": row["graph_iri"],
+                    "triples": count,
+                    "proposalId": proposal["proposal_id"] if proposal else None,
+                    "governed": True,
+                    "implicitProposal": False,
+                    "unchanged": True,
+                    "idempotent": True,
+                    "mode": "activate_existing" if activate_existing else "publish",
+                    "previousVersionId": locked_previous,
+                    "publishedBy": actor,
+                    "gates": {},
+                    "publishedAt": _now(),
+                }
+            previous_id = locked_previous
             if implicit:
                 summary = "implicit proposal: direct publish"
                 tx.execute(
@@ -2544,11 +2672,14 @@ class OntologyRegistry:
                     tx, previous_id, None, "superseded", actor, reason,
                     {"replacedBy": version_id},
                 )
+            # Forward publishing an existing version records this run's real
+            # timestamp; a plain first publish has published_at NULL anyway.
             tx.execute(
                 "UPDATE platform.ontology_version "
-                "SET status = 'published', published_at = COALESCE(published_at, now()) "
+                "SET status = 'published', published_at = "
+                "CASE WHEN %s THEN now() ELSE COALESCE(published_at, now()) END "
                 "WHERE version_id = %s",
-                (version_id,),
+                (bool(activate_existing), version_id),
             )
             tx.execute(
                 """
@@ -2568,8 +2699,14 @@ class OntologyRegistry:
             self._append_event(
                 tx, version_id, pid, "published", actor, reason,
                 {
-                    "mode": "implicit_governed" if implicit else "governed",
+                    "mode": (
+                        "activate_existing" if activate_existing
+                        else ("implicit_governed" if implicit else "governed")
+                    ),
                     "previous": previous_id,
+                    "previousVersionId": previous_id,
+                    "publishedBy": actor,
+                    "canonicalHash": row.get("content_hash"),
                     "breaking": bool(breaking),
                     "gates": gates,
                 },
@@ -2634,6 +2771,10 @@ class OntologyRegistry:
             "proposalId": pid,
             "governed": True,
             "implicitProposal": bool(implicit),
+            "mode": "activate_existing" if activate_existing else "publish",
+            "previousVersionId": previous_id,
+            "publishedBy": actor,
+            "idempotent": False,
             "gates": gates,
             "publishedAt": _now(),
         }
@@ -2729,7 +2870,12 @@ class OntologyRegistry:
             )
             self._append_event(
                 tx, version_id, None, "rolled_back", actor, reason,
-                {"previous": previous_id, "target": version_id},
+                {
+                    "previous": previous_id,
+                    "previousVersionId": previous_id,
+                    "target": version_id,
+                    "publishedBy": actor,
+                },
             )
         if self._materializer is not None:
             try:

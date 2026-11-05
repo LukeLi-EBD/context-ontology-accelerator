@@ -13,6 +13,7 @@ switched.
 import os
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -33,7 +34,10 @@ from platform_core.validation import ShaclValidator
 
 DSN = os.environ.get(
     "TEST_PG_DSN",
-    "postgres://platform:***MASKED***@host.docker.internal:5432/platform",
+    os.environ.get(
+        "PLATFORM__DATABASE__URL",
+        "postgres://platform:***MASKED***@host.docker.internal:5432/platform",
+    ),
 )
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://host.docker.internal:7878")
 REASONER_URL = os.environ.get("TEST_REASONER_URL", "http://host.docker.internal:7879")
@@ -62,6 +66,17 @@ ROOT_SHAPES_TTL = """\
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 <urn:test:shape:Noop> a sh:NodeShape .
+"""
+
+TTL_VARIANT = """\
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<urn:s14pub:Widget> a owl:Class ;
+    rdfs:label "Widget"@en .
+
+<urn:s14pub:Gadget> a owl:Class ;
+    rdfs:label "Gadget"@en .
 """
 
 
@@ -224,6 +239,9 @@ class PublishTests(unittest.TestCase):
         return self.reasoner.reason(tbox_nt, b"", profile="EL", consistency_first=True)
 
     def _import(self, author: str, usable: bool = True):
+        return self._import_ttl(TTL, author, usable=usable)
+
+    def _import_ttl(self, ttl: str, author: str, usable: bool = True):
         kwargs = dict(
             target_namespace=NAMESPACE,
             author=author,
@@ -234,20 +252,40 @@ class PublishTests(unittest.TestCase):
             kwargs["consistency_checker"] = self._consistency
         else:
             kwargs["shapes_dir"] = "/nonexistent"
-        result, merged = build_import_document(TTL.encode("utf-8"), **kwargs)
-        record = persist_import(result, merged, TTL.encode("utf-8"), self.meta, self.graph)
+        result, merged = build_import_document(ttl.encode("utf-8"), **kwargs)
+        record = persist_import(result, merged, ttl.encode("utf-8"), self.meta, self.graph)
         self.created.append(record)
         return record
 
-    def _publish(self, import_id: str, dry_run: bool):
+    def _publish(self, import_id: str, dry_run: bool, publish_existing: bool = False):
         body = {"dryRun": dry_run}
         if not dry_run:
             body["acknowledgeBreaking"] = True
+        if publish_existing:
+            body["publishExisting"] = True
         response = self.client.post(
             f"/api/ontology/imports/{import_id}/publish", json=body
         )
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
+
+    def _events(self, version_id: str) -> list[dict]:
+        rows = self.meta.query(
+            "SELECT event_id, action, actor, payload FROM platform.ontology_event "
+            "WHERE version_id = %s ORDER BY event_id",
+            (version_id,),
+        )
+        return rows
+
+    def _publish_superseded(self, author: str) -> str:
+        """Publish content X, then content Y, leaving X's version superseded."""
+        first = self._import(author + "x")
+        version_x = self._publish(first["importId"], dry_run=False)["versionId"]
+        second = self._import_ttl(TTL_VARIANT, author + "y")
+        version_y = self._publish(second["importId"], dry_run=False)["versionId"]
+        self.assertNotEqual(version_x, version_y)
+        self.assertEqual(self.registry.current()["versionId"], version_y)
+        return version_x
 
     def test_1_unusable_import_is_refused(self):
         record = self._import("p1", usable=False)
@@ -326,6 +364,107 @@ class PublishTests(unittest.TestCase):
             (import_id,),
         )
         self.assertEqual(rows[0]["n"], 0)
+
+
+    def test_6_publish_existing_same_content(self):
+        """Same canonical content re-publishes the existing version (OQ-65)."""
+        version_x = self._publish_superseded("p6")
+        repeat = self._import("p6c")
+        payload = self._publish(repeat["importId"], dry_run=False, publish_existing=True)
+
+        self.assertEqual(payload["mode"], "activate_existing")
+        self.assertEqual(payload["versionId"], version_x)
+        self.assertEqual(payload["canonicalEqualTo"], version_x)
+        self.assertNotEqual(payload["previousVersionId"], version_x)
+        self.assertEqual(payload["publishedBy"], "operator")
+        self.assertFalse(payload["idempotent"])
+        self.assertIn("shacl", payload["gates"])
+        self.assertIn("consistency", payload["gates"])
+        self.assertEqual(self.registry.current()["versionId"], version_x)
+
+        published_events = [
+            e for e in self._events(version_x) if e["action"] == "published"
+        ]
+        last = published_events[-1]["payload"]
+        if isinstance(last, str):
+            import json as _json
+            last = _json.loads(last)
+        self.assertEqual(last["mode"], "activate_existing")
+        self.assertEqual(last["publishedBy"], "operator")
+        self.assertEqual(last["previousVersionId"], payload["previousVersionId"])
+
+    def test_7_publish_existing_is_idempotent(self):
+        """A second forward publish is a no-op and adds no audit event."""
+        version_x = self._publish_superseded("p7")
+        repeat = self._import("p7c")
+        first = self._publish(repeat["importId"], dry_run=False, publish_existing=True)
+        second = self._publish(repeat["importId"], dry_run=False, publish_existing=True)
+
+        self.assertEqual(first["versionId"], version_x)
+        self.assertTrue(second["idempotent"])
+        self.assertTrue(second["unchanged"])
+        self.assertEqual(second["versionId"], version_x)
+        self.assertEqual(self.registry.current()["versionId"], version_x)
+        published = [e for e in self._events(version_x) if e["action"] == "published"]
+        # 1 = original publish in _publish_superseded; repeated forward publish
+        # is idempotent and must not append another event.
+        self.assertEqual(len(published), 2)
+
+    def test_8_concurrent_forward_publish_only_one_wins(self):
+        """Two simultaneous forward publishes append exactly one published event."""
+        version_x = self._publish_superseded("p8")
+        left = self._import("p8a")
+        right = self._import("p8b")
+
+        def call(import_id: str, actor: str) -> dict:
+            return publish_import(
+                self.meta, self.graph, self.objects, self.registry,
+                import_id,
+                dry_run=False,
+                actor=actor,
+                change_summary="concurrent forward publish",
+                acknowledge_breaking=True,
+                publish_existing=True,
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(
+                lambda pair: call(*pair),
+                [(left["importId"], "t-left"), (right["importId"], "t-right")],
+            ))
+
+        wins = [r for r in results if not r.get("idempotent")]
+        losses = [r for r in results if r.get("idempotent")]
+        self.assertEqual(len(wins), 1, results)
+        self.assertEqual(len(losses), 1, results)
+        self.assertEqual(self.registry.current()["versionId"], version_x)
+        published = [e for e in self._events(version_x) if e["action"] == "published"]
+        # 1 = original publish in _publish_superseded; the two concurrent
+        # forward publishes must append exactly one more, not two.
+        self.assertEqual(len(published), 2)
+
+    def test_9_publish_after_rollback(self):
+        """After rolling back, the forward publish path can activate the version again."""
+        first = self._import("p9x")
+        version_x = self._publish(first["importId"], dry_run=False)["versionId"]
+        second = self._import_ttl(TTL_VARIANT, "p9y")
+        version_y = self._publish(second["importId"], dry_run=False)["versionId"]
+
+        self.registry.rollback_to(version_x, actor="t-rollback", reason="revert for test")
+        self.assertEqual(self.registry.current()["versionId"], version_x)
+        self.assertIn(
+            "rolled_back", [e["action"] for e in self._events(version_x)]
+        )
+
+        third = self._import_ttl(TTL_VARIANT, "p9z")
+        payload = self._publish(third["importId"], dry_run=False, publish_existing=True)
+        self.assertEqual(payload["versionId"], version_y)
+        self.assertEqual(payload["mode"], "activate_existing")
+        self.assertEqual(payload["previousVersionId"], version_x)
+        self.assertEqual(self.registry.current()["versionId"], version_y)
+        self.assertIn(
+            "published", [e["action"] for e in self._events(version_y)]
+        )
 
 
 def publish_import_version(import_id: str) -> str:

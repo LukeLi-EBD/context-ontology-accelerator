@@ -706,6 +706,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             change_summary=payload.get("changeSummary"),
             acknowledge_breaking=bool(payload.get("acknowledgeBreaking", False)),
             abox_graphs=runtime.config.reasoning.abox_graphs,
+            publish_existing=bool(payload.get("publishExisting", False)),
         )
 
     @app.put("/ontology/shapes")
