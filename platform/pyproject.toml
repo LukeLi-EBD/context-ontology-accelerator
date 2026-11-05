@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "platform-core"
+version = "0.1.0"
+description = "Single-node platform kernel (S0 skeleton): glue and web layer only"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn==0.34.0",
+  "pydantic==2.10.4",
+  "PyYAML==6.0.2",
+  "httpx==0.28.1",
+  "psycopg[binary,pool]==3.2.3",
+]
+
+[project.scripts]
+platform = "platform_core.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+platform_core = ["sql/*.sql"]

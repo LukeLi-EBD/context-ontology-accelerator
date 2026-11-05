@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 检索与问答</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="search">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>检索与问答 <span class="sub">融合由 SearchService 的 RRF(k=60)，本页只展示结果与引用</span></h2>
+      <form id="search-form" class="toolbar">
+        <input type="text" id="q" placeholder="输入问题，例如：海岸带监测有哪些点位？" style="min-width:340px" required>
+        <label>策略 <select id="strategy">
+          <option value="hybrid">hybrid</option>
+          <option value="vector">vector</option>
+          <option value="lexical">lexical</option>
+        </select></label>
+        <label>topK <input type="number" id="topK" value="10" min="1" max="50" style="width:70px"></label>
+        <label>token 预算 <input type="number" id="tokenBudget" value="2048" min="32" max="8192" step="32" style="width:100px"></label>
+        <button class="primary" type="submit">检索</button>
+      </form>
+      <p class="hint">截断会显示 <code>truncated=true</code> 警告；通路不可用会显示 <code>degraded=true</code> 与原因，不会静默。</p>
+    </section>
+    <section class="panel">
+      <h2>结果 <span class="sub">片段带 documentId/chunkId/页码；事实带图 IRI 与本体版本</span></h2>
+      <div id="search-result" class="empty">输入问题后查看带引用的片段与事实</div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

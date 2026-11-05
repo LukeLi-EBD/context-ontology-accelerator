@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 审批队列</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="approvals">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>待审批候选 <span class="sub">通过后写入 A-Box；拒绝只记录决定</span></h2>
+      <div id="decision-status"></div>
+      <div id="candidates" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>冲突裁决 <span class="sub">仅人工三选一：保留单值 / 两者都保留 / 合并；可撤销；不做自动打分</span>
+        <button id="conflict-undo" style="margin-left:auto">撤销上次裁决</button>
+        <button id="conflict-batch">按谓词批量</button>
+        <button id="conflicts-refresh">刷新冲突</button>
+      </h2>
+      <div id="conflicts-status"></div>
+      <div id="conflicts" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>事实治理 <span class="sub">撤回=置 retracted 并写审计；冲突同 (s,p) 多值不静默取最新</span>
+        <button id="facts-refresh" style="margin-left:auto">刷新事实</button>
+      </h2>
+      <div id="facts-status"></div>
+      <div id="facts" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>物化 <span class="sub">RDFS 闭包 → OWL(ELK) → SHACL 门禁，同一 inferred 图</span>
+        <button id="materialize-btn" class="primary" style="margin-left:auto">运行物化</button>
+      </h2>
+      <div id="materialize-result" class="empty">审批完成后点击“运行物化”，可看到 skipped / 各阶段结果</div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

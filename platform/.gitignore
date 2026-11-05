@@ -1,0 +1,19 @@
+# --- runtime data (never commit) ---
+data/*
+!data/README.md
+logs/
+.lock/
+*.log
+*.jsonl
+
+# --- secrets & local config ---
+.env
+platform.yaml
+
+# --- python / build residue ---
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- oversized model binaries (place locally, not in git) ---
+reasoner/robot.jar

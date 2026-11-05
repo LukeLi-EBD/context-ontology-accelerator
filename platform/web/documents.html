@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 文档库</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="documents">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>上传文档 <span class="sub">支持 txt / md / pdf（OCR 关闭，扫描件会标 degraded）</span></h2>
+      <form id="upload-form" class="toolbar">
+        <input type="file" name="file" required>
+        <button class="primary" type="submit">上传</button>
+      </form>
+      <div id="upload-status"></div>
+    </section>
+    <section class="panel">
+      <h2>导入进度 <span class="sub">只读：批量入库批次（platform import），失败原因可查</span></h2>
+      <div class="toolbar"><button id="import-refresh">刷新</button></div>
+      <div id="import-progress" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>文档列表 <span class="sub">解析=切块+索引；抽取=生成候选三元组</span></h2>
+      <div id="doc-status"></div>
+      <div id="documents" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>原文片段</h2>
+      <div id="chunks" class="empty">从上方点击文档 ID 查看分块</div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

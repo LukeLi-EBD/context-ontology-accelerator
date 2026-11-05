@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 概览</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="overview">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>系统概览 <span class="sub">版本指针 / 容器状态 / 命名图</span>
+        <button id="refresh" style="margin-left:auto">刷新</button>
+      </h2>
+      <div id="overview" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>下一步</h2>
+      <p class="hint">首次使用运行 <code>scripts/seed.ps1</code> 灌入示例本体与文档；然后用“文档库”上传，依次解析、抽取，最后在“审批队列”通过候选并物化。</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

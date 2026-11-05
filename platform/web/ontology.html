@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 本体浏览</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="ontology">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>本体浏览 <span class="sub" id="graphs-info"></span></h2>
+      <div id="ontology" class="grid two">
+        <div><h2 style="font-size:13px">类</h2><div id="classes" class="list empty">加载中…</div></div>
+        <div><h2 style="font-size:13px">属性</h2><div id="properties" class="list empty">加载中…</div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>T-Box 变更治理 <span class="sub" id="onto-governance-status"></span></h2>
+      <div id="onto-versions" class="list empty">加载中…</div>
+      <h2 style="font-size:13px;margin-top:16px">提案</h2>
+      <form id="onto-proposal-form" class="toolbar">
+        <input type="text" id="onto-proposal-version" placeholder="版本 ID" required style="min-width:190px">
+        <input type="text" id="onto-proposal-note" placeholder="变更说明（必填）" required style="min-width:240px">
+        <input type="text" id="onto-proposal-actor" placeholder="操作人" value="operator" required style="width:110px">
+        <button class="primary" type="submit">创建提案</button>
+      </form>
+      <div class="toolbar" style="margin-top:8px">
+        <button id="onto-diff-preview" type="button">diff 预览</button>
+        <button id="onto-publish" type="button" class="primary">发布</button>
+        <button id="onto-rollback" type="button" class="danger">回滚</button>
+        <span class="hint">发布需提案已审批；breaking 变更必须显式确认</span>
+      </div>
+      <div id="onto-diff-preview-box" class="empty" style="margin-top:10px">尚未预览 diff</div>
+    </section>
+    <section class="panel">
+      <h2>实体搜索与邻居子图</h2>
+      <form id="entity-form" class="toolbar">
+        <input type="text" id="entity-q" placeholder="输入 label 或 IRI 片段，例如 监测点" style="min-width:280px">
+        <button class="primary" type="submit">搜索</button>
+        <span class="hint">留空则列出带类型的实体</span>
+      </form>
+      <div id="entity-results" class="list empty">尚未搜索</div>
+      <div id="neighbors" class="empty" style="margin-top:12px">点击实体查看邻居子图</div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

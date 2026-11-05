@@ -1,0 +1,14 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+pydantic==2.10.4
+PyYAML==6.0.2
+rdflib==7.1.4
+httpx==0.28.1
+psycopg[binary,pool]==3.2.3
+# S2 document parsing (pinned; see _design/impl/S2-文档入库-设计.md §7)
+pypdfium2==5.14.0
+pdfplumber==0.11.10
+markitdown[docx,pptx,xlsx]==0.1.9
+python-multipart==0.0.20
+# S5 SHACL validation (pinned; see _design/impl/S5-校验与物化-设计.md §6)
+pyshacl==0.30.1
