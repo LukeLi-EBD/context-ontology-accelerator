@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>只读浏览 · 本体平台</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="browse.css">
+</head>
+<body data-page="browse">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse" class="active">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>只读浏览 <span class="sub">本体类 / 口径卡 / 术语别名 · 不触发推理与重建</span></h2>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-view="ontology" role="tab">本体</button>
+        <button class="tab" data-view="metrics" role="tab">口径卡</button>
+        <button class="tab" data-view="terms" role="tab">术语别名</button>
+      </div>
+
+      <div id="view-ontology" class="view">
+        <div class="split">
+          <div>
+            <h3>类树 <span id="tree-count" class="sub"></span></h3>
+            <div id="ontology-tree" class="empty">加载中…</div>
+            <h3>属性 <span id="prop-count" class="sub"></span></h3>
+            <div id="ontology-properties" class="empty">加载中…</div>
+          </div>
+          <div>
+            <h3>类下实例 <span id="instance-total" class="sub"></span></h3>
+            <div id="instance-head" class="hint">点击左侧任一类型查看实例</div>
+            <div id="instance-list" class="empty">尚未选择类型</div>
+            <div class="pager">
+              <button id="instance-prev" disabled>上一页</button>
+              <span id="instance-page" class="sub"></span>
+              <button id="instance-next" disabled>下一页</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-metrics" class="view" hidden>
+        <div class="filters">
+          <label>域
+            <select id="filter-domain">
+              <option value="">全部</option>
+              <option value="bank">bank</option>
+              <option value="insurance">insurance</option>
+              <option value="customer">customer</option>
+            </select>
+          </label>
+          <label>evidenceBasis
+            <select id="filter-basis">
+              <option value="">全部</option>
+              <option value="regulatory">regulatory</option>
+              <option value="industry">industry</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <label>publishable
+            <select id="filter-publishable">
+              <option value="">全部</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </label>
+          <button id="metrics-refresh">刷新</button>
+          <span id="metrics-count" class="sub"></span>
+        </div>
+        <div id="metrics-empty" class="empty" hidden>当前过滤条件下没有口径卡（接口返回 0 条）。</div>
+        <table id="metrics-table" class="data-table" hidden>
+          <thead>
+            <tr>
+              <th>指标ID</th><th>名称</th><th>域</th><th>依据</th>
+              <th>publishable</th><th>推理</th><th>公式禁用</th><th>版本</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="metric-detail" class="detail empty">点击任一指标查看口径详情</div>
+      </div>
+
+      <div id="view-terms" class="view" hidden>
+        <div id="terms-counts" class="hint">加载中…</div>
+        <div class="split">
+          <div>
+            <h3>锚点类 <span id="terms-class-count" class="sub"></span></h3>
+            <div id="terms-classes" class="empty">加载中…</div>
+          </div>
+          <div>
+            <h3>别名条目</h3>
+            <div id="terms-empty" class="empty" hidden>当前 T-Box 没有术语别名条目。</div>
+            <table id="terms-table" class="data-table" hidden>
+              <thead>
+                <tr>
+                  <th>锚点类</th><th>别名</th><th>档位</th><th>confidence</th>
+                  <th>guardRegex</th><th>canonicalFor</th><th>suppressedSurface</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="browse.js"></script>
+</body>
+</html>

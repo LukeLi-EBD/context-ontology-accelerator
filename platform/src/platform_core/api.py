@@ -7,6 +7,7 @@ codes so clients see provider codes instead of stack traces.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from datetime import date
 from pathlib import Path
@@ -48,6 +49,99 @@ _HTTP_STATUS = {
     "Internal": 500,
     "DataLoss": 500,
 }
+
+# ---- read-only browse helpers -------------------------------------------
+
+_BROWSE_IRI = re.compile(r"^[^<>\"{}|^`\\\s]+$")
+_OWL = "http://www.w3.org/2002/07/owl#"
+_RDFS = "http://www.w3.org/2000/01/rdf-schema#"
+_SKOS = "http://www.w3.org/2004/02/skos/core#"
+_TERM = "https://w3id.org/fsldm/terms#"
+_READ_ONLY_QUERY = re.compile(
+    r"(?is)^(?:prefix\s+[^:\s]+:\s*<[^>]*>\s*|base\s*<[^>]*>\s*)*"
+    r"(select|ask)\b"
+)
+
+
+def _browse_error(code: str, message: str, details: dict[str, Any] | None = None) -> PortError:
+    return PortError(
+        code="InvalidArgument",
+        message=message,
+        provider="platform",
+        provider_code=code,
+        details=details or {},
+    )
+
+
+def _require_iri(value: str | None, field: str) -> str:
+    if not value:
+        raise _browse_error("E_BROWSE_IRI_REQUIRED", f"{field} is required", {"field": field})
+    if not _BROWSE_IRI.match(value) or not value.startswith(("http://", "https://", "urn:")):
+        raise _browse_error(
+            "E_BROWSE_BAD_IRI",
+            f"{field} is not a safe absolute IRI",
+            {"field": field, "value": value},
+        )
+    return value
+
+
+def _binding(binding: dict[str, Any], name: str) -> str | None:
+    term = (binding.get("values") or {}).get(name)
+    if not isinstance(term, dict):
+        return None
+    kind = term.get("kind")
+    if kind == "iri":
+        return term.get("iri")
+    if kind == "bnode":
+        return term.get("label")
+    return term.get("value")
+
+
+def _local_name(iri: str | None) -> str | None:
+    if not iri:
+        return None
+    for sep in ("#", "/"):
+        if sep in iri:
+            return iri.rsplit(sep, 1)[-1]
+    return iri
+
+
+def _current_graph(runtime: Runtime) -> str | None:
+    pointer = runtime.ontology.current()
+    return pointer.get("graph") if pointer else None
+
+
+def _metric_json(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "metricId": row["metric_id"],
+        "nameZh": row["name_zh"],
+        "domain": row["domain"],
+        "evidenceBasis": row["evidence_basis"],
+        "publishable": row["publishable"],
+        "inference": row["inference"],
+        "formulaDisabled": row["formula_disabled"],
+        "missing": row["missing"],
+        "definitionStatus": row["evidence_status"],
+        "note": row["note"],
+        "definitionVersion": row["definition_version"],
+        "unit": row["unit"],
+    }
+    if detail:
+        payload.update(
+            {
+                "metricKind": row["metric_kind"],
+                "formula": row["formula_expr"],
+                "numeratorAgg": row["numerator_agg"],
+                "denominator": row["denominator_agg"],
+                "observationPeriod": {
+                    "kind": row["window_kind"],
+                    "minWindowDays": row["min_window_days"],
+                },
+                "grain": row["grain"],
+            }
+        )
+    return payload
+
 
 
 def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
@@ -277,6 +371,365 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             entity_key=entity_key,
             institution=institution,
         )
+
+    # ---- read-only browse API (metrics / ontology / terms) ---------------
+
+    @app.get("/browse/metrics")
+    def browse_metrics(
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> dict[str, Any]:
+        clauses: list[str] = []
+        params: list[Any] = []
+        if domain:
+            clauses.append("domain = %s")
+            params.append(domain)
+        if evidenceBasis:
+            clauses.append("evidence_basis = %s")
+            params.append(evidenceBasis)
+        if publishable is not None:
+            clauses.append("publishable = %s")
+            params.append(publishable)
+        where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        rows = runtime.metadata.query(
+            """
+            SELECT metric_id, name_zh, domain, evidence_basis, publishable, inference,
+                   formula_disabled, missing, evidence_status, note, definition_version,
+                   metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
+                   min_window_days, grain, unit
+              FROM platform.metric_definition
+            """
+            + where
+            + " ORDER BY metric_id",
+            tuple(params),
+        )
+        items = [_metric_json(row) for row in rows]
+        return {
+            "items": items,
+            "count": len(items),
+            "source": "metric_definition",
+            "filters": {
+                "domain": domain,
+                "evidenceBasis": evidenceBasis,
+                "publishable": publishable,
+            },
+        }
+
+    @app.get("/browse/metrics/{metric_id}")
+    def browse_metric_detail(metric_id: str) -> dict[str, Any]:
+        rows = runtime.metadata.query(
+            """
+            SELECT metric_id, name_zh, domain, evidence_basis, publishable, inference,
+                   formula_disabled, missing, evidence_status, note, definition_version,
+                   metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
+                   min_window_days, grain, unit
+              FROM platform.metric_definition
+             WHERE metric_id = %s
+            """,
+            (metric_id,),
+        )
+        if not rows:
+            raise PortError(
+                code="NotFound",
+                message=f"metric not found: {metric_id}",
+                provider="platform",
+                provider_code="E_METRIC_NOT_FOUND",
+                details={"metricId": metric_id},
+            )
+        return {
+            "metric": _metric_json(rows[0], detail=True),
+            "source": "metric_definition",
+        }
+
+    @app.get("/browse/ontology/tree")
+    def browse_ontology_tree() -> dict[str, Any]:
+        graph_iri = _current_graph(runtime)
+        if not graph_iri:
+            return {
+                "pointer": None,
+                "tree": [],
+                "classes": [],
+                "properties": [],
+                "counts": {"classes": 0, "properties": 0},
+            }
+        class_rows = runtime.graph.query(
+            f"""
+            SELECT ?iri ?label ?parent FROM <{graph_iri}> WHERE {{
+              {{ ?iri a <{_OWL}Class> }} UNION {{ ?iri a <{_RDFS}Class> }}
+              OPTIONAL {{ ?iri <{_SKOS}prefLabel> ?pref }}
+              OPTIONAL {{ ?iri <{_RDFS}label> ?rlab }}
+              OPTIONAL {{ ?iri <{_RDFS}subClassOf> ?parent }}
+              BIND(COALESCE(?pref, ?rlab, STR(?iri)) AS ?label)
+            }}
+            LIMIT 5000
+            """
+        ).get("bindings", [])
+        prop_rows = runtime.graph.query(
+            f"""
+            SELECT ?iri ?label ?kind FROM <{graph_iri}> WHERE {{
+              VALUES ?kind {{
+                <{_OWL}ObjectProperty> <{_OWL}DatatypeProperty> <{_OWL}AnnotationProperty>
+              }}
+              ?iri a ?kind .
+              OPTIONAL {{ ?iri <{_SKOS}prefLabel> ?pref }}
+              OPTIONAL {{ ?iri <{_RDFS}label> ?rlab }}
+              BIND(COALESCE(?pref, ?rlab, STR(?iri)) AS ?label)
+            }}
+            LIMIT 5000
+            """
+        ).get("bindings", [])
+
+        classes: dict[str, dict[str, Any]] = {}
+        for row in class_rows:
+            iri = _binding(row, "iri")
+            if not iri:
+                continue
+            entry = classes.setdefault(
+                iri, {"iri": iri, "label": _binding(row, "label") or _local_name(iri), "parents": []}
+            )
+            parent = _binding(row, "parent")
+            if parent and parent not in entry["parents"]:
+                entry["parents"].append(parent)
+        properties: dict[str, dict[str, Any]] = {}
+        for row in prop_rows:
+            iri = _binding(row, "iri")
+            if not iri:
+                continue
+            properties.setdefault(
+                iri,
+                {
+                    "iri": iri,
+                    "label": _binding(row, "label") or _local_name(iri),
+                    "kind": _local_name(_binding(row, "kind")),
+                },
+            )
+        children: dict[str, list[dict[str, Any]]] = {}
+        roots: list[dict[str, Any]] = []
+        for entry in classes.values():
+            parent = entry["parents"][0] if entry["parents"] else None
+            if parent and parent in classes and parent != entry["iri"]:
+                children.setdefault(parent, []).append(entry)
+            else:
+                roots.append(entry)
+
+        def node(entry: dict[str, Any], seen: set[str]) -> dict[str, Any]:
+            kids = []
+            if entry["iri"] not in seen:
+                seen.add(entry["iri"])
+                kids = [node(child, seen) for child in sorted(
+                    children.get(entry["iri"], []), key=lambda item: item["label"] or ""
+                )]
+            return {
+                "iri": entry["iri"],
+                "label": entry["label"],
+                "parents": entry["parents"],
+                "children": kids,
+            }
+
+        tree = [node(entry, set()) for entry in sorted(roots, key=lambda item: item["label"] or "")]
+        return {
+            "pointer": runtime.ontology.current(),
+            "tree": tree,
+            "classes": sorted(classes.values(), key=lambda item: item["label"] or ""),
+            "properties": sorted(properties.values(), key=lambda item: item["label"] or ""),
+            "counts": {"classes": len(classes), "properties": len(properties)},
+        }
+
+    @app.get("/browse/ontology/instances")
+    def browse_ontology_instances(
+        class_iri: str | None = Query(default=None, alias="class"),
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        target = _require_iri(class_iri, "class")
+        graph_iri = _current_graph(runtime)
+        if not graph_iri:
+            return {
+                "class": target,
+                "items": [],
+                "total": 0,
+                "limit": limit,
+                "offset": offset,
+                "pointer": None,
+            }
+        count_rows = runtime.graph.query(
+            f"""
+            SELECT (COUNT(DISTINCT ?s) AS ?n) WHERE {{
+              GRAPH ?g {{ ?s a <{target}> }}
+            }}
+            """
+        ).get("bindings", [])
+        total = int(_binding(count_rows[0], "n") or 0) if count_rows else 0
+        item_rows = runtime.graph.query(
+            f"""
+            SELECT DISTINCT ?s ?label ?g WHERE {{
+              GRAPH ?g {{
+                ?s a <{target}> .
+                OPTIONAL {{ ?s <{_RDFS}label> ?label }}
+              }}
+            }}
+            ORDER BY ?s
+            LIMIT {limit} OFFSET {offset}
+            """
+        ).get("bindings", [])
+        items = []
+        for row in item_rows:
+            iri = _binding(row, "s")
+            if not iri:
+                continue
+            items.append(
+                {
+                    "iri": iri,
+                    "label": _binding(row, "label") or _local_name(iri),
+                    "graph": _binding(row, "g"),
+                }
+            )
+        return {
+            "class": target,
+            "items": items,
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "pointer": runtime.ontology.current(),
+        }
+
+    @app.get("/browse/triples")
+    def browse_triples(
+        subject: str | None = None,
+        predicate: str | None = None,
+        object: str | None = None,
+        graph: str | None = None,
+        limit: int = Query(default=20, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        subject_term = f"<{_require_iri(subject, 'subject')}>" if subject else "?s"
+        predicate_term = f"<{_require_iri(predicate, 'predicate')}>" if predicate else "?p"
+        if object:
+            if object.startswith(("http://", "https://", "urn:")):
+                object_term = f"<{_require_iri(object, 'object')}>"
+            else:
+                escaped = object.replace("\\", "\\\\").replace('"', '\\"')
+                object_term = f'"{escaped}"'
+        else:
+            object_term = "?o"
+        triple_pattern = f"{subject_term} {predicate_term} {object_term}"
+        graph_pattern = (
+            f"GRAPH <{_require_iri(graph, 'graph')}> {{ {triple_pattern} }} BIND(<{graph}> AS ?g)"
+            if graph
+            else f"GRAPH ?g {{ {triple_pattern} }}"
+        )
+        result = runtime.graph.query(
+            f"""
+            SELECT ?g ?s ?p ?o WHERE {{
+              {graph_pattern}
+            }}
+            LIMIT {limit} OFFSET {offset}
+            """
+        )
+        items = [
+            {
+                "graph": _binding(row, "g") or graph,
+                "subject": _binding(row, "s") or subject,
+                "predicate": _binding(row, "p") or predicate,
+                # Fixed terms never bind a variable, so fall back to the input.
+                "object": _binding(row, "o") or object,
+            }
+            for row in result.get("bindings", [])
+        ]
+        return {
+            "items": items,
+            "limit": limit,
+            "offset": offset,
+            "truncated": result.get("truncated", False),
+        }
+
+    @app.get("/browse/sparql")
+    def browse_sparql(
+        query: str = Query(min_length=1, max_length=5000),
+    ) -> dict[str, Any]:
+        if not _READ_ONLY_QUERY.match(query.strip()):
+            raise _browse_error(
+                "E_BROWSE_NOT_READ_ONLY",
+                "only SELECT/ASK queries are allowed on the read-only browse endpoint",
+                {"allowed": ["SELECT", "ASK"]},
+            )
+        result = runtime.graph.query(query)
+        return {"readOnly": True, **result}
+
+    @app.get("/browse/terms")
+    def browse_terms() -> dict[str, Any]:
+        graph_iri = _current_graph(runtime)
+        if not graph_iri:
+            return {
+                "pointer": None,
+                "entries": [],
+                "classes": [],
+                "counts": {"anchorClasses": 0, "altLabels": 0, "evidenced": 0, "inferred": 0},
+            }
+        rows = runtime.graph.query(
+            f"""
+            SELECT ?e ?c ?classLabel ?label ?status ?confidence ?guard ?canonical ?suppressed
+              FROM <{graph_iri}> WHERE {{
+              ?e a <{_TERM}TermEntry> ;
+                 <{_TERM}forClass> ?c ;
+                 <{_TERM}label> ?label .
+              OPTIONAL {{ ?c <{_SKOS}prefLabel> ?classLabel }}
+              OPTIONAL {{ ?e <{_TERM}status> ?status }}
+              OPTIONAL {{ ?e <{_TERM}confidence> ?confidence }}
+              OPTIONAL {{ ?e <{_TERM}guardRegex> ?guard }}
+              OPTIONAL {{ ?c <{_TERM}canonicalFor> ?canonical }}
+              OPTIONAL {{ ?c <{_TERM}suppressedSurface> ?suppressed }}
+            }}
+            """
+        ).get("bindings", [])
+        entries: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            entry_iri = _binding(row, "e")
+            if not entry_iri:
+                continue
+            entry = entries.setdefault(
+                entry_iri,
+                {
+                    "entry": entry_iri,
+                    "classIri": _binding(row, "c"),
+                    "classLabel": _binding(row, "classLabel") or _local_name(_binding(row, "c")),
+                    "label": _binding(row, "label"),
+                    "status": _local_name(_binding(row, "status")),
+                    "confidence": _local_name(_binding(row, "confidence")),
+                    "guardRegex": _binding(row, "guard"),
+                    "canonicalFor": [],
+                    "suppressedSurface": [],
+                },
+            )
+            for field, key in (("canonical", "canonicalFor"), ("suppressed", "suppressedSurface")):
+                value = _binding(row, field)
+                if value and value not in entry[key]:
+                    entry[key].append(value)
+        items = sorted(entries.values(), key=lambda item: (item["classIri"] or "", item["label"] or ""))
+        classes: dict[str, dict[str, Any]] = {}
+        for entry in items:
+            class_iri = entry["classIri"]
+            if not class_iri:
+                continue
+            group = classes.setdefault(
+                class_iri,
+                {"iri": class_iri, "label": entry["classLabel"], "aliases": []},
+            )
+            group["aliases"].append(entry["label"])
+        evidenced = sum(1 for item in items if item["status"] == "evidenced")
+        inferred = sum(1 for item in items if item["status"] == "inferred")
+        return {
+            "pointer": runtime.ontology.current(),
+            "entries": items,
+            "classes": sorted(classes.values(), key=lambda item: item["label"] or ""),
+            "counts": {
+                "anchorClasses": len(classes),
+                "altLabels": len(items),
+                "evidenced": evidenced,
+                "inferred": inferred,
+            },
+        }
 
     # ---- S4 extraction ---------------------------------------------------
 
