@@ -104,7 +104,8 @@
   5. 可选（依赖迁移）：`ontology_version` 增 `published_by` 列（当前只有 `published_at`），迁移 V18。
 - 工作量：接口+分支 ~0.5d；事件/payload/diff 字段 ~0.25d；CLI + smoke 用例（同内容发布、breaking 拦截、幂等、审计链 verify）~0.5d；文档回写（OQ-48 / 04 §5.2）~0.25d；合计 **1.5d**（含迁移），不含迁移 **1.25d**。
 - 与 OQ-48 关系：OQ-48 是“两套回滚并存”，本条是“发布入口缺失”；修复本条时可一并统一入口，但不改变 `rollback` 的新建版本语义。
-- 状态：open（S14H 新增，本段不改代码，仅留痕；触发条件=下一次需要“同内容向前发布”或版本谱系被审计质疑）。
+- 状态：**closed（2026-11-06 00:07 已修，commit `87e42f0`）**。落地：`publish --existing` / API `publishExisting=true`；`registry.publish(activate_existing=True)` 仍走 SHACL/一致性/breaking 全门禁，`published_at=now()`，`published` 事件带 `mode=activate_existing`/`publishedBy`/`previousVersionId`，`rolled_back` 事件同样补 `publishedBy`/`previousVersionId`，两者按 `action` 可区分；事务内 advisory lock 二次检查保证并发发布只一次生效。单测 `tests/test_g01_import_publish.py` 9/9（新增同内容、幂等、并发、回滚后再发布 4 条）。
+- 残留（本轮新发现，未修）：`ont-f413054a0c72` 的 `sources/….ttl` 存的是 `persist_import` 的**原始 TTL**，而行的 `content_hash` 按 **merged 图**计算；`_load_graph` 重新解析原文件后哈希不一致（expected `87c3fdef…` / actual `6257b89…`），因此对**该历史版本**调用 `publish` 会报 `E_ONTOLOGY_HASH_MISMATCH`（`rollback-to` 走 `_ensure_graph`，不受影响）。新建版本路径不受影响。触发条件=需要重新发布历史 FS-LDM 版本时，先回填该版本的 source 对象或放宽 `_load_graph` 的源文件哈希校验（按 versionId 一次性修复，不做全局放宽）。
 
 ### OQ-66（2026-11-05）`.ppt` / `.doc` 与加密 PDF 的解析缺口
 - 现状：`parsers.mime_for_filename` 只覆盖 pdf / docx / txt / md / pptx / csv / html；`D:\FS-LDM` 里 **15 个 `.ppt` + 1 个 `.doc`** 无法解析（当前直接不计入“可解析 427 篇”）。加密 PDF 共 **5 篇**：`real-19.pdf`（bench-real）+ `EB6546.pdf`、`Appendices-Book 1.pdf`、`Reference Guide-Book 1.pdf`、`Reference Guide-Book 2.pdf`（FS-LDM），一律 `E_DOC_PDF_ENCRYPTED`，**不重试**。

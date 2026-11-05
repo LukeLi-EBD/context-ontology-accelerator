@@ -184,6 +184,8 @@ class ContextConfig(_Strict):
     default_top_k: int = Field(default=10, ge=1, le=50)
     graph_limit: int = Field(default=50, ge=1, le=500)
     seed_limit: int = Field(default=10, ge=1, le=100)
+    # Q4: minimum T-Box term coverage before an answer is considered possible.
+    answerable_min_coverage: float = Field(default=0.6, ge=0.0, le=1.0)
 
 
 class LlmConfig(_Strict):

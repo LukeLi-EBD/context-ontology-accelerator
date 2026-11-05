@@ -16,6 +16,7 @@ from .adapters.ontology_pg import OntologyRegistry
 from .adapters.reasoner_robot import ReasonerClient
 from .adapters.search_pg import PgSearchIndex
 from .adapters.vector_pg import PgVectorStore
+from .answerable import AnswerabilityService
 from .config import ConfigBundle
 from .context import ContextResolver
 from .documents import DocumentService
@@ -51,6 +52,7 @@ class Runtime:
     validator: ShaclValidator
     reasoning: ReasoningService
     context: ContextResolver
+    answerable: AnswerabilityService
     placeholders: dict[str, UnsupportedPort] = field(default_factory=dict)
     degraded: list[str] = field(default_factory=list)
 
@@ -111,6 +113,8 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         reason_profile=cfg.reasoning.profile,
     )
     context = ContextResolver(cfg.context, ontology, reasoning, search, graph, facts)
+    # Q4: pre-retrieval coverage gate over T-Box terms (SKOS when present).
+    answerable = AnswerabilityService(cfg.context, ontology, graph)
 
     placeholders = {
         "Cache": UnsupportedPort("Cache", "S3"),
@@ -151,6 +155,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         validator=validator,
         reasoning=reasoning,
         context=context,
+        answerable=answerable,
         placeholders=placeholders,
         degraded=degraded,
     )

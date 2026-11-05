@@ -224,6 +224,26 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             )
         return runtime.search.hybrid_search(q, limit=limit, mode=mode)  # type: ignore[arg-type]
 
+    # ---- Q4: ontology coverage pre-check ---------------------------------
+
+    @app.get("/answerable")
+    def answerable_get(
+        q: str = Query(min_length=1, max_length=2000),
+        ontologyVersion: str | None = Query(default=None),
+        minCoverage: float | None = Query(default=None, ge=0.0, le=1.0),
+    ) -> dict[str, Any]:
+        return runtime.answerable.check(
+            q, ontology_version=ontologyVersion, min_coverage=minCoverage
+        )
+
+    @app.post("/answerable")
+    def answerable_post(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        return runtime.answerable.check(
+            str(body.get("query") or ""),
+            ontology_version=body.get("ontologyVersion"),
+            min_coverage=body.get("minCoverage"),
+        )
+
     # ---- S4 extraction ---------------------------------------------------
 
     @app.post("/documents/{document_id}/extract")
@@ -1003,6 +1023,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "validation": runtime.validator.manifest().__dict__ if hasattr(runtime.validator, "manifest") else {},
                 "reasoning": runtime.reasoning.manifest().__dict__,
                 "context": runtime.context.manifest().__dict__,
+                "answerability": runtime.answerable.manifest().__dict__,
                 "facts": runtime.facts.manifest().__dict__,
                 "secrets": runtime.secrets.manifest().__dict__,
             },
