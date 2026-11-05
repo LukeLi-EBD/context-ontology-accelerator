@@ -187,3 +187,33 @@
 - OCR 只评估未执行：环境无 Tesseract/PaddleOCR（无法实测，不编造）；公开基准 Tesseract 1–2s/页/核、PaddleOCR 3–6s/页/核 → 1,220 页 8 核约 3–15min；云端 ¥6–24。建议 OCR real-01/real-08，其余 6 篇标“不可检索”。
 - 缺口留痕：`.ppt` 15 + `.doc` 1 + 5 篇加密 PDF → `_impl/OPEN-QUESTIONS.md` **OQ-66**；扫描件 OCR 决策 → **OQ-67**。
 - 继续 ingest：bench-real 导入完成（19/21 新增、1 failed=real-19 加密、alreadyDone 3、embedded +677）；FS-LDM 25 篇导入已接续启动（日志 `logs/import-fsldm.log`）；corpus-s13 / clean 两目录待其后。
+
+- **S14H-OCR（18:25–20:09，起止含镜像重建与索引）**：持锁 `s14h-ocr-toolchain`（owner `UVSFUJSA\cpslau#22392`）→ 镜像 `agent-platform:0.1-s5` 重建 **271.3s**（18:30:32 完成），**521MB→981MB（+460MB）**，新增 tesseract 5.5.0（chi_sim/eng/osd）+ LibreOffice 25.2.3.2；验收 `/readyz=200`、`schema_version=17`、`smoke-embed S13b 12/12`、`smoke-s1 17/17`，恢复 8 核 / `RAYON=8` / `rate=0`。
+- OCR 8 篇（300 DPI、`chi_sim+eng`、4 线程/篇、串行）：**1,220 页 / 1,434.1s（23.9min，≈51 页/分钟）/ 1,462,343 字符 / 失败页 0 / 1,465 chunk**；逐篇 real-01 838p·1010.7s·1,184、real-08 194p·108.8s·157、real-21 57p·37.7s·36、real-04 42p·29.9s·17、real-05 40p·73.6s·57、real-17 27p·11.5s·3、real-14 20p·158.7s·10、real-13 2p·3.2s·1；原 8 篇 metadata 保留 `noTextLayer=true` 并追加 `ocrApplied=true`+`ocrDocumentId`（UPDATE 8）。
+- 转换 16 个（15 `.ppt`+1 `.doc`）→ PDF：**16/16 成功、36.6s、857 chunk**，无 failureCode（回执 `_impl/data/tmp/fsldm-office-out/convert.jsonl`）。
+- 24 篇先入库后统一串行索引：**2,322 chunk 全部嵌入，remaining=0**；索引墙钟 18:59–20:06（≈67min），real-01 1,184/2,896.3s=0.409 chunk/s；随后补跑测试件 70 条至 **pending=0**。
+- 检索证据：`GET /search?q=CSCO 常见恶性肿瘤诊疗指南 证据类别 推荐等级&mode=hybrid` → `real-01.pdf.ocr.txt`（原 0 chunk），`lexicalOnly=false`、`routes=["vector","lexical"]`、`degraded=false`，片段 `[page 1] 中国临床肿瘤学会 (CSCO ) 第见恶性肿瘤诊疗指南 …`。
+- 补料后全库：documents **1,122** / chunks **13,274** / embeddings **13,274**（BAAI 13,266 + fake 8）/ pending **0**；`/readyz=200`、embedding `restarts=2`（均在 18:54:54 前即 OCR 阶段，索引阶段未新增）、8 核 / rate=0。
+- 留痕：`_design/19-burst窗口-复盘.md` 已加“OCR 与格式转换补料”节；`_impl/OPEN-QUESTIONS.md` OQ-66/OQ-67 结论改为“已采用并实测”、OQ-68 记 faster-whisper 待下一轮镜像（本轮不重建）。
+
+## 六、S13H-13 性能优化与资源管控收尾（2026-11-05 20:38–21:15）
+
+| 段 | 内容 | 结果 | 关键实测 |
+|---|---|---|---|
+| 1 | 队列上限临时 8，真实触发解析/嵌入解耦队列满 | 已完成 | 日志原文 `20:45:48 / 20:47:04 [import] queue full queue=36/8 waiting=36 -> parse blocked`；parse 两次各停 76s，embed 消化后恢复；默认 512 已回读确认 |
+| 2 | background 档（4 核/RAYON 4/并发 4/rate 1.0）64 条真实 chunk | 已完成 | **0.525 chunk/s**、**P50 1,277.5 ms**、**P95 5,605.9 ms**、**embedding CPU 382.2%（峰 405.98%）**、**宿主 CPU 均 16.8%/峰 28%**、**可用内存 11.23 GB** → 机器始终可用成立 |
+| 3 | background 下 acceptance 全量（A）与 157 chunk 真实入库（B）并发 | 部分通过（如实保留） | A 并发 `39/4/0/0`（单跑 `40/3/0/0`）；B `embedded=157/157`、`426.23s / 0.37 chunk/s`、无 timeout/degraded；峰值宿主 CPU 51%、内存 10.8 GB、磁盘 102.5 GB；A 多 1 条 `smoke-s13` heavy job 互斥失败 |
+| 4 | 定档 background + burst 显式开档；burst.ps1 增 background；RUN.md 两档判据；设计文档留痕 | 已完成 | `.env` 固化 4 核/4/4/1.0；`burst.ps1 background` → `cpus=4 rayon=4 rate=1.0`、`readyz=200`、`S13b SMOKE 12/12`、锁已释放 |
+
+- 结论：**默认 background**（4 核 / 并发 4 / 批 2 / rate 1.0）；**burst 必须显式开启并持重型锁**。不追 12/16 核（8→12 核仅 +6.5%<15%，VM 上限 12 CPU）。
+- 文档：`_design/21-性能优化收尾-资源管控.md`（新建）；`coa/platform/RUN.md` §5 已增两档适用场景与判据；`_impl/WORKLOG.md` W-28。
+- 遗留：~~`smoke-s13` 与 heavy job 互斥的最小修复（0.5d）~~ → 已修复（2026-11-05 21:17–21:33）；acceptance 3 条既有数据态失败未修。
+
+### 复验：smoke-s13 heavy job 排队（2026-11-05 21:17–21:33）
+
+- 修复：`smoke_s13.py` 对 `E_HEAVY_BUSY` 每 2s 重试、总预算 180s，预算耗尽输出 `SKIP blocked_by_heavy` 并以退出码 **75** 结束（acceptance 记 `skipped`，`failed` 不变）；子进程前复用 `platform:heavy` advisory lock 等待，日志 `[smoke] waiting heavy job n/90`；未新造锁。
+- 单测：`tests/test_smoke_s13_heavy.py` 2/2（`wait.within_budget_succeeds`、`timeout.exit_75_skip code=75`）；无争用 `platform smoke-s13` 13/13。
+- 真实争用：2 篇 121-chunk 入库（单篇 embed 245.9s、持锁 >180s）+ smoke-s13 → 真实 `1/90…90/90` → `SKIP blocked_by_heavy attempts=91/90 holder=pid=106628 ...`，退出码 75；入库后单跑 13/13。
+- 重跑并发（background 未提档）：A **40/3/0/0**（约 4m09s）；B 121/121、0.83 chunk/s、无 timeout/degraded；峰值宿主 CPU 37%、内存 11.21 GB、磁盘 102.36 GB。
+- 3 条失败：`embedding.unavailable.index`、`context.empty`、`demo abox purity`（既有数据态，与 B 无关）。
+- 文档：`_design/21-性能优化收尾-资源管控.md` §6、`coa/platform/RUN.md` §5；锁 `free`，档位 `cpus=4 rayon=4 rate=1.0`。

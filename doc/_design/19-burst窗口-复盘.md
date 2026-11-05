@@ -121,3 +121,29 @@
 - `logs\s14h17-build*.log`、`logs\s14h17-up*.log`
 - `_design/a_progress.md` 的 `BURST-SAMPLE` 行
 - `_impl/WORKLOG.md` 的 `BURST-SAMPLE` 行
+
+## OCR 与格式转换补料（2026-11-05 18:25–20:09）
+
+- 前置：pending 归零、无活跃 `/index`；`compose-guard acquire -Purpose s14h-ocr-toolchain`（owner `UVSFUJSA\cpslau#22392`，pid/host 入锁，TTL 30min）。
+- 镜像：`agent-platform:0.1-s5` 重建 **271.3s**（18:30:32 完成），**521MB → 981MB（+460MB）**；新增 `tesseract-ocr` + `tesseract-ocr-eng` + `tesseract-ocr-chi-sim` + `libreoffice-impress` + `libreoffice-writer`；容器内实测 `tesseract 5.5.0`（langs: chi_sim / eng / osd）、`LibreOffice 25.2.3.2`。
+- 重建后验收：`/readyz=200`（3s 内）、`schema_version=17` 不变、`smoke-embed S13b 12/12`、`smoke-s1 17/17`；随后恢复 `NanoCpus=8000000000` / `RAYON_NUM_THREADS=8` / `max_chunks_per_sec=0`（重建时 compose 曾回落 1.0，已重建 platform 修正）。
+- OCR（tesseract，300 DPI，`chi_sim+eng`，4 线程/篇，逐篇串行）：**8 篇 / 1,220 页 / 1,434.1s（23.9min，≈51 页/分钟）**，字符 **1,462,343**，**失败页 0**：
+
+| 文档 | 页数 | OCR 秒 | 字符 | chunk |
+|---|---|---|---|---|
+| real-01 | 838 | 1010.7 | 1,183,848 | 1,184 |
+| real-08 | 194 | 108.8 | 156,257 | 157 |
+| real-21 | 57 | 37.7 | 35,219 | 36 |
+| real-04 | 42 | 29.9 | 16,338 | 17 |
+| real-05 | 40 | 73.6 | 56,995 | 57 |
+| real-17 | 27 | 11.5 | 2,913 | 3 |
+| real-14 | 20 | 158.7 | 9,711 | 10 |
+| real-13 | 2 | 3.2 | 1,062 | 1 |
+
+- 转换（LibreOffice headless `--convert-to pdf`）：**16/16 成功、36.6s**（15 `.ppt` + 1 `.doc`），产出 **857 chunk**；逐条 rc/秒/字节/failureCode 见 `_impl/data/tmp/fsldm-office-out/convert.jsonl`（无失败）。
+- 入库/索引：24 篇**先入库、后统一串行索引**（8 核 / rate=0），**2,322 chunk（OCR 1,465 + 转换 857）全部嵌入，remaining=0、failureCode=null**；驱动 `_impl/logs/{stage_files.py,index_queue.py}`，回执 `_impl/data/tmp/stage-{upload,index}.jsonl`；索引墙钟 18:59–20:06（≈67min），最大值 real-01 1,184 chunk / 2,896.3s = **0.409 chunk/s**；转换 PDF 短块可合批（3.6–4.5 chunk/s）。
+- 检索证据：`GET /search?q=CSCO 常见恶性肿瘤诊疗指南 证据类别 推荐等级&mode=hybrid` → 命中 `real-01.pdf.ocr.txt`（原 0 chunk），`lexicalOnly=false`、`routes=["vector","lexical"]`、`degraded=false`，片段 `[page 1] 中国临床肿瘤学会 (CSCO ) 第见恶性肿瘤诊疗指南 …`（vector rank 5 / lexical rank 1）。
+- 原 8 篇扫描件 metadata 保留 `noTextLayer=true`，追加 `ocrApplied=true` + `ocrDocumentId`（SQL 更新 8 行，未覆盖历史）。
+- 质量说明：`chi_sim+eng` 对中文封面/版权页/正文可用（ISBN、出版社、推荐等级均识别正确）；英文人名与部分符号有噪声（如 “ete k gape”），属 OCR 质量而非解析失败；本段未做后处理校对。
+- 补料后全库：documents **1,122**、chunks **13,274**、embeddings **13,274**（BAAI 13,266 + fake-hash 8）、pending **0**；`/readyz=200`；embedding `restarts=2`（均发生在 18:54:54 前，即 OCR 阶段；索引阶段无新增），`NanoCpus=8`、`rate=0`。
+

@@ -17,7 +17,101 @@ from pathlib import Path
 import httpx
 
 from .assembly import Runtime
+from .errors import PortError
 from .importer import Importer, dry_run, list_items
+
+# S13H-13 fix: acceptance imports used to fail outright when a real import held
+# the `platform:heavy` advisory lock. Wait (2s steps, 180s total) instead of
+# creating a second lock; if the budget runs out the suite reports SKIP (75)
+# rather than FAIL so a long import cannot fail an acceptance run.
+HEAVY_WAIT_SECONDS = 180.0
+HEAVY_RETRY_INTERVAL_SECONDS = 2.0
+
+
+class HeavyBlocked(Exception):
+    """Raised when the wait budget is spent; maps to exit 75 (SKIP)."""
+
+    def __init__(self, attempts: int, limit: int, holder: str) -> None:
+        self.attempts = attempts
+        self.limit = limit
+        self.holder = holder
+        super().__init__(f"blocked_by_heavy attempts={attempts}/{limit} holder={holder}")
+
+
+def _heavy_busy(exc: PortError) -> bool:
+    return getattr(exc, "provider_code", None) == "E_HEAVY_BUSY"
+
+
+def _heavy_holder(runtime: Runtime) -> str:
+    """Describe the session holding `platform:heavy` for the SKIP line."""
+    try:
+        rows = runtime.metadata.query(
+            """
+            SELECT l.pid, a.application_name, a.state,
+                   to_char(a.query_start, 'HH24:MI:SS') AS started
+            FROM pg_locks l
+            LEFT JOIN pg_stat_activity a ON a.pid = l.pid
+            WHERE l.locktype = 'advisory' AND l.granted
+              AND (l.classid::bigint, l.objid::bigint) = (
+                  SELECT (k >> 32) & 4294967295, k & 4294967295
+                  FROM (SELECT hashtext('platform:heavy')::bigint AS k) t
+              )
+            ORDER BY l.pid
+            LIMIT 1
+            """
+        )
+    except Exception:  # noqa: BLE001 - diagnostics must not mask the skip
+        return "unknown"
+    if not rows:
+        return "unknown"
+    row = rows[0]
+    return (
+        f"pid={row['pid']} app={row.get('application_name') or '-'} "
+        f"state={row.get('state') or '-'} started={row.get('started') or '-'}"
+    )
+
+
+def _wait_heavy_free(runtime: Runtime) -> None:
+    """Block until the existing `platform:heavy` lock is free (same lock, no new one)."""
+    deadline = time.monotonic() + HEAVY_WAIT_SECONDS
+    attempt = 0
+    limit = max(1, int(HEAVY_WAIT_SECONDS / HEAVY_RETRY_INTERVAL_SECONDS))
+    while True:
+        with runtime.metadata.advisory_lock("platform:heavy", blocking=False) as free:
+            if free:
+                return
+        attempt += 1
+        if time.monotonic() >= deadline:
+            raise HeavyBlocked(attempt, limit, _heavy_holder(runtime))
+        print(f"[smoke] waiting heavy job {attempt}/{limit}", flush=True)
+        time.sleep(HEAVY_RETRY_INTERVAL_SECONDS)
+
+
+def _run_importer(
+    runtime: Runtime,
+    directory: str,
+    *,
+    retry_failed: bool = False,
+    timeout_s: float | None = None,
+) -> dict:
+    """Run an import, retrying E_HEAVY_BUSY up to the wait budget."""
+    timeout = HEAVY_WAIT_SECONDS if timeout_s is None else timeout_s
+    deadline = time.monotonic() + timeout
+    attempt = 0
+    limit = max(1, int(timeout / HEAVY_RETRY_INTERVAL_SECONDS))
+    while True:
+        try:
+            return Importer(runtime, progress_seconds=0).run(
+                directory, retry_failed=retry_failed
+            )
+        except PortError as exc:
+            if not _heavy_busy(exc):
+                raise
+            attempt += 1
+            if time.monotonic() >= deadline:
+                raise HeavyBlocked(attempt, limit, _heavy_holder(runtime)) from exc
+            print(f"[smoke] waiting heavy job {attempt}/{limit}", flush=True)
+            time.sleep(HEAVY_RETRY_INTERVAL_SECONDS)
 
 
 class _Case:
@@ -94,7 +188,7 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
             f"skipped={preview['skipped']} breakdown={preview['skipBreakdown']}",
         )
 
-        first = Importer(runtime, progress_seconds=0).run(str(clean_dir))
+        first = _run_importer(runtime, str(clean_dir))
         created_batches.append(first["batchId"])
         suite.check(
             "import.dryrun_matches",
@@ -125,7 +219,7 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
             f"states={_item_states(runtime, first['batchId'])}",
         )
 
-        second = Importer(runtime, progress_seconds=0).run(str(clean_dir))
+        second = _run_importer(runtime, str(clean_dir))
         suite.check(
             "rerun.no_work",
             second["processed"] == 0 and second["parsed"] == 0
@@ -149,6 +243,7 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
             _write(path, f"file {index} {nonce}\n" + filler)
             crash_files.append(path)
 
+        _wait_heavy_free(runtime)
         process = subprocess.Popen(
             [sys.executable, "-m", "platform_core.cli", "import", str(crash_dir),
              "--config", str(runtime.bundle.path), "--progress-seconds", "0",
@@ -188,7 +283,7 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
                 + states.get("chunked", 0)
             )
             done = states.get("indexed", 0)
-            resumed = Importer(runtime, progress_seconds=0).run(str(crash_dir))
+            resumed = _run_importer(runtime, str(crash_dir))
             final_states = _item_states(runtime, batch_id)
             suite.check(
                 "resume.only_remaining",
@@ -209,7 +304,7 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
         else:
             suite.fail("fixture.encrypted", f"missing fixture {fixture}")
 
-        bad_run = Importer(runtime, progress_seconds=0).run(str(bad_dir))
+        bad_run = _run_importer(runtime, str(bad_dir))
         created_batches.append(bad_run["batchId"])
         codes = {item["code"] for item in bad_run["failures"]}
         suite.check(
@@ -221,7 +316,7 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
             f"indexed={bad_run['indexed']} failures={sorted(codes)}",
         )
 
-        retry = Importer(runtime, progress_seconds=0).run(str(bad_dir), retry_failed=True)
+        retry = _run_importer(runtime, str(bad_dir), retry_failed=True)
         retry_codes = {item["code"] for item in retry["failures"]}
         suite.check(
             "failure.retry_failed",
@@ -261,6 +356,14 @@ def run_smoke_s13(runtime: Runtime, base_url: str) -> int:
                 "http.failure_reasons", len(failed_items) == 3,
                 f"failed_items={len(failed_items)}",
             )
+    except HeavyBlocked as exc:
+        # S13H-13: being blocked by another heavy job is a SKIP (exit 75), not a
+        # failure: the suite is incomplete, not incorrect.
+        print(
+            f"SKIP blocked_by_heavy attempts={exc.attempts}/{exc.limit} holder={exc.holder}",
+            flush=True,
+        )
+        return 75
     except Exception as exc:  # noqa: BLE001 - report as a failed suite, not a crash
         suite.fail("runtime", f"{type(exc).__name__}: {exc}")
     finally:

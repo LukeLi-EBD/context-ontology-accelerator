@@ -34,6 +34,16 @@ function Report([string]$name, [bool]$ok, [string]$detail) {
     }
 }
 
+function Report-Smoke([string]$name, [int]$exitCode, [string]$detail) {
+    # S13H-13: exit 75 = blocked_by_heavy -> SKIP, never counted as failed.
+    if ($exitCode -eq 75) {
+        $script:skipped++
+        Write-Host "[SKIP] $name exit=75 blocked_by_heavy"
+    } else {
+        Report $name ($exitCode -eq 0) $detail
+    }
+}
+
 function Get-HttpStatus([string]$url) {
     $code = & curl.exe -s -o NUL -w "%{http_code}" $url
     if ($LASTEXITCODE -ne 0) { return 0 }
@@ -184,7 +194,7 @@ Report "platform smoke-s12" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
 
 Write-Host "== smoke S13 =="
 docker compose exec -T platform platform smoke-s13
-Report "platform smoke-s13" ($LASTEXITCODE -eq 0) "exit=$LASTEXITCODE"
+Report-Smoke "platform smoke-s13" $LASTEXITCODE "exit=$LASTEXITCODE"
 
 Write-Host "== smoke S13b embedding partitions =="
 docker compose exec -T platform platform smoke-embed

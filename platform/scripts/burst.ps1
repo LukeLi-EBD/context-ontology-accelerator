@@ -3,13 +3,15 @@
 #   powershell -ExecutionPolicy Bypass -File scripts/burst.ps1 status
 #   powershell -ExecutionPolicy Bypass -File scripts/burst.ps1 on
 #   powershell -ExecutionPolicy Bypass -File scripts/burst.ps1 off
+#   powershell -ExecutionPolicy Bypass -File scripts/burst.ps1 background
 #   powershell -ExecutionPolicy Bypass -File scripts/burst.ps1 on -DryRun
-# on  : embedding cpus 4->8, RAYON 3->8, max_chunks_per_sec 1.0->0 (unlimited)
-# off : restore 4 cpus / RAYON 3 / rate 1.0, then smoke-embed 8/8 + /readyz
-# Both on/off hold the heavy lock (compose-guard) and append a WORKLOG entry.
+# on  : embedding cpus 4->8, RAYON 4->8, max_chunks_per_sec 1.0->0 (unlimited)
+# background/off : restore 4 cpus / RAYON 4 / TEI 并发 4 / rate 1.0, then smoke-embed + /readyz
+# background 为定档（S13H-13），off 保留为兼容别名。
+# All switching holds the heavy lock (compose-guard) and appends a WORKLOG entry.
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('on', 'off', 'status')]
+    [ValidateSet('on', 'off', 'background', 'status')]
     [string]$Command = 'status',
     [string]$Deadline = '',
     # S14H-CORES: explicit tier override for the 8 -> 12 -> 16 ladder test.
@@ -89,6 +91,7 @@ try {
     $acquired = $true
 
     $desiredRate = '0'
+    $env:MAX_CONCURRENT_REQUESTS = '4'
     if ($Command -eq 'on') {
         $cpus = if ($Cpus -gt 0) { $Cpus } else { Get-BurstCpus }
         $rayon = if ($Rayon -gt 0) { $Rayon } else { $cpus }
@@ -98,9 +101,10 @@ try {
         $env:RAYON_NUM_THREADS = "$rayon"
         $env:EMBED_MAX_CHUNKS_PER_SEC = $desiredRate
     } else {
+        # S13H-13 定档 background：4 核 / rayon 4 / TEI 并发 4 / rate 1.0
         $desiredRate = '1.0'
         $env:EMBEDDING_CPUS = '4'
-        $env:RAYON_NUM_THREADS = '3'
+        $env:RAYON_NUM_THREADS = '4'
         $env:EMBED_MAX_CHUNKS_PER_SEC = $desiredRate
     }
 

@@ -136,11 +136,23 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
   每 ≤5 分钟 heartbeat → 结束 `compose-guard release`。
   `status` 查看当前持有者；`-Force` 仅用于确认遗留死锁后强制接管。
 - `up.ps1` 通过锁检查；`-AssumeLock -Owner <owner>` 仅在 owner 与当前锁一致时跳过检查。
-- embedding 档位（`scripts/burst.ps1`）：
-  - `burst.ps1 on`：cpus 4→8、`RAYON_NUM_THREADS` 3→8、`max_chunks_per_sec` 1.0→0（不限速）
-  - `burst.ps1 off`：恢复 4 核 / RAYON 3 / rate 1.0，并跑 `smoke-embed` 8/8 + `/readyz`
-  - `-Cpus/-Rayon` 用于阶梯测试；实测 12 核对 8 核提升仅 6.5%（<15% 阈值，故退回 8 核），16 核被 Docker Desktop 拒绝
-  - 切档后必须 `readyz` + `smoke-embed` 全过才可批量作业
+- embedding 档位（`scripts/burst.ps1`）——**默认 background，burst 必须显式开启**：
+  - `burst.ps1 background`（= `off`）：cpus **4** / `RAYON_NUM_THREADS` **4** / `MAX_CONCURRENT_REQUESTS` **4** /
+    `max_chunks_per_sec` **1.0**；切完跑 `smoke-embed` 12/12 + `/readyz`，是**日常默认档**，一键回落用。
+  - `burst.ps1 on`：cpus→8 / RAYON→8 / rate→0（不限速）；**必须人工显式开启**，且切档过程持重型锁
+    （`compose-guard acquire`），不得在并发验收/他人作业期间提档。
+  - `burst.ps1 status`：只读打印当前 `cpus/rayon/rate`；`-Cpus/-Rayon` 用于阶梯测试。
+  - 适用场景与判据：
+
+    | 档 | 适用 | 判据（实测） |
+    |---|---|---|
+    | background（4 核/rate 1.0） | 日常入库、验收、与人共享机器 | 64 真实 chunk 0.525 chunk/s、P50 1,277.5 ms / P95 5,605.9 ms；宿主 CPU 峰 28%（<50%）、可用内存 ≥11.23 GB（>8 GB）→ 机器始终可用 |
+    | burst（8 核/rate 0） | 无人值守的批量回填窗口 | real-11 0.60 chunk/s、real-22 0.777 chunk/s；12 核对 8 核仅 +6.5%（<15% 阈值），16 核被 Docker Desktop 拒绝（VM 仅 12 CPU） |
+
+  - 结论：**不追 12/16 核**；瓶颈是 TEI 单飞 + 长块推理（长块 3.76 s/chunk，平台侧仅 3.1 ms/chunk），不是核数。
+  - 切档后必须 `readyz` + `smoke-embed` 全过才可批量作业。
+  - `smoke-s13` 撞上他人 heavy job 时**排队等待**（2s 间隔，预算 180s）；预算耗尽输出
+    `SKIP blocked_by_heavy` 并以**退出码 75** 结束，`acceptance.ps1` 计入 `skipped` 而非 `failed`。
 - 批量入库：`scripts/bulk-index.ps1` 分段可续跑；限速默认 `max_chunks_per_sec=1.0`（约实测上限 2.19 chunk/s 的 60%）。
 
 ## 6. 常见故障

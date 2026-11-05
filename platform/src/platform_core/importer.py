@@ -372,7 +372,10 @@ class Importer:
         # Bounded parse->embed queue: parsing stops once this many chunks are
         # waiting for embedding. Prevents unbounded memory/workpile growth when
         # parsing is much faster than the local CPU model (R3/R4, S13H-12).
-        self._queue_max_chunks = max(1, queue_max_chunks)
+        # S13H-13: 环境变量仅用于临时压测，未设置时维持默认 512。
+        self._queue_max_chunks = max(
+            1, int(os.environ.get("PLATFORM_IMPORT_QUEUE_MAX_CHUNKS", queue_max_chunks))
+        )
         # Segment size: stop after N files so one invocation stays short and
         # the operator gets progress between segments. 0 = unlimited.
         self._max_files = max(0, max_files)
