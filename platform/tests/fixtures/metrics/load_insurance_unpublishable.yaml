@@ -1,0 +1,7 @@
+metric_id: FIN-INS-003
+columns:
+  entity_key: product
+  numerator: policies
+  denominator: opening_policies
+  window_start: start_date
+  window_end: end_date

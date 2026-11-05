@@ -364,6 +364,26 @@ def _build_parser() -> argparse.ArgumentParser:
         "--keep-db-on-failure", dest="keep_db_on_failure", action="store_true"
     )
 
+    metrics = sub.add_parser("metrics", help="metric facts: load external observations")
+    metrics.add_argument("action", choices=["load"])
+    metrics.add_argument("--config", default="/data/platform.yaml")
+    metrics.add_argument("--file", required=True, help="source facts (.csv or .parquet)")
+    metrics.add_argument("--metric", required=True, help="target metric id")
+    metrics.add_argument("--mapping", required=True, help="column mapping YAML")
+    metrics.add_argument(
+        "--apply", action="store_true",
+        help="write the batch (default is dry-run validation only)",
+    )
+    metrics.add_argument(
+        "--data-source", dest="data_source", required=True,
+        choices=["fixture", "business"],
+        help="provenance label written to every row (no default)",
+    )
+    metrics.add_argument(
+        "--fixture", required=True, choices=["true", "false"],
+        help="fixture flag written to every row (must match --data-source)",
+    )
+
     smoke = sub.add_parser("smoke", help="run the S0 acceptance smoke suite")
     smoke.add_argument("--config", default="/data/platform.yaml")
     smoke.add_argument("--base-url", default="http://127.0.0.1:8080")
@@ -477,6 +497,7 @@ def main(argv: list[str] | None = None) -> int:
         "smoke-embed",
         "bench-embed",
         "graph-count",
+        "metrics",
     ):
         runtime = assemble(bundle)
         try:
@@ -602,6 +623,19 @@ def main(argv: list[str] | None = None) -> int:
                 from .bench_embed import run_bench_embed
 
                 return run_bench_embed(runtime, args.short, args.long)
+            if args.command == "metrics":
+                from .metric_loader import MetricLoader
+
+                result = MetricLoader(runtime.metadata).load(
+                    file=args.file,
+                    metric_id=args.metric,
+                    mapping_path=args.mapping,
+                    apply=args.apply,
+                    data_source=args.data_source,
+                    fixture=args.fixture == "true",
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return EXIT_OK if result.get("ok") else 1
             if args.command == "facts-export":
                 from .fact_export import export_meta, write_export
 
