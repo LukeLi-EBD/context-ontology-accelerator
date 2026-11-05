@@ -6,8 +6,13 @@
 #   powershell -ExecutionPolicy Bypass -File scripts/compose-guard.ps1 release
 #   powershell -ExecutionPolicy Bypass -File scripts/compose-guard.ps1 status
 #   powershell -ExecutionPolicy Bypass -File scripts/compose-guard.ps1 acquire -Force   # 仅旧格式/跨主机时显式接管
+#   powershell -ExecutionPolicy Bypass -File scripts/compose-guard.ps1 check -Stack platform-b
 # 退出码: 0=成功/空闲; 75=锁被占用(E_BUILD_CONFLICT); 76=持有者存活或无法验活(含旧格式);
 #         1=参数或所有权错误
+#
+# 锁作用域: 默认栈使用 .lock/heavy.lock（路径与历史一致）。传入 -Stack <name>（或设置
+# STACK_GUARD_NAME）时使用 .lock/<name>.heavy.lock。同一栈内仍互斥；跨栈不互斥是刻意的，
+# 由资源预算（Docker VM 12 核 / 内存）约束，见 RUN.md “并行双栈”。
 param(
     [Parameter(Position = 0)]
     [ValidateSet('acquire', 'release', 'check', 'status', 'heartbeat', 'help')]
@@ -15,13 +20,16 @@ param(
     [string]$Purpose = 'unspecified',
     [int]$TtlMinutes = 30,
     [string]$Owner = '',
+    [string]$Stack = '',
     [switch]$Force
 )
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $lockDir = Join-Path $root '.lock'
-$lockPath = Join-Path $lockDir 'heavy.lock'
+$effectiveStack = if ($Stack) { $Stack } elseif ($env:STACK_GUARD_NAME) { $env:STACK_GUARD_NAME } else { 'agent-platform' }
+$lockFile = if ($effectiveStack -eq 'agent-platform') { 'heavy.lock' } else { "$effectiveStack.heavy.lock" }
+$lockPath = Join-Path $lockDir $lockFile
 $HeartbeatIntervalMinutes = 5   # 长任务每 <=5 分钟必须 heartbeat
 
 if (-not $Owner) { $Owner = "$env:COMPUTERNAME\$env:USERNAME#$PID" }
@@ -209,10 +217,10 @@ switch ($Command) {
         if ($null -eq $lock) { Write-Output 'free (no lock)'; exit 0 }
         $age = Get-AgeMinutes $lock.heartbeat_at
         $alive = Test-HolderAlive $lock
-        Write-Output '--- heavy.lock ---'
+        Write-Output "--- $lockFile ---"
         Get-Content -LiteralPath $lockPath -Raw
         $state = if ($age -lt $TtlMinutes) { 'busy' } elseif ($alive -eq $true) { 'stale-but-holder-alive' } elseif ($alive -eq $null) { 'stale-unverifiable' } else { 'stale-holder-dead' }
-        Write-Output "state=$state heartbeat_age=$([math]::Round($age))min ttl=${TtlMinutes}min holder_alive=$(Format-Alive $lock $alive)"
+        Write-Output "state=$state heartbeat_age=$([math]::Round($age))min ttl=${TtlMinutes}min holder_alive=$(Format-Alive $lock $alive) stack=$effectiveStack"
         exit 0
     }
 

@@ -247,7 +247,73 @@ docker compose exec -T platform `
 
 ### 8.5 两条硬约束
 
-- **`schemaVersion` 必须与代码完全匹配**（`manifest.schemaVersion == SUPPORTED_SCHEMA_VERSION`，当前 18）；
+- **`schemaVersion` 必须与代码完全匹配**（`manifest.schemaVersion == SUPPORTED_SCHEMA_VERSION`，当前 19）；
   不一致直接 `E_BUNDLE_SCHEMA_MISMATCH`，不做隐式升级/降级 —— 先把库迁到对应版本再导。
 - **blobs 不在 bundle 内**（`totals.blobs.included=false`）。要完整还原原文下载/预览，需单独同步
   `data/blobs/`（CAS 目录）；只缺 blobs 时元数据仍可恢复，但 `/documents/{id}/source` 会 404。
+
+## 9. 并行双栈（compose 参数化）
+
+并行瓶颈不是 git，而是共用一套 compose 栈、一个重型锁和 12 核的 Docker VM 上限。
+`docker-compose.yml` 已把项目名、宿主端口、容器名和数据根改为 env 驱动；**默认值等价于
+原来的单栈**（`docker compose config --hash` 逐服务哈希不变）。两套栈用不同项目名、
+不同数据根、不同宿主端口即可同时存活。
+
+### 9.1 参数与默认值
+
+| 项 | 变量 | 默认（=历史行为） |
+| --- | --- | --- |
+| 项目名 | `COMPOSE_PROJECT_NAME` / `-p` | `agent-platform` |
+| 容器名 | 由 `COMPOSE_PROJECT_NAME` 派生 | `agent-platform-{postgres,oxigraph,api,...}` |
+| 数据根 | `PLATFORM_DATA_ROOT` | `D:/agentABC/data` |
+| api | `PLATFORM_PORT` | 8080 |
+| postgres | `POSTGRES_PORT` | 5432 |
+| oxigraph | `OXIGRAPH_PORT` | **默认不映射**（无鉴权，防绕过 GSP）；仅 `docker-compose.oxigraph-host.yml` 显式启用 |
+| reasoner | `REASONER_PORT` | 7879 |
+| embedding | `EMBEDDING_PORT` | 8081 |
+| fuseki | `FUSEKI_PORT` | 3030 |
+| 重型锁 | `-Stack <name>` | `.lock/heavy.lock`；其他栈为 `.lock/<name>.heavy.lock` |
+
+命名卷（`pgdata`、`oxigraph-data`）由 compose 按项目名自动加前缀，两套栈不会共用；
+`/data` 是 bind mount，必须用 `PLATFORM_DATA_ROOT` 指到不同目录，两套栈才不共用库/文件。
+同一栈内重型锁仍互斥；**跨栈不互斥是刻意的**，靠下面的资源预算约束。
+
+### 9.2 起一套短时验证栈
+
+```powershell
+# 第二套：api 8081 / pg 5433 / oxigraph 7879，独立卷与独立数据根
+powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 up -Name platform-b `
+  -ApiPort 8081 -PgPort 5433 -OxigraphPort 7879 `
+  -DataRoot D:/agentABC/data-b `
+  -Services postgres,oxigraph,platform
+
+powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 status -Name platform-b -ApiPort 8081
+curl.exe -s http://127.0.0.1:8081/readyz
+```
+
+注意：默认栈的 embedding 占 8081、reasoner 占 7879。若 B 必须用这两个端口，先临时
+`docker compose stop embedding reasoner`（它们都是 learn-only，不影响 `/readyz`），
+或者把 B 改成 `-ApiPort 8082 -OxigraphPort 7880`。
+
+`stack.ps1 up` 会先做端口预检：端口被别人占用时直接
+`E_STACK_PORT_IN_USE: ... used by pid=... (not project 'platform-b')`，不会盲起容器；
+`/readyz` 探测带 `-WaitSeconds`（默认 180s）/`-ProbeSeconds`（默认 5s）超时。
+
+### 9.3 资源预算（硬约束）
+
+- Docker VM 实测上限 **12 CPU / 11.68 GiB**，16 CPU 会被 Docker Desktop 拒绝。
+- B 栈只用于**短时验证**，不常驻；验证栈建议只起 `postgres,oxigraph,platform` 三个核心容器。
+- **不得两套同时跑重型作业**（批量导入、全量索引、acceptance、reasoner 物化）；同一时间只允许
+  一套做重活，另一套保持只读/空闲。
+- B 栈不要挂 `learn` profile（embedding 常驻约 6g、reasoner 4g），否则内存直接超预算。
+
+### 9.4 拆除与残渣核对
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 down -Name platform-b `
+  -ApiPort 8081 -PgPort 5433 -OxigraphPort 7879 `
+  -DataRoot D:/agentABC/data-b -RemoveDataRoot
+```
+
+`down -v` 删除 B 的命名卷，`-RemoveDataRoot` 删除 `D:/agentABC/data-b`；脚本末尾打印
+`residual containers/volumes for 'platform-b'`，两者都应为 `none`。

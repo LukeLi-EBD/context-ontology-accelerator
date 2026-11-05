@@ -1,0 +1,10 @@
+# Opt-in host mapping for oxigraph (used by scripts/stack.ps1 -OxigraphPort).
+#
+# The base compose file deliberately publishes no oxigraph port: the image has
+# no auth, so a host mapping would let local processes bypass the platform's
+# GSP governance. Keep this as an explicit override so the default stack is
+# unchanged; parallel verification stacks may use it on a dedicated port.
+services:
+  oxigraph:
+    ports:
+      - "127.0.0.1:${OXIGRAPH_PORT:-7878}:7878"

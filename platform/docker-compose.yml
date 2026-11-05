@@ -1,12 +1,16 @@
 # S0 skeleton: 3 long-running containers (lean shape).
 # learn/lean are both 3 containers in S0; learn-only services (embedding/reasoner)
 # are appended in S3/S5. Keep COMPOSE_PROFILES=learn in .env to pin the intent.
+#
+# Parallel stacks: project name, host ports, container names and the data root
+# are env-driven. Defaults reproduce the original single stack exactly; see
+# RUN.md "并行双栈" and scripts/stack.ps1.
 name: agent-platform
 
 services:
   postgres:
     image: pgvector/pgvector:pg18-trixie
-    container_name: agent-platform-postgres
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-postgres
     environment:
       POSTGRES_USER: platform
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-platform_dev}
@@ -51,7 +55,7 @@ services:
 
   oxigraph:
     image: oxigraph/oxigraph:0.5.7
-    container_name: agent-platform-oxigraph
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-oxigraph
     # Image is distroless (no shell/curl), so no in-container healthcheck.
     # Real graph readiness is proven by platform self-check and /readyz.
     command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7878"]
@@ -72,10 +76,10 @@ services:
   fuseki:
     build: ./fuseki
     image: agent-fuseki:0.1-s5
-    container_name: agent-platform-fuseki
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-fuseki
     profiles: ["graph-fuseki"]
     volumes:
-      - D:/agentABC/data/fuseki:/fuseki
+      - ${PLATFORM_DATA_ROOT:-D:/agentABC/data}/fuseki:/fuseki
     ports:
       - "127.0.0.1:${FUSEKI_PORT:-3030}:3030"
     mem_limit: 2g
@@ -98,7 +102,7 @@ services:
   # is down, hybrid search degrades to lexical and says so.
   embedding:
     image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
-    container_name: agent-platform-embedding
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-embedding
     profiles: ["learn", "embedding"]
     command:
       - "--model-id"
@@ -114,7 +118,7 @@ services:
     volumes:
       # Integration: runtime data (incl. embedding models) lives outside git at
       # D:/agentABC/data and is bind-mounted at the container's /data.
-      - D:/agentABC/data/models:/data/models:ro
+      - ${PLATFORM_DATA_ROOT:-D:/agentABC/data}/models:/data/models:ro
     ports:
       - "127.0.0.1:${EMBEDDING_PORT:-8081}:80"
     environment:
@@ -145,7 +149,7 @@ services:
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     image: agent-reasoner:0.1-s5
-    container_name: agent-platform-reasoner
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-reasoner
     profiles: ["learn", "reasoning"]
     environment:
       ROBOT_JAR: /opt/robot/robot.jar
@@ -175,10 +179,10 @@ services:
   rdfs:
     build: ./rdfs
     image: agent-rdfs:0.1-s5
-    container_name: agent-platform-rdfs
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-rdfs
     profiles: ["job"]
     volumes:
-      - D:/agentABC/data:/data
+      - ${PLATFORM_DATA_ROOT:-D:/agentABC/data}:/data
     command: ["/data/jobs/rdfs/in.ttl", "/data/jobs/rdfs/out.nt"]
     mem_limit: 1g
     restart: "no"
@@ -190,7 +194,7 @@ services:
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     image: agent-platform:0.1-s5
-    container_name: agent-platform-api
+    container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-api
     depends_on:
       postgres:
         condition: service_healthy
@@ -208,7 +212,7 @@ services:
     ports:
       - "127.0.0.1:${PLATFORM_PORT:-8080}:8080"
     volumes:
-      - D:/agentABC/data:/data
+      - ${PLATFORM_DATA_ROOT:-D:/agentABC/data}:/data
     healthcheck:
       test:
         [
