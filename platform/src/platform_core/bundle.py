@@ -52,6 +52,7 @@ REQUIRED_FILES = [
 METRIC_DEFINITIONS_FILE = "meta/metric_definitions.jsonl"
 METRIC_OBSERVATIONS_FILE = "meta/metric_observations.jsonl"
 METRIC_ENTITY_FILE = "meta/metric_entity_facts.jsonl"
+DOCUMENT_PAGES_FILE = "meta/document_pages.jsonl"
 
 ENTITY_TABLES = {
     "platform.ins_payment_record": "insPaymentRecord",
@@ -638,6 +639,16 @@ def export_bundle(
         _write_jsonl(bundle_dir / METRIC_OBSERVATIONS_FILE, metric_obs)
         _write_jsonl(bundle_dir / METRIC_ENTITY_FILE, entity_rows)
 
+        # ---- per-page text (document detail / page-count consistency) -----
+        page_rows = runtime.metadata.query(
+            """
+            SELECT document_id, page_number, text, char_count
+              FROM platform.document_page
+             ORDER BY document_id, page_number
+            """
+        )
+        _write_jsonl(bundle_dir / DOCUMENT_PAGES_FILE, page_rows)
+
         # ---- optional blobs ----------------------------------------------
         blob_entries: list[dict[str, Any]] = []
         blob_missing: list[str] = []
@@ -675,6 +686,7 @@ def export_bundle(
             _file_entry(bundle_dir, METRIC_DEFINITIONS_FILE, "jsonl", len(metric_defs)),
             _file_entry(bundle_dir, METRIC_OBSERVATIONS_FILE, "jsonl", len(metric_obs)),
             _file_entry(bundle_dir, METRIC_ENTITY_FILE, "jsonl", len(entity_rows)),
+            _file_entry(bundle_dir, DOCUMENT_PAGES_FILE, "jsonl", len(page_rows)),
         ]
         files.extend(blob_entries)
 
@@ -721,6 +733,7 @@ def export_bundle(
                 "metricDefinitions": len(metric_defs),
                 "metricDefinitionsHash": _metric_def_hash(metric_defs),
                 "metricObservations": len(metric_obs),
+                "documentPages": len(page_rows),
                 "metricEntityFacts": {
                     "insPaymentRecord": len(ins_payments),
                     "loanInstallmentPlan": len(loan_plans),
@@ -946,9 +959,17 @@ def verify_bundle(bundle_dir: str | Path, expected_schema: int | None = None) ->
                 "metric definition content hash does not match the manifest",
                 path=METRIC_DEFINITIONS_FILE,
             )
+    if DOCUMENT_PAGES_FILE in listed:
+        rows = read_ndjson(root / DOCUMENT_PAGES_FILE)
+        if len(rows) != int(totals.get("documentPages") or 0):
+            raise _err(
+                "E_BUNDLE_PAGE_COUNT",
+                f"document page count mismatch: file={len(rows)} "
+                f"manifest={totals.get('documentPages')}",
+                path=DOCUMENT_PAGES_FILE,
+            )
     if METRIC_ENTITY_FILE in listed:
         from collections import Counter
-
         rows = read_ndjson(root / METRIC_ENTITY_FILE)
         counts = Counter(str(row.get("table") or "") for row in rows)
         declared_entities = totals.get("metricEntityFacts") or {}
@@ -1256,6 +1277,10 @@ def import_bundle(
             read_ndjson(root / METRIC_ENTITY_FILE)
             if (root / METRIC_ENTITY_FILE).is_file() else []
         )
+        page_rows = (
+            read_ndjson(root / DOCUMENT_PAGES_FILE)
+            if (root / DOCUMENT_PAGES_FILE).is_file() else []
+        )
         with runtime.metadata.tx() as tx:
             if definitions:
                 tx.executemany(
@@ -1279,6 +1304,24 @@ def import_bundle(
                 tx.executemany(_INS_UPSERT, insurance)
             if loans:
                 tx.executemany(_LOAN_UPSERT, loans)
+            if page_rows:
+                tx.executemany(
+                    """
+                    INSERT INTO platform.document_page
+                      (document_id, page_number, text, char_count)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (document_id, page_number) DO UPDATE SET
+                      text = EXCLUDED.text,
+                      char_count = EXCLUDED.char_count
+                    """,
+                    [
+                        (
+                            row["document_id"], int(row["page_number"]),
+                            row["text"], int(row["char_count"]),
+                        )
+                        for row in page_rows
+                    ],
+                )
 
         # ---- consistency checks -----------------------------------------
         step = "checks"
@@ -1499,6 +1542,18 @@ def _verify_restored(
             totals["metricObservations"],
             obs_count,
             obs_count == int(totals["metricObservations"]),
+        )
+    if "documentPages" in totals:
+        page_count = int(
+            runtime.metadata.query(
+                "SELECT COUNT(*) AS n FROM platform.document_page"
+            )[0]["n"]
+        )
+        add(
+            "documentPages",
+            totals["documentPages"],
+            page_count,
+            page_count == int(totals["documentPages"]),
         )
     declared_entities = totals.get("metricEntityFacts") or {}
     if declared_entities:
