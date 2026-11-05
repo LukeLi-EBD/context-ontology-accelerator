@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .adapters.embedding import EmbeddingClient
+from .adapters.graph_fuseki import FusekiHttpStore
 from .adapters.graph_oxigraph import OxigraphHttpStore
+from .adapters.reasoner_hermit import HermitReasoner
 from .adapters.llm_openai import LlmClient
 from .adapters.metadata_pg import MetadataPg
 from .adapters.object_fs import FsCasBackend
@@ -34,7 +36,7 @@ from .validation import ShaclValidator
 class Runtime:
     bundle: ConfigBundle
     metadata: MetadataPg
-    graph: OxigraphHttpStore
+    graph: Any
     objects: LayeredObjectStore
     ontology: OntologyRegistry
     shapes: ShapesRegistry
@@ -49,6 +51,7 @@ class Runtime:
     facts: FactLedger
     extraction: ExtractionService
     reasoner: ReasonerClient
+    consistency_reasoner: HermitReasoner | None
     validator: ShaclValidator
     reasoning: ReasoningService
     context: ContextResolver
@@ -64,6 +67,8 @@ class Runtime:
         self.embedding.close()
         self.llm.close()
         self.reasoner.close()
+        if self.consistency_reasoner is not None:
+            self.consistency_reasoner.close()
         self.metadata.close()
         self.graph.close()
 
@@ -75,11 +80,20 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         pool_max=cfg.database.pool_max,
         statement_timeout_ms=cfg.database.statement_timeout_ms,
     )
-    graph = OxigraphHttpStore(
-        endpoint=cfg.graph.endpoint,
-        timeout_ms=cfg.graph.timeout_ms,
-        max_rows=cfg.graph.max_rows,
-    )
+    # Q8-a: graph.provider selects the assembled adapter; config rejected any
+    # known-but-missing provider before we get here.
+    if cfg.graph.provider == "fuseki":
+        graph: Any = FusekiHttpStore(
+            endpoint=cfg.graph.endpoint,
+            timeout_ms=cfg.graph.timeout_ms,
+            max_rows=cfg.graph.max_rows,
+        )
+    else:
+        graph = OxigraphHttpStore(
+            endpoint=cfg.graph.endpoint,
+            timeout_ms=cfg.graph.timeout_ms,
+            max_rows=cfg.graph.max_rows,
+        )
     fs_backend = FsCasBackend(root=cfg.storage.root, tmp_dir=cfg.storage.tmp_dir)
     pg_backend = PgByteaBackend(metadata)
     objects = LayeredObjectStore(cfg.storage, metadata, fs_backend, pg_backend)
@@ -99,8 +113,21 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     extraction = ExtractionService(cfg.extraction, metadata, graph, llm, facts)
     reasoner = ReasonerClient(cfg.reasoning)
     validator = ShaclValidator(cfg.reasoning)
+    # Q8-b: engine=hermit adds a DL consistency/classify client; materialize
+    # stays on reasoner (ROBOT/ELK) so the default path is unchanged.
+    consistency_reasoner = (
+        HermitReasoner(cfg.reasoning.endpoint, cfg.reasoning.timeout_ms)
+        if cfg.reasoning.engine == "hermit"
+        else None
+    )
     reasoning = ReasoningService(
-        cfg.reasoning, metadata, graph, reasoner, validator, ontology
+        cfg.reasoning,
+        metadata,
+        graph,
+        reasoner,
+        validator,
+        ontology,
+        consistency_reasoner=consistency_reasoner,
     )
     # S11: governed publish runs SHACL + consistency + breaking gates, then
     # materializes the RDFS->OWL->SHACL chain. Legacy direct publish (bootstrap
@@ -152,6 +179,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         facts=facts,
         extraction=extraction,
         reasoner=reasoner,
+        consistency_reasoner=consistency_reasoner,
         validator=validator,
         reasoning=reasoning,
         context=context,

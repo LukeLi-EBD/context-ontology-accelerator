@@ -47,6 +47,7 @@ class ReasoningService:
         reasoner: ReasonerClient,
         validator: ShaclValidator,
         ontology: OntologyRegistry,
+        consistency_reasoner: Any | None = None,
     ) -> None:
         self._config = config
         self._meta = metadata
@@ -54,6 +55,9 @@ class ReasoningService:
         self._reasoner = reasoner
         self._validator = validator
         self._ontology = ontology
+        # Q8-b: engine=hermit routes the consistency gate to ROBOT/HermiT while
+        # materialize keeps the existing ROBOT/ELK path.
+        self._consistency_reasoner = consistency_reasoner
 
     def manifest(self) -> Manifest:
         return Manifest(
@@ -85,6 +89,8 @@ class ReasoningService:
                 provider="platform",
                 provider_code="E_CONSISTENCY_UNAVAILABLE",
             )
+        if self._consistency_reasoner is not None:
+            return self._consistency_reasoner.check_consistency(tbox_nt)
         result = self._reasoner.reason(
             tbox_nt, b"", profile=self._config.profile, consistency_first=True
         )
@@ -150,6 +156,14 @@ class ReasoningService:
                 provider="platform",
                 provider_code="E_REASONING_DISABLED",
                 details={"key": "reasoning.mode"},
+            )
+        if mode == "on-demand":
+            raise PortError(
+                code="Unsupported",
+                message="reasoning.mode=on-demand is not implemented: no query rewriter/UCQ engine",
+                provider="platform",
+                provider_code="E_REASONING_ON_DEMAND_NOT_IMPLEMENTED",
+                details={"key": "reasoning.mode", "mode": mode},
             )
         if mode not in SUPPORTED_MODES:
             raise PortError(

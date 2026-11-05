@@ -249,7 +249,7 @@ Write-Host "== config bad (type error) =="
 docker compose exec -T platform platform check-config --config /app/tests/bad_config.yaml *> $null
 Report "check-config bad type" ($LASTEXITCODE -eq 78) "exit=$LASTEXITCODE expected=78"
 
-Write-Host "== config bad (unsupported provider) =="
+Write-Host "== config bad (invalid provider) =="
 docker compose exec -T platform platform check-config --config /app/tests/bad_config_unsupported_provider.yaml *> $null
 Report "check-config bad provider" ($LASTEXITCODE -eq 78) "exit=$LASTEXITCODE expected=78"
 

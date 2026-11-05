@@ -37,9 +37,10 @@ class DatabaseConfig(_Strict):
 
 
 class GraphConfig(_Strict):
-    provider: Literal["oxigraph-http", "pyoxigraph", "pyoxigraph-memory", "fuseki", "age"] = (
-        "oxigraph-http"
-    )
+    # Q8-a: the schema accepts every known provider name; whether it is
+    # *assembled* is decided in _apply_semantics with E_PROVIDER_NOT_IMPLEMENTED
+    # (known but missing adapter) vs E_PROVIDER_INVALID (unknown value).
+    provider: str = "oxigraph-http"
     endpoint: str = "http://oxigraph:7878"
     data_dir: str | None = None
     default_graph: str | None = None
@@ -194,6 +195,9 @@ class LlmConfig(_Strict):
     # `ark` = Volcengine Ark coding plan, which speaks the OpenAI-compatible
     # protocol but bills/limits differently (base URL must end with /coding/v3).
     provider: Literal["openai-compatible", "ark", "disabled"] = "openai-compatible"
+    # Q8-a: preset fills base_url/model/api_key_env only when they are empty;
+    # an explicit value always wins.
+    preset: Literal["deepseek", "volcano-ark", "ollama"] | None = None
     base_url: str = ""
     model: str = ""
     timeout_ms: int = Field(default=30000, ge=1000, le=300000)
@@ -225,9 +229,13 @@ class ExtractionConfig(_Strict):
 class ReasoningConfig(_Strict):
     """S5 SHACL + EL materialization (04 section 4.5, 05 section 2)."""
 
-    mode: Literal["off", "rdfs", "materialize", "validate"] = "materialize"
+    # Q8-a: on-demand is a recognised enum value but returns
+    # E_REASONING_ON_DEMAND_NOT_IMPLEMENTED at runtime (no query rewriter yet).
+    mode: Literal["off", "rdfs", "materialize", "on-demand", "validate"] = "materialize"
     profile: Literal["RDFS", "EL", "OWL2EL", "OWL2QL", "OWL2RL", "OWL2DL"] = "EL"
-    engine: Literal["robot"] = "robot"
+    # Q8-a: enum accepts robot/elk/hermit/konclude; unimplemented engines are
+    # rejected in _apply_semantics with E_PROVIDER_NOT_IMPLEMENTED.
+    engine: str = "robot"
     service_enabled: bool = True
     endpoint: str = "http://reasoner:7879"
     timeout_ms: int = Field(default=300000, ge=1000, le=3600000)
@@ -438,9 +446,10 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
             )
         if shorthand == "silo":
             raise _config_error(
-                "E_PROVIDER_UNSUPPORTED",
-                "storage.provider=silo is P1 and not implemented",
+                "E_PROVIDER_NOT_IMPLEMENTED",
+                "storage.provider=silo is a known provider but no Silo adapter is assembled (P1)",
                 key="storage.provider",
+                hint="use storage.provider=fs",
             )
         if "small_object_provider" not in storage_raw:
             model.storage.small_object_provider = shorthand  # type: ignore[assignment]
@@ -457,28 +466,54 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
             "range_read requires pg_mode=lo (or set require_range_read=false)",
             key="storage.require_range_read",
         )
+    # Q8-a: "can it be assembled?" replaces a blanket whitelist rejection.
+    # Known-but-missing adapters are E_PROVIDER_NOT_IMPLEMENTED; unknown values
+    # are E_PROVIDER_INVALID. Both exit 78 but the codes mean different things.
     if model.storage.large_object_provider == "pg":
         raise _config_error(
-            "E_PROVIDER_UNSUPPORTED",
-            "large_object_provider=pg is not implemented in S0",
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            (
+                "large_object_provider=pg is a known provider but its bytea/lo tier "
+                "cannot serve a truthful range_read; no adapter is assembled"
+            ),
             key="storage.large_object_provider",
             hint="use large_object_provider=fs",
         )
     if model.storage.large_object_provider == "silo":
         raise _config_error(
-            "E_PROVIDER_UNSUPPORTED",
-            "large_object_provider=silo is P1 and not implemented",
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            "large_object_provider=silo is a known provider but no Silo adapter is assembled (P1)",
             key="storage.large_object_provider",
             hint="use large_object_provider=fs",
         )
 
-    if model.graph.provider != "oxigraph-http":
+    graph_known = (
+        "oxigraph-http", "oxigraph", "pyoxigraph", "pyoxigraph-memory", "fuseki", "age"
+    )
+    graph_implemented = ("oxigraph-http", "oxigraph", "fuseki")
+    if model.graph.provider not in graph_known:
         raise _config_error(
-            "E_PROVIDER_UNSUPPORTED",
-            f"graph.provider={model.graph.provider} is not assembled in S0",
+            "E_PROVIDER_INVALID",
+            (
+                f"graph.provider={model.graph.provider!r} is not a known provider; "
+                f"known values: {', '.join(graph_known)}"
+            ),
             key="graph.provider",
-            hint="use graph.provider=oxigraph-http; fuseki/age adapters arrive later",
+            hint="fix the name; unknown names are configuration errors, not missing adapters",
         )
+    if model.graph.provider not in graph_implemented:
+        raise _config_error(
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            (
+                f"graph.provider={model.graph.provider} is a known provider but no adapter "
+                "is assembled (pyoxigraph/pyoxigraph-memory/age stay P2)"
+            ),
+            key="graph.provider",
+            hint="use graph.provider=oxigraph-http or graph.provider=fuseki",
+        )
+    if model.graph.provider == "oxigraph":
+        warnings.append("graph.provider=oxigraph: alias of oxigraph-http (same HTTP adapter)")
+        model.graph.provider = "oxigraph-http"
     if not model.graph.endpoint:
         raise _config_error("E_CONFIG_REQUIRED", "graph.endpoint is required", key="graph.endpoint")
 
@@ -567,27 +602,110 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
             )
     if not model.extraction.enabled:
         warnings.append("extraction:disabled")
+    # Q8-a: llm.preset maps to a base_url/model/api_key triplet. Explicit values
+    # always win; the preset only fills empty fields (never overwrites).
+    llm_presets = {
+        "deepseek": {
+            "base_url": "https://api.deepseek.com/v1",
+            "model": "deepseek-chat",
+            "api_key_env": "DEEPSEEK_API_KEY",
+        },
+        "volcano-ark": {
+            "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+            "model": "ep-xxxx",
+            "api_key_env": "ARK_API_KEY",
+        },
+        "ollama": {
+            "base_url": "http://ollama:11434/v1",
+            "model": "qwen2.5:7b-instruct",
+            "api_key_env": "OLLAMA_API_KEY",
+        },
+    }
+    if model.llm.preset:
+        preset = llm_presets[model.llm.preset]
+        filled: list[str] = []
+        if not model.llm.base_url:
+            model.llm.base_url = preset["base_url"]
+            filled.append("base_url")
+        if not model.llm.model:
+            model.llm.model = preset["model"]
+            filled.append("model")
+        if model.llm.api_key_env == "LLM_API_KEY" and preset["api_key_env"]:
+            model.llm.api_key_env = preset["api_key_env"]
+            filled.append("api_key_env")
+        warnings.append(
+            f"llm.preset={model.llm.preset}: filled {', '.join(filled) or 'nothing'} "
+            "(explicit values were kept)"
+        )
+
     if model.llm.provider == "disabled":
         warnings.append("llm.provider=disabled: extraction uses rules only")
     elif not (model.llm.base_url and model.llm.model):
         warnings.append("llm.base_url/model are empty: extraction uses rules only (auto mode)")
 
     # ---- S5 reasoning semantics -----------------------------------------
+    # Q8-a: engine names are opened at the enum layer; only assembled adapters
+    # pass. robot (ELK materialize) and hermit (consistency/classify) exist.
+    engine_known = ("robot", "elk", "hermit", "konclude")
+    engine_implemented = ("robot", "hermit")
+    if model.reasoning.engine not in engine_known:
+        raise _config_error(
+            "E_PROVIDER_INVALID",
+            (
+                f"reasoning.engine={model.reasoning.engine!r} is not a known engine; "
+                f"known values: {', '.join(engine_known)}"
+            ),
+            key="reasoning.engine",
+            hint="fix the name; unknown names are configuration errors",
+        )
+    if model.reasoning.engine not in engine_implemented:
+        raise _config_error(
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            (
+                f"reasoning.engine={model.reasoning.engine} is a known engine but no "
+                "adapter is assembled; ROBOT exposes ELK via engine=robot"
+            ),
+            key="reasoning.engine",
+            hint="use engine=robot (ELK materialize) or engine=hermit (DL consistency/classify)",
+        )
+
+    if model.reasoning.mode == "on-demand":
+        warnings.append(
+            "reasoning.mode=on-demand: recognised but NOT implemented "
+            "(E_REASONING_ON_DEMAND_NOT_IMPLEMENTED at runtime)"
+        )
+
     if model.reasoning.mode != "off":
         # ROBOT's `reason` offers ELK/HermiT/JFact only: there is no RDFS
         # reasoner to delegate to, and S5 never implements one in-process.
-        if model.reasoning.profile in ("RDFS", "OWL2QL", "OWL2RL", "OWL2DL"):
+        if model.reasoning.profile == "OWL2DL":
+            if model.reasoning.engine != "hermit":
+                raise _config_error(
+                    "E_CONFIG_REASONING",
+                    "reasoning.profile=OWL2DL requires reasoning.engine=hermit (ROBOT/HermiT)",
+                    key="reasoning.profile",
+                    hint="set reasoning.engine=hermit, or use profile=EL/OWL2EL for ELK",
+                )
+            if model.reasoning.mode != "validate":
+                raise _config_error(
+                    "E_CONFIG_REASONING",
+                    "reasoning.profile=OWL2DL is only supported for mode=validate; "
+                    "materialize stays on ROBOT/ELK",
+                    key="reasoning.profile",
+                    hint="use mode=validate for DL consistency, or profile=EL for materialize",
+                )
+        if model.reasoning.profile in ("RDFS", "OWL2QL", "OWL2RL"):
             raise _config_error(
                 "E_CONFIG_REASONING",
                 (
                     f"reasoning.profile={model.reasoning.profile} is not implemented: "
-                    "the S5 reasoner is ROBOT/ELK (OWL 2 EL only)"
+                    "the assembled reasoners are ROBOT/ELK (OWL 2 EL) and ROBOT/HermiT (DL validate)"
                 ),
                 key="reasoning.profile",
                 hint=(
-                    "use profile=EL or profile=OWL2EL for ELK; RDFS closure is the "
-                    "one-shot Jena job (docker compose --profile job run --rm rdfs), "
-                    "not an in-process reasoner"
+                    "use profile=EL or OWL2EL for ELK; OWL2DL with engine=hermit for DL "
+                    "validate; RDFS closure is the one-shot Jena job "
+                    "(docker compose --profile job run --rm rdfs)"
                 ),
             )
         if not model.reasoning.inferred_graph_prefix:

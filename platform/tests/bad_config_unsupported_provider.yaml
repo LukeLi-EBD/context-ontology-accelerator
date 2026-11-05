@@ -1,5 +1,7 @@
 mode: single
 config_version: 1
 graph:
-  provider: fuseki
+  # Q8-a: unknown provider names stay a configuration error (E_PROVIDER_INVALID,
+  # exit 78). Known-but-unassembled names are covered by tests/test_q8_slots.py.
+  provider: not-a-provider
   endpoint: http://fuseki:3030

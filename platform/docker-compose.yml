@@ -64,6 +64,35 @@ services:
       - oxigraph-data:/data
     restart: unless-stopped
 
+  # Q8-b: alternate GraphStore backend (D25). Profile graph-fuseki only; it is
+  # mutually exclusive with oxigraph (never run both as writers). The platform
+  # default stays graph.provider=oxigraph-http.
+  # Point PLATFORM__GRAPH__ENDPOINT=http://fuseki:3030 and
+  # PLATFORM__GRAPH__PROVIDER=fuseki when using it.
+  fuseki:
+    build: ./fuseki
+    image: agent-fuseki:0.1-s5
+    container_name: agent-platform-fuseki
+    profiles: ["graph-fuseki"]
+    volumes:
+      - D:/agentABC/data/fuseki:/fuseki
+    ports:
+      - "127.0.0.1:${FUSEKI_PORT:-3030}:3030"
+    mem_limit: 2g
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:3030/ds/query?query=ASK%20%7B%7D', timeout=5).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 20
+      start_period: 40s
+    restart: "no"
+
   # learn profile only (05 section 1.6): local BGE-M3 served by TEI (CPU, OpenAI
   # compatible /v1/embeddings). platform does NOT depend_on it: if the container
   # is down, hybrid search degrades to lexical and says so.

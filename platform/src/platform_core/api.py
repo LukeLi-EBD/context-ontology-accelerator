@@ -1020,6 +1020,11 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "llm": runtime.llm.manifest().__dict__,
                 "extraction": runtime.extraction.manifest().__dict__,
                 "reasoner": runtime.reasoner.manifest().__dict__,
+                "consistency_reasoner": (
+                    runtime.consistency_reasoner.manifest().__dict__
+                    if runtime.consistency_reasoner is not None
+                    else None
+                ),
                 "validation": runtime.validator.manifest().__dict__ if hasattr(runtime.validator, "manifest") else {},
                 "reasoning": runtime.reasoning.manifest().__dict__,
                 "context": runtime.context.manifest().__dict__,
