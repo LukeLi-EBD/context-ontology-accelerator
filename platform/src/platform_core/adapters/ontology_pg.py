@@ -27,7 +27,7 @@ import json
 
 import httpx
 from psycopg.types.json import Jsonb
-from rdflib import Graph, Namespace, OWL, RDF, RDFS, URIRef
+from rdflib import BNode, Graph, Namespace, OWL, RDF, RDFS, URIRef
 
 from ..config import OntologyConfig
 from ..errors import EXIT_CONFIG, PortError, PlatformError
