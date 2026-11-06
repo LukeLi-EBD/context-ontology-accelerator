@@ -110,7 +110,7 @@ if graph_iri != "urn:platform:prov": raise E_PROV_GRAPH_MIXING
 | `tests/test_prov.py` | 9/9 OK |
 | 全量单测 | 200 OK（原 191 + 9） |
 | `tests/acceptance.ps1` | 43 passed / 0 failed / 0 skipped / 0 degraded |
-| `scripts/acceptance-s14.ps1` | 155 passed / 0 failed / 0 skipped |
+| `scripts/acceptance-s14.ps1` | 155 passed / 0 failed / 0 skipped（**2026-11-06 回写：该次无独立日志、未复现，不作为结论**；可复核 212/0/0 `_tmp_acc3_s14.log` / 366/0/0 `doc/evidence/acceptance-s14-20261106-233619-6ca8561.log`） |
 | PROV 链（验收后） | 69 事件：decision 33 / rule_trigger 21 / refusal 15；`checked=69, ok=true` |
 | schema | 28（`V27`→`V28`） |
 | 图指针 | `tbox/current=ont-3f57d8ce6636`、`inferred=997` |

@@ -108,7 +108,7 @@ SKOS 是发布时快照，文本更新只在下次显式重发布时进入 T-Box
   3 条词表行为（pref/alt 命中、类别名不受影响）、2 条形状（正例 0 违规 / 负例仅 Warning）、
   4 条实时（85 概念唯一 notation、pref+definition 齐全、6 变体有 broader、计算字段未泄漏）。
 - `acceptance.ps1`：**passed=43 failed=0 skipped=0**。
-- `acceptance-s14.ps1`：**passed=168 failed=0 skipped=0**。
+- `acceptance-s14.ps1`：当时记录 **passed=168 failed=0 skipped=0**；**2026-11-06 回写：该次无独立日志、未复现，不作为结论**。可复核 212/0/0（`_tmp_acc3_s14.log`，`f44a8b6`）/ 366/0/0（`doc/evidence/acceptance-s14-20261106-233619-6ca8561.log`，`6ca8561`）。
 - 终态：`/readyz=200`、`metric_observation=0`、`tbox/current=ont-11f92ebb3326`。
 
 ## 8. 变更文件
