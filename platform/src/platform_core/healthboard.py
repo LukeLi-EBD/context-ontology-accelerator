@@ -448,10 +448,175 @@ def ontology_diff(
         # O-02: the diff response carries the proposal/version flow so
         # /health/ontology-diff can answer "who moved this version, when, why".
         "lifecycle": _lifecycle_block(runtime, [from_version, to_version]),
+        # O-06: changes aggregated by class/property plus an explicit
+        # two-version snapshot comparison.
+        "aggregations": _aggregate_block(runtime, from_graph, to_graph),
+        "snapshots": _safe_snapshot_block(runtime, from_row, to_row),
         "sampledAt": sampled_at,
         "source": "GET /health/ontology-diff（runtime.ontology.diff + 图差异示例查询）",
         "readOnly": True,
     }
+
+
+def _aggregate_block(runtime: Any, from_graph: str | None, to_graph: str | None) -> dict[str, Any]:
+    """O-06: class/property aggregation; never fails the diff itself."""
+    try:
+        from .impact import _aggregate
+
+        return _aggregate(runtime, from_graph, to_graph)
+    except Exception as exc:
+        return {
+            "byClass": [], "byProperty": [],
+            "unclassified": {"addedTriples": 0, "removedTriples": 0},
+            "empty": True,
+            "emptyReason": f"聚合不可算：{exc}",
+            "method": "SPARQL GROUP BY ?s ?p over (to MINUS from)",
+            "readOnly": True,
+        }
+
+
+def _safe_snapshot_block(runtime: Any, from_row: dict[str, Any],
+                         to_row: dict[str, Any]) -> dict[str, Any]:
+    try:
+        return _snapshot_block(runtime, from_row, to_row)
+    except Exception as exc:
+        return {
+            "from": None, "to": None, "delta": {}, "empty": True,
+            "emptyReason": f"快照不可算：{exc}", "readOnly": True,
+        }
+
+
+def snapshot(runtime: Any, version_id: str) -> dict[str, Any]:
+    """O-06: one version's class/property/instance snapshot with explicit gaps."""
+    try:
+        row = _version(runtime, version_id)
+    except Exception as exc:
+        return {
+            "versionId": version_id, "empty": True,
+            "emptyReason": f"版本不存在或不可读：{exc}", "readOnly": True,
+        }
+    graph = row.get("graph")
+    if not graph:
+        return {
+            "versionId": version_id, "semver": row.get("semver"),
+            "status": row.get("status"), "empty": True,
+            "emptyReason": "版本没有关联图（graph 为空）", "readOnly": True,
+        }
+    classes = _classes(runtime, graph)
+    properties = _properties(runtime, graph)
+    graphs = _abox_graphs(runtime)
+    instances = _instance_total(runtime, graphs) if graphs else None
+    return {
+        "versionId": row.get("versionId") or row.get("id"),
+        "semver": row.get("semver"),
+        "status": row.get("status"),
+        "graph": graph,
+        "triples": _as_int(row.get("tripleCount")),
+        "triplesSource": "version.tripleCount（内容指纹三元组数）",
+        "classes": classes["total"],
+        "classesSource": classes["source"],
+        "properties": properties["total"],
+        "propertiesSource": properties["source"],
+        "instances": instances,
+        "instancesSource": "SPARQL COUNT(DISTINCT ?s) over A-Box graphs" if graphs
+        else "A-Box 未配置",
+        "instancesNote": None if graphs else "没有 A-Box 图，实例数不可算（未以 0 代替）",
+        "empty": False,
+        "readOnly": True,
+    }
+
+
+def _delta(before: Any, after: Any) -> int | None:
+    if before is None or after is None:
+        return None
+    return int(after) - int(before)
+
+
+def _snapshot_block(runtime: Any, from_row: dict[str, Any],
+                    to_row: dict[str, Any]) -> dict[str, Any]:
+    before = snapshot(runtime, from_row.get("versionId") or from_row.get("id"))
+    after = snapshot(runtime, to_row.get("versionId") or to_row.get("id"))
+    delta = {
+        "triples": _delta(before.get("triples"), after.get("triples")),
+        "classes": _delta(before.get("classes"), after.get("classes")),
+        "properties": _delta(before.get("properties"), after.get("properties")),
+        "instances": _delta(before.get("instances"), after.get("instances")),
+    }
+    same = before.get("versionId") == after.get("versionId")
+    unchanged = same or all(value in (0, None) for value in delta.values())
+    return {
+        "from": before,
+        "to": after,
+        "delta": delta,
+        "empty": unchanged,
+        "emptyReason": (
+            "两版本相同，无快照差异" if same
+            else "快照无可比指标（实例数不可算或数据缺失）" if all(
+                value is None for value in delta.values())
+            else None
+        ),
+        "source": "各版本类/属性/实例计数 + 内容指纹三元组数",
+        "readOnly": True,
+    }
+
+
+def snapshot_compare(runtime: Any, from_version: str | None = None,
+                     to_version: str | None = None) -> dict[str, Any]:
+    """O-06 endpoint payload: two explicit versions, or current vs previous."""
+    pointer = _pointer(runtime)
+    if not to_version:
+        to_version = (pointer or {}).get("versionId")
+    if not to_version:
+        return {
+            "from": None, "to": None, "delta": {},
+            "empty": True,
+            "emptyReason": "tbox/current 指针不存在，且未指定 to 版本",
+            "source": "各版本类/属性/实例计数 + 内容指纹三元组数",
+            "readOnly": True,
+        }
+    if not from_version:
+        versions = [item for item in runtime.ontology.list_versions()
+                    if item.get("status") != "deprecated"]
+        ids = [str(item.get("id")) for item in versions]
+        if to_version in ids:
+            index = ids.index(to_version)
+            if index == 0:
+                return {
+                    "from": None, "to": snapshot(runtime, to_version), "delta": {},
+                    "empty": True,
+                    "emptyReason": "当前版本没有基线版本，无法做快照对比",
+                    "source": "各版本类/属性/实例计数 + 内容指纹三元组数",
+                    "readOnly": True,
+                }
+            from_version = ids[index - 1]
+        else:
+            return {
+                "from": None, "to": snapshot(runtime, to_version), "delta": {},
+                "empty": True,
+                "emptyReason": "当前版本不在版本列表中，无法确定基线",
+                "readOnly": True,
+            }
+    before = snapshot(runtime, from_version)
+    after = snapshot(runtime, to_version)
+    block = {
+        "from": before, "to": after,
+        "delta": {
+            "triples": _delta(before.get("triples"), after.get("triples")),
+            "classes": _delta(before.get("classes"), after.get("classes")),
+            "properties": _delta(before.get("properties"), after.get("properties")),
+            "instances": _delta(before.get("instances"), after.get("instances")),
+        },
+    }
+    if before.get("versionId") == after.get("versionId"):
+        block.update({"empty": True, "emptyReason": "两版本相同，无快照差异"})
+    elif all(value is None for value in block["delta"].values()):
+        block.update({"empty": True,
+                      "emptyReason": "快照无可比指标（实例数不可算或数据缺失）"})
+    else:
+        block.update({"empty": False, "emptyReason": None})
+    block["source"] = "各版本类/属性/实例计数 + 内容指纹三元组数"
+    block["readOnly"] = True
+    return block
 
 
 def _lifecycle_block(runtime: Any, version_ids: list[str]) -> dict[str, Any]:

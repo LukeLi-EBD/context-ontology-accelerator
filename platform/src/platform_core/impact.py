@@ -115,11 +115,14 @@ def _aggregate(runtime: Any, from_graph: str | None, to_graph: str) -> dict[str,
     for direction, field in (("added", "addedTriples"), ("removed", "removedTriples")):
         for row in _rows(direction):
             total_changes += row["n"]
+            classified = False
             if row["s"] in classes:
                 _bump(by_class, row["s"], field, row["n"])
-            elif row["p"] in properties:
+                classified = True
+            if row["p"] in properties:
                 _bump(by_property, row["p"], field, row["n"])
-            else:
+                classified = True
+            if not classified:
                 unclassified[field] += row["n"]
 
     return {

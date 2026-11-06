@@ -3750,6 +3750,15 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         from . import termgov
 
         return termgov.list_checks(runtime.metadata, limit=limit)
+
+    # ---- O-06 health snapshot comparison --------------------------------
+
+    @app.get("/health/ontology-snapshot")
+    def health_ontology_snapshot(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+    ) -> dict[str, Any]:
+        return healthboard.snapshot_compare(runtime, from_, to)
     # --- end G1 ---
 
     return app
