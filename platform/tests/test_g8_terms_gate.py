@@ -724,6 +724,22 @@ class PublishGateTests(unittest.TestCase):
         stored = self._evidence(payload["versionId"])[0]["payload"]
         self.assertTrue(stored["gates"]["terms"]["vocabGuard"]["exemption"])
 
+    def test_15_off_cannot_switch_off_the_vocab_guard(self):
+        self.registry.set_terms_gate(TermsConfig(gate="off"))
+        self._set_mark()
+        record = self._import(NO_TERMS_TTL, "g8offzero")
+        preview = self._publish(record["importId"], dry_run=True)
+        self.assertEqual(preview.status_code, 200, preview.text)
+        self.assertTrue(preview.json()["termsGate"]["blocked"])
+        self.assertEqual(preview.json()["termsGate"]["gate"], "off")
+        response = self._publish(record["importId"], dry_run=False)
+        self.assertEqual(response.status_code, 409, response.text)
+        error = response.json()["error"]
+        self.assertEqual(error["providerCode"], "E_TERM_GATE_BLOCKED")
+        self.assertEqual(error["details"]["gate"], "off")
+        self.assertTrue(error["details"]["vocabGuard"]["forcedBlocking"])
+        self.assertEqual(error["details"]["vocabGuard"]["highWater"]["conceptsInScheme"], 85)
+
     def test_8_warn_publishes_and_records_the_gate_in_evidence(self):
         record = self._import(DUPLICATE_TTL, "g8warn")
         self.registry.set_terms_gate(TermsConfig(gate="warn"))
