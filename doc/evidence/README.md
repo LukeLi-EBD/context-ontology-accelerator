@@ -29,7 +29,7 @@
 | 2026-11-07 00:15 | `acceptance-s0s13-platform-acceptance-20261107-001536-8b2d6a7.log` | 隔离栈补起 embedding 前：`smoke-s13` 失败后中止，exit 1 |
 | 2026-11-07 00:33 | `acceptance-s0s13-platform-acceptance-20261107-003328-82244bb.log` | **隔离栈终态**：43 passed / 0 failed / 0 skipped，exit 0 |
 | 2026-11-07 00:37 | `acceptance-s14--20261107-003732-b2bcd8d.log` | 脚本参数块 UTF-8 无 BOM 被 PS 5.1 误读，项目名为空导致协议失败；已加 BOM 修复 |
-| 2026-11-07 00:39 | `acceptance-s14-platform-acceptance-20261107-003809-b2bcd8d.log` | **隔离栈全量**：381 discovered / 378 executed / 360 passed / 5 failed / 13 errors / 0 skipped，exit 2（真实失败见下） |
+| 2026-11-07 00:39 | `acceptance-s14-platform-acceptance-20261107-003809-b2bcd8d.log` | **隔离栈全量**：381 discovered / 378 executed / 360 passed / 5 failed / 13 errors / 0 skipped，exit 2（真实失败见下）。该轮为独立栈修复前结果，已被后续全量 418 例全绿的运行取代 |
 | 2026-11-07 00:40 | `acceptance-s0s13-platform-acceptance-20261107-004023-b2bcd8d.log` | 锁占用注入演练：`E_BUILD_CONFLICT`，exit 75，未执行任何 smoke |
 | 2026-11-07 00:47 | `acceptance-s0s13-platform-acceptance-20261107-004430-ea7c94f.log` | **隔离栈终态复跑**（脚本最后一次改动后）：43 passed / 0 failed / 0 skipped，exit 0，锁正常释放 |
 
