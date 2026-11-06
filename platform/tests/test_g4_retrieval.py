@@ -348,5 +348,49 @@ class EntityProvenanceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
 
 
+class BrowseLinksTests(unittest.TestCase):
+    def test_four_stable_read_only_paths(self):
+        with _client() as client:
+            payload = client.get("/browse/links").json()
+        self.assertEqual(payload["paths"][0]["id"], "triples-to-entity")
+        self.assertEqual(payload["paths"][1]["id"], "metrics-to-definition")
+        self.assertEqual(payload["paths"][2]["id"], "tree-to-entity")
+        self.assertEqual(payload["paths"][3]["id"], "entity-to-tab")
+        self.assertEqual(payload["templates"]["triples-to-entity"], "/ui/entity.html?iri={iri}")
+        self.assertEqual(
+            payload["templates"]["metrics-to-definition"],
+            "/ui/browse.html?tab=metrics&metricId={metricId}",
+        )
+        self.assertEqual(payload["templates"]["entity-to-tab"],
+                         "/ui/browse.html?tab={tab}&entity={iri}")
+        self.assertTrue(payload["stable"])
+        self.assertTrue(payload["readOnly"])
+        self.assertEqual(payload["writeOperations"], 0)
+        self.assertTrue(all(item["method"] == "GET" for item in payload["paths"]))
+
+    def test_concrete_hrefs_are_url_encoded(self):
+        with _client() as client:
+            payload = client.get(
+                "/browse/links",
+                params={
+                    "iri": "http://example.org/E 1",
+                    "metricId": "FIN BANK 001",
+                    "classIri": "http://example.org/C",
+                    "entity": "urn:test:e1",
+                    "tab": "metrics",
+                },
+            ).json()
+        hrefs = {item["id"]: item["href"] for item in payload["paths"]}
+        self.assertEqual(hrefs["triples-to-entity"], "/ui/entity.html?iri=http%3A%2F%2Fexample.org%2FE%201")
+        self.assertEqual(
+            hrefs["metrics-to-definition"],
+            "/ui/browse.html?tab=metrics&metricId=FIN%20BANK%20001",
+        )
+        self.assertEqual(
+            hrefs["entity-to-tab"],
+            "/ui/browse.html?tab=metrics&entity=urn%3Atest%3Ae1",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

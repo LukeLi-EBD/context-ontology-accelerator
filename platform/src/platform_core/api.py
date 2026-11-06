@@ -4434,6 +4434,87 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "source": "GET /entity/provenance",
         }
 
+    def _g4_browse_links(
+        iri: str | None = None,
+        metric_id: str | None = None,
+        class_iri: str | None = None,
+        entity_iri: str | None = None,
+        tab: str | None = None,
+    ) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        def _q(value: str | None) -> str:
+            return quote(str(value or ""), safe="")
+
+        templates = {
+            "triples-to-entity": "/ui/entity.html?iri={iri}",
+            "metrics-to-definition": "/ui/browse.html?tab=metrics&metricId={metricId}",
+            "tree-to-entity": "/ui/entity.html?iri={iri}",
+            "entity-to-tab": "/ui/browse.html?tab={tab}&entity={iri}",
+        }
+        paths = [
+            {
+                "id": "triples-to-entity",
+                "label": "三元组 → 实体页",
+                "from": "/browse/triples",
+                "to": "entity.html",
+                "template": templates["triples-to-entity"],
+                "method": "GET",
+                "href": "/ui/entity.html?iri=" + _q(iri) if iri else None,
+            },
+            {
+                "id": "metrics-to-definition",
+                "label": "口径卡 → 口径定义",
+                "from": "/browse/metrics",
+                "to": "/browse/metrics/{metricId} + browse metrics tab",
+                "template": templates["metrics-to-definition"],
+                "method": "GET",
+                "href": (
+                    "/ui/browse.html?tab=metrics&metricId=" + _q(metric_id)
+                    if metric_id
+                    else None
+                ),
+            },
+            {
+                "id": "tree-to-entity",
+                "label": "类树 → 实体页",
+                "from": "/browse/ontology/tree",
+                "to": "entity.html",
+                "template": templates["tree-to-entity"],
+                "method": "GET",
+                "href": "/ui/entity.html?iri=" + _q(class_iri) if class_iri else None,
+            },
+            {
+                "id": "entity-to-tab",
+                "label": "实体页 → 浏览 tab",
+                "from": "/ui/entity.html",
+                "to": "browse.html",
+                "template": templates["entity-to-tab"],
+                "method": "GET",
+                "href": (
+                    "/ui/browse.html?tab="
+                    + _q(tab or "ontology")
+                    + "&entity="
+                    + _q(entity_iri)
+                    if entity_iri
+                    else None
+                ),
+            },
+        ]
+        return {
+            "paths": paths,
+            "templates": templates,
+            "artifacts": {
+                "triples": "/browse/triples?limit=20",
+                "metrics": "/browse/metrics",
+                "tree": "/browse/ontology/tree",
+                "entity": "/ui/api/entity?iri={iri}",
+            },
+            "stable": True,
+            "readOnly": True,
+            "writeOperations": 0,
+        }
+
     @app.get("/answerable/panel")
     def g4_answerable_panel(
         intent: str = Query(default="all"),
@@ -4544,6 +4625,22 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     ) -> dict[str, Any]:
         detail = entity_view.entity_detail(runtime, iri, limit=limit)
         return _g4_provenance_fields(detail, iri)
+
+    @app.get("/browse/links")
+    def g4_browse_links(
+        iri: str | None = Query(default=None, max_length=2048),
+        metricId: str | None = Query(default=None, max_length=200),
+        classIri: str | None = Query(default=None, max_length=2048),
+        entity: str | None = Query(default=None, max_length=2048),
+        tab: str | None = Query(default=None, max_length=40),
+    ) -> dict[str, Any]:
+        return _g4_browse_links(
+            iri=iri,
+            metric_id=metricId,
+            class_iri=classIri,
+            entity_iri=entity,
+            tab=tab,
+        )
 
     # --- end G4 ---
 
