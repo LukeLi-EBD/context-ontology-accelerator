@@ -1,0 +1,6 @@
+agreement_id,customer_no,product,institution,approved_limit,drawn_principal,currency,fx_rate,limit_type,facility_status,effective_from,effective_to,internal_flag,test_flag,status_as_of
+F1,C1,loan,B1,1000,900,CNY,1,revolving,active,2025-01-01,2025-12-31,false,false,2025-12-31
+F2,C2,loan,B1,500,100,CNY,1,revolving,active,2025-01-01,2025-12-31,false,false,2025-12-31
+F3,C3,loan,B1,200,200,CNY,1,revolving,frozen,2025-01-01,2025-12-31,false,false,2025-12-31
+F4,C4,loan,B1,300,300,CNY,1,revolving,active,2025-01-01,2025-12-31,false,true,2025-12-31
+F5,C5,loan,B1,400,400,CNY,1,revolving,active,2025-01-01,2025-12-31,true,false,2025-12-31

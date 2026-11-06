@@ -157,6 +157,137 @@ ON CONFLICT ON CONSTRAINT loan_installment_plan_key DO UPDATE SET
 _KINDS = {"insurance_payment": _INSURANCE, "loan_installment": _LOAN}
 
 
+def _spec(
+    table: str,
+    key: str,
+    columns: tuple[str, ...],
+    *,
+    dates: tuple[str, ...] = (),
+    decimals: tuple[str, ...] = (),
+    ints: tuple[str, ...] = (),
+    enums: dict[str, tuple[str, ...]] | None = None,
+) -> _Spec:
+    """Build a v6 fact spec; every declared column is required in the CSV."""
+    updates = ", ".join(f"{name} = EXCLUDED.{name}" for name in columns)
+    placeholders = ", ".join(["%s"] * (len(columns) + 2))
+    column_sql = ", ".join(columns + ("data_source", "fixture"))
+    return _Spec(
+        table=table,
+        columns=columns,
+        required=columns,
+        date_columns=dates,
+        decimal_columns=decimals,
+        int_columns=ints,
+        enum_columns=enums or {},
+        upsert_sql=(
+            f"INSERT INTO {table} ({column_sql}) VALUES ({placeholders})\n"
+            f"ON CONFLICT ON CONSTRAINT {key} DO UPDATE SET {updates}"
+        ),
+    )
+
+
+_COLLECTION_RECOVERY = _spec(
+    "platform.bank_collection_recovery",
+    "bank_collection_recovery_key",
+    ("case_id", "recovery_date", "principal_recovered", "interest_recovered",
+     "fee_recovered", "recovery_channel"),
+    dates=("recovery_date",),
+    decimals=("principal_recovered", "interest_recovered", "fee_recovered"),
+)
+
+_KINDS.update(
+    {
+        "bank_credit_application": _spec(
+            "platform.bank_credit_application",
+            "bank_credit_application_key",
+            ("application_id", "customer_no", "product", "channel", "institution",
+             "accept_date", "decision_date", "decision_status", "requested_amount",
+             "duplicate_group_id", "first_flag", "test_flag", "internal_flag"),
+            dates=("accept_date", "decision_date"),
+            decimals=("requested_amount",),
+            enums={"decision_status": ("approved", "rejected", "pending", "withdrawn", "voided")},
+        ),
+        "bank_credit_facility": _spec(
+            "platform.bank_credit_facility",
+            "bank_credit_facility_key",
+            ("agreement_id", "customer_no", "product", "institution",
+             "approved_limit", "drawn_principal", "currency", "fx_rate",
+             "limit_type", "facility_status", "effective_from", "effective_to",
+             "internal_flag", "test_flag", "status_as_of"),
+            dates=("effective_from", "effective_to", "status_as_of"),
+            decimals=("approved_limit", "drawn_principal", "fx_rate"),
+            enums={
+                "limit_type": ("revolving", "term", "overdraft"),
+                "facility_status": ("active", "frozen", "expired", "cancelled"),
+            },
+        ),
+        "bank_collection_case": _spec(
+            "platform.bank_collection_case",
+            "bank_collection_case_key",
+            ("case_id", "account_id", "customer_no", "product", "institution",
+             "outstanding_principal", "case_status", "status_as_of"),
+            dates=("status_as_of",),
+            decimals=("outstanding_principal",),
+            enums={"case_status": ("collecting", "written_off", "transferred",
+                                   "restructured", "closed")},
+        ),
+        "bank_collection_recovery": _COLLECTION_RECOVERY,
+        "bank_npl_snapshot": _spec(
+            "platform.bank_npl_snapshot",
+            "bank_npl_snapshot_key",
+            ("asset_id", "institution", "product", "risk_class", "npl_balance", "as_of"),
+            dates=("as_of",),
+            decimals=("npl_balance",),
+            enums={"risk_class": ("substandard", "doubtful", "loss")},
+        ),
+        "bank_disposal_event": _spec(
+            "platform.bank_disposal_event",
+            "bank_disposal_event_key",
+            ("event_id", "asset_id", "institution", "product", "disposal_type",
+             "completion_date", "gross_amount", "recovery_cash",
+             "recovery_noncash_fv", "disposal_fee"),
+            dates=("completion_date",),
+            decimals=("gross_amount", "recovery_cash", "recovery_noncash_fv", "disposal_fee"),
+            enums={"disposal_type": ("cash", "transfer", "asset_swap", "judicial", "write_off")},
+        ),
+        "ins_policy": _spec(
+            "platform.ins_policy",
+            "ins_policy_key",
+            ("policy_no", "product", "channel", "institution", "customer_no",
+             "issue_date", "policy_year", "premium_type", "premium_amount",
+             "first_year_premium", "is_investment_linked", "reversal_amount",
+             "policy_status", "status_as_of"),
+            dates=("issue_date", "status_as_of"),
+            decimals=("premium_amount", "first_year_premium", "reversal_amount"),
+            ints=("policy_year",),
+            enums={
+                "premium_type": ("single", "regular"),
+                "policy_status": ("in_force", "lapsed", "surrendered", "cancelled"),
+            },
+        ),
+        "cust_master": _spec(
+            "platform.cust_master",
+            "cust_master_key",
+            ("customer_no", "registration_date", "channel", "segment", "institution",
+             "customer_status", "as_of"),
+            dates=("registration_date", "as_of"),
+            enums={"customer_status": ("active", "closed")},
+        ),
+        "cust_product_holding": _spec(
+            "platform.cust_product_holding",
+            "cust_product_holding_key",
+            ("holding_id", "customer_no", "product_category", "holding_status",
+             "as_of", "institution"),
+            dates=("as_of",),
+            enums={
+                "product_category": ("deposit", "loan", "insurance", "wealth", "card"),
+                "holding_status": ("active", "closed"),
+            },
+        ),
+    }
+)
+
+
 def _text(value: Any) -> str:
     if value is None:
         return ""
@@ -423,8 +554,6 @@ class MetricProjector:
             base["definitionVersion"] = definition["definition_version"]
             if definition["formula_disabled"]:
                 raise _Reject(FORMULA_DISABLED, f"metric formula is disabled: {metric_id}")
-            if not definition["publishable"]:
-                raise _Reject(NOT_PUBLISHABLE, f"metric is not publishable: {metric_id}")
             function = definition["fact_function"]
             if not function:
                 raise _Reject(

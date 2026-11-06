@@ -1,0 +1,4 @@
+case_id,account_id,customer_no,product,institution,outstanding_principal,case_status,status_as_of
+C1,A1,K1,loan,B1,1000,collecting,2025-01-01
+C2,A2,K2,loan,B1,500,collecting,2025-01-01
+C3,A3,K3,loan,B1,300,written_off,2025-01-01

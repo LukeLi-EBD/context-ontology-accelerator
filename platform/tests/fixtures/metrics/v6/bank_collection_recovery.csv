@@ -1,0 +1,5 @@
+case_id,recovery_date,principal_recovered,interest_recovered,fee_recovered,recovery_channel
+C1,2025-02-10,300,10,0,cash
+C1,2025-04-05,100,0,0,cash
+C2,2025-03-20,200,5,0,cash
+C3,2025-02-01,150,0,0,cash

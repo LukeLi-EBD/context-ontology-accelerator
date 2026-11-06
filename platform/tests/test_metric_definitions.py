@@ -31,6 +31,7 @@ from platform_core.sqlsplit import split_sql_statements
 
 CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
 SQL_NAME = "V21__metric_definition_v5.sql"
+SQL_NAME_V22 = "V22__fact_model_v6.sql"
 
 FAMILY_IDS = ("FIN-INS-022", "FIN-INS-023", "FIN-BANK-036")
 VARIANT_IDS = (
@@ -81,6 +82,9 @@ class MetricDefinitionV5Test(unittest.TestCase):
         cls.sql = files("platform_core").joinpath(f"sql/{SQL_NAME}").read_text(
             encoding="utf-8"
         )
+        cls.sql_v22 = files("platform_core").joinpath(f"sql/{SQL_NAME_V22}").read_text(
+            encoding="utf-8"
+        )
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -89,7 +93,11 @@ class MetricDefinitionV5Test(unittest.TestCase):
     # ---- helpers -------------------------------------------------------
 
     def _apply_v21(self, times: int = 1) -> None:
-        statements = split_sql_statements(self.sql)
+        # Replaying a migration means V21 then V22, in order: V22 sits on top
+        # (rule specs, projection bindings) and must survive the replay.
+        statements = split_sql_statements(self.sql) + split_sql_statements(
+            self.sql_v22
+        )
         for _ in range(times):
             with self.meta.tx() as tx:
                 for statement in statements:
@@ -124,7 +132,7 @@ class MetricDefinitionV5Test(unittest.TestCase):
     # ---- 1. schema -----------------------------------------------------
 
     def test_1_schema_version_and_new_columns(self) -> None:
-        self.assertEqual(SUPPORTED_SCHEMA_VERSION, 21)
+        self.assertEqual(SUPPORTED_SCHEMA_VERSION, 22)
         rows = self.meta.query(
             "SELECT column_name, data_type FROM information_schema.columns "
             "WHERE table_schema = 'platform' AND table_name = 'metric_definition'"
@@ -137,7 +145,7 @@ class MetricDefinitionV5Test(unittest.TestCase):
         version = self.meta.query(
             "SELECT MAX(version) AS v FROM platform.schema_version"
         )
-        self.assertEqual(int(version[0]["v"]), 21)
+        self.assertEqual(int(version[0]["v"]), 22)
 
     # ---- 2. idempotency -------------------------------------------------
 

@@ -1,0 +1,4 @@
+event_id,asset_id,institution,product,disposal_type,completion_date,gross_amount,recovery_cash,recovery_noncash_fv,disposal_fee
+D1,N1,B1,loan,cash,2025-02-15,400,350,0,10
+D2,N2,B2,loan,transfer,2025-03-10,300,100,180,5
+D3,N1,B1,loan,write_off,2025-02-20,200,0,0,0

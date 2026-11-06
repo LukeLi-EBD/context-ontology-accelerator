@@ -1,0 +1,7 @@
+holding_id,customer_no,product_category,holding_status,as_of,institution
+H1,M1,deposit,active,2025-12-31,B1
+H2,M1,loan,active,2025-12-31,B1
+H3,M2,deposit,active,2025-12-31,B1
+H4,M2,insurance,active,2025-12-31,B1
+H5,M2,deposit,closed,2025-12-31,B1
+H6,M4,wealth,active,2025-12-31,B1

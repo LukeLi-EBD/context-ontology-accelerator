@@ -615,6 +615,14 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     # ---- read-only browse API (metrics / ontology / terms) ---------------
 
+    @app.post("/metrics/{metric_id}/rules")
+    def metric_rules(metric_id: str, body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        return runtime.rules.execute(
+            metric_id,
+            list(body.get("facts") or []),
+            as_of=body.get("asOf"),
+        )
+
     @app.get("/browse/metrics")
     def browse_metrics(
         domain: str | None = None,

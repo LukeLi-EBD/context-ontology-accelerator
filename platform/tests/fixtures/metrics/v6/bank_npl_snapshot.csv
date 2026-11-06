@@ -1,0 +1,3 @@
+asset_id,institution,product,risk_class,npl_balance,as_of
+N1,B1,loan,substandard,1000,2025-01-01
+N2,B2,loan,doubtful,500,2025-01-01

@@ -409,8 +409,17 @@ def _build_parser() -> argparse.ArgumentParser:
     metrics.add_argument("action", choices=["load", "facts-load", "project"])
     metrics.add_argument("--config", default="/data/platform.yaml")
     metrics.add_argument("--file", help="source facts (.csv or .parquet)")
-    metrics.add_argument("--kind", choices=["insurance_payment", "loan_installment"],
-                         help="entity fact kind for facts-load")
+    metrics.add_argument(
+        "--kind",
+        choices=[
+            "insurance_payment", "loan_installment",
+            "bank_credit_application", "bank_credit_facility",
+            "bank_collection_case", "bank_collection_recovery",
+            "bank_npl_snapshot", "bank_disposal_event",
+            "ins_policy", "cust_master", "cust_product_holding",
+        ],
+        help="entity fact kind for facts-load",
+    )
     metrics.add_argument("--metric", help="target metric id")
     metrics.add_argument("--mapping", help="column mapping YAML for load")
     metrics.add_argument("--window-start", help="observation window start (YYYY-MM-DD)")
