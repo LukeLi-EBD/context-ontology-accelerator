@@ -209,6 +209,9 @@ services:
       PLATFORM__RUNTIME__MODE: "${PLATFORM_RUNTIME_MODE:-learn}"
       # S14H-17 burst tier: scripts/burst.ps1 on sets 0 (unlimited), off restores 1.0.
       PLATFORM__EMBEDDING__MAX_CHUNKS_PER_SEC: "${EMBED_MAX_CHUNKS_PER_SEC:-1.0}"
+      # O-05 fail-closed: `purpose=smoke` 豁免必须携带内部 token；未注入时
+      # 所有 smoke 豁免被一律拒绝（验收栈会表现为 smoke 403，不是功能回归）。
+      PLATFORM_SMOKE_TOKEN: "${PLATFORM_SMOKE_TOKEN:-}"
     ports:
       - "127.0.0.1:${PLATFORM_PORT:-8080}:8080"
     volumes:
