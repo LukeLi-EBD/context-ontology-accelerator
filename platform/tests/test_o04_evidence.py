@@ -187,5 +187,98 @@ class EvidenceRouteTests(unittest.TestCase):
                          evidence.E_EVIDENCE_NOT_FOUND)
 
 
+class ConsistencyGateEvidenceTests(unittest.TestCase):
+    """The gate must record *what it validated*, not just consistent=true.
+
+    Audit gap: 1,187 publish events carried {profile, consistent:true} and no
+    input, so "checked real data" and "checked an empty A-Box" looked identical.
+    """
+
+    class FakeGraph:
+        def __init__(self, graphs: dict[str, bytes], broken: set[str] | None = None):
+            self._graphs = graphs
+            self._broken = broken or set()
+            self.exported: list[str] = []
+
+        def export_graph(self, iri: str) -> bytes:
+            if iri in self._broken:
+                raise PortError(code="NotFound", message="graph missing",
+                                provider="oxigraph",
+                                provider_code="E_GRAPH_NOT_FOUND")
+            self.exported.append(iri)
+            return self._graphs.get(iri, b"")
+
+    class FakeReasoner:
+        def __init__(self, consistent: bool = True):
+            self.consistent = consistent
+            self.inputs: list[tuple[int, int]] = []
+
+        def reason(self, tbox_nt, abox_nt, profile, consistency_first=True):
+            if not self.consistent:
+                raise PortError(
+                    code="Unsupported", message="unsatisfiable classes",
+                    provider="robot", provider_code="E_REASONER_BAD_RESPONSE",
+                )
+            self.inputs.append((len(tbox_nt), len(abox_nt)))
+            return {"consistent": True, "profile": profile}
+
+    def _registry(self, graphs, abox_graphs, broken=None, consistent=True):
+        return SimpleNamespace(
+            _reasoner=self.FakeReasoner(consistent=consistent),
+            _reason_profile="EL",
+            _graph=self.FakeGraph(graphs, broken),
+            _abox_graphs=list(abox_graphs),
+        )
+
+    def test_records_graphs_counts_and_hash(self):
+        registry = self._registry(
+            {"urn:abox:a": b"<s1> <p> <o> .\n<s2> <p> <o> .\n",
+             "urn:abox:b": b"<s3> <p> <o> .\n"},
+            ["urn:abox:a", "urn:abox:b"],
+        )
+        result = OntologyRegistry._gate_consistency(
+            registry, b"<c> <p> <o> .\n"
+        )
+        self.assertEqual(result["aboxGraphs"], ["urn:abox:a", "urn:abox:b"])
+        self.assertEqual(result["aboxGraphTriples"], {"urn:abox:a": 2, "urn:abox:b": 1})
+        self.assertEqual(result["aboxTriples"], 3)
+        self.assertEqual(result["tboxTriples"], 1)
+        self.assertFalse(result["emptyAbox"])
+        self.assertEqual(result["aboxGraphsUnavailable"], [])
+        self.assertEqual(len(result["inputHash"]), 64)
+
+    def test_explicit_empty_when_abox_not_included(self):
+        registry = self._registry({"urn:abox:a": b"<s> <p> <o> .\n"}, ["urn:abox:a"])
+        result = OntologyRegistry._gate_consistency(
+            registry, b"<c> <p> <o> .\n", include_abox=False
+        )
+        self.assertEqual(result["aboxGraphs"], [])
+        self.assertEqual(result["aboxGraphTriples"], {})
+        self.assertEqual(result["aboxTriples"], 0)
+        self.assertTrue(result["emptyAbox"])
+
+    def test_unreadable_graph_is_not_reported_as_empty(self):
+        registry = self._registry(
+            {}, ["urn:abox:main"], broken={"urn:abox:main"}
+        )
+        result = OntologyRegistry._gate_consistency(registry, b"<c> <p> <o> .\n")
+        self.assertEqual(
+            result["aboxGraphsUnavailable"],
+            [{"graph": "urn:abox:main", "error": "E_GRAPH_NOT_FOUND"}],
+        )
+        self.assertEqual(result["aboxGraphs"], ["urn:abox:main"])
+        self.assertEqual(result["aboxTriples"], 0)
+        self.assertTrue(result["emptyAbox"])
+
+    def test_inconsistent_gate_keeps_input_evidence(self):
+        registry = self._registry(
+            {"urn:abox:a": b"<s> <p> <o> .\n"}, ["urn:abox:a"], consistent=False
+        )
+        with self.assertRaises(PortError) as ctx:
+            OntologyRegistry._gate_consistency(registry, b"<c> <p> <o> .\n")
+        self.assertEqual(ctx.exception.provider_code, "E_ONTOLOGY_INCONSISTENT")
+        self.assertEqual(ctx.exception.details["input"]["aboxTriples"], 1)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

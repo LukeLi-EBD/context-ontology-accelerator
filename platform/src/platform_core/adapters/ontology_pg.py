@@ -2609,13 +2609,42 @@ class OntologyRegistry:
                 provider="platform",
                 provider_code="E_ONTOLOGY_GATE_UNAVAILABLE",
             )
+        # Evidence pack (O-04 gap): a passing consistency gate used to record only
+        # {profile, consistent:true}, so after the fact nobody could tell "checked
+        # with real data" from "checked an empty A-Box". Always record the exact
+        # input: which graphs, how many triples each, the total, and a hash.
+        # Missing input is stated explicitly (aboxGraphs: [] + emptyAbox: true)
+        # instead of being hidden by defaults.
         abox = b""
-        if include_abox:
-            for graph_iri in self._abox_graphs:
-                try:
-                    abox += self._graph.export_graph(graph_iri) + b"\n"
-                except PortError:
-                    continue
+        abox_graphs: list[str] = list(self._abox_graphs) if include_abox else []
+        abox_graph_triples: dict[str, int] = {}
+        abox_unavailable: list[dict[str, str]] = []
+        for graph_iri in abox_graphs:
+            try:
+                data = self._graph.export_graph(graph_iri)
+            except PortError as exc:
+                # A configured graph that cannot be read is *not* an empty graph:
+                # say so instead of silently counting zero.
+                abox_unavailable.append(
+                    {"graph": graph_iri, "error": exc.provider_code or exc.code}
+                )
+                abox_graph_triples[graph_iri] = 0
+                continue
+            abox_graph_triples[graph_iri] = sum(
+                1 for line in data.splitlines() if line.strip()
+            )
+            abox += data + b"\n"
+        tbox_triples = sum(1 for line in tbox_nt.splitlines() if line.strip())
+        abox_triples = sum(abox_graph_triples.values())
+        evidence = {
+            "aboxGraphs": abox_graphs,
+            "aboxGraphTriples": abox_graph_triples,
+            "aboxTriples": abox_triples,
+            "tboxTriples": tbox_triples,
+            "emptyAbox": abox_triples == 0,
+            "aboxGraphsUnavailable": abox_unavailable,
+            "inputHash": hashlib.sha256(tbox_nt + b"\x00" + abox).hexdigest(),
+        }
         try:
             result = self._reasoner.reason(
                 tbox_nt, abox, self._reason_profile, consistency_first=True
@@ -2633,7 +2662,8 @@ class OntologyRegistry:
                     message="ontology has unsatisfiable classes; publish rejected",
                     provider="robot",
                     provider_code="E_ONTOLOGY_INCONSISTENT",
-                    details={"profile": self._reason_profile, "reason": "unsatisfiable"},
+                    details={"profile": self._reason_profile, "reason": "unsatisfiable",
+                             "input": evidence},
                 ) from exc
             raise
         if not result.get("consistent", True):
@@ -2642,9 +2672,9 @@ class OntologyRegistry:
                 message="ontology consistency check failed; publish rejected",
                 provider="robot",
                 provider_code="E_ONTOLOGY_INCONSISTENT",
-                details={"profile": self._reason_profile},
+                details={"profile": self._reason_profile, "input": evidence},
             )
-        return {"consistent": True, "profile": self._reason_profile}
+        return {"consistent": True, "profile": self._reason_profile, **evidence}
 
     def publish(
         self,
