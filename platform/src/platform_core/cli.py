@@ -479,6 +479,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="read-only coverage audit: ontology, bindings, metrics and boundary cases",
     )
+    datagen.add_argument(
+        "--abox",
+        action="store_true",
+        help="also regenerate the synthetic ABox (all T-Box classes and properties)",
+    )
 
     smoke = sub.add_parser("smoke", help="run the S0 acceptance smoke suite")
     smoke.add_argument("--config", default="/data/platform.yaml")
@@ -822,6 +827,18 @@ def main(argv: list[str] | None = None) -> int:
                     verify=args.verify,
                     check_repro=not args.skip_repro,
                 )
+                if args.abox and not args.dry_run:
+                    from .datagen_abox import generate_abox
+
+                    pointer = runtime.ontology.status().get("pointer") or {}
+                    versions = {v["id"] for v in runtime.ontology.status().get("versions", [])}
+                    preferred = "ont-3f57d8ce6636"
+                    version = preferred if preferred in versions else pointer.get("versionId")
+                    if not version:
+                        print("E_USAGE datagen --abox requires a published T-Box", file=sys.stderr)
+                        return EXIT_USAGE
+                    ttl = runtime.ontology.export_version(version, "turtle")["content"]
+                    result["abox"] = generate_abox(runtime.graph, ttl, seed=args.seed)
                 print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return EXIT_OK if result.get("status") in ("completed", "dry-run") else 1
             if args.command == "facts-export":
