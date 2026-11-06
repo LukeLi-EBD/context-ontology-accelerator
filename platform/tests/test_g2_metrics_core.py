@@ -460,6 +460,21 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertFalse(default_body["noData"])
         self.assertNotIn("reason", default_body)
 
+    def test_25_no_period_metric_has_instant_bindings(self) -> None:
+        # Guard the whole definition set, not just 013-018: a period metric
+        # whose bindings are instant silently collapses the window. The only
+        # intentional mix is FIN-INS-017's snapshot denominator (period-end
+        # policy count), so everything else must be period.
+        rows = self.meta.query(
+            "SELECT d.metric_id, b.role FROM platform.metric_definition d"
+            " JOIN platform.metric_field_binding b"
+            "   ON b.metric_id = d.metric_id"
+            "  AND b.definition_version = d.definition_version"
+            " WHERE d.window_kind = 'period' AND b.window_mode = 'instant'"
+        )
+        observed = {(r["metric_id"], r["role"]) for r in rows}
+        self.assertEqual(observed, {("FIN-INS-017", "denominator")})
+
 
 if __name__ == "__main__":
     unittest.main()
