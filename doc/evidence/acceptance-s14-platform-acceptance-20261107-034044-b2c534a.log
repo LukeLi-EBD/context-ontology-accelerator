@@ -1,0 +1,562 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261107034044
+Username: UVSFUJSA\cpslau
+RunAs User: UVSFUJSA\cpslau
+Configuration Name: 
+Machine: UVSFUJSA (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File scripts\acceptance-s14.ps1
+Process ID: 75396
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+S14 acceptance start ts=20261107-034044 git=b2c534a image=agent-platform:0.1-s5 network=platform-acceptance_default api=http://127.0.0.1:8082
+evidence_file=D:\agentABC\coa\doc\evidence\acceptance-s14-platform-acceptance-20261107-034044-b2c534a.log excludes=
+readyz=200 network=platform-acceptance_default image=agent-platform:0.1-s5
+acquired owner=UVSFUJSA\cpslau#75396 pid=75396 host=UVSFUJSA purpose=S14 acceptance (full unittest tree, platform-acceptance)
+test_answer_definition_with_citations (test_answer_layers.AnswerLayerTest.test_answer_definition_with_citations) ... FAIL
+test_answer_refused_with_gaps (test_answer_layers.AnswerLayerTest.test_answer_refused_with_gaps) ... ok
+test_answer_rule_metric_routes_to_rules (test_answer_layers.AnswerLayerTest.test_answer_rule_metric_routes_to_rules) ... ok
+test_answerable_facts_degraded (test_answer_layers.AnswerLayerTest.test_answerable_facts_degraded) ... ok
+test_answerable_full_ontology_question (test_answer_layers.AnswerLayerTest.test_answerable_full_ontology_question) ... FAIL
+test_answerable_partial_layers_missing (test_answer_layers.AnswerLayerTest.test_answerable_partial_layers_missing) ... FAIL
+test_1_list_returns_all_79_style_rows_with_camel_case (test_browse.MetricsBrowseTests.test_1_list_returns_all_79_style_rows_with_camel_case) ... ok
+test_2_filters_by_domain_evidence_and_publishable (test_browse.MetricsBrowseTests.test_2_filters_by_domain_evidence_and_publishable) ... ok
+test_3_detail_carries_formula_window_and_flags (test_browse.MetricsBrowseTests.test_3_detail_carries_formula_window_and_flags) ... ok
+test_4_instances_require_a_safe_class_iri (test_browse.OntologyBrowseTests.test_4_instances_require_a_safe_class_iri) ... ok
+test_5_instances_empty_state_without_pointer (test_browse.OntologyBrowseTests.test_5_instances_empty_state_without_pointer) ... ok
+test_6_instances_paginate_with_total (test_browse.OntologyBrowseTests.test_6_instances_paginate_with_total) ... ok
+test_7_terms_empty_state_without_pointer (test_browse.TermsAndSparqlTests.test_7_terms_empty_state_without_pointer) ... ok
+test_8_sparql_rejects_write_queries_but_allows_select (test_browse.TermsAndSparqlTests.test_8_sparql_rejects_write_queries_but_allows_select) ... ok
+test_missing_file (test_bundle.BundleVerifyTests.test_missing_file) ... ok
+test_ok (test_bundle.BundleVerifyTests.test_ok) ... ok
+test_schema_version_mismatch (test_bundle.BundleVerifyTests.test_schema_version_mismatch) ... ok
+test_sha_mismatch (test_bundle.BundleVerifyTests.test_sha_mismatch) ... ok
+test_vector_dimension_mismatch (test_bundle.BundleVerifyTests.test_vector_dimension_mismatch) ... ok
+test_keep_list_is_honoured (test_bundle.RestoreCleanupTests.test_keep_list_is_honoured) ... ok
+test_only_restore_graphs_deleted (test_bundle.RestoreCleanupTests.test_only_restore_graphs_deleted) ... ok
+test_as_of_binds_to_observation_date (test_catalog.BindingTests.test_as_of_binds_to_observation_date) ... ok
+test_audit_and_key_columns_are_unbound (test_catalog.BindingTests.test_audit_and_key_columns_are_unbound) ... ok
+test_dpd_is_unbound_without_inventing_property (test_catalog.BindingTests.test_dpd_is_unbound_without_inventing_property) ... ok
+test_explicit_binding_beats_name_match (test_catalog.BindingTests.test_explicit_binding_beats_name_match) ... ok
+test_mappable_candidate_stays_unbound (test_catalog.BindingTests.test_mappable_candidate_stays_unbound) ... ok
+test_name_match_confidence_is_080 (test_catalog.BindingTests.test_name_match_confidence_is_080) ... ok
+test_unbound_column_keeps_reason (test_catalog.BindingTests.test_unbound_column_keeps_reason) ... ok
+test_binding_rate_uses_mappable_denominator (test_catalog.CoverageTests.test_binding_rate_uses_mappable_denominator) ... ok
+test_column_coverage_is_zero_gap (test_catalog.CoverageTests.test_column_coverage_is_zero_gap) ... ok
+test_mappable_unbound_view_keeps_denominator_honest (test_catalog.FilterViewTests.test_mappable_unbound_view_keeps_denominator_honest) ... ok
+test_mappable_view (test_catalog.FilterViewTests.test_mappable_view) ... ok
+test_missing_comment_view (test_catalog.FilterViewTests.test_missing_comment_view) ... ok
+test_unbound_view (test_catalog.FilterViewTests.test_unbound_view) ... ok
+test_manual_binding_records_operator_basis_and_time (test_catalog.ManualBindingTests.test_manual_binding_records_operator_basis_and_time) ... ok
+test_manual_binding_rejects_unknown_column (test_catalog.ManualBindingTests.test_manual_binding_rejects_unknown_column) ... ok
+test_manual_binding_requires_operator_basis_and_known_property (test_catalog.ManualBindingTests.test_manual_binding_requires_operator_basis_and_known_property) ... ok
+test_refresh_preserves_manual_binding (test_catalog.ManualBindingTests.test_refresh_preserves_manual_binding) ... ok
+test_filter_and_pagination (test_catalog.QueryTests.test_filter_and_pagination) ... ok
+test_missing_table_detail_is_not_found (test_catalog.QueryTests.test_missing_table_detail_is_not_found) ... ok
+test_table_detail_counts_binding_tiers (test_catalog.QueryTests.test_table_detail_counts_binding_tiers) ... ok
+test_glue_source_unreachable (test_catalog.RefreshTests.test_glue_source_unreachable) ... ok
+test_mysql_source_unreachable (test_catalog.RefreshTests.test_mysql_source_unreachable) ... ok
+test_refresh_is_idempotent (test_catalog.RefreshTests.test_refresh_is_idempotent) ... ok
+test_refresh_reports_three_tiers (test_catalog.RefreshTests.test_refresh_reports_three_tiers) ... ok
+test_unknown_source_is_rejected (test_catalog.RefreshTests.test_unknown_source_is_rejected) ... ok
+test_12_endpoint_returns_path_payload (test_d1_canvas.CanvasApiTests.test_12_endpoint_returns_path_payload) ... ok
+test_13_endpoint_rejects_bad_iri_hops_and_graph (test_d1_canvas.CanvasApiTests.test_13_endpoint_rejects_bad_iri_hops_and_graph) ... ok
+test_14_off_returns_503_without_touching_other_endpoints (test_d1_canvas.CanvasApiTests.test_14_off_returns_503_without_touching_other_endpoints) ... ok
+test_15_unimplemented_provider_is_explicit_over_http (test_d1_canvas.CanvasApiTests.test_15_unimplemented_provider_is_explicit_over_http) ... ok
+test_10_provider_codes_follow_q8 (test_d1_canvas.CanvasConfigTests.test_10_provider_codes_follow_q8) ... ok
+test_11_off_and_simple_are_accepted (test_d1_canvas.CanvasConfigTests.test_11_off_and_simple_are_accepted) ... ok
+test_1_two_hop_path_and_contract_keys (test_d1_canvas.SimplePathTests.test_1_two_hop_path_and_contract_keys) ... ok
+test_2_max_hops_is_effective_and_has_a_reason (test_d1_canvas.SimplePathTests.test_2_max_hops_is_effective_and_has_a_reason) ... ok
+test_3_request_beyond_the_provider_hard_cap_is_rejected (test_d1_canvas.SimplePathTests.test_3_request_beyond_the_provider_hard_cap_is_rejected) ... ok
+test_4_cycles_are_deduped (test_d1_canvas.SimplePathTests.test_4_cycles_are_deduped) ... ok
+test_5_subgraph_returns_bounded_neighbourhood (test_d1_canvas.SimplePathTests.test_5_subgraph_returns_bounded_neighbourhood) ... ok
+test_6_include_flags_keep_the_keyset (test_d1_canvas.SimplePathTests.test_6_include_flags_keep_the_keyset) ... ok
+test_7_empty_tbox_and_unknown_graph_are_structured (test_d1_canvas.SimplePathTests.test_7_empty_tbox_and_unknown_graph_are_structured) ... ok
+test_8_full_skeleton_fails_explicitly (test_d1_canvas.SkeletonTests.test_8_full_skeleton_fails_explicitly) ... ok
+test_9_disabled_canvas_is_a_structured_503 (test_d1_canvas.SkeletonTests.test_9_disabled_canvas_is_a_structured_503) ... ok
+test_a_generation_scale_and_consistency (test_datagen.DatagenTest.test_a_generation_scale_and_consistency) ... ok
+test_b_schema_drift_is_loud (test_datagen.DatagenTest.test_b_schema_drift_is_loud) ... ok
+test_c_official_schema_requires_switch (test_datagen.DatagenTest.test_c_official_schema_requires_switch) ... ok
+test_d_metrics_three_categories (test_datagen.DatagenTest.test_d_metrics_three_categories) ... ok
+test_e_isolation_protected_tables_unchanged (test_datagen.DatagenTest.test_e_isolation_protected_tables_unchanged) ... ok
+test_f_same_seed_is_byte_identical (test_datagen.DatagenTest.test_f_same_seed_is_byte_identical) ... ok
+test_g_clean_removes_only_synthetic (test_datagen.DatagenTest.test_g_clean_removes_only_synthetic) ... ok
+test_10_bad_iri_is_rejected (test_entity_health.EntityViewTests.test_10_bad_iri_is_rejected) ... ok
+test_11_unknown_entity_returns_not_found (test_entity_health.EntityViewTests.test_11_unknown_entity_returns_not_found) ... ok
+test_7_entity_evidenced_with_source_ref_and_metrics (test_entity_health.EntityViewTests.test_7_entity_evidenced_with_source_ref_and_metrics) ... ok
+test_8_entity_inferred_badge_exposes_basis_and_judge (test_entity_health.EntityViewTests.test_8_entity_inferred_badge_exposes_basis_and_judge) ... ok
+test_9_entity_without_provenance_is_no_source (test_entity_health.EntityViewTests.test_9_entity_without_provenance_is_no_source) ... ok
+test_1_dashboard_aggregates_with_explicit_sources (test_entity_health.HealthDashboardTests.test_1_dashboard_aggregates_with_explicit_sources) ... ok
+test_2_missing_tbox_pointer_returns_null_not_zero (test_entity_health.HealthDashboardTests.test_2_missing_tbox_pointer_returns_null_not_zero) ... ok
+test_3_diff_explicit_versions_returns_counts_and_5_examples (test_entity_health.OntologyDiffTests.test_3_diff_explicit_versions_returns_counts_and_5_examples) ... ok
+test_4_default_diff_uses_current_and_previous (test_entity_health.OntologyDiffTests.test_4_default_diff_uses_current_and_previous) ... ok
+test_5_unknown_version_returns_stable_error_code (test_entity_health.OntologyDiffTests.test_5_unknown_version_returns_stable_error_code) ... ok
+test_6_post_is_rejected (test_entity_health.OntologyDiffTests.test_6_post_is_rejected) ... ok
+test_cycle_raises_explicit_code (test_g01_import_closure.ClosureTests.test_cycle_raises_explicit_code) ... ok
+test_local_import_resolves_and_increases_total (test_g01_import_closure.ClosureTests.test_local_import_resolves_and_increases_total) ... ok
+test_missing_import_is_critical_and_unresolved (test_g01_import_closure.ClosureTests.test_missing_import_is_critical_and_unresolved) ... ok
+test_no_imports_reason_is_shacl_not_deployed (test_g01_import_closure.ClosureTests.test_no_imports_reason_is_shacl_not_deployed) ... ok
+test_syntax_error_still_reports_line_and_column (test_g01_import_closure.ClosureTests.test_syntax_error_still_reports_line_and_column) ... ok
+test_two_level_nesting_resolves_both (test_g01_import_closure.ClosureTests.test_two_level_nesting_resolves_both) ... ok
+test_consistent_import_is_usable_but_not_published (test_g01_import_consistency.ConsistencyTests.test_consistent_import_is_usable_but_not_published) ... ok
+test_disjoint_classes_conflict_is_not_usable (test_g01_import_consistency.ConsistencyTests.test_disjoint_classes_conflict_is_not_usable) ... ok
+test_reasoner_unreachable_reports_unavailable (test_g01_import_consistency.ConsistencyTests.test_reasoner_unreachable_reports_unavailable) ... ok
+test_timeout_aborts_instead_of_hanging (test_g01_import_consistency.ConsistencyTests.test_timeout_aborts_instead_of_hanging) ... ok
+test_owl_imports_is_not_silently_empty (test_g01_import_parse.ParseImportTests.test_owl_imports_is_not_silently_empty) ... ok
+test_syntax_error_reports_real_line_and_column (test_g01_import_parse.ParseImportTests.test_syntax_error_reports_real_line_and_column) ... ok
+test_valid_ttl_counts_and_reason (test_g01_import_parse.ParseImportTests.test_valid_ttl_counts_and_reason) ... ok
+test_graph_failure_leaves_no_record (test_g01_import_persist.PersistenceTests.test_graph_failure_leaves_no_record) ... ok
+test_record_is_queryable_with_author_and_created_at (test_g01_import_persist.PersistenceTests.test_record_is_queryable_with_author_and_created_at) ... ok
+test_staging_graph_is_sparql_queryable (test_g01_import_persist.PersistenceTests.test_staging_graph_is_sparql_queryable) ... ok
+test_10_deprecated_version_is_a_read_only_baseline (test_g01_import_publish.PublishTests.test_10_deprecated_version_is_a_read_only_baseline)
+B-5: archived rows never trigger a source/graph reload (hash drift). ... ok
+test_1_unusable_import_is_refused (test_g01_import_publish.PublishTests.test_1_unusable_import_is_refused) ... ok
+test_2_dry_run_returns_diff_and_impact_without_switching (test_g01_import_publish.PublishTests.test_2_dry_run_returns_diff_and_impact_without_switching) ... ok
+test_3_publish_switches_pointer_to_versioned_graph (test_g01_import_publish.PublishTests.test_3_publish_switches_pointer_to_versioned_graph) ... ok
+test_4_repeat_publish_returns_same_version (test_g01_import_publish.PublishTests.test_4_repeat_publish_returns_same_version) ... ok
+test_5_record_failure_drops_staging_graph (test_g01_import_publish.PublishTests.test_5_record_failure_drops_staging_graph) ... ok
+test_6_publish_existing_same_content (test_g01_import_publish.PublishTests.test_6_publish_existing_same_content)
+Same canonical content re-publishes the existing version (OQ-65). ... ok
+test_7_publish_existing_is_idempotent (test_g01_import_publish.PublishTests.test_7_publish_existing_is_idempotent)
+A second forward publish is a no-op and adds no audit event. ... ok
+test_8_concurrent_forward_publish_only_one_wins (test_g01_import_publish.PublishTests.test_8_concurrent_forward_publish_only_one_wins)
+Two simultaneous forward publishes append exactly one published event. ... ok
+test_9_publish_after_rollback (test_g01_import_publish.PublishTests.test_9_publish_after_rollback)
+After rolling back, the forward publish path can activate the version again. ... ok
+test_closure_failure_outranks_shacl_violation (test_g01_import_shacl.ShaclIntegrationTests.test_closure_failure_outranks_shacl_violation) ... ok
+test_compliant_class_conforms_and_consistency_decides_usable (test_g01_import_shacl.ShaclIntegrationTests.test_compliant_class_conforms_and_consistency_decides_usable) ... ok
+test_missing_label_yields_focus_node (test_g01_import_shacl.ShaclIntegrationTests.test_missing_label_yields_focus_node) ... ok
+test_no_deployed_shapes_is_not_a_pass (test_g01_import_shacl.ShaclIntegrationTests.test_no_deployed_shapes_is_not_a_pass) ... ok
+test_01_npl_ratio (test_g2_metrics_core.G2MetricsCoreTest.test_01_npl_ratio) ... ok
+test_02_normal_migration (test_g2_metrics_core.G2MetricsCoreTest.test_02_normal_migration) ... ok
+test_03_special_migration (test_g2_metrics_core.G2MetricsCoreTest.test_03_special_migration) ... ok
+test_04_substandard_migration (test_g2_metrics_core.G2MetricsCoreTest.test_04_substandard_migration) ... ok
+test_05_doubtful_migration (test_g2_metrics_core.G2MetricsCoreTest.test_05_doubtful_migration) ... ok
+test_06_concentration (test_g2_metrics_core.G2MetricsCoreTest.test_06_concentration) ... ok
+test_07_signed_premium (test_g2_metrics_core.G2MetricsCoreTest.test_07_signed_premium) ... ok
+test_08_claim_filing_rate (test_g2_metrics_core.G2MetricsCoreTest.test_08_claim_filing_rate) ... ok
+test_09_recomputable_after_new_fact (test_g2_metrics_core.G2MetricsCoreTest.test_09_recomputable_after_new_fact) ... ok
+test_10_non_executable_has_code_and_reason (test_g2_metrics_core.G2MetricsCoreTest.test_10_non_executable_has_code_and_reason) ... ok
+test_11_rule_set_routes_to_rules (test_g2_metrics_core.G2MetricsCoreTest.test_11_rule_set_routes_to_rules) ... ok
+test_12_missing_binding (test_g2_metrics_core.G2MetricsCoreTest.test_12_missing_binding) ... ok
+test_13_not_publishable_gate (test_g2_metrics_core.G2MetricsCoreTest.test_13_not_publishable_gate) ... ok
+test_14_unknown_metric (test_g2_metrics_core.G2MetricsCoreTest.test_14_unknown_metric) ... ok
+test_15_period_window_insufficient (test_g2_metrics_core.G2MetricsCoreTest.test_15_period_window_insufficient) ... ok
+test_16_readiness_ledger (test_g2_metrics_core.G2MetricsCoreTest.test_16_readiness_ledger) ... ok
+test_17_registered_only_export (test_g2_metrics_core.G2MetricsCoreTest.test_17_registered_only_export) ... ok
+test_18_readiness_invalid_status (test_g2_metrics_core.G2MetricsCoreTest.test_18_readiness_invalid_status) ... ok
+test_19_v34_reentrant (test_g2_metrics_core.G2MetricsCoreTest.test_19_v34_reentrant) ... ok
+test_20_migrate_repairs_rewound_binding (test_g2_metrics_core.G2MetricsCoreTest.test_20_migrate_repairs_rewound_binding) ... ok
+test_21_seed_source_matches_registry (test_g2_metrics_core.G2MetricsCoreTest.test_21_seed_source_matches_registry) ... ok
+test_22_period_window_takes_effect (test_g2_metrics_core.G2MetricsCoreTest.test_22_period_window_takes_effect) ... ok
+test_23_definition_binding_agg_consistency (test_g2_metrics_core.G2MetricsCoreTest.test_23_definition_binding_agg_consistency) ... ok
+test_24_datasource_mismatch_is_explicit (test_g2_metrics_core.G2MetricsCoreTest.test_24_datasource_mismatch_is_explicit) ... ok
+test_25_no_period_metric_has_instant_bindings (test_g2_metrics_core.G2MetricsCoreTest.test_25_no_period_metric_has_instant_bindings) ... ok
+test_case_id_drill_down (test_g4_retrieval.AnswerQualityTests.test_case_id_drill_down) ... ok
+test_facts_data_source_comes_from_observation_row (test_g4_retrieval.AnswerQualityTests.test_facts_data_source_comes_from_observation_row) ... ok
+test_invalid_strategy_is_rejected (test_g4_retrieval.AnswerQualityTests.test_invalid_strategy_is_rejected) ... ok
+test_output_compute_requires_data_source_and_passes_it_down (test_g4_retrieval.AnswerQualityTests.test_output_compute_requires_data_source_and_passes_it_down) ... ok
+test_quality_never_persists_prov (test_g4_retrieval.AnswerQualityTests.test_quality_never_persists_prov) ... ok
+test_refusal_without_layers_and_broken_citation_are_flagged (test_g4_retrieval.AnswerQualityTests.test_refusal_without_layers_and_broken_citation_are_flagged) ... ok
+test_ten_case_golden_set_passes_with_citations_and_refusal_layers (test_g4_retrieval.AnswerQualityTests.test_ten_case_golden_set_passes_with_citations_and_refusal_layers) ... ok
+test_triple_citation_is_resolvable (test_g4_retrieval.AnswerQualityTests.test_triple_citation_is_resolvable) ... ok
+test_panel_aggregates_four_layers_missing_candidates_and_trend (test_g4_retrieval.AnswerablePanelTests.test_panel_aggregates_four_layers_missing_candidates_and_trend) ... ok
+test_panel_empty_state_is_explicit_when_runtime_is_unavailable (test_g4_retrieval.AnswerablePanelTests.test_panel_empty_state_is_explicit_when_runtime_is_unavailable) ... ok
+test_panel_filters_intent_group_and_layer (test_g4_retrieval.AnswerablePanelTests.test_panel_filters_intent_group_and_layer) ... ok
+test_panel_query_id_drill_down_and_unknown_id (test_g4_retrieval.AnswerablePanelTests.test_panel_query_id_drill_down_and_unknown_id) ... ok
+test_concrete_hrefs_are_url_encoded (test_g4_retrieval.BrowseLinksTests.test_concrete_hrefs_are_url_encoded) ... ok
+test_four_stable_read_only_paths (test_g4_retrieval.BrowseLinksTests.test_four_stable_read_only_paths) ... ok
+test_every_field_has_badge_and_missing_provenance_says_none (test_g4_retrieval.EntityProvenanceTests.test_every_field_has_badge_and_missing_provenance_says_none) ... ok
+test_missing_entity_iri_is_rejected_by_validation (test_g4_retrieval.EntityProvenanceTests.test_missing_entity_iri_is_rejected_by_validation) ... ok
+test_10_other_purposes_are_not_exemptions (test_g8_terms_gate.GateSemanticsTests.test_10_other_purposes_are_not_exemptions) ... ok
+test_11_consecutive_collapse_uses_the_mark_not_the_pointer (test_g8_terms_gate.GateSemanticsTests.test_11_consecutive_collapse_uses_the_mark_not_the_pointer) ... ok
+test_1_off_returns_none (test_g8_terms_gate.GateSemanticsTests.test_1_off_returns_none) ... ok
+test_2_warn_never_blocks_and_records_counts (test_g8_terms_gate.GateSemanticsTests.test_2_warn_never_blocks_and_records_counts) ... ok
+test_3_block_blocks_only_on_blocking_codes (test_g8_terms_gate.GateSemanticsTests.test_3_block_blocks_only_on_blocking_codes) ... ok
+test_4_alias_missing_target_is_blocking_by_default (test_g8_terms_gate.GateSemanticsTests.test_4_alias_missing_target_is_blocking_by_default) ... ok
+test_5_severity_threshold_is_reconfigurable (test_g8_terms_gate.GateSemanticsTests.test_5_severity_threshold_is_reconfigurable) ... ok
+test_6_coverage_decline_is_warning_and_tolerance_is_honoured (test_g8_terms_gate.GateSemanticsTests.test_6_coverage_decline_is_warning_and_tolerance_is_honoured) ... ok
+test_7_zero_drop_blocks_at_every_tier (test_g8_terms_gate.GateSemanticsTests.test_7_zero_drop_blocks_at_every_tier) ... ok
+test_8_first_import_without_a_mark_is_not_blocked (test_g8_terms_gate.GateSemanticsTests.test_8_first_import_without_a_mark_is_not_blocked) ... ok
+test_9_smoke_exemption_records_actor_path_and_baseline (test_g8_terms_gate.GateSemanticsTests.test_9_smoke_exemption_records_actor_path_and_baseline) ... ok
+test_10_block_passes_when_no_blocking_finding_exists (test_g8_terms_gate.PublishGateTests.test_10_block_passes_when_no_blocking_finding_exists) ... ok
+test_11_gate_status_endpoint_is_null_with_reason_before_publish (test_g8_terms_gate.PublishGateTests.test_11_gate_status_endpoint_is_null_with_reason_before_publish) ... ok
+test_12_implicit_publish_zeroing_terms_is_blocked_without_a_request (test_g8_terms_gate.PublishGateTests.test_12_implicit_publish_zeroing_terms_is_blocked_without_a_request) ... ok
+test_13_implicit_publish_purpose_smoke_is_exempted_and_leaves_a_trace (test_g8_terms_gate.PublishGateTests.test_13_implicit_publish_purpose_smoke_is_exempted_and_leaves_a_trace) ... ok
+test_14_import_publish_zero_terms_is_blocked_then_exempted_by_smoke (test_g8_terms_gate.PublishGateTests.test_14_import_publish_zero_terms_is_blocked_then_exempted_by_smoke) ... ok
+test_15_off_cannot_switch_off_the_vocab_guard (test_g8_terms_gate.PublishGateTests.test_15_off_cannot_switch_off_the_vocab_guard) ... ok
+test_7_off_attaches_no_gate_when_the_effective_term_set_is_nonzero (test_g8_terms_gate.PublishGateTests.test_7_off_attaches_no_gate_when_the_effective_term_set_is_nonzero) ... ok
+test_8_warn_publishes_and_records_the_gate_in_evidence (test_g8_terms_gate.PublishGateTests.test_8_warn_publishes_and_records_the_gate_in_evidence) ... ok
+test_9_block_refuses_before_any_write (test_g8_terms_gate.PublishGateTests.test_9_block_refuses_before_any_write) ... ok
+test_1_default_is_warn (test_g8_terms_gate.TermsConfigTests.test_1_default_is_warn) ... ok
+test_2_unknown_gate_is_provider_invalid (test_g8_terms_gate.TermsConfigTests.test_2_unknown_gate_is_provider_invalid) ... ok
+test_3_known_but_unimplemented_uses_its_own_code (test_g8_terms_gate.TermsConfigTests.test_3_known_but_unimplemented_uses_its_own_code) ... ok
+test_4_env_override_sets_block (test_g8_terms_gate.TermsConfigTests.test_4_env_override_sets_block) ... ok
+test_5_blocking_codes_are_configurable (test_g8_terms_gate.TermsConfigTests.test_5_blocking_codes_are_configurable) ... ok
+test_6_off_is_accepted_and_announced (test_g8_terms_gate.TermsConfigTests.test_6_off_is_accepted_and_announced) ... ok
+test_10_publish_returns_gates (test_governance_api.GovernanceConsoleTests.test_10_publish_returns_gates) ... ok
+test_11_rollback_plan_shows_replaced_version (test_governance_api.GovernanceConsoleTests.test_11_rollback_plan_shows_replaced_version) ... ok
+test_12_rollback_endpoints_require_actor_and_report_previous (test_governance_api.GovernanceConsoleTests.test_12_rollback_endpoints_require_actor_and_report_previous) ... ok
+test_13_rollback_to_unknown_version_is_rejected (test_governance_api.GovernanceConsoleTests.test_13_rollback_to_unknown_version_is_rejected) ... ok
+test_14_events_filter_by_version_and_category (test_governance_api.GovernanceConsoleTests.test_14_events_filter_by_version_and_category) ... ok
+test_15_proposal_list_annotates_version_status (test_governance_api.GovernanceConsoleTests.test_15_proposal_list_annotates_version_status) ... ok
+test_16_bundle_write_endpoints_require_actor (test_governance_api.GovernanceConsoleTests.test_16_bundle_write_endpoints_require_actor) ... ok
+test_1_create_proposal_requires_actor (test_governance_api.GovernanceConsoleTests.test_1_create_proposal_requires_actor) ... ok
+test_2_create_proposal_forwards_actor_and_against (test_governance_api.GovernanceConsoleTests.test_2_create_proposal_forwards_actor_and_against) ... ok
+test_3_approve_and_reject_require_actor_and_reason (test_governance_api.GovernanceConsoleTests.test_3_approve_and_reject_require_actor_and_reason) ... ok
+test_4_reject_marks_version_rejected_and_appends_audit (test_governance_api.GovernanceConsoleTests.test_4_reject_marks_version_rejected_and_appends_audit) ... ok
+test_5_reject_published_proposal_is_conflict (test_governance_api.GovernanceConsoleTests.test_5_reject_published_proposal_is_conflict) ... ok
+test_6_publish_dry_run_lists_gates_without_writing (test_governance_api.GovernanceConsoleTests.test_6_publish_dry_run_lists_gates_without_writing) ... ok
+test_7_publish_dry_run_surfaces_gate_error_verbatim (test_governance_api.GovernanceConsoleTests.test_7_publish_dry_run_surfaces_gate_error_verbatim) ... ok
+test_8_real_publish_requires_actor_and_version (test_governance_api.GovernanceConsoleTests.test_8_real_publish_requires_actor_and_version) ... ok
+test_9_publish_unapproved_proposal_is_rejected_with_code (test_governance_api.GovernanceConsoleTests.test_9_publish_unapproved_proposal_is_rejected_with_code) ... ok
+test_01_npl_ratio (test_metric_compiler_v7.MetricCompilerV7Test.test_01_npl_ratio) ... ok
+test_02_rfm_m (test_metric_compiler_v7.MetricCompilerV7Test.test_02_rfm_m) ... ok
+test_03_signed_premium (test_metric_compiler_v7.MetricCompilerV7Test.test_03_signed_premium) ... ok
+test_04_first_year_premium (test_metric_compiler_v7.MetricCompilerV7Test.test_04_first_year_premium) ... ok
+test_05_renewal_premium (test_metric_compiler_v7.MetricCompilerV7Test.test_05_renewal_premium) ... ok
+test_06_simple_loss_ratio (test_metric_compiler_v7.MetricCompilerV7Test.test_06_simple_loss_ratio) ... ok
+test_07_average_settled_claim (test_metric_compiler_v7.MetricCompilerV7Test.test_07_average_settled_claim) ... ok
+test_08_product_holdings (test_metric_compiler_v7.MetricCompilerV7Test.test_08_product_holdings) ... ok
+test_09_external_gate (test_metric_compiler_v7.MetricCompilerV7Test.test_09_external_gate) ... ok
+test_10_rule_metric_routes_to_rules (test_metric_compiler_v7.MetricCompilerV7Test.test_10_rule_metric_routes_to_rules) ... ok
+test_11_unsupported_expression (test_metric_compiler_v7.MetricCompilerV7Test.test_11_unsupported_expression) ... ok
+test_12_missing_binding (test_metric_compiler_v7.MetricCompilerV7Test.test_12_missing_binding) ... ok
+test_13_migrations_reentrant (test_metric_compiler_v7.MetricCompilerV7Test.test_13_migrations_reentrant) ... ok
+test_14_period_window_must_be_a_range (test_metric_compiler_v7.MetricCompilerV7Test.test_14_period_window_must_be_a_range) ... ok
+test_denominator_zero (test_metric_compute.MetricComputeTest.test_denominator_zero) ... ok
+test_evidence_missing (test_metric_compute.MetricComputeTest.test_evidence_missing) ... ok
+test_four_drivable_metrics_return_fixture_values (test_metric_compute.MetricComputeTest.test_four_drivable_metrics_return_fixture_values) ... ok
+test_not_drivable (test_metric_compute.MetricComputeTest.test_not_drivable) ... ok
+test_not_publishable (test_metric_compute.MetricComputeTest.test_not_publishable) ... ok
+test_window_insufficient (test_metric_compute.MetricComputeTest.test_window_insufficient) ... ok
+test_01_partials_have_auditable_decisions (test_metric_decisions_v8.MetricDecisionsV8Test.test_01_partials_have_auditable_decisions) ... ok
+test_02_scalar_partials_have_numerator_agg (test_metric_decisions_v8.MetricDecisionsV8Test.test_02_scalar_partials_have_numerator_agg) ... ok
+test_03_partial_fields_by_family (test_metric_decisions_v8.MetricDecisionsV8Test.test_03_partial_fields_by_family) ... ok
+test_04_rule_specs_are_machine_readable (test_metric_decisions_v8.MetricDecisionsV8Test.test_04_rule_specs_are_machine_readable) ... ok
+test_05_rule_executor_hit_miss_unevaluated (test_metric_decisions_v8.MetricDecisionsV8Test.test_05_rule_executor_hit_miss_unevaluated) ... ok
+test_06_rule_executor_no_data_is_typed (test_metric_decisions_v8.MetricDecisionsV8Test.test_06_rule_executor_no_data_is_typed) ... ok
+test_07_cust002_counts_distinct_days (test_metric_decisions_v8.MetricDecisionsV8Test.test_07_cust002_counts_distinct_days) ... ok
+test_08_non_scalar_and_derived_are_explicit (test_metric_decisions_v8.MetricDecisionsV8Test.test_08_non_scalar_and_derived_are_explicit) ... ok
+test_09_four_tier_distribution (test_metric_decisions_v8.MetricDecisionsV8Test.test_09_four_tier_distribution) ... ok
+test_10_cust002_binding_registered (test_metric_decisions_v8.MetricDecisionsV8Test.test_10_cust002_binding_registered) ... ok
+test_1_schema_version_and_new_columns (test_metric_definitions.MetricDefinitionV5Test.test_1_schema_version_and_new_columns) ... ok
+test_2_seed_is_idempotent_and_lands_85_rows (test_metric_definitions.MetricDefinitionV5Test.test_2_seed_is_idempotent_and_lands_85_rows) ... ok
+test_3_family_index_requires_a_variant (test_metric_definitions.MetricDefinitionV5Test.test_3_family_index_requires_a_variant) ... ok
+test_4_variants_read_definition_cards (test_metric_definitions.MetricDefinitionV5Test.test_4_variants_read_definition_cards) ... ok
+test_5_bank034_returns_rule_set_not_a_value (test_metric_definitions.MetricDefinitionV5Test.test_5_bank034_returns_rule_set_not_a_value) ... ok
+test_6_no_definition_field_drift_on_reapply (test_metric_definitions.MetricDefinitionV5Test.test_6_no_definition_field_drift_on_reapply) ... ok
+test_7_browse_list_distinguishes_variants (test_metric_definitions.MetricDefinitionV5Test.test_7_browse_list_distinguishes_variants) ... ok
+test_bad_row_rolls_back_whole_batch (test_metric_facts.MetricFactsTest.test_bad_row_rolls_back_whole_batch) ... ok
+test_bank_001_is_entity_driven (test_metric_facts.MetricFactsTest.test_bank_001_is_entity_driven) ... ok
+test_fact_loader_dry_run_then_idempotent (test_metric_facts.MetricFactsTest.test_fact_loader_dry_run_then_idempotent) ... ok
+test_ins_021_is_entity_driven (test_metric_facts.MetricFactsTest.test_ins_021_is_entity_driven) ... ok
+test_instant_metric_rejects_a_period_window (test_metric_facts.MetricFactsTest.test_instant_metric_rejects_a_period_window) ... ok
+test_metric_without_fact_source_is_rejected (test_metric_facts.MetricFactsTest.test_metric_without_fact_source_is_rejected) ... ok
+test_period_window_short_is_rejected_before_write (test_metric_facts.MetricFactsTest.test_period_window_short_is_rejected_before_write) ... ok
+test_v20_migration_is_reentrant (test_metric_facts.MetricFactsTest.test_v20_migration_is_reentrant) ... ok
+test_01_new_tables_are_documented (test_metric_facts_v7.MetricFactsV7Test.test_01_new_tables_are_documented) ... ok
+test_02_bank_migration_dpd_fpd (test_metric_facts_v7.MetricFactsV7Test.test_02_bank_migration_dpd_fpd) ... ok
+test_03_bank_provision_and_concentration (test_metric_facts_v7.MetricFactsV7Test.test_03_bank_provision_and_concentration) ... ok
+test_04_underwriting_ratios (test_metric_facts_v7.MetricFactsV7Test.test_04_underwriting_ratios) ... ok
+test_05_claim_reserves_and_report_rates (test_metric_facts_v7.MetricFactsV7Test.test_05_claim_reserves_and_report_rates) ... ok
+test_06_surrender_persistence_channel (test_metric_facts_v7.MetricFactsV7Test.test_06_surrender_persistence_channel) ... ok
+test_07_customer_recency_and_retention (test_metric_facts_v7.MetricFactsV7Test.test_07_customer_recency_and_retention) ... ok
+test_08_customer_aum_point_and_daily_average (test_metric_facts_v7.MetricFactsV7Test.test_08_customer_aum_point_and_daily_average) ... ok
+test_09_no_metric_observation_written (test_metric_facts_v7.MetricFactsV7Test.test_09_no_metric_observation_written) ... ok
+test_bank001_regulatory_output_is_unchanged (test_metric_guard.MetricGuardTest.test_bank001_regulatory_output_is_unchanged) ... ok
+test_bank020_is_released_without_regulatory_source (test_metric_guard.MetricGuardTest.test_bank020_is_released_without_regulatory_source) ... ok
+test_bank031_v5_industry_denominator_is_internal_only (test_metric_guard.MetricGuardTest.test_bank031_v5_industry_denominator_is_internal_only) ... ok
+test_cust009_industry_output_is_marked (test_metric_guard.MetricGuardTest.test_cust009_industry_output_is_marked) ... ok
+test_ins003_industry_output_is_marked (test_metric_guard.MetricGuardTest.test_ins003_industry_output_is_marked) ... ok
+test_apply_success_with_dry_run_default (test_metric_loader.MetricLoaderTest.test_apply_success_with_dry_run_default) ... ok
+test_bad_row_rolls_back_entire_batch (test_metric_loader.MetricLoaderTest.test_bad_row_rolls_back_entire_batch) ... ok
+test_invalid_numeric_type_rejected (test_metric_loader.MetricLoaderTest.test_invalid_numeric_type_rejected) ... ok
+test_reimport_is_idempotent (test_metric_loader.MetricLoaderTest.test_reimport_is_idempotent) ... ok
+test_unpublishable_metric_rejected (test_metric_loader.MetricLoaderTest.test_unpublishable_metric_rejected) ... ok
+test_window_out_of_contract_rejected (test_metric_loader.MetricLoaderTest.test_window_out_of_contract_rejected) ... ok
+test_01_bank_031_approval_rate (test_metric_v6.FactModelV6Test.test_01_bank_031_approval_rate)
+First-accepted 2025-01: A1,A2,A3 (A4 duplicate, A5 test, A6 withdrawn). ... ok
+test_02_bank_032_limit_utilization (test_metric_v6.FactModelV6Test.test_02_bank_032_limit_utilization)
+Active non-test non-internal: F1 900/1000 + F2 100/500 = 1000/1500 ... ok
+test_03_bank_035_collection_recovery (test_metric_v6.FactModelV6Test.test_03_bank_035_collection_recovery)
+T0 collecting: C1 1000 + C2 500 = 1500. In-window principal: ... ok
+test_04_bank_036_v1_disposal_rate (test_metric_v6.FactModelV6Test.test_04_bank_036_v1_disposal_rate)
+Opening NPL 1000 + 500 = 1500; disposed gross 400 + 300 + 200 ... ok
+test_05_bank_036_v2_recovery_rate (test_metric_v6.FactModelV6Test.test_05_bank_036_v2_recovery_rate)
+Recovery-method disposals only: D1 (350-10) + D2 (100+180-5) ... ok
+test_06_insurance_premium_income (test_metric_v6.FactModelV6Test.test_06_insurance_premium_income)
+January issue dates, non-investment: P1 (1000-50) + P2 2000 = 2950; ... ok
+test_07_customer_products_per_customer (test_metric_v6.FactModelV6Test.test_07_customer_products_per_customer)
+Active customers M1,M2 (S1) and M4 (S2) = 3; active holdings ... ok
+test_08_rule_set_hit (test_metric_v6.FactModelV6Test.test_08_rule_set_hit) ... ok
+test_09_rule_set_no_hit (test_metric_v6.FactModelV6Test.test_09_rule_set_no_hit) ... ok
+test_10_rule_set_no_data (test_metric_v6.FactModelV6Test.test_10_rule_set_no_data) ... ok
+test_11_rule_executor_rejects_value_metric (test_metric_v6.FactModelV6Test.test_11_rule_executor_rejects_value_metric) ... ok
+test_12_projection_keeps_fixture_provenance (test_metric_v6.FactModelV6Test.test_12_projection_keeps_fixture_provenance) ... ok
+test_publishable_and_disabled_counts (test_metric_v9_seed.MetricV9SeedTest.test_publishable_and_disabled_counts) ... ok
+test_release_guards_still_hold (test_metric_v9_seed.MetricV9SeedTest.test_release_guards_still_hold) ... ok
+test_replay_is_idempotent (test_metric_v9_seed.MetricV9SeedTest.test_replay_is_idempotent) ... ok
+test_seed_rows_are_finalized (test_metric_v9_seed.MetricV9SeedTest.test_seed_rows_are_finalized) ... ok
+test_1_main_metric_has_built_card_with_clickable_chain (test_metrics_report.CardTests.test_1_main_metric_has_built_card_with_clickable_chain) ... ok
+test_2_variant_without_card_shows_not_built (test_metrics_report.CardTests.test_2_variant_without_card_shows_not_built) ... ok
+test_3_industry_card_carries_internal_notice_badge (test_metrics_report.CardTests.test_3_industry_card_carries_internal_notice_badge) ... ok
+test_4_prov_decision_badge_reflects_runtime (test_metrics_report.CardTests.test_4_prov_decision_badge_reflects_runtime) ... ok
+test_5_unknown_metric_card_is_typed_404 (test_metrics_report.CardTests.test_5_unknown_metric_card_is_typed_404) ... ok
+test_1_families_group_index_and_variants (test_metrics_report.FamilyTests.test_1_families_group_index_and_variants) ... ok
+test_2_window_denominator_and_grain_are_side_by_side (test_metrics_report.FamilyTests.test_2_window_denominator_and_grain_are_side_by_side) ... ok
+test_3_variant_required_guidance_is_explicit (test_metrics_report.FamilyTests.test_3_variant_required_guidance_is_explicit) ... ok
+test_4_unknown_family_is_typed_404 (test_metrics_report.FamilyTests.test_4_unknown_family_is_typed_404) ... ok
+test_5_industry_variants_keep_internal_notice (test_metrics_report.FamilyTests.test_5_industry_variants_keep_internal_notice) ... ok
+test_1_all_25_e1_rows_are_marked_industry (test_metrics_report.IndustryBaselineTests.test_1_all_25_e1_rows_are_marked_industry) ... ok
+test_2_external_scope_excludes_every_industry_row (test_metrics_report.IndustryBaselineTests.test_2_external_scope_excludes_every_industry_row) ... ok
+test_3_inconsistent_or_missing_e1_row_is_reported_not_hidden (test_metrics_report.IndustryBaselineTests.test_3_inconsistent_or_missing_e1_row_is_reported_not_hidden) ... ok
+test_1_manifest_is_db_shaped_and_complete (test_metrics_report.ManifestTests.test_1_manifest_is_db_shaped_and_complete) ... ok
+test_2_computability_never_implies_observed_value (test_metrics_report.ManifestTests.test_2_computability_never_implies_observed_value) ... ok
+test_3_gap_prefers_db_missing_then_variant_guidance (test_metrics_report.ManifestTests.test_3_gap_prefers_db_missing_then_variant_guidance) ... ok
+test_4_external_scope_excludes_industry_and_blocked (test_metrics_report.ManifestTests.test_4_external_scope_excludes_industry_and_blocked) ... ok
+test_5_csv_export_reuses_the_same_rows (test_metrics_report.ManifestTests.test_5_csv_export_reuses_the_same_rows) ... ok
+test_6_filters_are_applied_after_db_read (test_metrics_report.ManifestTests.test_6_filters_are_applied_after_db_read) ... ok
+test_7_invalid_scope_is_rejected (test_metrics_report.ManifestTests.test_7_invalid_scope_is_rejected) ... ok
+test_6_published_vocabulary_has_85_concepts (test_metrics_skos.LiveVocabularyTests.test_6_published_vocabulary_has_85_concepts) ... FAIL
+test_7_every_concept_has_pref_and_definition (test_metrics_skos.LiveVocabularyTests.test_7_every_concept_has_pref_and_definition) ... ok
+test_8_six_variants_point_at_a_broader (test_metrics_skos.LiveVocabularyTests.test_8_six_variants_point_at_a_broader) ... FAIL
+test_9_calculation_fields_stay_out_of_skos (test_metrics_skos.LiveVocabularyTests.test_9_calculation_fields_stay_out_of_skos) ... ok
+test_1_metric_concept_pref_becomes_seed (test_metrics_skos.MetricLexiconTests.test_1_metric_concept_pref_becomes_seed) ... ok
+test_2_metric_altlabel_becomes_seed (test_metrics_skos.MetricLexiconTests.test_2_metric_altlabel_becomes_seed) ... ok
+test_3_class_alias_lexicon_still_works (test_metrics_skos.MetricLexiconTests.test_3_class_alias_lexicon_still_works) ... ok
+test_4_valid_vocabulary_passes_shapes (test_metrics_skos.MetricShaclTests.test_4_valid_vocabulary_passes_shapes) ... ok
+test_5_broken_vocabulary_reports_warnings_only (test_metrics_skos.MetricShaclTests.test_5_broken_vocabulary_reports_warnings_only) ... ok
+test_gap_helper_ignores_retired_and_applied (test_migration_gap.MigrationGapTest.test_gap_helper_ignores_retired_and_applied) ... ok
+test_gap_helper_without_history_on_fresh_database (test_migration_gap.MigrationGapTest.test_gap_helper_without_history_on_fresh_database) ... ok
+test_lower_version_inserted_into_registry_raises_gap (test_migration_gap.MigrationGapTest.test_lower_version_inserted_into_registry_raises_gap) ... ok
+test_newer_database_still_reports_mismatch (test_migration_gap.MigrationGapTest.test_newer_database_still_reports_mismatch) ... ok
+test_normal_ascending_upgrade_does_not_raise (test_migration_gap.MigrationGapTest.test_normal_ascending_upgrade_does_not_raise) ... ok
+test_registered_versions_are_unique_and_exclude_retired (test_migration_gap.MigrationGapTest.test_registered_versions_are_unique_and_exclude_retired) ... ok
+test_retired_versions_do_not_raise (test_migration_gap.MigrationGapTest.test_retired_versions_do_not_raise) ... ok
+test_diff_payload_carries_lifecycle_block (test_o02_lifecycle.ReviewRouteTests.test_diff_payload_carries_lifecycle_block) ... ok
+test_flow_endpoint_empty_state_is_explicit (test_o02_lifecycle.ReviewRouteTests.test_flow_endpoint_empty_state_is_explicit) ... ok
+test_illegal_review_is_conflict (test_o02_lifecycle.ReviewRouteTests.test_illegal_review_is_conflict) ... ok
+test_review_forwarding_and_transition_read (test_o02_lifecycle.ReviewRouteTests.test_review_forwarding_and_transition_read) ... ok
+test_review_requires_actor_and_reason (test_o02_lifecycle.ReviewRouteTests.test_review_requires_actor_and_reason) ... ok
+test_all_four_documented_transitions_are_allowed (test_o02_lifecycle.StateMachineTests.test_all_four_documented_transitions_are_allowed) ... ok
+test_allowed_targets_matches_declared_graph (test_o02_lifecycle.StateMachineTests.test_allowed_targets_matches_declared_graph) ... ok
+test_illegal_transitions_are_rejected (test_o02_lifecycle.StateMachineTests.test_illegal_transitions_are_rejected) ... ok
+test_unknown_entity_kind_is_invalid_argument (test_o02_lifecycle.StateMachineTests.test_unknown_entity_kind_is_invalid_argument) ... ok
+test_markdown_csv_and_json_exports (test_o03_impact.ExportTests.test_markdown_csv_and_json_exports) ... ok
+test_unsupported_format_is_invalid_argument (test_o03_impact.ExportTests.test_unsupported_format_is_invalid_argument) ... ok
+test_affected_classes_properties_instances (test_o03_impact.ImpactAnalysisTests.test_affected_classes_properties_instances) ... ok
+test_dependent_metrics_and_rules (test_o03_impact.ImpactAnalysisTests.test_dependent_metrics_and_rules) ... ok
+test_empty_change_set_is_explicit (test_o03_impact.ImpactAnalysisTests.test_empty_change_set_is_explicit) ... ok
+test_missing_abox_reports_null_not_zero (test_o03_impact.ImpactAnalysisTests.test_missing_abox_reports_null_not_zero) ... ok
+test_no_previous_baseline_returns_empty_report (test_o03_impact.ImpactAnalysisTests.test_no_previous_baseline_returns_empty_report) ... ok
+test_sampling_recount_is_consistent_and_deterministic (test_o03_impact.ImpactAnalysisTests.test_sampling_recount_is_consistent_and_deterministic) ... ok
+test_impact_and_export_endpoints (test_o03_impact.ImpactRouteTests.test_impact_and_export_endpoints) ... ok
+test_explicit_empty_when_abox_not_included (test_o04_evidence.ConsistencyGateEvidenceTests.test_explicit_empty_when_abox_not_included) ... ok
+test_inconsistent_gate_keeps_input_evidence (test_o04_evidence.ConsistencyGateEvidenceTests.test_inconsistent_gate_keeps_input_evidence) ... ok
+test_records_graphs_counts_and_hash (test_o04_evidence.ConsistencyGateEvidenceTests.test_records_graphs_counts_and_hash) ... ok
+test_unreadable_graph_is_not_reported_as_empty (test_o04_evidence.ConsistencyGateEvidenceTests.test_unreadable_graph_is_not_reported_as_empty) ... ok
+test_list_and_download (test_o04_evidence.EvidenceRouteTests.test_list_and_download) ... ok
+test_missing_pack_is_404 (test_o04_evidence.EvidenceRouteTests.test_missing_pack_is_404) ... ok
+test_bad_verdict_is_rejected (test_o04_evidence.PackTests.test_bad_verdict_is_rejected) ... ok
+test_fail_pack_keeps_gate_error (test_o04_evidence.PackTests.test_fail_pack_keeps_gate_error) ... ok
+test_pass_pack_contains_gates_and_fingerprints (test_o04_evidence.PackTests.test_pass_pack_contains_gates_and_fingerprints) ... ok
+test_hook_records_pack_without_raising (test_o04_evidence.PublishHookTests.test_hook_records_pack_without_raising) ... ok
+test_hook_swallows_storage_failure (test_o04_evidence.PublishHookTests.test_hook_swallows_storage_failure) ... ok
+ontology evidence pack not written
+test_materialize_and_checksum_roundtrip (test_o04_evidence.StorageTests.test_materialize_and_checksum_roundtrip) ... ok
+test_baseline_can_be_overridden (test_o05_termgov.CoverageTests.test_baseline_can_be_overridden) ... ok
+test_coverage_against_documented_baseline (test_o05_termgov.CoverageTests.test_coverage_against_documented_baseline) ... ok
+test_graph_coverage_empty_state (test_o05_termgov.CoverageTests.test_graph_coverage_empty_state) ... ok
+test_graph_coverage_reads_published_terms (test_o05_termgov.CoverageTests.test_graph_coverage_reads_published_terms) ... ok
+test_bad_guard_regex_is_blocking (test_o05_termgov.DiffTests.test_bad_guard_regex_is_blocking) ... ok
+test_diff_hash_is_stable_for_same_input (test_o05_termgov.DiffTests.test_diff_hash_is_stable_for_same_input) ... ok
+test_diff_shows_add_remove_and_redefinition (test_o05_termgov.DiffTests.test_diff_shows_add_remove_and_redefinition) ... ok
+test_missing_pref_blocks_publish (test_o05_termgov.DiffTests.test_missing_pref_blocks_publish) ... ok
+test_shared_surface_is_blocking (test_o05_termgov.DiffTests.test_shared_surface_is_blocking) ... ok
+test_unparsable_content_is_invalid_argument (test_o05_termgov.DiffTests.test_unparsable_content_is_invalid_argument) ... ok
+test_checks_route (test_o05_termgov.RouteTests.test_checks_route) ... ok
+test_coverage_route (test_o05_termgov.RouteTests.test_coverage_route) ... ok
+test_diff_route_records_check_and_requires_content (test_o05_termgov.RouteTests.test_diff_route_records_check_and_requires_content) ... ok
+test_import_refuses_blocking_diff_and_accepts_clean_one (test_o05_termgov.RouteTests.test_import_refuses_blocking_diff_and_accepts_clean_one) ... ok
+test_changes_grouped_by_class_and_property (test_o06_healthdiff.AggregationTests.test_changes_grouped_by_class_and_property) ... ok
+test_no_baseline_is_explicit (test_o06_healthdiff.AggregationTests.test_no_baseline_is_explicit) ... ok
+test_no_changes_is_explicit (test_o06_healthdiff.AggregationTests.test_no_changes_is_explicit) ... ok
+test_diff_embeds_aggregations_and_snapshots (test_o06_healthdiff.DiffPayloadTests.test_diff_embeds_aggregations_and_snapshots) ... ok
+test_snapshot_route (test_o06_healthdiff.DiffPayloadTests.test_snapshot_route) ... ok
+test_compare_delta (test_o06_healthdiff.SnapshotTests.test_compare_delta) ... ok
+test_missing_abox_is_null_with_reason (test_o06_healthdiff.SnapshotTests.test_missing_abox_is_null_with_reason) ... ok
+test_no_pointer_empty_state (test_o06_healthdiff.SnapshotTests.test_no_pointer_empty_state) ... ok
+test_same_version_is_explicit_empty (test_o06_healthdiff.SnapshotTests.test_same_version_is_explicit_empty) ... ok
+test_snapshot_counts (test_o06_healthdiff.SnapshotTests.test_snapshot_counts) ... ok
+test_chain_verifies_and_graphs_do_not_mix (test_prov.ProvDatabaseTest.test_chain_verifies_and_graphs_do_not_mix) ... ok
+test_decision_history_and_rejudgement (test_prov.ProvDatabaseTest.test_decision_history_and_rejudgement) ... ok
+test_graph_mixing_refused (test_prov.ProvDatabaseTest.test_graph_mixing_refused) ... ok
+test_physical_delete_refused (test_prov.ProvDatabaseTest.test_physical_delete_refused) ... ok
+test_refusal_lookup_by_query (test_prov.ProvDatabaseTest.test_refusal_lookup_by_query) ... ok
+test_refusal_lookup_by_request (test_prov.ProvDatabaseTest.test_refusal_lookup_by_request) ... ok
+test_rule_trigger_history (test_prov.ProvDatabaseTest.test_rule_trigger_history) ... ok
+test_unknown_metric_is_not_found (test_prov.ProvDatabaseTest.test_unknown_metric_is_not_found) ... ok
+test_unknown_request_is_not_found (test_prov.ProvDatabaseTest.test_unknown_request_is_not_found) ... ok
+setUpClass (test_q4_answerable.AnswerableTests) ... ERROR
+test_1_query_rejects_graph_outside_the_whitelist (test_q7_contract.ContractGuardTests.test_1_query_rejects_graph_outside_the_whitelist) ... ok
+test_2_range_read_is_a_real_byte_range_for_fs (test_q7_contract.ContractGuardTests.test_2_range_read_is_a_real_byte_range_for_fs) ... ok
+test_3_embedding_model_or_dimension_mismatch_blocks_startup (test_q7_contract.ContractGuardTests.test_3_embedding_model_or_dimension_mismatch_blocks_startup) ... ok
+test_1_missing_tbox_blocks_startup_with_69 (test_q7_ontology_init.OntologyInitGateTests.test_1_missing_tbox_blocks_startup_with_69) ... ok
+test_2_benign_skip_does_not_block_startup (test_q7_ontology_init.OntologyInitGateTests.test_2_benign_skip_does_not_block_startup) ... ok
+test_1_graph_common_subset_is_equivalent (test_q8_dualrun.DualRunTests.test_1_graph_common_subset_is_equivalent) ...
+=== graph dual-run table ===
+item                   oxigraph-http      jena-fuseki        equal
+replace.triples        2                  2                  yes
+count.afterReplace     2                  2                  yes
+ask                    True               True               yes
+query.rows             ['urn:platform:q8: ['urn:platform:q8: yes
+count.afterUpdate      3                  3                  yes
+export.lines           3                  3                  yes
+count.afterClear       0                  0                  yes
+probe                  True               True               yes
+ok
+test_2_consistency_elk_vs_hermit (test_q8_dualrun.DualRunTests.test_2_consistency_elk_vs_hermit) ...
+consistency[consistent] elk=True (code=None) hermit=True (code=None)
+
+consistency[inconsistent] elk=False (code=None) hermit=False (code=E_ONTOLOGY_INCONSISTENT)
+ok
+test_3_classify_hermit_returns_axioms (test_q8_dualrun.DualRunTests.test_3_classify_hermit_returns_axioms) ...
+classify subClassOf=2 equivalent=0 disjoint=0
+ok
+test_1_graph_provider_distinguishes_unknown_from_missing (test_q8_slots.SlotConfigTests.test_1_graph_provider_distinguishes_unknown_from_missing) ... ok
+test_2_graph_provider_accepts_implemented_backends (test_q8_slots.SlotConfigTests.test_2_graph_provider_accepts_implemented_backends) ... ok
+test_3_reasoning_engine_opens_enum_and_flags_missing (test_q8_slots.SlotConfigTests.test_3_reasoning_engine_opens_enum_and_flags_missing) ... ok
+test_4_reasoning_mode_on_demand_is_recognised_but_not_implemented (test_q8_slots.SlotConfigTests.test_4_reasoning_mode_on_demand_is_recognised_but_not_implemented) ... ok
+test_5_large_object_provider_reports_missing_implementation (test_q8_slots.SlotConfigTests.test_5_large_object_provider_reports_missing_implementation) ... ok
+test_6_llm_preset_fills_defaults_and_explicit_wins (test_q8_slots.SlotConfigTests.test_6_llm_preset_fills_defaults_and_explicit_wins) ... ok
+test_defaults_are_both_50mib (test_s5_reasoning_limits.ReasoningLimitSplitTest.test_defaults_are_both_50mib) ... ok
+test_legacy_key_is_rejected (test_s5_reasoning_limits.ReasoningLimitSplitTest.test_legacy_key_is_rejected) ... ok
+test_manifest_exposes_both_limits (test_s5_reasoning_limits.ReasoningLimitSplitTest.test_manifest_exposes_both_limits) ... ok
+test_rdfs_overrun_names_source_layer (test_s5_reasoning_limits.ReasoningLimitSplitTest.test_rdfs_overrun_names_source_layer) ... ok
+test_reason_overrun_names_assembly_layer (test_s5_reasoning_limits.ReasoningLimitSplitTest.test_reason_overrun_names_assembly_layer) ... ok
+test_the_two_limits_are_independent (test_s5_reasoning_limits.ReasoningLimitSplitTest.test_the_two_limits_are_independent) ... ok
+test_compute_carries_resolvable_set_ref (test_source_ref.SourceRefDatabaseTest.test_compute_carries_resolvable_set_ref) ... ok
+test_document_chunk (test_source_ref.SourceRefDatabaseTest.test_document_chunk) ... ok
+test_fact_row (test_source_ref.SourceRefDatabaseTest.test_fact_row) ... ok
+test_forbidden_table (test_source_ref.SourceRefDatabaseTest.test_forbidden_table) ... ok
+test_not_found (test_source_ref.SourceRefDatabaseTest.test_not_found) ... ok
+test_observation_row (test_source_ref.SourceRefDatabaseTest.test_observation_row) ... ok
+test_recompute_keeps_same_row (test_source_ref.SourceRefDatabaseTest.test_recompute_keeps_same_row) ... ok
+test_stale_after_row_removed (test_source_ref.SourceRefDatabaseTest.test_stale_after_row_removed) ... ok
+test_version_switch_does_not_misresolve (test_source_ref.SourceRefDatabaseTest.test_version_switch_does_not_misresolve) ... ok
+test_malformed_and_unsupported (test_source_ref.SourceRefUnitTest.test_malformed_and_unsupported) ... ok
+test_ref_shapes (test_source_ref.SourceRefUnitTest.test_ref_shapes) ... ok
+test_block_comment_and_quoted_identifier (test_sqlsplit.SplitSqlStatementsTest.test_block_comment_and_quoted_identifier) ... ok
+test_dollar_quoted_body_with_semicolons (test_sqlsplit.SplitSqlStatementsTest.test_dollar_quoted_body_with_semicolons) ... ok
+test_empty_and_trailing_statements (test_sqlsplit.SplitSqlStatementsTest.test_empty_and_trailing_statements) ... ok
+test_line_comment_with_semicolon_is_not_a_split_point (test_sqlsplit.SplitSqlStatementsTest.test_line_comment_with_semicolon_is_not_a_split_point) ... ok
+test_string_literal_with_semicolon_is_not_a_split_point (test_sqlsplit.SplitSqlStatementsTest.test_string_literal_with_semicolon_is_not_a_split_point) ... ok
+test_1_alias_hits_canonical_class (test_terms_layer.TermLexiconTest.test_1_alias_hits_canonical_class) ... ok
+test_2_canonical_for_does_not_redirect_remaining_aliases (test_terms_layer.TermLexiconTest.test_2_canonical_for_does_not_redirect_remaining_aliases) ... ok
+test_3_untagged_legacy_alt_label_is_not_a_key (test_terms_layer.TermLexiconTest.test_3_untagged_legacy_alt_label_is_not_a_key) ... ok
+test_4_guard_mismatch_is_counted_and_not_used (test_terms_layer.TermLexiconTest.test_4_guard_mismatch_is_counted_and_not_used) ... ok
+test_5_longest_match_wins (test_terms_layer.TermLexiconTest.test_5_longest_match_wins) ... ok
+test_6_broken_guard_is_a_hard_error (test_terms_layer.TermLexiconTest.test_6_broken_guard_is_a_hard_error) ... ok
+test_7_lexical_queries_expand_only_lexical_route (test_terms_layer.TermLexiconTest.test_7_lexical_queries_expand_only_lexical_route) ... ok
+
+======================================================================
+ERROR: setUpClass (test_q4_answerable.AnswerableTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/hosttests/test_q4_answerable.py", line 51, in setUpClass
+    cls.registry.get(PINNED_VERSION)
+  File "/app/src/platform_core/adapters/ontology_pg.py", line 4097, in get
+    return _row_to_version(self._require(version_id))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/src/platform_core/adapters/ontology_pg.py", line 1499, in _require
+    raise PortError(
+platform_core.errors.PortError: ontology version not found: ont-11f92ebb3326
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/hosttests/test_q4_answerable.py", line 53, in setUpClass
+    raise AssertionError(
+AssertionError: pinned ontology version is missing: ont-11f92ebb3326 (ontology version not found: ont-11f92ebb3326)
+
+======================================================================
+FAIL: test_answer_definition_with_citations (test_answer_layers.AnswerLayerTest.test_answer_definition_with_citations)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/hosttests/test_answer_layers.py", line 91, in test_answer_definition_with_citations
+    self.assertEqual(result["ontologyVersion"], TBOX_VERSION)
+AssertionError: 'ont-42ebf9b375fd' != 'ont-11f92ebb3326'
+- ont-42ebf9b375fd
++ ont-11f92ebb3326
+
+
+======================================================================
+FAIL: test_answerable_full_ontology_question (test_answer_layers.AnswerLayerTest.test_answerable_full_ontology_question)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/hosttests/test_answer_layers.py", line 45, in test_answerable_full_ontology_question
+    self.assertTrue(result["answerable"])
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_answerable_partial_layers_missing (test_answer_layers.AnswerLayerTest.test_answerable_partial_layers_missing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/hosttests/test_answer_layers.py", line 60, in test_answerable_partial_layers_missing
+    self.assertEqual(_layer(result, "ontology")["status"], "partial")
+AssertionError: 'missing' != 'partial'
+- missing
++ partial
+
+
+======================================================================
+FAIL: test_6_published_vocabulary_has_85_concepts (test_metrics_skos.LiveVocabularyTests.test_6_published_vocabulary_has_85_concepts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/hosttests/test_metrics_skos.py", line 231, in test_6_published_vocabulary_has_85_concepts
+    self.assertEqual(len(notations), 85)
+AssertionError: 0 != 85
+
+======================================================================
+FAIL: test_8_six_variants_point_at_a_broader (test_metrics_skos.LiveVocabularyTests.test_8_six_variants_point_at_a_broader)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/hosttests/test_metrics_skos.py", line 254, in test_8_six_variants_point_at_a_broader
+    self.assertEqual(len(rows), 6)
+AssertionError: 0 != 6
+
+----------------------------------------------------------------------
+Ran 415 tests in 88.038s
+
+FAILED (failures=5, errors=1)
+ACCEPTANCE_RESULT {"discovered_total": 418, "excluded": {}, "unknown_excludes": [], "discovered": 418, "executed": 415, "passed": 409, "failed": 5, "errors": 1, "skipped": 0, "import_failures": [], "not_executed": ["test_q4_answerable.AnswerableTests.test_1_answerable_when_labels_cover_the_question", "test_q4_answerable.AnswerableTests.test_2_answerable_via_http", "test_q4_answerable.AnswerableTests.test_3_not_answerable_reports_what_is_missing"], "skip_details": []}
+ACCEPTANCE_FAILURE test_answer_layers.AnswerLayerTest.test_answer_definition_with_citations :: + ont-11f92ebb3326
+ACCEPTANCE_FAILURE test_answer_layers.AnswerLayerTest.test_answerable_full_ontology_question :: AssertionError: False is not true
+ACCEPTANCE_FAILURE test_answer_layers.AnswerLayerTest.test_answerable_partial_layers_missing :: + partial
+ACCEPTANCE_FAILURE test_metrics_skos.LiveVocabularyTests.test_6_published_vocabulary_has_85_concepts :: AssertionError: 0 != 85
+ACCEPTANCE_FAILURE test_metrics_skos.LiveVocabularyTests.test_8_six_variants_point_at_a_broader :: AssertionError: 0 != 6
+ACCEPTANCE_ERROR setUpClass (test_q4_answerable.AnswerableTests) :: AssertionError: pinned ontology version is missing: ont-11f92ebb3326 (ontology version not found: ont-11f92ebb3326)
+ACCEPTANCE_NOT_EXECUTED test_q4_answerable.AnswerableTests.test_1_answerable_when_labels_cover_the_question
+ACCEPTANCE_NOT_EXECUTED test_q4_answerable.AnswerableTests.test_2_answerable_via_http
+ACCEPTANCE_NOT_EXECUTED test_q4_answerable.AnswerableTests.test_3_not_answerable_reports_what_is_missing
+ACCEPTANCE_MISMATCH discovered=418 executed=415 missing=3
+released owner=UVSFUJSA\cpslau#75396
+coverage: discovered_total=418 excluded=0 discovered=418 executed=415
+[NOT_EXECUTED] test_q4_answerable.AnswerableTests.test_1_answerable_when_labels_cover_the_question
+[NOT_EXECUTED] test_q4_answerable.AnswerableTests.test_2_answerable_via_http
+[NOT_EXECUTED] test_q4_answerable.AnswerableTests.test_3_not_answerable_reports_what_is_missing
+S14 ACCEPTANCE NOT PASS: coverage_mismatch:discovered=418 executed=415 missing=3
+S14 ACCEPTANCE discovered_total=418 excluded=0 discovered=418 executed=415 passed=409 failed=6 skipped=0 exit=2 note=coverage_mismatch:discovered=418 executed=415 missing=3
+evidence=D:\agentABC\coa\doc\evidence\acceptance-s14-platform-acceptance-20261107-034044-b2c534a.log
+**********************
+Windows PowerShell transcript end
+End time: 20261107034214
+**********************
