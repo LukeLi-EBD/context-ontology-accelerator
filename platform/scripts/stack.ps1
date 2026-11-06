@@ -40,7 +40,16 @@ param(
     [string]$Owner = '',
     # 追加的 compose override（相对 platform/ 或绝对路径），用于独立验收栈把
     # 只读模型资产挂进 embedding；不改变默认共享栈行为。
-    [string[]]$ExtraComposeFiles = @()
+    [string[]]$ExtraComposeFiles = @(),
+    # 新建数据根播种 bootstrap.ttl 时追加的 T-Box 源（相对 platform/ 或绝对路径）。
+    # 用于把 B-05 指标 SKOS 词表（doc/_fsldm/fsldm-metrics.ttl，85 概念）并入
+    # baseline T-Box，使全新库初始化后即带词表。只在新播种时生效：已有数据根
+    # 不会被改写，避免改变正在运行的栈的 T-Box 内容哈希。
+    [string[]]$ExtraOntologySeeds = @('../doc/_fsldm/fsldm-metrics.ttl'),
+    # 新建数据根时显式指定 baseline T-Box 源（相对 platform/ 或绝对路径）。
+    # 缺省保持历史顺序（共享数据根 -> 仓库 seed）。独立验收栈用它指向仓库里的
+    # FS-LDM baseline，让全新库不依赖本机历史数据根。
+    [string]$BootstrapSource = ''
 )
 $ErrorActionPreference = 'Stop'
 
@@ -121,8 +130,25 @@ function Initialize-DataRoot {
         Write-Host "[stack] WARNING: $config still contains CHANGE_ME. Set database.url's password to the same value as POSTGRES_PASSWORD, otherwise CLI subcommands that bypass the compose env (for example smoke-s3) fail authentication."
     }
     $bootstrap = Join-Path $path 'ontology/bootstrap.ttl'
+    $seededBootstrap = $false
     if (-not (Test-Path -LiteralPath $bootstrap)) {
-        $source = Join-Path ((Get-DataRootDefault) -replace '/', [IO.Path]::DirectorySeparatorChar) 'ontology/bootstrap.ttl'
+        $source = ''
+        if ($BootstrapSource) {
+            $source = if ([IO.Path]::IsPathRooted($BootstrapSource)) {
+                $BootstrapSource
+            } else {
+                Join-Path $root $BootstrapSource
+            }
+            if (Test-Path -LiteralPath $source) {
+                Write-Host "[stack] seeding bootstrap from explicit source $source"
+            } else {
+                Write-Host "[stack] WARNING: -BootstrapSource not found: $source; falling back"
+                $source = ''
+            }
+        }
+        if (-not $source) {
+            $source = Join-Path ((Get-DataRootDefault) -replace '/', [IO.Path]::DirectorySeparatorChar) 'ontology/bootstrap.ttl'
+        }
         if (-not (Test-Path -LiteralPath $source)) {
             $source = Join-Path $root 'seed/ontology/bootstrap.ttl'
             Write-Host "[stack] seeding bootstrap from the repo seed (no default data root found)"
@@ -130,8 +156,28 @@ function Initialize-DataRoot {
         if (Test-Path -LiteralPath $source) {
             Copy-Item -LiteralPath $source -Destination $bootstrap
             Write-Host "[stack] seeded $bootstrap from $source"
+            $seededBootstrap = $true
         } else {
             Write-Host "[stack] WARNING: no bootstrap.ttl source found; serve will exit with E_ONTOLOGY_TBOX_MISSING"
+        }
+    }
+    if ($seededBootstrap) {
+        foreach ($extra in @($ExtraOntologySeeds)) {
+            if (-not $extra) { continue }
+            $extraPath = if ([IO.Path]::IsPathRooted($extra)) { $extra } else { Join-Path $root $extra }
+            if (-not (Test-Path -LiteralPath $extraPath)) {
+                Write-Host "[stack] WARNING: extra ontology seed not found: $extraPath"
+                continue
+            }
+            $bootstrapText = [IO.File]::ReadAllText($bootstrap, [Text.Encoding]::UTF8)
+            if ($bootstrapText -match 'MetricScheme') {
+                Write-Host "[stack] ontology seed already merged: $bootstrap"
+                continue
+            }
+            $extraText = [IO.File]::ReadAllText($extraPath, [Text.Encoding]::UTF8)
+            $merged = $bootstrapText.TrimEnd() + "`n`n# ---- merged seed: $([IO.Path]::GetFileName($extraPath)) ----`n" + $extraText
+            [IO.File]::WriteAllText($bootstrap, $merged, (New-Object Text.UTF8Encoding($false)))
+            Write-Host "[stack] merged ontology seed $extraPath -> $bootstrap"
         }
     }
     $targetShapes = Join-Path $path 'shapes'

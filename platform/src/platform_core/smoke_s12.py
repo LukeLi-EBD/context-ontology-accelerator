@@ -89,7 +89,8 @@ def run_smoke_s12(runtime: Runtime, base_url: str) -> int:
         # A fresh namespace replaces every class of the current pointer, so this
         # implicit publish is breaking and must carry an explicit acknowledgement.
         published = runtime.ontology.publish(
-            v_base["versionId"], acknowledge_breaking=True, actor="operator"
+            v_base["versionId"], acknowledge_breaking=True, actor="operator",
+            purpose="smoke",
         )
         v_base_events = runtime.ontology.events(v_base["versionId"])["items"]
         actions = {event["action"] for event in v_base_events}
@@ -126,7 +127,8 @@ def run_smoke_s12(runtime: Runtime, base_url: str) -> int:
             f"pointer={after_pointer.get('versionId')}",
         )
         acked = runtime.ontology.publish(
-            v_break["versionId"], acknowledge_breaking=True, actor="operator"
+            v_break["versionId"], acknowledge_breaking=True, actor="operator",
+            purpose="smoke",
         )
         suite.check(
             "legacy.breaking_acknowledged",

@@ -129,7 +129,8 @@ switch ($Action) {
         & $stackScript up -Name $ComposeProject -ApiPort $ApiPort -PgPort $PgPort `
             -ReasonerPort $ReasonerPort -EmbeddingPort $EmbeddingPort -OxigraphPort $OxigraphPort `
             -DataRoot $dataRootNormalized -Services postgres,oxigraph,platform,reasoner,embedding `
-            -ExtraComposeFiles $acceptanceOverride -WaitSeconds $WaitSeconds
+            -ExtraComposeFiles $acceptanceOverride -WaitSeconds $WaitSeconds `
+            -BootstrapSource '../doc/_fsldm/fsldm-merged.ttl'
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         # stack.ps1 只等 API /readyz；TEI 模型 warmup 需要额外时间，必须等 /health 200
         # 否则 smoke-s13 会在 E_EMBED_UNAVAILABLE 上失败（实测 2026-11-07）。

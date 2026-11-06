@@ -99,7 +99,9 @@ def run_smoke_s9(runtime: Runtime, base_url: str) -> int:
                 str(_write(tmp_dir, f"s9-{nonce}.ttl", _tbox(nonce))), "1.0.0",
                 on_conflict="new_version",
             )
-            runtime.ontology.publish(version["versionId"], acknowledge_breaking=True)
+            runtime.ontology.publish(
+                version["versionId"], acknowledge_breaking=True, purpose="smoke"
+            )
             inferred = f"urn:platform:inferred:{version['versionId']}"
 
             payloads = [

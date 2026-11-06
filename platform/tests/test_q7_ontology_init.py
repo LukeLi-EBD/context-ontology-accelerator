@@ -68,12 +68,18 @@ class OntologyInitGateTests(unittest.TestCase):
         self.assertEqual(ctx.exception.key, "ontology.init_source")
 
     def test_2_benign_skip_does_not_block_startup(self):
-        # The real pointer is 1.0.0 while init_semver is 0.0.0, so bootstrap
-        # reports "pointer managed outside init source" and must not block.
+        # The init watcher only owns versions whose semver equals init_semver, so
+        # this case needs a semver that cannot match the live pointer. Derive it
+        # from the pointer instead of assuming a historical value (a fresh DB
+        # publishes the bootstrap as 0.0.0, which made the old hard-coded 0.0.0
+        # look "unchanged" instead of "managed outside init source").
+        live = self.registry.current() or {}
+        live_semver = str(live.get("semver") or "0.0.0")
+        init_semver = "9.9.9" if live_semver != "9.9.9" else "8.8.8"
         cfg = OntologyConfig(
             init_mode="once",
             init_source=BOOTSTRAP_TTL,
-            init_semver="0.0.0",
+            init_semver=init_semver,
         )
         runtime = self._runtime(cfg, self.registry)
         state = start(runtime)

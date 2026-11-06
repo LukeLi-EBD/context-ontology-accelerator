@@ -136,7 +136,7 @@ def run_smoke_s11(runtime: Runtime, base_url: str) -> int:
         approved = runtime.ontology.approve(proposal["proposalId"], actor="operator")
         published = runtime.ontology.publish(
             test_versions["v1"], proposal_id=proposal["proposalId"],
-            acknowledge_breaking=True, actor="operator",
+            acknowledge_breaking=True, actor="operator", purpose="smoke",
         )
         v1_events = runtime.ontology.events(test_versions["v1"])["items"]
         actions = {event["action"] for event in v1_events}
@@ -203,7 +203,7 @@ def run_smoke_s11(runtime: Runtime, base_url: str) -> int:
         )
         acked = runtime.ontology.publish(
             test_versions["v4"], proposal_id=breaking_proposal["proposalId"],
-            acknowledge_breaking=True, actor="operator",
+            acknowledge_breaking=True, actor="operator", purpose="smoke",
         )
         stored = runtime.ontology.get_proposal(breaking_proposal["proposalId"])
         suite.check(

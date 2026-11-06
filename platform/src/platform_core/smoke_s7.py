@@ -119,7 +119,12 @@ def run_smoke_s7(runtime: Runtime, base_url: str) -> int:
             version = runtime.ontology.import_source(
                 str(path), "1.0.0", on_conflict="new_version"
             )
-            runtime.ontology.publish(version["versionId"], acknowledge_breaking=True)
+            # Self-check probe: an explicit purpose=smoke is the only exemption
+            # for publishing a vocabulary-free probe T-Box once the MetricScheme
+            # high-water mark is non-zero; the exemption is recorded in evidence.
+            runtime.ontology.publish(
+                version["versionId"], acknowledge_breaking=True, purpose="smoke"
+            )
             suite.check(
                 "ontology.publish",
                 runtime.ontology.current()["versionId"] == version["versionId"],

@@ -34,8 +34,15 @@
 | 2026-11-07 00:47 | `acceptance-s0s13-platform-acceptance-20261107-004430-ea7c94f.log` | **隔离栈终态复跑**（脚本最后一次改动后）：43 passed / 0 failed / 0 skipped，exit 0，锁正常释放 |
 | 2026-11-07 03:36 | `acceptance-s0s13-platform-acceptance-20261107-033631-b2c534a.log` | **合并后复验**（HEAD `b2c534a`、新镜像、全新库）：43 passed / 0 failed / 0 skipped，exit 0 |
 | 2026-11-07 03:40 | `acceptance-s14-platform-acceptance-20261107-034044-b2c534a.log` | **合并后复验 S14 全量**：418 discovered / 415 executed / 409 passed / 5 failed / 1 error / 0 skipped，exit 2；3 条未执行（历史 T-Box 夹具缺失，见 69 第 8 节） |
+| 2026-11-07 03:57 | `acceptance-s0s13-platform-acceptance-20261107-035734-b53314a.log` | 全新库首轮：35 passed / 8 failed，exit 1；s7–s12 `E_TERM_GATE_BLOCKED`（源码加了 `purpose="smoke"` 但镜像未重建，改动未生效） |
+| 2026-11-07 04:08 | `acceptance-s0s13-platform-acceptance-20261107-040845-b53314a.log` | 重建镜像后：36 passed / 8 failed，exit 1；s5/s6 仍缺 `purpose="smoke"`（已补）；s1 与指针恢复仍未处理 |
+| 2026-11-07 04:17 | `acceptance-s0s13-platform-acceptance-20261107-041711-b53314a.log` | 根因定位轮：42 passed / 2 failed，exit 1；`smoke-s1` 缺 `purpose="smoke"` → `E_TERM_GATE_BLOCKED`；指针恢复被 `E_ONTOLOGY_BREAKING` 拒绝（exit 70）。已修复 |
+| 2026-11-07 04:24 | `acceptance-s0s13-platform-acceptance-20261107-042456-b53314a.log` | **全新库终态（S0–S13）**：44 passed / 0 failed / 0 skipped，exit 0；`pointer_before=ont-4066f8835772` → `pointer restored exit=0` |
+| 2026-11-07 04:35 | `acceptance-s14-platform-acceptance-20261107-043532-b53314a.log` | 全新库 S14 首跑：418 discovered / 418 executed / 417 passed / 1 failed / 0 skipped，exit 1；`test_q7_ontology_init.test_2` 依赖历史 semver，已修为前提自洽 |
+| 2026-11-07 04:37 | `acceptance-s14-platform-acceptance-20261107-043746-b53314a.log` | **全新库终态（S14 全量）**：418 discovered / 418 executed / 418 passed / 0 skipped，exit 0 |
 
-隔离栈 S14 的失败定性（**未修复、未跳过、未删除用例**）：
+隔离栈 S14 的早期失败定性（**未跳过、未删除用例**）。其中"环境夹具缺失"一类已在
+2026-11-07 04:37 从根因修复（测试改为解析活指针、词表随 bootstrap 播种），见 69 第 9 节：
 
 - 环境夹具缺失（隔离栈无共享栈历史数据）：`ont-11f92ebb3326` 缺失 → 3 个 answer 用例 FAIL + `AnswerableTests.setUpClass` ERROR（连带 3 个用例未执行）；85 词表未导入 → 2 个 FAIL；`fuseki:3030` 不可达 → 1 个 ERROR。
 - 并行代码线与测试契约不一致（真实缺陷，非本次脚本改动引入）：`FakeOntology.publish/rollback_to` 不接受新参数 `expected_version_id`（4 个 ERROR）；`MetricCompiler.execute()` 缺必填 `data_source`（7 个 ERROR）。

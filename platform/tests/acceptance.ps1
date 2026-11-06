@@ -71,6 +71,14 @@ function Get-HeavyLock {
     try { return (Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json) } catch { return [pscustomobject]@{ owner = 'unknown'; purpose = 'corrupt' } }
 }
 
+function Get-TboxPointer {
+    # 只读查询：当前已发布的 T-Box 版本 id（用于 smoke 后恢复指针）。
+    $out = & docker @composeArgs exec -T postgres psql -U platform -d platform -tAc "SELECT version_id FROM platform.graph_pointer WHERE name='tbox/current'" 2>$null
+    $line = @($out | Where-Object { $_ -and "$_" -notmatch '^ERROR' } | Select-Object -First 1)
+    if ($line.Count -eq 0) { return '' }
+    return "$($line[0])".Trim()
+}
+
 function Get-LockAgeMinutes([string]$iso) {
     if (-not $iso) { return -1 }
     try { return [math]::Round(((Get-Date).ToUniversalTime() - ([datetime]$iso).ToUniversalTime()).TotalMinutes, 1) } catch { return -1 }
@@ -312,6 +320,13 @@ if ((Get-HttpStatus "$base/readyz") -eq 200) {
     Report "readyz 200" $false "status=$(Get-HttpStatus "$base/readyz")"
 }
 
+# 记录进入 smoke 前的已发布 T-Box 指针：smoke 会发布临时版本，跑完必须用官方
+# "激活已有版本"（publish --existing）恢复，既避免留下探针 pointer，也让紧随其后
+# 的 S14（按当前指针解析版本）看到 baseline 而不是探针版本。
+$pointerBefore = Get-TboxPointer
+if ($pointerBefore) { Write-Host "pointer_before=$pointerBefore" }
+else { Write-Host "[DEGRADED] 无法读取 tbox/current 指针，跳过指针恢复" ; $script:degraded++ }
+
 $demoQuery = 'SELECT (COUNT(*) AS ?n) WHERE { GRAPH <urn:platform:graph:abox:main> { ?s ?p ?o } }'
 $aboxBaseline = Get-SparqlCount $demoQuery
 Write-Host "demo abox baseline triples=$aboxBaseline"
@@ -376,6 +391,23 @@ $embedCode = $LASTEXITCODE
 $embedOut | ForEach-Object { Write-Host $_ }
 $embedCounts = Get-SmokeCounts $embedOut
 Report "platform smoke-embed" ($embedCode -eq 0 -and $embedCounts.total -gt 0 -and $embedCounts.passed -eq $embedCounts.total) "exit=$embedCode passed=$($embedCounts.passed)/$($embedCounts.total)"
+
+if ($pointerBefore) {
+    $pointerNow = Get-TboxPointer
+    if ($pointerNow -ne $pointerBefore) {
+        Write-Host "== restore pointer $pointerNow -> $pointerBefore =="
+        # 恢复指针是显式治理动作：smoke 已把指针推到临时 T-Box，切回基线相对当前版本
+        # 必然被判为 breaking，平台要求人工 acknowledge + 记录 reason 才能落地。
+        # 这不是放宽断言：恢复后的指针仍要与 pointerBefore 严格一致才判 PASS。
+        $restoreOut = @(& docker @composeArgs exec -T platform platform ontology publish --version $pointerBefore --existing --acknowledge-breaking --reason "restore baseline T-Box pointer after smoke suites" 2>&1)
+        $restoreCode = $LASTEXITCODE
+        $restoreOut | ForEach-Object { Write-Host $_ }
+        $pointerFinal = Get-TboxPointer
+        Report "pointer restored" ($restoreCode -eq 0 -and $pointerFinal -eq $pointerBefore) "exit=$restoreCode pointer=$pointerFinal expected=$pointerBefore"
+    } else {
+        Report "pointer unchanged" $true "pointer=$pointerNow"
+    }
+}
 
 Write-Host "== demo abox purity (OQ-31) =="
 $aboxAfter = Get-SparqlCount $demoQuery

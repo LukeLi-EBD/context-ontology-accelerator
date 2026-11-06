@@ -81,7 +81,7 @@ def run_smoke_s1(runtime: Runtime) -> int:
     if v1:
         published = suite.run(
             "publish.v1",
-            lambda: registry.publish(v1["versionId"], acknowledge_breaking=True),
+            lambda: registry.publish(v1["versionId"], acknowledge_breaking=True, purpose="smoke"),
         )
         if published:
             pointer = registry.current()
@@ -103,7 +103,7 @@ def run_smoke_s1(runtime: Runtime) -> int:
     if v2:
         suite.run(
             "publish.v2",
-            lambda: registry.publish(v2["versionId"], acknowledge_breaking=True),
+            lambda: registry.publish(v2["versionId"], acknowledge_breaking=True, purpose="smoke"),
         )
         pointer = registry.current()
         if pointer and pointer["versionId"] == v2["versionId"]:

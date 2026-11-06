@@ -82,7 +82,7 @@ def run_smoke_s5(runtime: Runtime, base_url: str, bad_config: str) -> int:
         # 2. import + publish v1
         v1_path = _write(tmp_dir, f"s5-{nonce}-v1.ttl", _tbox(nonce))
         v1 = runtime.ontology.import_source(str(v1_path), "1.0.0")
-        runtime.ontology.publish(v1["versionId"], acknowledge_breaking=True)
+        runtime.ontology.publish(v1["versionId"], acknowledge_breaking=True, purpose="smoke")
         suite.check(
             "ontology.publish.v1",
             runtime.ontology.current()["versionId"] == v1["versionId"],
@@ -221,7 +221,7 @@ def run_smoke_s5(runtime: Runtime, base_url: str, bad_config: str) -> int:
             ),
         )
         v2 = runtime.ontology.import_source(str(v2_path), "2.0.0")
-        runtime.ontology.publish(v2["versionId"], acknowledge_breaking=True)
+        runtime.ontology.publish(v2["versionId"], acknowledge_breaking=True, purpose="smoke")
         carol = f"urn:platform:smoke:{nonce}:carol"
         _insert(runtime, abox, f"<{carol}> a <urn:platform:smoke:{nonce}:Teacher> .")
         v2_result = runtime.reasoning.materialize(force=True, abox_graphs=[abox])

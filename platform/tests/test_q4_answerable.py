@@ -4,10 +4,10 @@ Runs against the already-running postgres/oxigraph (no rebuild):
   docker compose exec -T -e PYTHONPATH=/app/src platform \
     python /app/tests/test_q4_answerable.py
 
-The cases bind an explicit ontology version (default ont-3f57d8ce6636, the
-FS-LDM 1.1.0 baseline; override with Q4_ONTOLOGY_VERSION). They never read the
-global ``tbox/current`` pointer, so a smoke/test version occupying the pointer
-cannot turn them red.
+The cases bind an explicit ontology version. By default they resolve the live
+``tbox/current`` pointer, so a fresh stack (random version id per import) works
+without any historical snapshot; set ``Q4_ONTOLOGY_VERSION`` to pin a specific
+version explicitly. They never depend on a version id baked into this file.
 
 The positive queries use real FS-LDM labels (产品包/产品特性/事件金额/事件编号);
 the negative query uses concepts absent from the T-Box and must come back
@@ -36,7 +36,17 @@ DSN = os.environ.get(
     ),
 )
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
-PINNED_VERSION = os.environ.get("Q4_ONTOLOGY_VERSION", "ont-11f92ebb3326")
+
+
+def _resolve_pinned_version(registry) -> str:
+    """Q4_ONTOLOGY_VERSION wins; otherwise follow the live tbox/current pointer."""
+    override = os.environ.get("Q4_ONTOLOGY_VERSION")
+    if override:
+        return override
+    pointer = registry.current()
+    if not pointer:
+        raise AssertionError("no tbox/current pointer; ontology init has not published a T-Box")
+    return pointer["versionId"]
 
 
 class AnswerableTests(unittest.TestCase):
@@ -47,11 +57,12 @@ class AnswerableTests(unittest.TestCase):
         cls.graph = OxigraphHttpStore(OXIGRAPH_URL)
         cls.registry = OntologyRegistry(cls.meta, cls.graph, None, OntologyConfig())
         cls.service = AnswerabilityService(ContextConfig(), cls.registry, cls.graph)
+        cls.pinned_version = _resolve_pinned_version(cls.registry)
         try:
-            cls.registry.get(PINNED_VERSION)
+            cls.registry.get(cls.pinned_version)
         except PortError as exc:
             raise AssertionError(
-                f"pinned ontology version is missing: {PINNED_VERSION} ({exc.message})"
+                f"pinned ontology version is missing: {cls.pinned_version} ({exc.message})"
             ) from exc
         runtime = SimpleNamespace(
             answerable=cls.service,
@@ -80,31 +91,31 @@ class AnswerableTests(unittest.TestCase):
 
     def test_1_answerable_when_labels_cover_the_question(self):
         result = self.service.check(
-            "产品包的产品特性有哪些", ontology_version=PINNED_VERSION
+            "产品包的产品特性有哪些", ontology_version=self.pinned_version
         )
         self.assert_covered(result, ("产品包", "产品特性"))
         self.assertEqual(result["coverage"], 1.0)
         self.assertEqual(result["coverageChars"], {"covered": 7, "total": 7})
-        self.assertEqual(result["ontologyVersion"], PINNED_VERSION)
+        self.assertEqual(result["ontologyVersion"], self.pinned_version)
 
     def test_2_answerable_via_http(self):
         response = self.client.get(
             "/answerable",
-            params={"q": "事件金额和事件编号", "ontologyVersion": PINNED_VERSION},
+            params={"q": "事件金额和事件编号", "ontologyVersion": self.pinned_version},
         )
         self.assertEqual(response.status_code, 200, response.text)
         payload = response.json()
         self.assert_covered(payload, ("事件金额", "事件编号"))
-        self.assertEqual(payload["ontologyVersion"], PINNED_VERSION)
+        self.assertEqual(payload["ontologyVersion"], self.pinned_version)
 
     # ---- negative --------------------------------------------------------
 
     def test_3_not_answerable_reports_what_is_missing(self):
         result = self.service.check(
-            "量子计算机的制冷功率是多少", ontology_version=PINNED_VERSION
+            "量子计算机的制冷功率是多少", ontology_version=self.pinned_version
         )
         self.assertFalse(result["answerable"], result)
-        self.assertEqual(result["ontologyVersion"], PINNED_VERSION)
+        self.assertEqual(result["ontologyVersion"], self.pinned_version)
         self.assertEqual(result["reasonCode"], "E_ANSWER_NOT_COVERED")
         self.assertLess(result["coverage"], result["threshold"])
         self.assertEqual(result["matchedTerms"], [])

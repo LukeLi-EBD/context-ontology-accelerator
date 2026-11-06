@@ -8,6 +8,7 @@ The tests read the live T-Box pointer and platform.metric_definition /
 metric_observation; they never write SQL and never rebuild the ontology.
 """
 
+import os
 import unittest
 
 from platform_core.api import _qa_answer, _qa_answerable
@@ -15,7 +16,20 @@ from platform_core.assembly import assemble
 from platform_core.config import load_config
 
 
-TBOX_VERSION = "ont-11f92ebb3326"
+def _current_tbox_version(runtime) -> str:
+    """Resolve the published T-Box from the live pointer.
+
+    Version ids are random per import, so a hard-coded id only exists on a
+    machine that once imported that exact snapshot. Set ANSWER_ONTOLOGY_VERSION
+    (or Q4_ONTOLOGY_VERSION) to pin a specific version explicitly.
+    """
+    override = os.environ.get("ANSWER_ONTOLOGY_VERSION") or os.environ.get("Q4_ONTOLOGY_VERSION")
+    if override:
+        return override
+    pointer = runtime.ontology.current()
+    if not pointer:
+        raise AssertionError("no tbox/current pointer; ontology init has not published a T-Box")
+    return pointer["versionId"]
 
 
 def _layer(payload, name):
@@ -30,6 +44,7 @@ class AnswerLayerTest(unittest.TestCase):
     def setUpClass(cls):
         cls.runtime = assemble(load_config("/data/platform.yaml", None))
         cls.runtime.metadata.open(retry_seconds=15)
+        cls.tbox_version = _current_tbox_version(cls.runtime)
 
     @classmethod
     def tearDownClass(cls):
@@ -45,7 +60,7 @@ class AnswerLayerTest(unittest.TestCase):
         self.assertTrue(result["answerable"])
         self.assertFalse(result["valueAnswerable"])
         self.assertEqual(result["answerMode"], "definition")
-        self.assertEqual(result["ontologyVersion"], TBOX_VERSION)
+        self.assertEqual(result["ontologyVersion"], self.tbox_version)
         self.assertEqual(result["missing"], [])
         self.assertEqual(_layer(result, "ontology")["status"], "covered")
         self.assertEqual(_layer(result, "terms")["status"], "not_applicable")
@@ -88,7 +103,7 @@ class AnswerLayerTest(unittest.TestCase):
         self.assertEqual(result["answerType"], "definition")
         self.assertIsNone(result["value"])
         self.assertIsNone(result["dataSource"])
-        self.assertEqual(result["ontologyVersion"], TBOX_VERSION)
+        self.assertEqual(result["ontologyVersion"], self.tbox_version)
         steps = {item["step"]: item for item in result["steps"]}
         self.assertEqual(
             [name for name in ("retrieve", "terms", "metric", "facts", "compute")],

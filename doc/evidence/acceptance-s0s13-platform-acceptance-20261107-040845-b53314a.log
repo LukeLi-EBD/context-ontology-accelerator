@@ -1,0 +1,617 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261107040845
+Username: UVSFUJSA\cpslau
+RunAs User: UVSFUJSA\cpslau
+Configuration Name: 
+Machine: UVSFUJSA (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tests\acceptance.ps1
+Process ID: 65508
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+S0-S13 acceptance start ts=20261107-040845 git=b53314a project=platform-acceptance api=http://127.0.0.1:8082 pg=5433 reasoner=7882 data=D:\agentABC\data-acceptance evidence_file=D:\agentABC\coa\doc\evidence\acceptance-s0s13-platform-acceptance-20261107-040845-b53314a.log
+heavy_lock=free
+== compose config ==
+[PASS] docker compose config exit=0
+== containers (no blind 'compose up -d') ==
+[PASS] containers running (no restart needed) services=5
+acquired owner=UVSFUJSA\cpslau#65508 pid=65508 host=UVSFUJSA purpose=acceptance full run (platform-acceptance)
+lock_acquired owner=UVSFUJSA\cpslau#65508 ttl=10min lock_file=D:\agentABC\coa\platform\.lock\platform-acceptance.heavy.lock
+lock_release_on_exit: powershell -ExecutionPolicy Bypass -File scripts\compose-guard.ps1 release -Owner 'UVSFUJSA\cpslau#65508'
+[PASS] healthz 200
+[PASS] readyz 200
+pointer_before=ont-dfb3559f4e0b
+demo abox baseline triples=0
+== smoke ==
+{"ts": "2026-11-06T20:08:48.299+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:08:48.350+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "selfcheck", "key": "pg-or-small-65ce5feccb494d0381a37565cb38570c", "hash": "9ce2519c0561bb0b06617143d723160ce3a095ce9fa2bada3403d84d32045e47", "size": 4096, "tier": "pg"}
+{"ts": "2026-11-06T20:08:48.380+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "selfcheck", "key": "large-53037d3fb1274908a739a1bcf4f99468", "hash": "0b2c2954d317f549e5add67f935294cfa99318bd572c8b87fc774310c684fa38", "size": 11534336, "tier": "fs"}
+{"ts": "2026-11-06T20:08:50.074+00:00", "level": "info", "logger": "platform_core.bootstrap", "msg": "self-check passed", "event": "self_check", "result": "ok", "checks": [{"stage": "config", "status": "ok", "detail": "config_version=1 file=/data/platform.yaml", "code": null}, {"stage": "io", "status": "ok", "detail": "root=/data tmp=/data/tmp same_volume=true free_pct=32.9", "code": null}, {"stage": "db", "status": "ok", "detail": "postgres ok schema_version=40", "code": null}, {"stage": "graph", "status": "ok", "detail": "sparql ask+write+read+drop ok", "code": null}, {"stage": "storage", "status": "ok", "detail": "small_tier=pg large_tier=fs sha256=ok", "code": null}, {"stage": "parser", "status": "ok", "detail": "pypdfium2=5.14.0 pdfplumber=0.11.10 markitdown=0.1.9 ocr=false tables=True", "code": null}, {"stage": "embedding", "status": "ok", "detail": "model=/data/models/bge-m3 dimensions=1024", "code": null}, {"stage": "capability", "status": "ok", "detail": "5 requirements satisfied", "code": null}], "degraded": ["ocr:disabled"], "runtime_mode": "learn"}
+[PASS] healthz: http=200
+[PASS] readyz: database=ok graph=ok storage=ok
+[PASS] graph_roundtrip: insert=1 select=1 drop=ok
+{"ts": "2026-11-06T20:08:50.114+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "smoke", "key": "smoke-small-e1667b90e7d7428197204cfae6f7f041", "hash": "9ce2519c0561bb0b06617143d723160ce3a095ce9fa2bada3403d84d32045e47", "size": 4096, "tier": "pg"}
+[PASS] small_object_roundtrip: tier=pg size=4096 sha256=ok
+{"ts": "2026-11-06T20:08:50.143+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "smoke", "key": "smoke-large-0a053a5338df469b9a946afddd119e86", "hash": "0b2c2954d317f549e5add67f935294cfa99318bd572c8b87fc774310c684fa38", "size": 11534336, "tier": "fs"}
+[PASS] cas_roundtrip: tier=fs size=11534336 sha256=ok
+[PASS] config_failfast:bad_config.yaml: exit=78 stage=config
+[PASS] config_failfast:bad_config_unsupported_provider.yaml: exit=78 stage=config
+SUMMARY passed=7 failed=0 total=7
+[PASS] platform smoke exit=0 passed=7/7
+== smoke S1 ==
+{"ts": "2026-11-06T20:08:53.010+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:08:53.136+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/21c1a64487a8226ccccdea6b41c8be54f98dbb1c24332604887486d1d67be086.ttl", "hash": "d5701ecb02c36b68048275a41ea9e6b142c5806c3b9a47e929f3417f85197cd2", "size": 660, "tier": "pg"}
+{"ts": "2026-11-06T20:08:53.139+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-81e7d7f05e71", "hash": "21c1a64487a8226ccccdea6b41c8be54f98dbb1c24332604887486d1d67be086", "triples": 16}
+{"ts": "2026-11-06T20:08:53.271+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-81e7d7f05e71", "namespace": null, "conforms": true, "violations": 0}
+{"ts": "2026-11-06T20:08:54.393+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/c827cb211d82f7ea95a1ee59a071b2b30425b2d1b2e8b76271a2a052d0210bae.ttl", "hash": "f5a90a81e97c6498f0f1b8cbf0c1238abc834cadea636c15a791d4b79c7eb729", "size": 881, "tier": "pg"}
+{"ts": "2026-11-06T20:08:54.396+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-17253ce628e4", "hash": "c827cb211d82f7ea95a1ee59a071b2b30425b2d1b2e8b76271a2a052d0210bae", "triples": 23}
+{"ts": "2026-11-06T20:08:54.528+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-17253ce628e4", "namespace": null, "conforms": true, "violations": 0}
+{"ts": "2026-11-06T20:08:55.532+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology import skipped (same content)", "event": "ontology_import", "result": "skipped", "hash": "21c1a64487a8226ccccdea6b41c8be54f98dbb1c24332604887486d1d67be086"}
+{"ts": "2026-11-06T20:08:55.546+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology rolled back", "event": "ontology_rollback", "new_version_id": "ont-41ad30006786", "to": "ont-81e7d7f05e71", "graph": "urn:platform:graph:tbox:ont-81e7d7f05e71"}
+{"ts": "2026-11-06T20:08:55.597+00:00", "level": "warning", "logger": "platform_core.smoke_s1", "msg": "smoke cleanup: version delete skipped", "event": "smoke_cleanup_version_skipped", "versionId": "ont-81e7d7f05e71", "error": "update or delete on table \"ontology_version\" violates foreign key constraint \"ontology_version_rollback_of_fkey\" on table \"ontology_version\"\nDETAIL:  Key (versi"}
+[PASS] import.v1:
+[FAIL] publish.v1: E_TERM_GATE_BLOCKED term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[PASS] import.v2:
+[FAIL] publish.v2: E_TERM_GATE_BLOCKED term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] pointer.v2: pointer is {'name': 'tbox/current', 'versionId': 'ont-dfb3559f4e0b', 'semver': '0.0.0', 'contentHash': '9417debca40282e5503d73f1446b98374a14508c7380807f548db54d65751303', 'graph': 'urn:platform:graph:tbox:ont-dfb3559f4e0b', 'updatedAt': '2026-11-07T04:04:48.703320+08:00'}
+[PASS] history.v1_readable: triples=16
+[PASS] import.idempotent:
+[PASS] import.idempotent: reused ont-81e7d7f05e71
+[PASS] invalid_turtle_failfast: E_ONTOLOGY_PARSE RDF parse failed (turtle): at line 5 of <>:
+Bad syntax (EOF found after object) at ^ in:
+"b'@prefix ex: <http://example.org/tbox#> .\n\nex:Broken a ex:Thing ;\n    ex:label "missing closing bracket"'^b''..." (expected)
+[PASS] invalid_turtle_side_effects: no version created, pointer unchanged
+[PASS] graph_unavailable_failfast: E_GRAPH_UNAVAILABLE oxigraph is unreachable at http://127.0.0.1:1: [Errno 111] Connection refused (expected)
+[PASS] graph_unavailable_side_effects: pointer unchanged
+[PASS] rollback:
+[PASS] rollback.pointer: new=ont-41ad30006786 content=v1
+[PASS] rollback.v2_still_readable: triples=23
+[PASS] capabilities.manifest: GSP_SUPPORT=full
+S1 SMOKE 13/16
+[FAIL] platform smoke-s1 exit=1
+== smoke S2 ==
+{"ts": "2026-11-06T20:08:56.659+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+[PASS] health: status=200
+[PASS] ready: status=200
+[PASS] ingest.txt: http=201 chunks=4 status=parsed
+[PASS] ingest.pdf: http=201 pages=1 chunks=1
+[PASS] ingest.docx: http=201 chunks=1
+[PASS] idempotent: http=200 dedup=True chunks=4->4
+[PASS] scanned.degraded: http=201 degraded=True warnings=['NO_OCR_ENABLED'] chunks=0
+[PASS] bad_pdf.rejected: http=400 code=E_DOC_PARSE_FAILED rows=4->4
+[PASS] unsupported.rejected: http=400 code=E_DOC_FORMAT_UNSUPPORTED
+[PASS] get.document: http=200 pages=1
+[PASS] get.chunks: http=200 items=4
+[PASS] get.source: http=200 sha_match=True
+[PASS] chunk.overlap: c0=[0,1200] c1_start=1000
+[PASS] ocr.unsupported: Unsupported/E_DOC_OCR_UNSUPPORTED
+[PASS] config.failfast: E_CONFIG_CHUNK_OVERLAP exit=78
+[PASS] db.unavailable: Unavailable/E_DB_UNAVAILABLE
+[PASS] counts: documents 0->4 delta=4
+S2 SMOKE 17/17
+[PASS] platform smoke-s2 exit=0 passed=17/17
+== smoke S3 ==
+{"ts": "2026-11-06T20:08:57.872+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:08:57.902+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:08:57.916+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "hash": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "size": 647, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.919+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "mimeType": "text/plain", "sizeBytes": 647, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.927+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "23d62966160adcc6b93bbf8e38ed01ba1acebbb11d5562cc6aa4889c8d6b4b33", "hash": "23d62966160adcc6b93bbf8e38ed01ba1acebbb11d5562cc6aa4889c8d6b4b33", "size": 369, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.929+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "23d62966160adcc6b93bbf8e38ed01ba1acebbb11d5562cc6aa4889c8d6b4b33", "mimeType": "text/plain", "sizeBytes": 369, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.938+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "9002006427f37823f90531092e7c1095cfb9268b88c483d0b68ec7b776712225", "hash": "9002006427f37823f90531092e7c1095cfb9268b88c483d0b68ec7b776712225", "size": 450, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.940+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "9002006427f37823f90531092e7c1095cfb9268b88c483d0b68ec7b776712225", "mimeType": "text/plain", "sizeBytes": 450, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.948+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "57753b6d76302d4fc06f14966039670d07b13c49e07280ca494d32aea691f14f", "hash": "57753b6d76302d4fc06f14966039670d07b13c49e07280ca494d32aea691f14f", "size": 312, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.950+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "57753b6d76302d4fc06f14966039670d07b13c49e07280ca494d32aea691f14f", "mimeType": "text/plain", "sizeBytes": 312, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.959+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "0f094f433dec58cc2426a0e22eb6ac1b85c505b96df01dace235563b12054298", "hash": "0f094f433dec58cc2426a0e22eb6ac1b85c505b96df01dace235563b12054298", "size": 405, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.960+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "0f094f433dec58cc2426a0e22eb6ac1b85c505b96df01dace235563b12054298", "mimeType": "text/plain", "sizeBytes": 405, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.969+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "eae33476e33faf2cb3b1ddd100ed3da31d513d01abf548f16a41284f726ca037", "hash": "eae33476e33faf2cb3b1ddd100ed3da31d513d01abf548f16a41284f726ca037", "size": 321, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.972+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "eae33476e33faf2cb3b1ddd100ed3da31d513d01abf548f16a41284f726ca037", "mimeType": "text/plain", "sizeBytes": 321, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.980+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "8c4259ad3b8da91b4d9466ae8284a74104123111862432bf6fb7b6b418f373cd", "hash": "8c4259ad3b8da91b4d9466ae8284a74104123111862432bf6fb7b6b418f373cd", "size": 327, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.982+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "8c4259ad3b8da91b4d9466ae8284a74104123111862432bf6fb7b6b418f373cd", "mimeType": "text/plain", "sizeBytes": 327, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.991+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "3e2a5f18b7d5121c476877dfb141ffb4bef47f86f7e6b6fe9bf8680e9216e0c7", "hash": "3e2a5f18b7d5121c476877dfb141ffb4bef47f86f7e6b6fe9bf8680e9216e0c7", "size": 321, "tier": "pg"}
+{"ts": "2026-11-06T20:08:57.992+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "3e2a5f18b7d5121c476877dfb141ffb4bef47f86f7e6b6fe9bf8680e9216e0c7", "mimeType": "text/plain", "sizeBytes": 321, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:57.997+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:57.999+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.000+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.354, "embed": 0.286, "upsert": 2.312, "checkpoint": 1.605, "total": 7.96}}
+{"ts": "2026-11-06T20:08:58.005+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "23d62966160adcc6b93bbf8e38ed01ba1acebbb11d5562cc6aa4889c8d6b4b33", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.006+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "23d62966160adcc6b93bbf8e38ed01ba1acebbb11d5562cc6aa4889c8d6b4b33", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.008+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "23d62966160adcc6b93bbf8e38ed01ba1acebbb11d5562cc6aa4889c8d6b4b33", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.516, "embed": 0.209, "upsert": 2.484, "checkpoint": 1.657, "total": 7.213}}
+{"ts": "2026-11-06T20:08:58.011+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "9002006427f37823f90531092e7c1095cfb9268b88c483d0b68ec7b776712225", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.013+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "9002006427f37823f90531092e7c1095cfb9268b88c483d0b68ec7b776712225", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.014+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "9002006427f37823f90531092e7c1095cfb9268b88c483d0b68ec7b776712225", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.495, "embed": 0.213, "upsert": 2.001, "checkpoint": 1.586, "total": 6.671}}
+{"ts": "2026-11-06T20:08:58.018+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "57753b6d76302d4fc06f14966039670d07b13c49e07280ca494d32aea691f14f", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.020+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "57753b6d76302d4fc06f14966039670d07b13c49e07280ca494d32aea691f14f", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.021+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "57753b6d76302d4fc06f14966039670d07b13c49e07280ca494d32aea691f14f", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.488, "embed": 0.167, "upsert": 2.043, "checkpoint": 1.504, "total": 6.576}}
+{"ts": "2026-11-06T20:08:58.025+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "0f094f433dec58cc2426a0e22eb6ac1b85c505b96df01dace235563b12054298", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.026+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "0f094f433dec58cc2426a0e22eb6ac1b85c505b96df01dace235563b12054298", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.028+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "0f094f433dec58cc2426a0e22eb6ac1b85c505b96df01dace235563b12054298", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.482, "embed": 0.225, "upsert": 2.131, "checkpoint": 1.471, "total": 6.605}}
+{"ts": "2026-11-06T20:08:58.032+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "eae33476e33faf2cb3b1ddd100ed3da31d513d01abf548f16a41284f726ca037", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.034+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "eae33476e33faf2cb3b1ddd100ed3da31d513d01abf548f16a41284f726ca037", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.035+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "eae33476e33faf2cb3b1ddd100ed3da31d513d01abf548f16a41284f726ca037", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.757, "embed": 0.172, "upsert": 2.114, "checkpoint": 1.713, "total": 7.075}}
+{"ts": "2026-11-06T20:08:58.039+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "8c4259ad3b8da91b4d9466ae8284a74104123111862432bf6fb7b6b418f373cd", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.040+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "8c4259ad3b8da91b4d9466ae8284a74104123111862432bf6fb7b6b418f373cd", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.041+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "8c4259ad3b8da91b4d9466ae8284a74104123111862432bf6fb7b6b418f373cd", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.441, "embed": 0.173, "upsert": 2.116, "checkpoint": 1.43, "total": 6.357}}
+{"ts": "2026-11-06T20:08:58.045+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "3e2a5f18b7d5121c476877dfb141ffb4bef47f86f7e6b6fe9bf8680e9216e0c7", "model": "fake-hash-1024", "count": 1}
+{"ts": "2026-11-06T20:08:58.046+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "3e2a5f18b7d5121c476877dfb141ffb4bef47f86f7e6b6fe9bf8680e9216e0c7", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:08:58.047+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "3e2a5f18b7d5121c476877dfb141ffb4bef47f86f7e6b6fe9bf8680e9216e0c7", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.401, "embed": 0.208, "upsert": 1.89, "checkpoint": 1.302, "total": 5.951}}
+{"ts": "2026-11-06T20:08:58.051+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 3, "degraded": false}
+{"ts": "2026-11-06T20:08:58.055+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 3, "degraded": false}
+{"ts": "2026-11-06T20:08:58.058+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 3, "degraded": false}
+{"ts": "2026-11-06T20:08:58.061+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 3, "degraded": false}
+{"ts": "2026-11-06T20:08:58.062+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "lexical", "routes": ["lexical"], "hits": 1, "degraded": false}
+{"ts": "2026-11-06T20:08:58.064+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "vector", "routes": ["vector"], "hits": 5, "degraded": false}
+{"ts": "2026-11-06T20:08:58.068+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 0, "model": "fake-hash-1024", "dimensions": 1024, "batchSize": 50, "batches": 0, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.343, "embed": 0.0, "upsert": 0.0, "checkpoint": 0.0, "total": 2.353}}
+{"ts": "2026-11-06T20:08:58.114+00:00", "level": "warning", "logger": "platform_core.search", "msg": "embed batch failed after retries", "event": "embed_batch_failed", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "code": "E_EMBED_UNAVAILABLE", "from": 0, "to": 0}
+{"ts": "2026-11-06T20:08:58.118+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9", "chunks": 1, "lexical": 1, "embedded": 0, "embeddedThisRun": 0, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 1, "checkpoint": {"model": "fake-hash-1024", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": true, "failureCode": "E_EMBED_UNAVAILABLE", "reasons": ["E_EMBED_UNAVAILABLE"], "timingMs": {"prep": 2.408, "embed": 0.0, "upsert": 0.0, "checkpoint": 0.0, "total": 12.426}}
+{"ts": "2026-11-06T20:08:58.119+00:00", "level": "warning", "logger": "platform_core.search", "msg": "search degraded: vector route unavailable", "event": "search_degraded", "code": "E_EMBED_UNAVAILABLE"}
+{"ts": "2026-11-06T20:08:58.122+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["lexical"], "hits": 1, "degraded": true}
+[PASS] corpus.ingest: documents=8 all_chunks>0=True
+[PASS] index.embedded: chunks=quantum:1/1,budget:1/1,reimbursement:1/1,attendance:1/1,ml:1/1,contract:1/1,food:1/1,city:1/1
+[PASS] search.hybrid.target: stable=True top1=14c7b3c4 quantum=14c7b3c4
+[PASS] search.hybrid.finance: stable=True top2=['90020064', '23d62966']
+[PASS] search.lexical: hits=1 routes=['lexical'] degraded=False
+[PASS] search.vector: hits=5 scores=[0.016393, 0.016129, 0.015873]
+[PASS] vectors.dim_guard: InvalidArgument/E_EMBED_DIM_MISMATCH rows=8->8
+[PASS] index.idempotent: embedded=1 rows=8->8
+[PASS] embedding.unavailable.index: embedded=0 reasons=['E_EMBED_UNAVAILABLE']
+[PASS] embedding.unavailable.search: hits=1 routes=['lexical'] reasons=['E_EMBED_UNAVAILABLE', 'lexicalOnly']
+[PASS] embedding.unavailable.strict: Unavailable/E_EMBED_UNAVAILABLE
+[PASS] config.failfast: E_CONFIG_SEARCH_RANGE exit=78
+[PASS] search.empty_query: InvalidArgument/E_SEARCH_QUERY_EMPTY
+[PASS] http.search: http=200 hits=5 degraded=False routes=['vector', 'lexical']
+[PASS] http.index: http=200 embedded=1 degraded=False
+[PASS] http.search_bad_mode: http=400 code=E_SEARCH_MODE
+[PASS] http.status: http=200 slice=S13
+[PASS] results.reference: checked=3
+S3 SMOKE 18/18
+[PASS] platform smoke-s3 exit=0 passed=18/18
+== smoke S4 ==
+{"ts": "2026-11-06T20:08:59.241+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:08:59.247+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:08:59.258+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "hash": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "size": 119, "tier": "pg"}
+{"ts": "2026-11-06T20:08:59.260+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "mimeType": "text/plain", "sizeBytes": 119, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:08:59.270+00:00", "level": "info", "logger": "platform_core.extraction", "msg": "extraction finished", "event": "extract", "documentId": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "mode": "rules", "chunks": 1, "rulesMatched": 5, "inserted": 5, "skipped": 0, "degraded": false, "reasons": [], "llm": null}
+{"ts": "2026-11-06T20:08:59.273+00:00", "level": "info", "logger": "platform_core.extraction", "msg": "extraction finished", "event": "extract", "documentId": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "mode": "rules", "chunks": 1, "rulesMatched": 5, "inserted": 0, "skipped": 0, "degraded": false, "reasons": [], "llm": null}
+{"ts": "2026-11-06T20:08:59.344+00:00", "level": "warning", "logger": "platform_core.extraction", "msg": "extraction degraded: llm unavailable", "event": "extract_degraded", "code": "E_LLM_UNAVAILABLE"}
+{"ts": "2026-11-06T20:08:59.348+00:00", "level": "info", "logger": "platform_core.extraction", "msg": "extraction finished", "event": "extract", "documentId": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "mode": "auto", "chunks": 1, "rulesMatched": 5, "inserted": 0, "skipped": 0, "degraded": true, "reasons": ["E_LLM_UNAVAILABLE"], "llm": null}
+{"ts": "2026-11-06T20:08:59.360+00:00", "level": "info", "logger": "platform_core.extraction", "msg": "candidate approved", "event": "candidate_approved", "candidateId": "cand-31f9b203c2b2445eb9c73c40a810c40b"}
+{"ts": "2026-11-06T20:08:59.396+00:00", "level": "info", "logger": "platform_core.extraction", "msg": "extraction finished", "event": "extract", "documentId": "f6d9b10d7b8250225fdab231bec9c3c34a5146b22c52251f70bdd0d9269e6d0f", "mode": "rules", "chunks": 1, "rulesMatched": 5, "inserted": 0, "skipped": 0, "degraded": false, "reasons": [], "llm": null}
+[PASS] corpus.ingest: document=f6d9b10d chunks=1 nonce=fcc28985
+[PASS] extract.rules: matched=5 inserted=5 skipped=0
+[PASS] extract.pending: pending=5
+[PASS] extract.idempotent: inserted=0 total=5->5
+[PASS] extract.llm_unconfigured: Unsupported/E_LLM_NOT_CONFIGURED
+[PASS] extract.auto_degraded: degraded=True reasons=['E_LLM_UNAVAILABLE'] matched=5
+[PASS] extract.llm_unreachable: Unavailable/E_LLM_UNAVAILABLE
+[PASS] approve.graph_write: triples=0->1 graph=urn:platform:test:38917aaff1:s4
+[PASS] candidates.state_filter: pending=4 approved=1
+[PASS] approve.conflict: Conflict/E_CANDIDATE_NOT_PENDING
+[PASS] reject.no_graph_write: triples=1
+[PASS] approve.bad_iri: InvalidArgument/E_CANDIDATE_BAD_IRI state=pending
+[PASS] approve.graph_down: Unavailable/E_GRAPH_UNAVAILABLE state=pending
+[PASS] extract.extra: inserted=0
+[PASS] approve.not_found: NotFound/E_CANDIDATE_NOT_FOUND
+[PASS] extract.not_found: NotFound/E_DOC_NOT_FOUND
+[PASS] http.extract: http=200 inserted=0
+[PASS] http.candidates: http=200 count=3
+[PASS] http.approve: http=200 state=approved
+[PASS] http.bad_mode: http=400 code=E_EXTRACT_MODE
+[PASS] http.status: http=200 slice=S13 total=5
+[PASS] config.failfast: E_CONFIG_EXTRACTION_RULE exit=78
+S4 SMOKE 22/22
+[PASS] platform smoke-s4 exit=0 passed=22/22
+== smoke S5 ==
+{"ts": "2026-11-06T20:09:00.491+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:00.495+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:00.621+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/5f5e94dde9a961bce88553f4f98ef3112652598b8ca695061e6b188232f13c6e.ttl", "hash": "38838f5282b1a4c90f1b36a286acbe0e2d73d6b35a72c94e754d22542c875e6a", "size": 489, "tier": "pg"}
+{"ts": "2026-11-06T20:09:00.624+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-38bb4042aec9", "hash": "5f5e94dde9a961bce88553f4f98ef3112652598b8ca695061e6b188232f13c6e", "triples": 6}
+{"ts": "2026-11-06T20:09:00.764+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-38bb4042aec9", "namespace": null, "conforms": true, "violations": 0}
+E_TERM_GATE_BLOCKED provider=platform detail: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s5 exit=70
+== smoke S6 ==
+{"ts": "2026-11-06T20:09:02.750+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:02.755+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:02.766+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "bc2dc8d2384d8ee8302b53920fed316b923eab76ef25fbdce243deb06e177b69", "hash": "bc2dc8d2384d8ee8302b53920fed316b923eab76ef25fbdce243deb06e177b69", "size": 260, "tier": "pg"}
+{"ts": "2026-11-06T20:09:02.769+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "bc2dc8d2384d8ee8302b53920fed316b923eab76ef25fbdce243deb06e177b69", "mimeType": "text/plain", "sizeBytes": 260, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:03.777+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "bc2dc8d2384d8ee8302b53920fed316b923eab76ef25fbdce243deb06e177b69", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:03.780+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "bc2dc8d2384d8ee8302b53920fed316b923eab76ef25fbdce243deb06e177b69", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:03.782+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "bc2dc8d2384d8ee8302b53920fed316b923eab76ef25fbdce243deb06e177b69", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.323, "embed": 1000.363, "upsert": 4.914, "checkpoint": 2.811, "total": 1012.426}}
+{"ts": "2026-11-06T20:09:03.899+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/3877d47289cb8c19c105fc8389ac024cb013db53dd641c97b88ab38ac31d6fe9.ttl", "hash": "7eae9c49c7e1f1f0c763036ed7dd7acc7d048ed22c634bb7e7a92113663b2839", "size": 488, "tier": "pg"}
+{"ts": "2026-11-06T20:09:03.902+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-e1b554bca5dc", "hash": "3877d47289cb8c19c105fc8389ac024cb013db53dd641c97b88ab38ac31d6fe9", "triples": 6}
+{"ts": "2026-11-06T20:09:04.032+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-e1b554bca5dc", "namespace": null, "conforms": true, "violations": 0}
+E_TERM_GATE_BLOCKED provider=platform detail: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s6 exit=70
+== smoke S7 ==
+{"ts": "2026-11-06T20:09:06.021+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:06.032+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:06.255+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/b41b5b3a6e82c8bbd5a0a240268453b6747a8fa76ad2d510f89a9a030e5028bc.ttl", "hash": "2f39bfb8017263150d0e755fc39d196f44dc06a3f5b39beea25e08443984d0ce", "size": 672, "tier": "pg"}
+{"ts": "2026-11-06T20:09:06.258+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-a84cdddfb044", "hash": "b41b5b3a6e82c8bbd5a0a240268453b6747a8fa76ad2d510f89a9a030e5028bc", "triples": 12}
+{"ts": "2026-11-06T20:09:06.392+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-a84cdddfb044", "namespace": null, "conforms": true, "violations": 0}
+SMOKE-S7 8/9
+  [PASS] ui.page.overview status=200
+  [PASS] ui.page.ontology status=200
+  [PASS] ui.page.documents status=200
+  [PASS] ui.page.search status=200
+  [PASS] ui.page.approvals status=200
+  [PASS] ui.root status=307 location=/ui/
+  [PASS] ui.assets css=200 js=200
+  [PASS] ui.file_origin acao=null
+  [FAIL] runtime Conflict/E_TERM_GATE_BLOCKED: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s7 exit=1
+== smoke S8 ==
+{"ts": "2026-11-06T20:09:08.448+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:08.460+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:08.581+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/4845243b49b93eb250bd4cf6d9db6a7084740e3367e09345f2ca158ce2f06ef1.ttl", "hash": "40b10847fe09f486e0eb6d16e2947f2c1f0a41992c08d9e6e34c6e2dcf1248b4", "size": 672, "tier": "pg"}
+{"ts": "2026-11-06T20:09:08.584+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-8457485f5078", "hash": "4845243b49b93eb250bd4cf6d9db6a7084740e3367e09345f2ca158ce2f06ef1", "triples": 12}
+{"ts": "2026-11-06T20:09:08.717+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-8457485f5078", "namespace": null, "conforms": true, "violations": 0}
+SMOKE-S8 0/1
+  [FAIL] runtime Conflict/E_TERM_GATE_BLOCKED: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s8 exit=1
+== smoke S9 ==
+{"ts": "2026-11-06T20:09:10.741+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:10.752+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:10.865+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/6592307c7cf4e543c213dad6297d0702c6fd56734b8072d87b681ab3681cd619.ttl", "hash": "d388eb020357927d299dfb597e105331fcfd972fc1c4ed2417cc919c81df55d4", "size": 530, "tier": "pg"}
+{"ts": "2026-11-06T20:09:10.869+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-7eeb67ec99b0", "hash": "6592307c7cf4e543c213dad6297d0702c6fd56734b8072d87b681ab3681cd619", "triples": 8}
+{"ts": "2026-11-06T20:09:10.995+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-7eeb67ec99b0", "namespace": null, "conforms": true, "violations": 0}
+SMOKE-S9 0/1
+  [FAIL] runtime Conflict/E_TERM_GATE_BLOCKED: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s9 exit=1
+== smoke S10 ==
+{"ts": "2026-11-06T20:09:13.005+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:13.020+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:13.288+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.288+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-f5f808bbb175", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 2, "tokens": 990, "degraded": false, "ms": 161}
+{"ts": "2026-11-06T20:09:13.312+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.312+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-559f86f51869", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 1, "tokens": 962, "degraded": false, "ms": 10}
+{"ts": "2026-11-06T20:09:13.339+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.339+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-1d02ff0b1aa9", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 2, "tokens": 990, "degraded": false, "ms": 9}
+{"ts": "2026-11-06T20:09:13.348+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.348+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-9b4af881f1b3", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 2, "tokens": 990, "degraded": false, "ms": 9}
+{"ts": "2026-11-06T20:09:13.390+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.390+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-fd542b21f839", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 1, "tokens": 961, "degraded": false, "ms": 10}
+{"ts": "2026-11-06T20:09:13.408+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.409+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-dd5ae27fd65d", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 2, "tokens": 990, "degraded": false, "ms": 10}
+{"ts": "2026-11-06T20:09:13.418+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "hybrid", "routes": ["vector", "lexical"], "hits": 4, "degraded": false}
+{"ts": "2026-11-06T20:09:13.419+00:00", "level": "info", "logger": "platform_core.context", "msg": "context resolve", "event": "context.resolve", "packId": "pack-221fc5fc5c67", "version": "ont-dfb3559f4e0b", "chunks": 4, "facts": 2, "tokens": 990, "degraded": false, "ms": 9}
+{"ts": "2026-11-06T20:09:13.948+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22", "V23", "V24", "V25", "V26", "V27", "V28", "V29", "V30", "V31", "V32", "V33", "V34", "V37", "V38", "V39", "V40"]}
+SMOKE-S10 22/22
+  [PASS] setup.facts facts=12
+  [PASS] merge.pre pending=6
+  [PASS] merge.active new=fact-2459e0e07bbb
+  [PASS] unmerge.restore undoOf=merge
+  [PASS] unmerge.context values=['urn:platform:smoke:74b1b737:regionP', 'urn:platform:smoke:74b1b737:regionQ']
+  [PASS] unmerge.audit events=1
+  [PASS] keepboth.resolve accepted=[True, True]
+  [PASS] keepboth.undo undoOf=keep_both
+  [PASS] keep.active state=retracted
+  [PASS] keep.undo state=active values=['urn:platform:smoke:74b1b737:regionX', 'urn:platform:smoke:74b1b737:regionY']
+  [PASS] keep.undo.audit undoOf=keep
+  [PASS] audit.chain ok=True actions=['asserted', 'conflict_accepted', 'conflict_kept', 'merge_superseded', 'merged', 'purged_test_graph', 'resolution_undo', 'unmerged']
+  [PASS] undo.no_target status=409
+  [PASS] batch.dry_run matched=4 kept=3
+  [PASS] batch.execute kept=3 remaining=1
+  [PASS] batch.audit batch=resolve-c223ccaa75
+  [PASS] replay.dry_run matched=13 snapshot=13
+  [PASS] replay.empty_db db=platform_replay_b574b78d45 matched=13 extra=0
+  [PASS] replay.tamper error=audit chain verification failed; replay refused
+  [PASS] ui.undo_batch page=200 script=200
+  [PASS] http.status slice=S13
+  [PASS] cleanup.test_graph purged=13 leftover=0
+[PASS] platform smoke-s10 exit=0 passed=22/22
+== smoke S11 ==
+{"ts": "2026-11-06T20:09:15.204+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:15.212+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:15.334+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/4bae0ff3ab33b01f1f0cfb2c904f0740a94e17c4854ffac28a61a72f023c9e86.ttl", "hash": "9156d53f239e8c5b19e7bbfd94f351c1966e8b28ab8c84c4467d414f83083b29", "size": 324, "tier": "pg"}
+{"ts": "2026-11-06T20:09:15.337+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-b346feda7d7b", "hash": "4bae0ff3ab33b01f1f0cfb2c904f0740a94e17c4854ffac28a61a72f023c9e86", "triples": 5}
+{"ts": "2026-11-06T20:09:15.440+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/876d2f55ef63a1310bc52dfa0dc57eace8a0772d0fd034b93058fa8e71e12bc6.ttl", "hash": "800b1d322a339bd413252ff4ead88f56d2b7ef573121beae8aa6305cd601be6a", "size": 454, "tier": "pg"}
+{"ts": "2026-11-06T20:09:15.443+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-43b276d5ca40", "hash": "876d2f55ef63a1310bc52dfa0dc57eace8a0772d0fd034b93058fa8e71e12bc6", "triples": 10}
+{"ts": "2026-11-06T20:09:15.545+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/0e4764d960c338ae07e42f183cb61dcff082d9e4bb76618724e3ac9ea8bba4c0.ttl", "hash": "60380b6049ea8e1cba23ffb85695ffe20682f987a3c557c67adef447220a738d", "size": 347, "tier": "pg"}
+{"ts": "2026-11-06T20:09:15.548+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-db0c852314ca", "hash": "0e4764d960c338ae07e42f183cb61dcff082d9e4bb76618724e3ac9ea8bba4c0", "triples": 6}
+{"ts": "2026-11-06T20:09:15.674+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/54c558c624b19d731250c451278ec3a7ad8b57656d4c23fd54bef38968f3d322.ttl", "hash": "163200372503c0631c3f9dc7646ff778618250e2b556bf1646063f5057334c21", "size": 281, "tier": "pg"}
+{"ts": "2026-11-06T20:09:15.677+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-a9b7481d0bc0", "hash": "54c558c624b19d731250c451278ec3a7ad8b57656d4c23fd54bef38968f3d322", "triples": 3}
+{"ts": "2026-11-06T20:09:15.777+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/7374afcd261661a46d2e2cb77c9eff7f6500ae82200d0ae5d51ec73af65e60c5.ttl", "hash": "b21281b9b8f8e45289b0c742e3b024b87a31c5e129814520196d4ac2ae93a75e", "size": 389, "tier": "pg"}
+{"ts": "2026-11-06T20:09:15.779+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-73ef2eef7208", "hash": "7374afcd261661a46d2e2cb77c9eff7f6500ae82200d0ae5d51ec73af65e60c5", "triples": 9}
+{"ts": "2026-11-06T20:09:15.943+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-b346feda7d7b", "namespace": null, "conforms": true, "violations": 0}
+SMOKE-S11 3/4
+  [PASS] setup.import versions=5
+  [PASS] lifecycle.propose proposal=prop-bd8a01da49d0
+  [PASS] publish.unapproved code=E_ONTOLOGY_NOT_APPROVED
+  [FAIL] runtime Conflict/E_TERM_GATE_BLOCKED: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s11 exit=1
+== smoke S12 ==
+{"ts": "2026-11-06T20:09:17.985+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:17.996+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:18.116+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "ontology", "key": "sources/5559d3bcd144030e9aed02b4fbf1f3490d1ad261f1ab9525ee7d47b9b0a2b18e.ttl", "hash": "f8b2b1f6403ca8c40cbe7d794e11f72b8a5a00636bcc7b91c2ee3c7cbcc3514e", "size": 273, "tier": "pg"}
+{"ts": "2026-11-06T20:09:18.119+00:00", "level": "info", "logger": "platform_core.adapters.ontology_pg", "msg": "ontology imported", "event": "ontology_import", "result": "created", "version_id": "ont-0d2d3ec8b7e0", "hash": "5559d3bcd144030e9aed02b4fbf1f3490d1ad261f1ab9525ee7d47b9b0a2b18e", "triples": 5}
+{"ts": "2026-11-06T20:09:18.255+00:00", "level": "info", "logger": "platform_core.validation", "msg": "shacl validated", "event": "shacl.validate", "graph": "urn:platform:graph:tbox:ont-0d2d3ec8b7e0", "namespace": null, "conforms": true, "violations": 0}
+SMOKE-S12 0/1
+[FAIL] runtime: Conflict/E_TERM_GATE_BLOCKED: term vocab guard blocked publish: the effective term set dropped to zero while the high-water mark is non-zero
+[FAIL] platform smoke-s12 exit=1
+== smoke S13 ==
+{"ts": "2026-11-06T20:09:20.377+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:20.392+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:20.561+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6", "hash": "111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6", "size": 600, "tier": "pg"}
+{"ts": "2026-11-06T20:09:20.561+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "3e73dd72a1f6401a4f735b6d56ff754de538937aa0faaa9e3fb9e1222bad6358", "hash": "3e73dd72a1f6401a4f735b6d56ff754de538937aa0faaa9e3fb9e1222bad6358", "size": 416, "tier": "pg"}
+{"ts": "2026-11-06T20:09:20.565+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "3e73dd72a1f6401a4f735b6d56ff754de538937aa0faaa9e3fb9e1222bad6358", "mimeType": "text/markdown", "sizeBytes": 416, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:20.565+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6", "mimeType": "text/plain", "sizeBytes": 600, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:20.583+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "1736b3bf5735e03fd34507ec84b5b1efec64d7ddf08339814400bbf5da686e07", "hash": "1736b3bf5735e03fd34507ec84b5b1efec64d7ddf08339814400bbf5da686e07", "size": 600, "tier": "pg"}
+{"ts": "2026-11-06T20:09:20.588+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "1736b3bf5735e03fd34507ec84b5b1efec64d7ddf08339814400bbf5da686e07", "mimeType": "text/plain", "sizeBytes": 600, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:21.579+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "3e73dd72a1f6401a4f735b6d56ff754de538937aa0faaa9e3fb9e1222bad6358", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:21.582+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "3e73dd72a1f6401a4f735b6d56ff754de538937aa0faaa9e3fb9e1222bad6358", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:21.585+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "3e73dd72a1f6401a4f735b6d56ff754de538937aa0faaa9e3fb9e1222bad6358", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 4.523, "embed": 1000.463, "upsert": 6.709, "checkpoint": 3.284, "total": 1017.909}}
+{"ts": "2026-11-06T20:09:22.592+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:22.594+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:22.596+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.966, "embed": 1000.14, "upsert": 3.95, "checkpoint": 2.01, "total": 1010.833}}
+{"ts": "2026-11-06T20:09:23.603+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "1736b3bf5735e03fd34507ec84b5b1efec64d7ddf08339814400bbf5da686e07", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:23.606+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "1736b3bf5735e03fd34507ec84b5b1efec64d7ddf08339814400bbf5da686e07", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:23.608+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "1736b3bf5735e03fd34507ec84b5b1efec64d7ddf08339814400bbf5da686e07", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.94, "embed": 1000.148, "upsert": 4.606, "checkpoint": 2.754, "total": 1011.913}}
+[import] 5/5 done processed=4 indexed=4 failed=1 embedded=3 chunk_s=0.95 queue=0/512 rate=1.27 files/s 0.00 MB/s elapsed=3s
+[import] 5/5 done processed=0 indexed=0 failed=1 embedded=0 chunk_s=0.00 queue=0/512 rate=0.00 files/s 0.00 MB/s elapsed=0s
+{"ts": "2026-11-06T20:09:26.946+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "c6cc64f24aa8733c44f0c498c9cbf943215e2b3f97d763469ff02bc79ee61e17", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:26.950+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "c6cc64f24aa8733c44f0c498c9cbf943215e2b3f97d763469ff02bc79ee61e17", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:26.953+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "c6cc64f24aa8733c44f0c498c9cbf943215e2b3f97d763469ff02bc79ee61e17", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.92, "embed": 1000.227, "upsert": 5.219, "checkpoint": 4.052, "total": 1015.031}}
+{"ts": "2026-11-06T20:09:27.960+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "459fded6c6ee41190a3b49cbdf8e1eec74c79c7dec645fc1597ffa2bbab9bf1b", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:27.964+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "459fded6c6ee41190a3b49cbdf8e1eec74c79c7dec645fc1597ffa2bbab9bf1b", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:27.966+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "459fded6c6ee41190a3b49cbdf8e1eec74c79c7dec645fc1597ffa2bbab9bf1b", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.294, "embed": 1000.619, "upsert": 4.419, "checkpoint": 3.044, "total": 1012.897}}
+{"ts": "2026-11-06T20:09:28.974+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "ee4c19e13a3e742a9ab9cf5bd709c72d50806bc418990042953302f7c1b998e9", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:28.977+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "ee4c19e13a3e742a9ab9cf5bd709c72d50806bc418990042953302f7c1b998e9", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:28.978+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "ee4c19e13a3e742a9ab9cf5bd709c72d50806bc418990042953302f7c1b998e9", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.472, "embed": 1000.354, "upsert": 4.716, "checkpoint": 2.946, "total": 1011.999}}
+{"ts": "2026-11-06T20:09:29.985+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "318acf5209b9a54df28aeafd7b89a34d8017d5b2e69f9b15ade21174598bde35", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:29.987+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "318acf5209b9a54df28aeafd7b89a34d8017d5b2e69f9b15ade21174598bde35", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:29.989+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "318acf5209b9a54df28aeafd7b89a34d8017d5b2e69f9b15ade21174598bde35", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.079, "embed": 1000.157, "upsert": 4.469, "checkpoint": 1.896, "total": 1010.473}}
+{"ts": "2026-11-06T20:09:30.996+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "23a3078dab88e91327f7dcf693b80c024541b3c2f8acd5a702ba985e4a225f68", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:30.999+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "23a3078dab88e91327f7dcf693b80c024541b3c2f8acd5a702ba985e4a225f68", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:31.002+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "23a3078dab88e91327f7dcf693b80c024541b3c2f8acd5a702ba985e4a225f68", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.804, "embed": 1000.172, "upsert": 5.667, "checkpoint": 2.628, "total": 1012.55}}
+{"ts": "2026-11-06T20:09:32.009+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "d3af4ef26efd690a263ccf5396627f6ddd893676d028b09c6b50c39f9aa4665e", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:32.011+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "d3af4ef26efd690a263ccf5396627f6ddd893676d028b09c6b50c39f9aa4665e", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:32.014+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "d3af4ef26efd690a263ccf5396627f6ddd893676d028b09c6b50c39f9aa4665e", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.229, "embed": 1000.336, "upsert": 4.453, "checkpoint": 2.61, "total": 1011.894}}
+{"ts": "2026-11-06T20:09:33.021+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "c19bbf8cf97605d1cc799dd96c814eda255aea95021aa5642e45676cba342084", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:33.024+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "c19bbf8cf97605d1cc799dd96c814eda255aea95021aa5642e45676cba342084", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:33.026+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "c19bbf8cf97605d1cc799dd96c814eda255aea95021aa5642e45676cba342084", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.857, "embed": 1000.636, "upsert": 4.865, "checkpoint": 3.15, "total": 1012.587}}
+{"ts": "2026-11-06T20:09:34.033+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "ab268e72963e10058278f482eaff2a2e93b0cebe3be7d5afb24b3935309b2cc6", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:34.036+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "ab268e72963e10058278f482eaff2a2e93b0cebe3be7d5afb24b3935309b2cc6", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:34.038+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "ab268e72963e10058278f482eaff2a2e93b0cebe3be7d5afb24b3935309b2cc6", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.901, "embed": 1000.208, "upsert": 4.752, "checkpoint": 2.492, "total": 1011.438}}
+{"ts": "2026-11-06T20:09:35.045+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "08de26e9d03f716bec2fa7fb1e079493b01fe9044a04555d12eedcfa7548e0b7", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:35.047+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "08de26e9d03f716bec2fa7fb1e079493b01fe9044a04555d12eedcfa7548e0b7", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:35.049+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "08de26e9d03f716bec2fa7fb1e079493b01fe9044a04555d12eedcfa7548e0b7", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.015, "embed": 1000.431, "upsert": 4.308, "checkpoint": 2.24, "total": 1011.22}}
+{"ts": "2026-11-06T20:09:36.055+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "814650f0794e00ff2f7f9fd87989b640b8d42146c3b492c3e51944d04ae59a5b", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:36.058+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "814650f0794e00ff2f7f9fd87989b640b8d42146c3b492c3e51944d04ae59a5b", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:36.060+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "814650f0794e00ff2f7f9fd87989b640b8d42146c3b492c3e51944d04ae59a5b", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.833, "embed": 1000.183, "upsert": 4.027, "checkpoint": 2.294, "total": 1010.265}}
+{"ts": "2026-11-06T20:09:37.067+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "1bf7de554ce10833b497db4e487c6f6f1f50ff8c94c00046b452eff51e610b30", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:37.070+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "1bf7de554ce10833b497db4e487c6f6f1f50ff8c94c00046b452eff51e610b30", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:37.071+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "1bf7de554ce10833b497db4e487c6f6f1f50ff8c94c00046b452eff51e610b30", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.834, "embed": 1001.142, "upsert": 4.258, "checkpoint": 2.339, "total": 1011.25}}
+{"ts": "2026-11-06T20:09:38.077+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "9b7b831c05fd48830bfc1f5b484680e3d6c7c89e5160797bf3faa9e2c7a8c566", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:38.080+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "9b7b831c05fd48830bfc1f5b484680e3d6c7c89e5160797bf3faa9e2c7a8c566", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:38.081+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "9b7b831c05fd48830bfc1f5b484680e3d6c7c89e5160797bf3faa9e2c7a8c566", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.006, "embed": 1000.188, "upsert": 4.782, "checkpoint": 2.546, "total": 1011.093}}
+{"ts": "2026-11-06T20:09:39.088+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "fda248a3e8334c64001c54023ecefbbcc72c78cbb508d777a4e55d5a6be43e8e", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:39.091+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "fda248a3e8334c64001c54023ecefbbcc72c78cbb508d777a4e55d5a6be43e8e", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:39.093+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "fda248a3e8334c64001c54023ecefbbcc72c78cbb508d777a4e55d5a6be43e8e", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.775, "embed": 1000.48, "upsert": 4.561, "checkpoint": 2.719, "total": 1011.371}}
+{"ts": "2026-11-06T20:09:40.100+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "c89c82eef3bc5bc8cdb68545cf63a5d4362216e38cea9ef648626ae3204daee7", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:40.102+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "c89c82eef3bc5bc8cdb68545cf63a5d4362216e38cea9ef648626ae3204daee7", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:40.104+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "c89c82eef3bc5bc8cdb68545cf63a5d4362216e38cea9ef648626ae3204daee7", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.982, "embed": 1000.176, "upsert": 4.77, "checkpoint": 2.174, "total": 1011.164}}
+{"ts": "2026-11-06T20:09:41.111+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "38a977866b54bcca82753c37be519c2636772f7db49461f4863f59d9cd9caedb", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:41.114+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "38a977866b54bcca82753c37be519c2636772f7db49461f4863f59d9cd9caedb", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:41.116+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "38a977866b54bcca82753c37be519c2636772f7db49461f4863f59d9cd9caedb", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.99, "embed": 1000.649, "upsert": 4.494, "checkpoint": 2.442, "total": 1011.414}}
+{"ts": "2026-11-06T20:09:42.123+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "4140dc7f10ae1b4a9954de46d0ddead0eb92b7ff9e4ffbd320787c41fc685b11", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:42.126+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "4140dc7f10ae1b4a9954de46d0ddead0eb92b7ff9e4ffbd320787c41fc685b11", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:42.128+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "4140dc7f10ae1b4a9954de46d0ddead0eb92b7ff9e4ffbd320787c41fc685b11", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.989, "embed": 1001.028, "upsert": 3.84, "checkpoint": 2.781, "total": 1012.143}}
+{"ts": "2026-11-06T20:09:43.136+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "a4ef4e617c8ba0ff3a50e54013302ffa448381e7e6048d75e7fbe2556a5efb9c", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:43.139+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "a4ef4e617c8ba0ff3a50e54013302ffa448381e7e6048d75e7fbe2556a5efb9c", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:43.141+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "a4ef4e617c8ba0ff3a50e54013302ffa448381e7e6048d75e7fbe2556a5efb9c", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.927, "embed": 1000.235, "upsert": 5.27, "checkpoint": 3.03, "total": 1012.719}}
+{"ts": "2026-11-06T20:09:44.148+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "70cdbf9471362175efdfeb29c1909669d431cafb10585bc727f3fa989b4ce267", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:44.150+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "70cdbf9471362175efdfeb29c1909669d431cafb10585bc727f3fa989b4ce267", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:44.152+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "70cdbf9471362175efdfeb29c1909669d431cafb10585bc727f3fa989b4ce267", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.929, "embed": 1000.167, "upsert": 4.905, "checkpoint": 2.316, "total": 1010.915}}
+{"ts": "2026-11-06T20:09:45.160+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "e0ca0fb00f29b057d409a48209f4aa777e1673699bbc5598988be7adb3540922", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:45.163+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "e0ca0fb00f29b057d409a48209f4aa777e1673699bbc5598988be7adb3540922", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:45.164+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "e0ca0fb00f29b057d409a48209f4aa777e1673699bbc5598988be7adb3540922", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.906, "embed": 1000.75, "upsert": 5.718, "checkpoint": 2.431, "total": 1012.315}}
+[import] 20/20 done processed=19 indexed=19 failed=0 embedded=19 chunk_s=0.98 queue=0/512 rate=0.98 files/s 0.00 MB/s elapsed=19s
+{"ts": "2026-11-06T20:09:45.232+00:00", "level": "warning", "logger": "platform_core.importer", "msg": "import item failed", "event": "import_item_failed", "sha256": "25d0c28be60b38b06f2fe9903d31a6a03dc21097e5bd3a2e39b288961dcc7ef0", "code": "E_DOC_PDF_ENCRYPTED"}
+{"ts": "2026-11-06T20:09:45.241+00:00", "level": "warning", "logger": "platform_core.importer", "msg": "import item failed", "event": "import_item_failed", "sha256": "8cbb6cfd83ef30392d1a75c16a689bc5a2cd6596701da5df638806ef02b5964a", "code": "E_DOC_PARSE_FAILED"}
+{"ts": "2026-11-06T20:09:45.246+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "8c57c60e95ea51f1fb5395244c5fe40e2e006e21e26a63b207a56cd14156c3cb", "hash": "8c57c60e95ea51f1fb5395244c5fe40e2e006e21e26a63b207a56cd14156c3cb", "size": 420, "tier": "pg"}
+{"ts": "2026-11-06T20:09:45.248+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "8c57c60e95ea51f1fb5395244c5fe40e2e006e21e26a63b207a56cd14156c3cb", "mimeType": "text/plain", "sizeBytes": 420, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:46.256+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "8c57c60e95ea51f1fb5395244c5fe40e2e006e21e26a63b207a56cd14156c3cb", "model": "BAAI/bge-m3", "count": 1}
+{"ts": "2026-11-06T20:09:46.259+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "8c57c60e95ea51f1fb5395244c5fe40e2e006e21e26a63b207a56cd14156c3cb", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:46.261+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "8c57c60e95ea51f1fb5395244c5fe40e2e006e21e26a63b207a56cd14156c3cb", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "BAAI/bge-m3", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "BAAI/bge-m3", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 1.712, "embed": 1000.286, "upsert": 4.143, "checkpoint": 2.562, "total": 1010.521}}
+[import] 4/4 done processed=3 indexed=1 failed=3 embedded=1 chunk_s=0.93 queue=0/512 rate=2.78 files/s 0.00 MB/s elapsed=1s
+{"ts": "2026-11-06T20:09:46.304+00:00", "level": "warning", "logger": "platform_core.importer", "msg": "import item failed", "event": "import_item_failed", "sha256": "25d0c28be60b38b06f2fe9903d31a6a03dc21097e5bd3a2e39b288961dcc7ef0", "code": "E_DOC_PDF_ENCRYPTED"}
+{"ts": "2026-11-06T20:09:46.310+00:00", "level": "warning", "logger": "platform_core.importer", "msg": "import item failed", "event": "import_item_failed", "sha256": "8cbb6cfd83ef30392d1a75c16a689bc5a2cd6596701da5df638806ef02b5964a", "code": "E_DOC_PARSE_FAILED"}
+[import] 4/4 done processed=2 indexed=0 failed=3 embedded=0 chunk_s=0.00 queue=0/512 rate=47.97 files/s 0.00 MB/s elapsed=0s
+SMOKE-S13 13/13
+[PASS] dryrun.counts: toImport=3 files=4 skipped=4 breakdown={'duplicate': 1, 'unsupported': 1, 'empty': 1, 'tooLarge': 0, 'unreadable': 0, 'hidden': 1}
+[PASS] import.dryrun_matches: added=3 indexed=4 failed=1
+[PASS] dedupe.rename_cas: copyDoc=111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6 aDoc=111da2ed5975d0c14269fcb505dd9945c6e6d67c22a507dc01595c29a2b833e6
+[PASS] state.empty_failed: states={'failed': 1, 'indexed': 4}
+[PASS] rerun.no_work: processed=0 parsed=0 added=0
+[PASS] rerun.no_duplicate_docs: uniqueDocs=3 rows=5
+[PASS] resume.only_remaining: indexed_before=1 remaining=19 processed=19 final={'indexed': 20}
+[PASS] failure.isolation: indexed=1 failures=['E_DOC_EMPTY', 'E_DOC_PARSE_FAILED', 'E_DOC_PDF_ENCRYPTED']
+[PASS] failure.retry_failed: processed=2 indexed=0 failures=['E_DOC_EMPTY', 'E_DOC_PARSE_FAILED', 'E_DOC_PDF_ENCRYPTED']
+[PASS] summary.metrics: throughput=0.0MB/s rss=80.0MB elapsed=1.08s
+[PASS] http.status: slice=S13
+[PASS] http.import_progress: batch={'batchId': '3aad5095-e744-488f-9cb3-4b01b59d1830', 'root': '/data/tmp/s13-bf229771/bad', 'status': 'completed', 'stale': False, 'staleReason': None, 'total': 4, 'completed': 4, 'indexed': 1, 'failed': 3, 'degraded': 0, 'createdAt': '2026-11-07T04:09:45.185738+08:00', 'updatedAt': '2026-11-07T04:09:46.310802+08:00', 'finishedAt': '2026-11-07T04:09:46.310802+08:00'}
+[PASS] http.failure_reasons: failed_items=3
+[PASS] platform smoke-s13 exit=0 passed=13/13
+== smoke S13b embedding partitions ==
+{"ts": "2026-11-06T20:09:47.461+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:47.494+00:00", "level": "info", "logger": "platform_core.adapters.metadata_pg", "msg": "migration applied", "event": "migrate", "to": []}
+{"ts": "2026-11-06T20:09:47.509+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "a83abb38537ac471b842804e062ec84c94c2fd6d5d89871bfb1a998081ccad94", "hash": "a83abb38537ac471b842804e062ec84c94c2fd6d5d89871bfb1a998081ccad94", "size": 84, "tier": "pg"}
+{"ts": "2026-11-06T20:09:47.512+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "a83abb38537ac471b842804e062ec84c94c2fd6d5d89871bfb1a998081ccad94", "mimeType": "text/plain", "sizeBytes": 84, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:47.521+00:00", "level": "info", "logger": "platform_core.adapters.object_layered", "msg": "object put", "event": "object_put", "bucket": "documents", "key": "394867369cea90b039f5f12ab95061f3ee38c557bd1d61f311d8187fec476c63", "hash": "394867369cea90b039f5f12ab95061f3ee38c557bd1d61f311d8187fec476c63", "size": 66, "tier": "pg"}
+{"ts": "2026-11-06T20:09:47.523+00:00", "level": "info", "logger": "platform_core.documents", "msg": "document ingested", "event": "document_ingest", "documentId": "394867369cea90b039f5f12ab95061f3ee38c557bd1d61f311d8187fec476c63", "mimeType": "text/plain", "sizeBytes": 66, "pages": 1, "chunks": 1, "degraded": false, "deduplicated": false}
+{"ts": "2026-11-06T20:09:47.529+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "a83abb38537ac471b842804e062ec84c94c2fd6d5d89871bfb1a998081ccad94", "model": "fake-hash-1024-smoke-cd053410", "count": 1}
+{"ts": "2026-11-06T20:09:47.531+00:00", "level": "info", "logger": "platform_core.search", "msg": "embed checkpoint", "event": "embed_checkpoint", "documentId": "a83abb38537ac471b842804e062ec84c94c2fd6d5d89871bfb1a998081ccad94", "lastOrdinal": 0, "embedded": 1, "batches": 1}
+{"ts": "2026-11-06T20:09:47.532+00:00", "level": "info", "logger": "platform_core.search", "msg": "document indexed", "event": "index_document", "documentId": "a83abb38537ac471b842804e062ec84c94c2fd6d5d89871bfb1a998081ccad94", "chunks": 1, "lexical": 1, "embedded": 1, "embeddedThisRun": 1, "model": "fake-hash-1024-smoke-cd053410", "dimensions": 1024, "batchSize": 50, "batches": 1, "paused": false, "remaining": 0, "checkpoint": {"model": "fake-hash-1024-smoke-cd053410", "embedded": 1, "lastOrdinal": 0}, "contentHashDuplicates": 0, "degraded": false, "failureCode": null, "reasons": [], "timingMs": {"prep": 2.31, "embed": 0.135, "upsert": 3.664, "checkpoint": 1.745, "total": 9.328}}
+{"ts": "2026-11-06T20:09:47.535+00:00", "level": "info", "logger": "platform_core.adapters.vector_pg", "msg": "vectors upserted", "event": "vector_upsert", "documentId": "394867369cea90b039f5f12ab95061f3ee38c557bd1d61f311d8187fec476c63", "model": "fake-hash-2048-smoke-cd053410", "count": 1}
+{"ts": "2026-11-06T20:09:47.541+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "vector", "routes": ["vector"], "hits": 1, "degraded": false}
+{"ts": "2026-11-06T20:09:47.546+00:00", "level": "info", "logger": "platform_core.search", "msg": "search", "event": "search", "mode": "vector", "routes": ["vector"], "hits": 1, "degraded": false}
+restore embedding pointer: before=fake:fake-hash-1024-smoke-cd053410@1024 after=local-bge:BAAI/bge-m3@1024
+restore embedding pointer: before=local-bge:BAAI/bge-m3@1024 after=local-bge:BAAI/bge-m3@1024
+[PASS] index.active_partition: embedded=1 model=fake-hash-1024-smoke-cd053410 dims=1024
+[PASS] partition.b.write: chunks=1
+[PASS] contract.1.partition_invisible: hits=1 models=['fake-hash-1024-smoke-cd053410'] docB=0
+[PASS] contract.2.switched_nonempty: hits=1 degraded=False reasons=[]
+[PASS] contract.3.switch_back: hits=1 degraded=False
+[PASS] restore.before_guards: restored={'provider': 'local-bge', 'model': 'BAAI/bge-m3', 'dimensions': 1024} expected={'provider': 'local-bge', 'model': 'BAAI/bge-m3', 'dimensions': 1024}
+[PASS] guard.model_mismatch: InvalidArgument/E_EMBED_MODEL_MISMATCH
+[PASS] guard.dim_mismatch: InvalidArgument/E_EMBED_DIM_MISMATCH
+[PASS] partition.listed: partitions={'fake-hash-1024-smoke-cd053410': 1024, 'fake-hash-2048-smoke-cd053410': 2048}
+[PASS] post.active_partition: active=local-bge:BAAI/bge-m3@1024 expected=local-bge:BAAI/bge-m3@1024
+[PASS] post.tbox_pointer: tbox=ont-dfb3559f4e0b snapshot=ont-dfb3559f4e0b smoke_versions=[]
+[PASS] post.inferred_pointer: inferred=ont-dfb3559f4e0b snapshot=ont-dfb3559f4e0b
+S13b SMOKE 12/12
+[PASS] platform smoke-embed exit=0 passed=12/12
+[PASS] pointer unchanged pointer=ont-dfb3559f4e0b
+== demo abox purity (OQ-31) ==
+[PASS] demo abox purity baseline=0 after=0 testGraphs=0 smokeSubjects=0
+== audit export ==
+[PASS] facts-export count exit=0 count=49 lines=49
+
+[PASS] facts-verify ok exit=0
+
+[PASS] facts-replay dry-run exit=0
+
+[PASS] facts-verify rejects tampering exit=1 expected=non-zero (not 125/126/127)
+
+[PASS] facts-replay rejects tampering exit=1 expected=non-zero (not 125/126/127)
+== config good ==
+[PASS] check-config good exit=0
+== config bad (type error) ==
+docker : E_CONFIG_SCHEMA stage=config key=http.port
+At D:\agentABC\coa\platform\tests\acceptance.ps1:448 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_CONFIG_SCHEMA...g key=http.port:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: Input should be less than or equal to 65535 (got 99999)
+  hint: fix the value or remove the key; unknown keys are rejected
+  log_id: 0c578eb1-2774-4722-96f5-933d3a4419a3   exit: 78
+[PASS] check-config bad type exit=78 expected=78
+== config bad (invalid provider) ==
+docker : E_PROVIDER_INVALID stage=config key=graph.provider
+At D:\agentABC\coa\platform\tests\acceptance.ps1:452 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_PROVIDER_INVA...=graph.provider:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: graph.provider='not-a-provider' is not a known provider; known values: oxigraph-http, oxigraph, pyoxigraph, py
+oxigraph-memory, fuseki, age
+  hint: fix the name; unknown names are configuration errors, not missing adapters
+  log_id: 040b2f43-0d40-4e0c-910a-690c2150b626   exit: 78
+[PASS] check-config bad provider exit=78 expected=78
+== config bad (chunk overlap) ==
+docker : E_CONFIG_CHUNK_OVERLAP stage=config key=documents.chunk_overlap_chars
+At D:\agentABC\coa\platform\tests\acceptance.ps1:456 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_CONFIG_CHUNK_...k_overlap_chars:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: documents.chunk_overlap_chars=500 must be smaller than documents.chunk_max_chars=500
+  hint: lower chunk_overlap_chars or raise chunk_max_chars; the chunker must advance
+  log_id: c35704ad-c7e3-4c66-a3db-a0eddea6b9b7   exit: 78
+[PASS] check-config bad chunk overlap exit=78 expected=78
+== config bad (search range) ==
+docker : E_CONFIG_SEARCH_RANGE stage=config key=search.candidate_k
+At D:\agentABC\coa\platform\tests\acceptance.ps1:460 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_CONFIG_SEARCH...rch.candidate_k:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: search.candidate_k=10 must be >= search.top_k=20
+  hint: candidate_k is the per-route candidate pool; it cannot be smaller than top_k
+  log_id: 22bb505f-38df-4402-a9ef-ed5435606d52   exit: 78
+[PASS] check-config bad search range exit=78 expected=78
+== config bad (extraction rule) ==
+docker : E_CONFIG_EXTRACTION_RULE stage=config key=extraction.rules
+At D:\agentABC\coa\platform\tests\acceptance.ps1:464 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_CONFIG_EXTRAC...xtraction.rules:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: extraction rule 'broken' has an invalid regex: unterminated character set at position 12
+  hint: fix the pattern or remove the rule
+  log_id: 62860070-a858-492c-8733-8e8725fa5f9f   exit: 78
+[PASS] check-config bad extraction rule exit=78 expected=78
+== config bad (reasoning profile) ==
+docker : E_CONFIG_REASONING stage=config key=reasoning.profile
+At D:\agentABC\coa\platform\tests\acceptance.ps1:468 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_CONFIG_REASON...asoning.profile:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: reasoning.profile=OWL2DL requires reasoning.engine=hermit (ROBOT/HermiT)
+  hint: set reasoning.engine=hermit, or use profile=EL/OWL2EL for ELK
+  log_id: 53e86c35-69c1-461c-ba0c-949732169bc4   exit: 78
+[PASS] check-config bad reasoning profile exit=78 expected=78
+== config bad (context budget) ==
+docker : E_CONFIG_CONTEXT stage=config key=context.default_token_budget
+At D:\agentABC\coa\platform\tests\acceptance.ps1:472 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_CONFIG_CONTEX...lt_token_budget:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: context.default_token_budget=8192 must be <= context.max_token_budget=2048
+  hint: lower the default budget or raise max_token_budget
+  log_id: 2f160110-c60c-4dd2-8460-4a43b32afb2e   exit: 78
+[PASS] check-config bad context budget exit=78 expected=78
+== failure path: reasoner container stopped ==
+docker :  Container platform-acceptance-reasoner Stopping 
+At D:\agentABC\coa\platform\tests\acceptance.ps1:477 char:5
++     docker @composeArgs stop reasoner *> $null
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container plat...soner Stopping :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ Container platform-acceptance-reasoner Stopped
+[PASS] stop reasoner exit=0
+[PASS] healthz 200 with reasoner down status=200
+[PASS] materialize 503 E_REASONER_UNAVAILABLE status=503
+docker :  Container platform-acceptance-reasoner Starting 
+At D:\agentABC\coa\platform\tests\acceptance.ps1:494 char:5
++     docker @composeArgs start reasoner *> $null
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container plat...soner Starting :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ Container platform-acceptance-reasoner Started
+[PASS] start reasoner exit=0
+[PASS] reasoner recovers to 200
+== failure path: graph unavailable ==
+docker :  Container platform-acceptance-oxigraph Stopping 
+At D:\agentABC\coa\platform\tests\acceptance.ps1:508 char:1
++ docker @composeArgs stop oxigraph *> $null
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container plat...graph Stopping :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ Container platform-acceptance-oxigraph Stopped
+[PASS] stop oxigraph exit=0
+docker : E_DB_UNAVAILABLE stage=db key=database.url provider=postgres
+At D:\agentABC\coa\platform\tests\acceptance.ps1:511 char:1
++ docker @composeArgs exec -T platform platform probe --config /data/pl ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (E_DB_UNAVAILABL...ovider=postgres:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+  detail: cannot connect to PostgreSQL: pool initialization incomplete after 0.0 sec
+  hint: ensure the postgres container is healthy; check database.url
+  log_id: 78c6fb29-b248-43bb-8821-94a3643a3b22   exit: 69
+[PASS] probe fails fast (69) exit=69 expected=69
+[PASS] readyz 503 while graph down status=503
+docker :  Container platform-acceptance-oxigraph Starting 
+At D:\agentABC\coa\platform\tests\acceptance.ps1:517 char:1
++ docker @composeArgs start oxigraph *> $null
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container plat...graph Starting :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ Container platform-acceptance-oxigraph Started
+[PASS] start oxigraph exit=0
+[PASS] readyz recovers to 200
+
+ACCEPTANCE passed=36 failed=8 skipped=0 degraded=0 checks=44 evidence=D:\agentABC\coa\doc\evidence\acceptance-s0s13-platform-acceptance-20261107-040845-b53314a.log
+released owner=UVSFUJSA\cpslau#65508
+**********************
+Windows PowerShell transcript end
+End time: 20261107041031
+**********************

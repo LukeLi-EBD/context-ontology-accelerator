@@ -99,7 +99,9 @@ def run_smoke_s8(runtime: Runtime, base_url: str) -> int:
             version = runtime.ontology.import_source(
                 str(path), "1.0.0", on_conflict="new_version"
             )
-            runtime.ontology.publish(version["versionId"], acknowledge_breaking=True)
+            runtime.ontology.publish(
+                version["versionId"], acknowledge_breaking=True, purpose="smoke"
+            )
             inferred = f"urn:platform:inferred:{version['versionId']}"
 
             # 2. assert six A-Box facts from four different sources
