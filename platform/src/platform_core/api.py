@@ -3569,13 +3569,24 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # 不做手工维护；可算性直接采用库内 computability_tier，且“可算”不等于“已有观测值”。
 
     _G3_METRIC_SQL = """
-        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
-               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
-               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
-               min_window_days, observation_period, grain, granularity, unit, effective_date,
-               variant_of, output_mode, provenance_label, computability_tier
-          FROM platform.metric_definition
-         ORDER BY metric_id
+        SELECT m.metric_id, m.name_zh, m.display_name, m.domain, m.evidence_basis,
+               m.publishable, m.inference, m.formula_disabled, m.missing, m.evidence_status,
+               m.note, m.definition_version, m.metric_kind, m.formula_expr, m.formula_text,
+               m.numerator_agg, m.denominator_agg, m.window_kind, m.min_window_days,
+               m.observation_period, m.grain, m.granularity, m.unit, m.effective_date,
+               m.variant_of, m.output_mode, m.provenance_label, m.computability_tier,
+               (SELECT count(*) FROM platform.metric_field_binding b
+                 WHERE b.metric_id = m.metric_id AND b.role = 'numerator') AS numerator_bindings,
+               (SELECT count(*) FROM platform.metric_field_binding b
+                 WHERE b.metric_id = m.metric_id AND b.role = 'denominator') AS denominator_bindings,
+               (SELECT count(*) FROM platform.metric_observation o
+                 WHERE o.metric_id = m.metric_id) AS observation_count,
+               (SELECT min(o.window_start) FROM platform.metric_observation o
+                 WHERE o.metric_id = m.metric_id) AS observation_start,
+               (SELECT max(o.window_end) FROM platform.metric_observation o
+                 WHERE o.metric_id = m.metric_id) AS observation_end
+          FROM platform.metric_definition m
+         ORDER BY m.metric_id
     """
 
     _G3_TIER_LABELS = {
@@ -3659,6 +3670,147 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "hasRegulatoryText": False,
         }
 
+    # 与 MetricService.compute（metrics._AGGREGATES）保持一致：compiler 支持的
+    # count/count_distinct 不在 compute 的可执行集合里，预检不能放宽。
+    _G3_EXEC_AGGREGATES = {"sum", "max", "min", "avg"}
+
+    def _g3_execution(row: dict[str, Any]) -> dict[str, Any]:
+        """按库内实况判定可执行路径，不把“资格”当成“可算”。
+
+        顺序对齐 MetricService.compute / MetricCompiler 的前置条件：
+        rule_set -> 公式停用 -> kind -> 四元组 -> 聚合合法 -> binding -> 观测 -> 窗口。
+        """
+        mode = (row.get("output_mode") or "").strip()
+        kind = (row.get("metric_kind") or "").strip()
+        numerator_bindings = int(row.get("numerator_bindings") or 0)
+        denominator_bindings = int(row.get("denominator_bindings") or 0)
+        observation_count = int(row.get("observation_count") or 0)
+        window_kind = (row.get("window_kind") or "").strip()
+        min_window_days = int(row.get("min_window_days") or 0)
+        start = row.get("observation_start")
+        end = row.get("observation_end")
+        available_days = (end - start).days + 1 if (start is not None and end is not None) else 0
+        window_sufficient = (
+            observation_count > 0
+            if window_kind == "instant"
+            else available_days >= min_window_days
+        )
+        checks = {
+            "ruleSet": mode == "rule_set" or kind == "rule_set",
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "metricKind": kind in ("ratio", "duration", "sum"),
+            "quartet": bool(
+                row.get("formula_expr")
+                and window_kind
+                and row.get("numerator_agg")
+                and (kind != "ratio" or row.get("denominator_agg"))
+            ),
+            "aggregate": bool(
+                row.get("numerator_agg") in _G3_EXEC_AGGREGATES
+                and (
+                    kind != "ratio"
+                    or row.get("denominator_agg") in _G3_EXEC_AGGREGATES
+                )
+            ),
+            "windowKind": window_kind in ("instant", "period"),
+            "numeratorBinding": numerator_bindings > 0,
+            "denominatorBinding": kind != "ratio" or denominator_bindings > 0,
+            "observations": observation_count > 0,
+            "window": window_sufficient,
+        }
+
+        def result(path: str, executable: bool, code: str, reason: str, **extra: Any):
+            payload = {
+                "path": path,
+                "executable": executable,
+                "reasonCode": code,
+                "reason": reason,
+                "checks": checks,
+                "availableWindowDays": available_days,
+                "minWindowDays": min_window_days,
+                "windowSufficient": window_sufficient,
+                "observationCount": observation_count,
+            }
+            payload.update(extra)
+            return payload
+
+        if checks["ruleSet"]:
+            return result(
+                "rule_set", False, "rule_set_only",
+                "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+            )
+        if mode == "index":
+            return result(
+                "unavailable", False, "variant_required",
+                "族索引不直接出数：需先选择变体（E_METRIC_VARIANT_REQUIRED）",
+            )
+        if checks["formulaDisabled"]:
+            return result("unavailable", False, "formula_disabled", "口径公式已被治理停用")
+        if not checks["metricKind"]:
+            return result(
+                "unavailable", False, "metric_kind_not_drivable",
+                f"metric_kind={kind or '空'}，compute 不支持该类型",
+            )
+        if not checks["quartet"]:
+            missing = []
+            if not row.get("formula_expr"):
+                missing.append("formula_expr")
+            if not window_kind:
+                missing.append("window_kind")
+            if not row.get("numerator_agg"):
+                missing.append("numerator_agg")
+            if kind == "ratio" and not row.get("denominator_agg"):
+                missing.append("denominator_agg")
+            return result(
+                "unavailable", False, "quartet_incomplete",
+                "四元组不完整：缺 " + "、".join(missing),
+                missingFields=missing,
+            )
+        if not checks["aggregate"]:
+            return result(
+                "unavailable", False, "aggregate_invalid",
+                "聚合函数不在 compute 支持范围（仅 sum/max/min/avg）",
+                missingFields=["numerator_agg"],
+            )
+        if not checks["windowKind"]:
+            return result(
+                "unavailable", False, "window_invalid",
+                f"window_kind={window_kind or '空'}，compute 不支持",
+            )
+        if not checks["numeratorBinding"]:
+            return result(
+                "unavailable", False, "binding_missing",
+                "缺 numerator binding，无法编译到事实字段",
+                missingFields=["numerator"],
+            )
+        if not checks["denominatorBinding"]:
+            return result(
+                "unavailable", False, "binding_missing",
+                "缺 denominator binding，无法编译到事实字段",
+                missingFields=["denominator"],
+            )
+        if not checks["observations"]:
+            return result(
+                "unavailable", False, "no_observations",
+                "库内该口径无任何观测记录",
+            )
+        if not window_sufficient:
+            return result(
+                "unavailable", False, "window_insufficient",
+                f"可用窗口 {available_days} 天 < 要求 {min_window_days} 天",
+            )
+        warning = None
+        if min_window_days >= 365:
+            warning = (
+                f"需整窗 ≥{min_window_days} 天；按不足该长度的窗口调用会返回 "
+                "E_METRIC_WINDOW_INSUFFICIENT"
+            )
+        return result(
+            "compute", True, "compute_ready",
+            f"可走 /metrics/{{metric_id}}/output?compute=true（可用窗口 {available_days} 天）",
+            windowWarning=warning,
+        )
+
     def _g3_metric_row(row: dict[str, Any]) -> dict[str, Any]:
         metric_id = str(row.get("metric_id") or "")
         tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
@@ -3670,10 +3822,17 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             and evidence["code"] == "regulatory"
             and tier == "structurally_computable"
         )
+        execution = _g3_execution(row)
         if external_eligible:
             external_status = "external_candidate"
             external_label = "对外可出数候选（需事实与观测）"
-            external_reason = "证据为监管原文、publishable=true、口径结构性可算"
+            external_reason = (
+                "证据为监管原文、publishable=true、口径结构性可算；"
+                "资格判定未含 binding/窗口/观测，实际可执行性见 executionPath"
+                if execution["executable"]
+                else "证据为监管原文、publishable=true、口径结构性可算；"
+                f"但当前不可直接 compute（{execution['reasonCode']}）：{execution['reason']}"
+            )
         elif evidence["code"] == "industry":
             external_status = "internal_baseline"
             external_label = _G3_INDUSTRY_NOTICE
@@ -3732,6 +3891,16 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "externalStatus": external_status,
             "externalLabel": external_label,
             "externalReason": external_reason,
+            "executionPath": execution["path"],
+            "executable": execution["executable"],
+            "executionReason": execution["reason"],
+            "executionReasonCode": execution["reasonCode"],
+            "executionChecks": execution["checks"],
+            "observationCount": execution["observationCount"],
+            "availableWindowDays": execution["availableWindowDays"],
+            "minWindowDays": execution["minWindowDays"],
+            "windowSufficient": execution["windowSufficient"],
+            "windowWarning": execution.get("windowWarning"),
             "variantOf": row.get("variant_of"),
             "outputMode": row.get("output_mode"),
             "formulaDisabled": bool(row.get("formula_disabled")),
@@ -3762,6 +3931,15 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         for item in items:
             tiers[item["computability"]] = tiers.get(item["computability"], 0) + 1
         external_count = sum(1 for item in items if item["externalEligible"])
+        candidates = [item for item in items if item["externalEligible"]]
+        executable_now = [item for item in candidates if item["executable"]]
+        rule_set_only = [item for item in candidates if item["executionPath"] == "rule_set"]
+        execution_reasons: dict[str, int] = {}
+        for item in candidates:
+            if item["executable"] or item["executionPath"] == "rule_set":
+                continue
+            code = item["executionReasonCode"]
+            execution_reasons[code] = execution_reasons.get(code, 0) + 1
 
         by_id = {item["metricId"]: item for item in all_items}
         e1_present = [mid for mid in _G3_E1_INDUSTRY_IDS if mid in by_id]
@@ -3780,12 +3958,32 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "industry": sum(1 for item in items if item["evidenceBasis"] == "industry"),
                 "regulatory": sum(1 for item in items if item["evidenceBasis"] == "regulatory"),
                 "externalEligible": external_count,
+                # “资格”与“当前真能算出数”是两个数字：前者只看三项证据/发布/可算性，
+                # 后者还要过 binding、观测与窗口。
+                "externalCandidates": len(candidates),
+                "executableNow": len(executable_now),
                 "industryExcludedFromExternal": (
                     sum(1 for item in all_items if item["evidenceBasis"] == "industry")
                     if scope == "external"
                     else 0
                 ),
                 "computability": tiers,
+            },
+            "execution": {
+                "externalCandidates": len(candidates),
+                "executableNow": len(executable_now),
+                "ruleSetOnly": len(rule_set_only),
+                "unavailable": len(candidates) - len(executable_now) - len(rule_set_only),
+                "byReason": execution_reasons,
+                "basis": (
+                    "只读预检：按库内 metric_field_binding、metric_observation 与窗口实况判定，"
+                    "不调用 compute、不写库；实际出数仍需按窗口参数调用 "
+                    "/metrics/{metric_id}/output?compute=true"
+                ),
+                "note": (
+                    "资格判定（externalEligible）只看 evidence_basis/publishable/computability_tier，"
+                    "未含 binding、观测与窗口；是否真能算出数见 executableNow。"
+                ),
             },
             "industryNotice": _G3_INDUSTRY_NOTICE,
             "e1Check": {
@@ -3850,6 +4048,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "公式",
                 "对外状态",
                 "对外判定说明",
+                "可执行路径",
+                "可执行",
+                "执行判定说明",
+                "可用窗口天数",
+                "要求窗口天数",
+                "窗口是否充足",
                 "内部标注",
                 "E1行业基线",
                 "缺口",
@@ -3871,6 +4075,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                     item["formula"],
                     item["externalLabel"],
                     item["externalReason"],
+                    item["executionPath"],
+                    "true" if item["executable"] else "false",
+                    item["executionReason"],
+                    str(item["availableWindowDays"]),
+                    str(item["minWindowDays"]),
+                    "true" if item["windowSufficient"] else "false",
                     item["internalNotice"] or "",
                     "true" if item["e1Baseline"] else "false",
                     item["gap"],
@@ -3892,8 +4102,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     _G3_FAMILY_SQL = """
         SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
                formula_disabled, missing, evidence_status, definition_version, metric_kind,
-               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
-               min_window_days, observation_period, grain, granularity, unit,
+               formula_expr, formula_text, numerator_agg, denominator_agg, denominator_text,
+               window_kind, min_window_days, observation_period, grain, granularity, unit,
                variant_of, output_mode, provenance_label, computability_tier
           FROM platform.metric_definition
          WHERE output_mode = 'index' OR variant_of IS NOT NULL
