@@ -1,0 +1,80 @@
+# S14-H-02 合成探针 A-Box（Synthetic，非业务结论）
+# s14: 命名空间属性仅为绕过 Oxigraph 无日期算术，不进入 T-Box。
+PREFIX core: <https://w3id.org/fsldm/core#>
+PREFIX agr: <https://w3id.org/fsldm/agreement#>
+PREFIX ev: <https://w3id.org/fsldm/event#>
+PREFIX ast: <https://w3id.org/fsldm/asset#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX s14: <urn:s14h02:>
+s14:st_active a skos:Concept ; skos:notation "active" .
+s14:st_settled a skos:Concept ; skos:notation "settled" .
+s14:st_balance a skos:Concept ; skos:notation "balance" .
+s14:st_capitalNet a skos:Concept ; skos:notation "capitalNet" .
+s14:st_aum a skos:Concept ; skos:notation "aum" .
+s14:m_obs a core:Metric ; core:observationDate "2025-12-31"^^xsd:date ; core:metricType s14:st_obs ; s14:obsOrdinal 20453 .
+s14:st_obs a skos:Concept ; skos:notation "observation" .
+s14:acct_A001 a agr:Account ; core:agreementId "A001" ; core:dueDate "2025-10-02"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20363 .
+s14:role_A001 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A001 ; agr:roleParty s14:party_P001 .
+s14:m_bal_A001 a core:Metric ; core:metricValue "1200"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A001 .
+s14:acct_A002 a agr:Account ; core:agreementId "A002" ; core:dueDate "2025-10-01"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20362 .
+s14:role_A002 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A002 ; agr:roleParty s14:party_P002 .
+s14:m_bal_A002 a core:Metric ; core:metricValue "800"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A002 .
+s14:acct_A003 a agr:Account ; core:agreementId "A003" ; core:dueDate "2025-12-31"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20453 .
+s14:role_A003 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A003 ; agr:roleParty s14:party_P003 .
+s14:m_bal_A003 a core:Metric ; core:metricValue "300"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A003 .
+s14:acct_A004 a agr:Account ; core:agreementId "A004" ; core:dueDate "2025-12-20"^^xsd:date ; core:hasStatus s14:st_settled ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20442 .
+s14:acct_A004 core:lastPaymentDate "2025-12-15"^^xsd:date .
+s14:role_A004 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A004 ; agr:roleParty s14:party_P004 .
+s14:m_bal_A004 a core:Metric ; core:metricValue "500"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A004 .
+s14:acct_A005 a agr:Account ; core:agreementId "A005" ; core:dueDate "2025-11-30"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20422 .
+s14:role_A005 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A005 ; agr:roleParty s14:party_P001 .
+s14:m_bal_A005 a core:Metric ; core:metricValue "400"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A005 .
+s14:acct_A006 a agr:Account ; core:agreementId "A006" ; core:dueDate "2025-12-01"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20423 .
+s14:role_A006 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A006 ; agr:roleParty s14:party_P005 .
+s14:m_bal_A006 a core:Metric ; core:metricValue "200"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A006 .
+s14:acct_A007 a agr:Account ; core:agreementId "A007" ; core:dueDate "2024-12-31"^^xsd:date ; core:hasStatus s14:st_settled ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20088 .
+s14:acct_A007 core:lastPaymentDate "2025-01-15"^^xsd:date .
+s14:role_A007 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A007 ; agr:roleParty s14:party_P002 .
+s14:m_bal_A007 a core:Metric ; core:metricValue "150"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A007 .
+s14:acct_A008 a agr:Account ; core:agreementId "A008" ; core:dueDate "2025-12-31"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20453 .
+s14:role_A008 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A008 ; agr:roleParty s14:party_P006 .
+s14:m_bal_A008 a core:Metric ; core:metricValue "50"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A008 .
+s14:acct_A009 a agr:Account ; core:agreementId "A009" ; core:dueDate "2025-09-30"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20361 .
+s14:role_A009 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A009 ; agr:roleParty s14:party_P004 .
+s14:m_bal_A009 a core:Metric ; core:metricValue "900"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A009 .
+s14:acct_A010 a agr:Account ; core:agreementId "A010" ; core:dueDate "2025-11-15"^^xsd:date ; core:hasStatus s14:st_active ; core:hasMetric s14:m_obs ; s14:dueOrdinal 20407 .
+s14:role_A010 a agr:AgreementPartyRole ; agr:ofAgreement s14:acct_A010 ; agr:roleParty s14:party_P005 .
+s14:m_bal_A010 a core:Metric ; core:metricValue "250"^^xsd:decimal ; core:metricType s14:st_balance ; core:metricOf s14:acct_A010 .
+s14:party_P001 a core:Party ; core:partyId "P001" .
+s14:party_P002 a core:Party ; core:partyId "P002" .
+s14:party_P003 a core:Party ; core:partyId "P003" .
+s14:party_P004 a core:Party ; core:partyId "P004" .
+s14:party_P005 a core:Party ; core:partyId "P005" .
+s14:party_P006 a core:Party ; core:partyId "P006" .
+s14:party_ORG a core:Party ; core:partyId "ORG" .
+s14:m_capital a core:Metric ; core:metricValue "10000"^^xsd:decimal ; core:metricType s14:st_capitalNet ; core:metricOf s14:party_ORG .
+s14:ev_E001 a ev:FinancialEvent ; ev:eventTimestamp "2025-12-30T10:00:00"^^xsd:dateTime ; ev:eventAmount "100"^^xsd:decimal .
+s14:erole_E001 a ev:EventPartyRole ; ev:ofEvent s14:ev_E001 ; core:ofSubject s14:party_P001 .
+s14:ev_E002 a ev:FinancialEvent ; ev:eventTimestamp "2025-11-01T09:00:00"^^xsd:dateTime ; ev:eventAmount "60"^^xsd:decimal .
+s14:erole_E002 a ev:EventPartyRole ; ev:ofEvent s14:ev_E002 ; core:ofSubject s14:party_P001 .
+s14:ev_E003 a ev:FinancialEvent ; ev:eventTimestamp "2025-12-21T15:00:00"^^xsd:dateTime ; ev:eventAmount "200"^^xsd:decimal .
+s14:erole_E003 a ev:EventPartyRole ; ev:ofEvent s14:ev_E003 ; core:ofSubject s14:party_P002 .
+s14:ev_E004 a ev:FinancialEvent ; ev:eventTimestamp "2025-10-02T11:00:00"^^xsd:dateTime ; ev:eventAmount "300"^^xsd:decimal .
+s14:erole_E004 a ev:EventPartyRole ; ev:ofEvent s14:ev_E004 ; core:ofSubject s14:party_P004 .
+s14:ev_E005 a ev:FinancialEvent ; ev:eventTimestamp "2025-09-03T08:00:00"^^xsd:dateTime ; ev:eventAmount "120"^^xsd:decimal .
+s14:erole_E005 a ev:EventPartyRole ; ev:ofEvent s14:ev_E005 ; core:ofSubject s14:party_P005 .
+s14:ev_E006 a ev:FinancialEvent ; ev:eventTimestamp "2025-12-31T23:00:00"^^xsd:dateTime ; ev:eventAmount "50"^^xsd:decimal .
+s14:erole_E006 a ev:EventPartyRole ; ev:ofEvent s14:ev_E006 ; core:ofSubject s14:party_P006 .
+s14:asset_AV001 a ast:AssetValue ; core:hasMetric s14:m_aum_AV001 .
+s14:m_aum_AV001 a core:Metric ; core:metricValue "1000"^^xsd:decimal ; core:metricType s14:st_aum ; core:observationDate "2025-12-31"^^xsd:date ; core:metricOf s14:asset_AV001 .
+s14:party_P001 core:hasAsset s14:asset_AV001 .
+s14:asset_AV002 a ast:AssetValue ; core:hasMetric s14:m_aum_AV002 .
+s14:m_aum_AV002 a core:Metric ; core:metricValue "900"^^xsd:decimal ; core:metricType s14:st_aum ; core:observationDate "2025-12-15"^^xsd:date ; core:metricOf s14:asset_AV002 .
+s14:party_P001 core:hasAsset s14:asset_AV002 .
+s14:asset_AV003 a ast:AssetValue ; core:hasMetric s14:m_aum_AV003 .
+s14:m_aum_AV003 a core:Metric ; core:metricValue "500"^^xsd:decimal ; core:metricType s14:st_aum ; core:observationDate "2025-12-31"^^xsd:date ; core:metricOf s14:asset_AV003 .
+s14:party_P002 core:hasAsset s14:asset_AV003 .
+s14:asset_AV004 a ast:AssetValue ; core:hasMetric s14:m_aum_AV004 .
+s14:m_aum_AV004 a core:Metric ; core:metricValue "750"^^xsd:decimal ; core:metricType s14:st_aum ; core:observationDate "2025-12-31"^^xsd:date ; core:metricOf s14:asset_AV004 .
+s14:party_P004 core:hasAsset s14:asset_AV004 .

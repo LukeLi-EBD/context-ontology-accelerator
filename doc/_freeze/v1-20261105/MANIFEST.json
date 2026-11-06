@@ -1,0 +1,160 @@
+{
+  "bundleVersion": 1,
+  "schemaVersion": 17,
+  "tag": "v1-20261105",
+  "generatedAt": "2026-11-05T11:15:41.499058+00:00",
+  "source": {
+    "database": "platform",
+    "graphEndpoint": "http://oxigraph:7878",
+    "tbox": {
+      "versionId": "ont-f413054a0c72",
+      "semver": "1.0.0",
+      "contentHash": "87c3fdef3b6866f824684afd37785b673555c3feea9c1ada56ecc7f1055d3231",
+      "canonicalHash": "4c486729a3fd9f23ed95084be889bcbcdfcf79e2b0d1a4461c9c5a62b9e8cec4",
+      "graph": "urn:platform:graph:tbox:ont-f413054a0c72",
+      "triples": 2676
+    },
+    "embedding": {
+      "provider": "local-bge",
+      "model": "BAAI/bge-m3",
+      "dimensions": 1024,
+      "partition": "local-bge:BAAI/bge-m3@1024"
+    },
+    "aboxGraphs": [
+      "urn:platform:graph:abox:main"
+    ],
+    "shapes": [
+      {
+        "shapesId": "fsldm-shapes",
+        "namespace": "https://w3id.org/fsldm/",
+        "version": "sv-861d1a9d39b6",
+        "contentHash": "861d1a9d39b63126b58e130e3b34143b37a347b987f9f3c8802cae4590a66399",
+        "triples": 6,
+        "contentFormat": "turtle",
+        "content": "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix fsldm: <https://w3id.org/fsldm/> .\n\nfsldm:ClassLabelShape a sh:NodeShape ;\n    sh:targetClass owl:Class ;\n    sh:property [\n        sh:path rdfs:label ;\n        sh:minCount 1 ;\n        sh:message \"owl:Class must carry rdfs:label\" ;\n    ] .\n"
+      },
+      {
+        "shapesId": "shapes-core",
+        "namespace": "urn:platform:default:",
+        "version": "sv-7634668832a2",
+        "contentHash": "7634668832a21b2c2109668058d70347208a78b6bf2b553604ec2a7ac8105bbb",
+        "triples": 13,
+        "contentFormat": "turtle",
+        "content": "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix platform: <urn:platform:rel:> .\n\n# locatedIn is a strong, entity-level relation: its object must be an IRI.\n# Unresolved place mentions are weakly annotated with hasLocationLabel (string)\n# and go through the human approval queue instead (OQ-35).\n<urn:platform:shape:LocatedInObject>\n    a sh:NodeShape ;\n    sh:targetSubjectsOf platform:locatedIn ;\n    sh:property [\n        sh:path platform:locatedIn ;\n        sh:nodeKind sh:IRI ;\n        sh:message \"locatedIn must point to an entity IRI, not a literal\" ;\n    ] .\n\n# hasLocationLabel is optional; when present it must be a single string.\n<urn:platform:shape:LocationLabel>\n    a sh:NodeShape ;\n    sh:targetSubjectsOf platform:hasLocationLabel ;\n    sh:property [\n        sh:path platform:hasLocationLabel ;\n        sh:datatype xsd:string ;\n        sh:maxCount 1 ;\n        sh:message \"hasLocationLabel takes at most one xsd:string literal\" ;\n    ] .\n"
+      },
+      {
+        "shapesId": "test-g01-shapes",
+        "namespace": "urn:test:g01:tbox",
+        "version": "sv-f8d74d046c17",
+        "contentHash": "f8d74d046c176b32d6c3514aa75f237f336717d0b667bffce436f568a52affa8",
+        "triples": 12,
+        "contentFormat": "turtle",
+        "content": "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix fsldm: <https://w3id.org/fsldm/> .\n\nfsldm:ClassLabelShape a sh:NodeShape ;\n    sh:targetClass owl:Class ;\n    sh:property [\n        sh:path rdfs:label ;\n        sh:minCount 1 ;\n        sh:message \"owl:Class must carry rdfs:label\" ;\n    ] .\n\nfsldm:AgreementLabelShape a sh:NodeShape ;\n    sh:targetClass fsldm:Agreement ;\n    sh:property [\n        sh:path rdfs:label ;\n        sh:minCount 1 ;\n        sh:message \"fsldm:Agreement must carry rdfs:label (v2)\" ;\n    ] .\n"
+      }
+    ]
+  },
+  "totals": {
+    "documents": 1122,
+    "chunks": 13274,
+    "chunksExcluded": 0,
+    "embeddings": 11905,
+    "embeddingsExcluded": 0,
+    "triples": 2676,
+    "tripleBreakdown": {
+      "tbox": 2676,
+      "abox": 0
+    },
+    "factEvents": 3280,
+    "factAssertions": 0,
+    "ontologyImports": 15,
+    "shapes": 3,
+    "blobs": {
+      "included": false,
+      "count": 0,
+      "bytes": 0,
+      "missing": 0
+    }
+  },
+  "files": [
+    {
+      "path": "graph/abox.ttl",
+      "kind": "ttl",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "lines": 0,
+      "records": null
+    },
+    {
+      "path": "graph/shapes.ttl",
+      "kind": "ttl",
+      "bytes": 2572,
+      "sha256": "cb55088ce62c3db30156de25e565c7cd4f5f85a4be91b2b0e31133faaad0ed47",
+      "lines": 63,
+      "records": null
+    },
+    {
+      "path": "graph/tbox.ttl",
+      "kind": "ttl",
+      "bytes": 193863,
+      "sha256": "60c39c18b1283571c0523b9234497ea08c09a73fce76611b7a2fd7caf843eb6d",
+      "lines": 3670,
+      "records": null
+    },
+    {
+      "path": "ledger/fact_events.jsonl",
+      "kind": "jsonl",
+      "bytes": 1682934,
+      "sha256": "393a8971fd9754b19d66de0b1ed1ec517f6339d79266d9f25a541c36c430d66f",
+      "lines": 3280,
+      "records": 3280
+    },
+    {
+      "path": "ledger/verify.json",
+      "kind": "json",
+      "bytes": 52,
+      "sha256": "87dd9b4e9ae02267d95197570a31b5ae07e1cfff51a21ca7a5a33a8b46f708ad",
+      "lines": null,
+      "records": null
+    },
+    {
+      "path": "meta/chunks.jsonl",
+      "kind": "jsonl",
+      "bytes": 23359669,
+      "sha256": "51d4eb8f1e876e62adfe58738a66fcb1bbe75c8516a418476dd7550b177447f2",
+      "lines": 13274,
+      "records": 13274
+    },
+    {
+      "path": "meta/documents.jsonl",
+      "kind": "jsonl",
+      "bytes": 2339939,
+      "sha256": "2e2c0623494b8defcb793928b0996ecee86fe6a5859539262edf6103e1e4f7e2",
+      "lines": 1122,
+      "records": 1122
+    },
+    {
+      "path": "meta/ontology_import.jsonl",
+      "kind": "jsonl",
+      "bytes": 26061,
+      "sha256": "926cfcdf36b12aef0bd2ce285564269ba126020909b9fb6879a06d37a5c421d6",
+      "lines": 15,
+      "records": 15
+    },
+    {
+      "path": "vectors/README",
+      "kind": "text",
+      "bytes": 213,
+      "sha256": "6a98bfb0bc66b25226e8d957ec3000f7307ed8ecbe886959a3c18c1d000a389a",
+      "lines": 6,
+      "records": null
+    },
+    {
+      "path": "vectors/embeddings.npz",
+      "kind": "npz",
+      "bytes": 52049184,
+      "sha256": "a87ba4f0333c4e3d47457a034522d586749809184c47f6d5ab960f5be5f1fc6d",
+      "lines": null,
+      "records": 11905
+    }
+  ]
+}

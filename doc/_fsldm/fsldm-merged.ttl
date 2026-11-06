@@ -1,0 +1,3595 @@
+@prefix fsldm: <https://w3id.org/fsldm/core#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix area: <https://w3id.org/fsldm/area/> .
+@prefix code: <https://w3id.org/fsldm/codes#> .
+@prefix party: <https://w3id.org/fsldm/party#> .
+@prefix agmt: <https://w3id.org/fsldm/agreement#> .
+@prefix prod: <https://w3id.org/fsldm/product#> .
+@prefix evt: <https://w3id.org/fsldm/event#> .
+@prefix asset: <https://w3id.org/fsldm/asset#> .
+@prefix loc: <https://w3id.org/fsldm/location#> .
+@prefix chan: <https://w3id.org/fsldm/channel#> .
+@prefix camp: <https://w3id.org/fsldm/campaign#> .
+@prefix org: <https://w3id.org/fsldm/org#> .
+@prefix fin: <https://w3id.org/fsldm/finance#> .
+@prefix bank: <https://w3id.org/fsldm/banking#> .
+@prefix ins: <https://w3id.org/fsldm/insurance#> .
+@prefix inv: <https://w3id.org/fsldm/investment#> .
+@prefix shape: <https://w3id.org/fsldm/shapes#> .
+
+# FS-LDM v10 merged ontology (15 modules, owl:imports stripped)
+# === fsldm-codes.ttl ===
+##############################################################################
+# 码表模块（ABox 侧）
+#
+# FS-LDM 有 828 个 TYPE 实体。它们不是类，是**受控词表**。
+# 判定规则（见指南 D6）三问，三个都"是"就放进这里：
+#   1. 能枚举完吗？（枚举不完的是类，不是码）
+#   2. 由业务人员维护吗？（工程维护的是枚举，业务维护的是码表）
+#   3. 需要参与推理吗？（需要推理的才值得做成类）
+#
+# 这份文件只收骨架必需的几套。其余 800 多套按同一形状扩写即可 ——
+# 这正是把它做成 SKOS 的价值：新增一套码表不需要动本体，只需要加数据。
+##############################################################################
+<https://w3id.org/fsldm/codes> a owl:Ontology ;
+    rdfs:label "FS-LDM 受控词表"@zh , "FS-LDM Controlled Vocabularies"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices（各单位 TYPE 实体）+ NCR FS-LDM 7.0 培训材料" ;
+    rdfs:comment "把 FS-LDM 的类型码实体实现为 SKOS 词表：可版本化、可多语言、可被 SPARQL 校验、不污染类空间。"@zh .
+##############################################################################
+# 1. 协议当事人角色
+##############################################################################
+code:PartyAgreementRoleScheme a skos:ConceptScheme ;
+    rdfs:label "协议当事人角色"@zh ;
+    fsldm:fsldmEntity "AGREEMENT PARTY ROLE TYPE" ;
+    fsldm:subjectArea "Agreement" ;
+    dct:source "AGREEMENT PARTY ROLE TYPE 实体定义" ;
+    skos:definition "当事人在协议上承担的角色。原文举例：account holder, beneficiary, trustee and originating employee。"@zh .
+code:AccountHolder a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "账户持有人"@zh , "Account Holder"@en ;
+    skos:altLabel "ACCT HOLDER" ;
+    skos:topConceptOf code:PartyAgreementRoleScheme ;
+    skos:definition "对账户拥有完整权利的当事人。同一账户可有多名持有人（联名户），但只能有一名主持有人。"@zh .
+code:JointHolder a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "共同持有人"@zh , "Joint Holder"@en ;
+    skos:broader code:AccountHolder ;
+    skos:definition "与他人共同持有账户的当事人。与主持有人权利相同，差别在业务规则与销户办理。"@zh .
+code:Beneficiary a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "受益人"@zh , "Beneficiary"@en ;
+    skos:definition "在保险、信托或继承安排中有权获得给付的当事人。"@zh .
+code:Guarantor a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "担保人"@zh , "Guarantor"@en ;
+    skos:definition "为他人债务提供保证的当事人。担保人在协议上是独立角色，不是共同借款人。"@zh .
+code:Borrower a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "借款人"@zh , "Borrower"@en ;
+    skos:definition "承担还款义务的当事人。"@zh .
+code:Trustee a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "受托人"@zh , "Trustee"@en .
+code:Signatory a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "签署人"@zh , "Signatory"@en ;
+    skos:definition "有权代表当事人签署该协议的個人（法人客户的法定代表人、授权代理人）。"@zh .
+code:OriginatingDealer a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "发起商户"@zh , "Originating Dealer"@en ;
+    skos:definition "引荐该笔业务的商户（如 4S 店引荐车贷）。原文明确列举了 the car dealer that originated the account。"@zh .
+code:Referrer a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "介绍人"@zh , "Referrer"@en .
+code:Insured a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "被保险人"@zh , "Insured"@en .
+code:Claimant a skos:Concept ;
+    skos:inScheme code:PartyAgreementRoleScheme ;
+    skos:prefLabel "索赔人"@zh , "Claimant"@en .
+##############################################################################
+# 2. 位置用途
+##############################################################################
+code:LocatorUsageScheme a skos:ConceptScheme ;
+    rdfs:label "位置用途"@zh ;
+    fsldm:fsldmEntity "CONTRACT LOCATOR REL TYPE" ;
+    fsldm:subjectArea "Location" ;
+    dct:source "CONTRACT LOCATOR REL TYPE / LOCATOR USAGE TYPE 实体定义" ;
+    skos:definition "同一个地址在不同场景下承担不同用途。原文列举：签约地、费率适用地、司法管辖地、对账单寄送地。"@zh .
+code:HomeAddress a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "家庭地址"@zh , "Home Address"@en ;
+    skos:topConceptOf code:LocatorUsageScheme .
+code:WorkAddress a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "工作地址"@zh , "Work Address"@en ;
+    skos:topConceptOf code:LocatorUsageScheme .
+code:MailingAddress a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "账单寄送地址"@zh , "Mailing Address"@en ;
+    skos:definition "对账单、卡片、函件的投递地址。原文：the address of which the account statement will be sent。"@zh .
+code:LegalAddress a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "法律送达地址"@zh , "Legal Service Address"@en ;
+    skos:definition "诉讼文书送达地址。法律效力最高，变更需留痕。"@zh .
+code:ContractSigningPlace a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "合同签署地"@zh , "Contract Signing Place"@en ;
+    skos:definition "原文：the address in which the contract was/will be signed。"@zh .
+code:RateApplicableArea a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "费率适用地"@zh , "Rate Applicable Area"@en ;
+    skos:definition "原文：the area for which rates and tariffs were used to set up the account。"@zh .
+code:JurisdictionArea a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "司法管辖地"@zh , "Jurisdiction"@en ;
+    skos:definition "原文：the State or Country of which the laws and regulations govern the account。"@zh .
+code:AssetLocation a skos:Concept ;
+    skos:inScheme code:LocatorUsageScheme ;
+    skos:prefLabel "资产所在地"@zh , "Asset Location"@en .
+##############################################################################
+# 3. 当事人关系角色
+##############################################################################
+code:PartyRelationshipRoleScheme a skos:ConceptScheme ;
+    rdfs:label "当事人关系角色"@zh ;
+    fsldm:fsldmEntity "PARTY RELATIONSHIP ROLE" ;
+    fsldm:subjectArea "Party" .
+code:Spouse a skos:Concept ;
+    skos:inScheme code:PartyRelationshipRoleScheme ;
+    skos:prefLabel "配偶"@zh , "Spouse"@en ;
+    skos:topConceptOf code:PartyRelationshipRoleScheme ;
+    code:symmetricRole true ;
+    skos:definition "对称关系：若 A 是 B 的配偶，则 B 也是 A 的配偶。"@zh .
+code:ParentOf a skos:Concept ;
+    skos:inScheme code:PartyRelationshipRoleScheme ;
+    skos:prefLabel "父母"@zh , "Parent Of"@en ;
+    skos:topConceptOf code:PartyRelationshipRoleScheme ;
+    skos:definition "不对称关系。其逆关系为子女。"@zh .
+code:EmployerOf a skos:Concept ;
+    skos:inScheme code:PartyRelationshipRoleScheme ;
+    skos:prefLabel "雇主"@zh , "Employer Of"@en ;
+    skos:topConceptOf code:PartyRelationshipRoleScheme .
+code:RelatedParty a skos:Concept ;
+    skos:inScheme code:PartyRelationshipRoleScheme ;
+    skos:prefLabel "关联方"@zh , "Related Party"@en ;
+    skos:definition "监管口径下的关联方。与「配偶」不同，它是合规判定结果而非亲属事实。"@zh .
+code:symmetricRole a owl:AnnotationProperty ;
+    rdfs:label "是否对称角色"@zh ;
+    rdfs:comment "标记对称关系角色。本体保留有向边，用该标记让上层查询自行做双向展开 —— 比在 OWL 里声明 SymmetricProperty 更可控，后者会让所有用同一角色的实例都被推成对称。"@zh .
+##############################################################################
+# 4. 协议状态
+##############################################################################
+code:AgreementStatusScheme a skos:ConceptScheme ;
+    rdfs:label "协议状态"@zh ;
+    fsldm:fsldmEntity "AGREEMENT STATUS TYPE" ;
+    fsldm:subjectArea "Agreement" .
+code:StatusActive a skos:Concept ;
+    skos:inScheme code:AgreementStatusScheme ;
+    skos:prefLabel "有效"@zh , "Active"@en ;
+    skos:topConceptOf code:AgreementStatusScheme .
+code:StatusSuspended a skos:Concept ;
+    skos:inScheme code:AgreementStatusScheme ;
+    skos:prefLabel "冻结"@zh , "Suspended"@en .
+code:StatusClosed a skos:Concept ;
+    skos:inScheme code:AgreementStatusScheme ;
+    skos:prefLabel "已销户"@zh , "Closed"@en .
+code:StatusMatured a skos:Concept ;
+    skos:inScheme code:AgreementStatusScheme ;
+    skos:prefLabel "已到期"@zh , "Matured"@en .
+code:StatusWrittenOff a skos:Concept ;
+    skos:inScheme code:AgreementStatusScheme ;
+    skos:prefLabel "已核销"@zh , "Written Off"@en ;
+    skos:definition "已确认无法收回并冲销的资产。必须保留记录：核销不等于债权消灭。"@zh .
+##############################################################################
+# 5. 事件类型（两级：活动种类 → 活动类型）
+##############################################################################
+code:EventTypeScheme a skos:ConceptScheme ;
+    rdfs:label "事件类型"@zh ;
+    fsldm:fsldmEntity "EVENT ACTIVITY TYPE" ;
+    fsldm:subjectArea "Event" ;
+    skos:definition "FS-LDM 用两级表达事件类型：活动种类（交易类型）与活动类型（交易码）。概念间的 skos:broader 承担这两级。"@zh .
+code:TransactionEvent a skos:Concept ;
+    skos:inScheme code:EventTypeScheme ;
+    skos:prefLabel "交易类"@zh , "Transaction"@en ;
+    skos:topConceptOf code:EventTypeScheme .
+code:InquiryEvent a skos:Concept ;
+    skos:inScheme code:EventTypeScheme ;
+    skos:prefLabel "查询类"@zh , "Inquiry"@en ;
+    skos:topConceptOf code:EventTypeScheme .
+code:MaintenanceEvent a skos:Concept ;
+    skos:inScheme code:EventTypeScheme ;
+    skos:prefLabel "维护类"@zh , "Maintenance"@en ;
+    skos:topConceptOf code:EventTypeScheme ;
+    skos:definition "改密、改限额、换卡、更新联系方式。"@zh .
+code:ComplaintEvent a skos:Concept ;
+    skos:inScheme code:EventTypeScheme ;
+    skos:prefLabel "投诉类"@zh , "Complaint"@en ;
+    skos:topConceptOf code:EventTypeScheme .
+code:CashDeposit a skos:Concept ;
+    skos:inScheme code:EventTypeScheme ;
+    skos:prefLabel "现金存款"@zh , "Cash Deposit"@en ;
+    skos:broader code:TransactionEvent .
+code:TransferOut a skos:Concept ;
+    skos:inScheme code:EventTypeScheme ;
+    skos:prefLabel "转出"@zh , "Transfer Out"@en ;
+    skos:broader code:TransactionEvent .
+##############################################################################
+# 6. 渠道类型
+##############################################################################
+code:ChannelTypeScheme a skos:ConceptScheme ;
+    rdfs:label "渠道类型"@zh ;
+    fsldm:fsldmEntity "CHANNEL TYPE" ;
+    fsldm:subjectArea "Channel" .
+code:BranchChannel a skos:Concept ;
+    skos:inScheme code:ChannelTypeScheme ;
+    skos:prefLabel "网点柜面"@zh , "Branch"@en ;
+    skos:topConceptOf code:ChannelTypeScheme .
+code:ATMChannel a skos:Concept ;
+    skos:inScheme code:ChannelTypeScheme ;
+    skos:prefLabel "自助设备"@zh , "ATM"@en ;
+    skos:topConceptOf code:ChannelTypeScheme .
+code:CallCenterChannel a skos:Concept ;
+    skos:inScheme code:ChannelTypeScheme ;
+    skos:prefLabel "呼叫中心"@zh , "Call Center"@en ;
+    skos:topConceptOf code:ChannelTypeScheme .
+code:OnlineBankingChannel a skos:Concept ;
+    skos:inScheme code:ChannelTypeScheme ;
+    skos:prefLabel "网上银行"@zh , "Online Banking"@en ;
+    skos:topConceptOf code:ChannelTypeScheme .
+code:MobileBankingChannel a skos:Concept ;
+    skos:inScheme code:ChannelTypeScheme ;
+    skos:prefLabel "手机银行"@zh , "Mobile Banking"@en ;
+    skos:topConceptOf code:ChannelTypeScheme .
+##############################################################################
+# 7. 标识类型
+##############################################################################
+code:IdentificationTypeScheme a skos:ConceptScheme ;
+    rdfs:label "标识类型"@zh ;
+    fsldm:fsldmEntity "PARTY IDENTIFICATION TYPE" ;
+    fsldm:subjectArea "Party" ;
+    dct:source "PARTY IDENTIFICATION 实体定义（原文列举 Social Security Number, Passport, Driver's License, Federal Tax ID, National Identity Card）" .
+code:NationalID a skos:Concept ;
+    skos:inScheme code:IdentificationTypeScheme ;
+    skos:prefLabel "身份证"@zh , "National Identity Card"@en ;
+    skos:topConceptOf code:IdentificationTypeScheme .
+code:Passport a skos:Concept ;
+    skos:inScheme code:IdentificationTypeScheme ;
+    skos:prefLabel "护照"@zh , "Passport"@en ;
+    skos:topConceptOf code:IdentificationTypeScheme .
+code:DriverLicense a skos:Concept ;
+    skos:inScheme code:IdentificationTypeScheme ;
+    skos:prefLabel "驾驶证"@zh , "Driver's License"@en ;
+    skos:topConceptOf code:IdentificationTypeScheme .
+code:TaxID a skos:Concept ;
+    skos:inScheme code:IdentificationTypeScheme ;
+    skos:prefLabel "纳税人识别号"@zh , "Tax Identification Number"@en ;
+    skos:topConceptOf code:IdentificationTypeScheme .
+code:USCC a skos:Concept ;
+    skos:inScheme code:IdentificationTypeScheme ;
+    skos:prefLabel "统一社会信用代码"@zh , "Unified Social Credit Code"@en ;
+    skos:topConceptOf code:IdentificationTypeScheme ;
+    skos:definition "中国法人实体的唯一标识。FS-LDM 原文写的是 Federal Tax Identification Number，本概念是其中国对应物。"@zh .
+code:SwiftBIC a skos:Concept ;
+    skos:inScheme code:IdentificationTypeScheme ;
+    skos:prefLabel "SWIFT/BIC"@zh ;
+    skos:topConceptOf code:IdentificationTypeScheme ;
+    skos:definition "金融机构识别码。原文特别说明：BIC 被建模为 locator 而非 party identifier，因为它是「机构的电子地址」。"@zh .
+##############################################################################
+# 8. 币种（维度而非码表，但形状相同）
+##############################################################################
+code:CurrencyScheme a skos:ConceptScheme ;
+    rdfs:label "币种"@zh ;
+    fsldm:fsldmEntity "CURRENCY" ;
+    fsldm:subjectArea "Finance" ;
+    dct:source "CURRENCY 实体（在附录 A 中被引用 87 次，是全模型最高频的维度之一）" ;
+    skos:definition "为什么币种做成 SKOS 而不是类：它由 ISO 4217 外部维护、可完全枚举、不参与本体推理，三个条件全部命中码表判定规则。"@zh .
+code:CNY a skos:Concept ;
+    skos:inScheme code:CurrencyScheme ;
+    skos:prefLabel "人民币"@zh , "Chinese Yuan"@en ;
+    skos:notation "CNY" ;
+    skos:topConceptOf code:CurrencyScheme .
+code:USD a skos:Concept ;
+    skos:inScheme code:CurrencyScheme ;
+    skos:prefLabel "美元"@zh , "US Dollar"@en ;
+    skos:notation "USD" ;
+    skos:topConceptOf code:CurrencyScheme .
+code:EUR a skos:Concept ;
+    skos:inScheme code:CurrencyScheme ;
+    skos:prefLabel "欧元"@zh , "Euro"@en ;
+    skos:notation "EUR" ;
+    skos:topConceptOf code:CurrencyScheme .
+code:HKD a skos:Concept ;
+    skos:inScheme code:CurrencyScheme ;
+    skos:prefLabel "港币"@zh , "Hong Kong Dollar"@en ;
+    skos:notation "HKD" ;
+    skos:topConceptOf code:CurrencyScheme .
+##############################################################################
+# 9. 产品特性类型
+##############################################################################
+code:FeatureTypeScheme a skos:ConceptScheme ;
+    rdfs:label "产品特性类型"@zh ;
+    fsldm:fsldmEntity "FEATURE TYPE" ;
+    fsldm:subjectArea "Product" ;
+    skos:definition "特性类型决定 featureValue 如何解释。同一字符串「3.85」，在利率类型下是年化百分比，在期限类型下是月数。"@zh .
+code:InterestRateFeature a skos:Concept ;
+    skos:inScheme code:FeatureTypeScheme ;
+    skos:prefLabel "利率"@zh , "Interest Rate"@en ;
+    skos:topConceptOf code:FeatureTypeScheme .
+code:TermFeature a skos:Concept ;
+    skos:inScheme code:FeatureTypeScheme ;
+    skos:prefLabel "期限"@zh , "Term"@en ;
+    skos:topConceptOf code:FeatureTypeScheme .
+code:MinimumAmountFeature a skos:Concept ;
+    skos:inScheme code:FeatureTypeScheme ;
+    skos:prefLabel "起存/起购金额"@zh , "Minimum Amount"@en ;
+    skos:topConceptOf code:FeatureTypeScheme .
+code:FeeWaiverFeature a skos:Concept ;
+    skos:inScheme code:FeatureTypeScheme ;
+    skos:prefLabel "费用减免"@zh , "Fee Waiver"@en ;
+    skos:topConceptOf code:FeatureTypeScheme .
+code:GracePeriodFeature a skos:Concept ;
+    skos:inScheme code:FeatureTypeScheme ;
+    skos:prefLabel "免息期"@zh , "Grace Period"@en ;
+    skos:topConceptOf code:FeatureTypeScheme .
+##############################################################################
+# 10. 客群分层（示例：支撑课堂练习案例）
+##############################################################################
+code:CustomerSegmentScheme a skos:ConceptScheme ;
+    rdfs:label "客群分层"@zh ;
+    fsldm:fsldmEntity "PARTY CLASS VALUE" ;
+    fsldm:subjectArea "Party" ;
+    skos:definition "银行内部对客户的营销分层。注意它是「内部判断」而非外部事实，与征信报告不同，可随时调整且需要留历史。"@zh .
+code:MassAffluent a skos:Concept ;
+    skos:inScheme code:CustomerSegmentScheme ;
+    skos:prefLabel "富裕阶层"@zh , "Mass Affluent"@en ;
+    skos:topConceptOf code:CustomerSegmentScheme .
+code:DINK a skos:Concept ;
+    skos:inScheme code:CustomerSegmentScheme ;
+    skos:prefLabel "丁克家庭"@zh , "Dual Income No Kids"@en ;
+    skos:broader code:MassAffluent ;
+    skos:definition "双收入无子女家庭。课堂练习案例中 Anny 与 Tom 即属此类。"@zh .
+code:LegalRepresentative a skos:Concept ;
+    skos:inScheme code:PartyRelationshipRoleScheme ;
+    skos:prefLabel "法定代表人"@zh , "Legal Representative"@en ;
+    skos:definition "代表法人签署法律文件的自然人。它是当事人关系的角色，不是协议角色 —— 因为它先于任何具体协议存在。"@zh .
+##############################################################################
+# 方案 11 · 风险评级（唯一"有顺序"的方案）
+#
+# 来源：附录 C RISK GRADE SCHEME / RISK GRADE VALUE / RISK GRADE TYPE ASSOC
+#      + Reference Guide Book 2 第 8 章 Score and Rating
+#
+# 与前面 10 套方案的区别：那些是平铺的（broader 只有上下位，不可比大小），
+# 这一套是**全序**。等级之间用 party:riskGradePrecedes 表达"优于"，
+# 并用上下界把等级锚到数值区间上 —— 光有字母顺序，算不了"降了两级"。
+##############################################################################
+code:RiskGradeScheme a skos:ConceptScheme ;
+    rdfs:label "风险评级方案"@zh ;
+    fsldm:fsldmEntity "RISK GRADE SCHEME" ;
+    fsldm:subjectArea "Party" ;
+    skos:definition """内部评级主标尺：把连续的风险分数切成若干等级。
+它是"方案"，不是"取值"：同一家机构可以同时跑 Basel 内评、信用卡评分、反洗钱风险三套标尺，
+三套的 A 级互不等价。所以等级必须绑方案引用，不能只存一个字母。"""@zh ;
+    rdfs:comment "示例取值仅用于演示全序结构，不是任何机构的真实标尺。"@zh .
+code:RiskGradeA a skos:Concept ;
+    skos:inScheme code:RiskGradeScheme ;
+    skos:prefLabel "A 级（低风险）"@zh , "Grade A"@en ;
+    skos:notation "A" ;
+    party:ratingLowerBound "700"^^xsd:decimal ;
+    party:ratingUpperBound "850"^^xsd:decimal ;
+    party:riskGradePrecedes code:RiskGradeB , code:RiskGradeC , code:RiskGradeD ;
+    skos:definition "最优档。上界不必显式写全序闭包：riskGradePrecedes 是传递的，A→B→C→D 会推出 A→D。"@zh .
+code:RiskGradeB a skos:Concept ;
+    skos:inScheme code:RiskGradeScheme ;
+    skos:prefLabel "B 级（中低风险）"@zh , "Grade B"@en ;
+    skos:notation "B" ;
+    party:ratingLowerBound "600"^^xsd:decimal ;
+    party:ratingUpperBound "699"^^xsd:decimal ;
+    party:riskGradePrecedes code:RiskGradeC , code:RiskGradeD .
+code:RiskGradeC a skos:Concept ;
+    skos:inScheme code:RiskGradeScheme ;
+    skos:prefLabel "C 级（中高风险）"@zh , "Grade C"@en ;
+    skos:notation "C" ;
+    party:ratingLowerBound "500"^^xsd:decimal ;
+    party:ratingUpperBound "599"^^xsd:decimal ;
+    party:riskGradePrecedes code:RiskGradeD .
+code:RiskGradeD a skos:Concept ;
+    skos:inScheme code:RiskGradeScheme ;
+    skos:prefLabel "D 级（高风险）"@zh , "Grade D"@en ;
+    skos:notation "D" ;
+    party:ratingLowerBound "300"^^xsd:decimal ;
+    party:ratingUpperBound "499"^^xsd:decimal .
+##############################################################################
+# 方案 12–17 · 信贷分析专用的六套码表
+#
+# 这六套是"做一张信贷报表就需要、缺了就算不出数"的最小集合：
+#   12 贷款五级分类      不良率、迁徙率、分类分布表的分母与分子
+#   13 逾期账龄分档      逾期率、逾期与不良的交叉矩阵
+#   14 拨备类型          拨备覆盖率
+#   15 重组类型          重组贷款率
+#   16 行业分类          行业集中度
+#   17 度量类型          让 metricValue 能区分"余额"与"额度"
+##############################################################################
+# ---- 12. 贷款五级分类 ------------------------------------------------------
+code:LoanClassificationScheme a skos:ConceptScheme ;
+    rdfs:label "贷款五级分类"@zh ;
+    skos:definition """按《贷款风险分类指导原则》的五个档位。后三档合称不良。
+五档不是形容词，是有法律与监管后果的档位：划为后三档就要计提专项准备、
+影响不良率、影响资本充足率，且下调容易上调难（有观察期要求）。"""@zh ;
+    rdfs:comment "示例用途，不对应任何机构的内部细则。"@zh .
+code:LoanNormal a skos:Concept ;
+    skos:inScheme code:LoanClassificationScheme ;
+    skos:prefLabel "正常"@zh , "Normal"@en ;
+    skos:notation "1" ;
+    skos:definition "借款人能履行合同，没有足够理由怀疑本息不能按时足额偿还。"@zh .
+code:LoanSpecialMention a skos:Concept ;
+    skos:inScheme code:LoanClassificationScheme ;
+    skos:prefLabel "关注"@zh , "Special Mention"@en ;
+    skos:notation "2" ;
+    skos:definition "目前有能力偿还，但存在不利因素，继续下去可能对偿还产生不利影响。"@zh .
+code:LoanSubstandard a skos:Concept ;
+    skos:inScheme code:LoanClassificationScheme ;
+    skos:prefLabel "次级"@zh , "Substandard"@en ;
+    skos:notation "3" ;
+    skos:definition "还款能力出现明显问题，依靠正常经营收入无法足额偿还，即使执行担保也可能造成损失。"@zh .
+code:LoanDoubtful a skos:Concept ;
+    skos:inScheme code:LoanClassificationScheme ;
+    skos:prefLabel "可疑"@zh , "Doubtful"@en ;
+    skos:notation "4" ;
+    skos:definition "无法足额偿还，即使执行担保也肯定要造成较大损失。"@zh .
+code:LoanLoss a skos:Concept ;
+    skos:inScheme code:LoanClassificationScheme ;
+    skos:prefLabel "损失"@zh , "Loss"@en ;
+    skos:notation "5" ;
+    skos:definition "采取所有可能的措施后，本息仍然无法收回，或只能收回极少部分。"@zh .
+# 用 skos:Collection 而不是再加一层 broader：五档必须保持平级（报表要的是
+# 五个并列的桶），"后三类"只是一个取数用的集合视图。用 broader 会把不良
+# 变成第六个桶，五级分类就变成了六级。
+code:NplLoans a skos:Collection ;
+    rdfs:label "不良贷款（后三类）"@zh ;
+    skos:definition "次级 + 可疑 + 损失。不良率 = 本集合内余额 / 全部贷款余额。"@zh ;
+    skos:member code:LoanSubstandard , code:LoanDoubtful , code:LoanLoss .
+# ---- 13. 逾期账龄分档 ------------------------------------------------------
+code:DelinquencyBucketScheme a skos:ConceptScheme ;
+    rdfs:label "逾期账龄分档"@zh ;
+    skos:definition """按逾期天数切档。分档边界是监管口径与内部风控口径交汇的地方，
+两边不一定一致（例如 90 天是监管硬线，内部可能用 60 天预警）。
+所以档位做成概念而不是把天数写死在字段里：口径变了改概念，不改模型。"""@zh .
+code:DpdCurrent a skos:Concept ;
+    skos:inScheme code:DelinquencyBucketScheme ;
+    skos:prefLabel "未逾期"@zh ;
+    skos:notation "D0" ;
+    skos:definition "未发生逾期，或逾期天数小于 1 天。"@zh .
+code:Dpd1to30 a skos:Concept ;
+    skos:inScheme code:DelinquencyBucketScheme ;
+    skos:prefLabel "逾期 1–30 天"@zh ;
+    skos:notation "D30" .
+code:Dpd31to90 a skos:Concept ;
+    skos:inScheme code:DelinquencyBucketScheme ;
+    skos:prefLabel "逾期 31–90 天"@zh ;
+    skos:notation "D60" .
+code:DpdOver90 a skos:Concept ;
+    skos:inScheme code:DelinquencyBucketScheme ;
+    skos:prefLabel "逾期 90 天以上"@zh ;
+    skos:notation "D90" ;
+    skos:definition "监管硬线：逾期超 90 天通常必须至少划为次级。"@zh .
+# ---- 14. 拨备类型 ----------------------------------------------------------
+code:ProvisionTypeScheme a skos:ConceptScheme ;
+    rdfs:label "贷款损失准备类型"@zh ;
+    skos:definition "不同性质的准备，计提依据与可抵扣范围都不同，不能合并成一个数。"@zh .
+code:GeneralProvision a skos:Concept ;
+    skos:inScheme code:ProvisionTypeScheme ;
+    skos:prefLabel "一般准备"@zh ;
+    skos:notation "GP" ;
+    skos:definition "按全部贷款余额的一定比例计提，用于覆盖尚未识别的损失。"@zh .
+code:SpecificProvision a skos:Concept ;
+    skos:inScheme code:ProvisionTypeScheme ;
+    skos:prefLabel "专项准备"@zh ;
+    skos:notation "SP" ;
+    skos:definition "针对已识别为不良的具体贷款逐笔计提。拨备覆盖率用的是这一项。"@zh .
+code:SpecialProvision a skos:Concept ;
+    skos:inScheme code:ProvisionTypeScheme ;
+    skos:prefLabel "特别准备"@zh ;
+    skos:notation "XSP" ;
+    skos:definition "针对特定国家、行业或产品的组合风险计提。"@zh .
+# ---- 15. 重组类型 ----------------------------------------------------------
+code:RestructureTypeScheme a skos:ConceptScheme ;
+    rdfs:label "重组类型"@zh ;
+    skos:definition """重组会改变风险分类：重组前正常/关注的，重组后通常至少降为关注；
+原本就是不良的，重组后要观察期内不得上调。所以必须记录重组类型与重组日。"""@zh .
+code:RestructureExtension a skos:Concept ;
+    skos:inScheme code:RestructureTypeScheme ;
+    skos:prefLabel "展期"@zh ;
+    skos:notation "EXT" ;
+    skos:definition "延长到期日，未改变本金。"@zh .
+code:RestructureRefinance a skos:Concept ;
+    skos:inScheme code:RestructureTypeScheme ;
+    skos:prefLabel "借新还旧"@zh ;
+    skos:notation "RFL" ;
+    skos:definition "以新发放贷款偿还旧贷款。是否算重组取决于是否因借款人财务困难而作出让步。"@zh .
+code:RestructureConcession a skos:Concept ;
+    skos:inScheme code:RestructureTypeScheme ;
+    skos:prefLabel "减免让步"@zh ;
+    skos:notation "CNS" ;
+    skos:definition "减免本金、利息或调整利率，一定构成重组。"@zh .
+# ---- 16. 行业分类 ----------------------------------------------------------
+code:IndustryScheme a skos:ConceptScheme ;
+    rdfs:label "行业分类"@zh ;
+    skos:definition """示例层级，实际应替换为国标行业分类（GB/T 4754）或机构内部口径。
+这里只保留四个一级门类，用于验证"行业维度能否被本体承载"。"""@zh .
+code:IndustryManufacturing a skos:Concept ;
+    skos:inScheme code:IndustryScheme ;
+    skos:prefLabel "制造业"@zh ;
+    skos:notation "C" .
+code:IndustryWholesaleRetail a skos:Concept ;
+    skos:inScheme code:IndustryScheme ;
+    skos:prefLabel "批发和零售业"@zh ;
+    skos:notation "F" .
+code:IndustryRealEstate a skos:Concept ;
+    skos:inScheme code:IndustryScheme ;
+    skos:prefLabel "房地产业"@zh ;
+    skos:notation "K" ;
+    skos:definition "集中度监管的重点行业。"@zh .
+code:IndustryConstruction a skos:Concept ;
+    skos:inScheme code:IndustryScheme ;
+    skos:prefLabel "建筑业"@zh ;
+    skos:notation "E" .
+# ---- 17. 度量类型 ----------------------------------------------------------
+code:MetricTypeScheme a skos:ConceptScheme ;
+    rdfs:label "度量类型"@zh ;
+    skos:definition """给 metricValue 定性：这个数是余额、额度、拨备还是天数。
+不做这层区分，同一个账户上的「余额 180 万」与「额度 200 万」在数据里长得
+一模一样，报表取数只能靠猜 —— 这是口径对不上账最常见的成因。"""@zh .
+code:MetricLoanBalance a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "贷款余额"@zh ;
+    skos:notation "LN_BAL" ;
+    skos:definition "截至某时点的未偿本金。信贷指标最常用的分母。"@zh .
+code:MetricCreditLimit a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "授信额度"@zh ;
+    skos:notation "LIMIT" ;
+    skos:definition "批准可用的上限。与余额的差额是未用额度，EAD 计算的输入。"@zh .
+code:MetricProvisionBalance a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "拨备余额"@zh ;
+    skos:notation "PRV_BAL" ;
+    skos:definition "已计提的损失准备余额。与拨备类型（一般/专项/特别）联合使用。"@zh .
+code:MetricDaysPastDue a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "逾期天数"@zh ;
+    skos:notation "DPD" ;
+    skos:definition "从应还款日次日起计算的天数。单位是「天」而不是货币。"@zh .
+code:MetricCapitalAdequacyBase a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "资本净额"@zh ;
+    skos:notation "NET_CAP" ;
+    skos:definition "集中度指标的分母。按监管口径从一级资本中扣减后的余额。"@zh .
+code:MetricRiskWeightedAssets a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "风险加权资产"@zh ;
+    skos:notation "RWA" ;
+    skos:definition "资本充足率的分母。算法取决于 Basel 方法与资产类别。"@zh .
+# ---- 18. 计量单位（非货币） ------------------------------------------------
+#
+# 货币走 CurrencyScheme（CURRENCY 在源模型被引用 87 次，单独一套）。
+# 天数、百分比、件数这类单位不属于货币，单开一套 —— 否则 unitOfMeasure
+# 指向两套方案会让"按单位分组"的查询需要先跨方案 union。
+#
+# 这一套是补出来的：示例里曾写 unitOfMeasure code:Day，而它根本不存在。
+# 当时语法、结构、SHACL 全部通过，因为没有任何检查在管"码表引用是否存在"。
+# 现在由 R13 守着。
+code:MeasureUnitScheme a skos:ConceptScheme ;
+    rdfs:label "计量单位（非货币）"@zh ;
+    skos:definition "天数、百分比、件数等非货币计量单位。"@zh .
+code:Day a skos:Concept ;
+    skos:inScheme code:MeasureUnitScheme ;
+    skos:prefLabel "天"@zh , "Day"@en ;
+    skos:notation "DAY" ;
+    skos:definition "逾期天数的单位。注意与日期区分：这是数量单位，不是时点。"@zh .
+code:Percent a skos:Concept ;
+    skos:inScheme code:MeasureUnitScheme ;
+    skos:prefLabel "百分比"@zh , "Percent"@en ;
+    skos:notation "PCT" ;
+    skos:definition "比率类指标的单位（不良率、拨备覆盖率）。存 0.0321 还是 3.21 必须约定，否则差 100 倍。"@zh .
+code:Count a skos:Concept ;
+    skos:inScheme code:MeasureUnitScheme ;
+    skos:prefLabel "件"@zh , "Count"@en ;
+    skos:notation "CNT" ;
+    skos:definition "户数、笔数类指标的单位。"@zh .
+# ---- 17 补、vintage 与逾期专用的度量类型 ------------------------------------
+#
+# 度量类型不是"描述"，是**口径的身份**。同一个 1,800,000 挂在不同类型下，
+# 一个是贷款余额、一个是初始放款额、一个是逾期余额，三者在报表里是三个数，
+# 在对账时是三个必须相等的等式。类型错了，等式就永远对不上。
+code:MetricOriginalBalance a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "初始放款额"@zh ;
+    skos:notation "ORIG_BAL" ;
+    skos:definition """放款时刻的合同金额，用于 vintage 的**冻结分母**。
+与「贷款余额」的关键区别：余额随时间递减（还款、提前结清），
+初始放款额永远不变。vintage 曲线要求分母固定，所以必须单独有这个类型 ——
+拿余额当分母，曲线会随还款自动上扬，看起来像"逾期率在恶化"，其实是分母在缩。
+它必须在放款当日写入并从此不再修改。这条纪律无法在 OWL 里表达，
+由 SHACL 与 ETL 共同保证。"""@zh ;
+    skos:related code:MetricLoanBalance .
+code:MetricOverdueBalance a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "逾期余额"@zh ;
+    skos:notation "OD_BAL" ;
+    skos:definition """已逾期部分的未偿本金。逾期率与 vintage 曲线的分子。
+与「贷款余额」的区别不是"金额更小"，而是**筛选条件不同**：
+余额是全部贷款，逾期余额只含 DPD>0 的部分。用同一个类型名会让
+「按类型分组求和」这一步直接错，因为两组数会被加在一起。"""@zh ;
+    skos:related code:MetricDaysPastDue .
+code:MetricOverdueCount a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "逾期笔数"@zh ;
+    skos:notation "OD_CNT" ;
+    skos:definition """逾期的账户数/笔数，配合 MetricOverdueBalance 构成双口径。
+**为什么金额与笔数必须分开表达**：一笔 5000 万的大额逾期和 500 笔 10 万的
+逾期，金额口径看是同一量级，笔数口径差 500 倍。监管要求两个口径同时披露，
+且两者对不上账时正是数据质量问题的信号。"""@zh ;
+    skos:related code:MetricOverdueBalance .
+code:MetricMaxDaysPastDue a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "历史最大逾期天数"@zh ;
+    skos:notation "MAX_DPD" ;
+    skos:definition """该账户自放款以来达到过的最大逾期天数。
+**与当前 DPD 是两个信号，不能合并**：一笔已结清的贷款当前 DPD=0，
+历史最大 DPD=95 —— 它曾经严重逾期但最终还清。这个「曾经」是行为评分
+最有效的特征之一，一旦用当前值覆盖就永久丢失。
+它不是当前 DPD 的下位概念，所以在 SKOS 里用 related 而不是 broader：
+两者是并列的两个观测口径，不是一个比另一个更细。"""@zh ;
+    skos:related code:MetricDaysPastDue .
+code:MetricWriteOffAmount a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "核销金额"@zh ;
+    skos:notation "WO_AMT" ;
+    skos:definition """已确认无法收回并冲销的金额。vintage 累计损失曲线的分子。
+核销是不可逆事件（核销不等于债权消灭，仍要追索），所以它的时点必须精确。
+用「不良余额」代替会造成重复计数：不良可以回升，核销不能。"""@zh ;
+    skos:related code:MetricOverdueBalance .
+code:MetricRecoveryAmount a skos:Concept ;
+    skos:inScheme code:MetricTypeScheme ;
+    skos:prefLabel "回收金额"@zh ;
+    skos:notation "RCV_AMT" ;
+    skos:definition """逾期或核销之后实际收回的金额。催收效果的唯一硬指标。
+口径上要区分「回收」与「还款」：正常还款不是回收。
+回收特指已进入催收/诉讼/核销流程后的回款，它与逾期金额的比值才是回收率。"""@zh .
+
+# === fsldm-core.ttl ===
+##############################################################################
+# FS-LDM 本体 · 核心元模型（Layer 0）
+#
+# 这一层不描述"银行有什么"，只描述"FS-LDM 用什么构造来描述银行"。
+# 业务类一律放在 10 个主题域模块里，只允许 import 本文件，不允许互相 import。
+##############################################################################
+<https://w3id.org/fsldm/core> a owl:Ontology;
+    rdfs:label "FS-LDM 核心元模型"@zh , "FS-LDM Core Meta-model"@en;
+    owl:versionInfo "0.1.0";
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, B035-9318-039A (2009-03), Appendix A / Appendix C";
+    dct:modified "2026-11-03"^^xsd:date;
+    rdfs:comment """FS-LDM 概念模型的本体化表达之公共底座。
+建模立场（三条，其余决策见《FS-LDM本体建模指南.md》）：
+1. 逻辑层优先。本体比物理表高一层，因此 FS-LDM 中无物理表的抽象实体（ACCOUNT、
+   POLICY、LOCATION）在本体里必须存在，并在注释中说明其在 v10 物理层被折叠。
+2. 主题域是"包"，不是"类"。Internal Organization 在类层次上是 Party 的分支，
+   而不是与 Party 并列的顶层类。
+3. 一切关联皆可再ification。FS-LDM 的关联实体带角色、带生效期、带来源系统，
+   一律建为 RoleAssignment 的子类，而不是裸 object property。
+"""@zh .
+##############################################################################
+# 一、注解属性：与 FS-LDM 原模型的溯源挂钩
+##############################################################################
+fsldm:fsldmEntity a owl:AnnotationProperty;
+    rdfs:label "对应 FS-LDM 实体名"@zh;
+    rdfs:comment """该本体元素在 Teradata FS-LDM 中的原始实体名（全大写、空格分隔）。
+用于机器可校验的溯源：catalog/fsldm-entities.ttl 中含 2705 条实体名，
+tools/ttl_lint.py 会检查每个类的该值是否能在目录中命中。"""@zh .
+fsldm:subjectArea a owl:AnnotationProperty;
+    rdfs:label "主题域"@zh;
+    rdfs:comment "FS-LDM 十大主题域之一：Party / Agreement / Product / Event / Asset / Location / Channel / Campaign / Internal Organization / Finance。"@zh .
+fsldm:modelVersion a owl:AnnotationProperty;
+    rdfs:label "模型版本"@zh;
+    rdfs:comment "该构造所依据的 FS-LDM 版本。课程 PPT 为 v7.0（1181 实体），文档为 v10.00.00（2719 实体），两者差异必须显式记录。"@zh .
+fsldm:structural a owl:AnnotationProperty;
+    rdfs:label "结构类（无 FS-LDM 实体对应）"@zh;
+    rdfs:comment """标记那些不对应任何 FS-LDM 实体、纯为本体结构需要而引入的类，
+例如元模式类（TimeBound / RoleAssignment / Classification）与抽象归并类。
+这类元素不参与 fsldm:fsldmEntity 溯源检查。"""@zh;
+    rdfs:range <http://www.w3.org/2001/XMLSchema#boolean> .
+fsldm:decision a owl:AnnotationProperty;
+    rdfs:label "建模决策"@zh;
+    rdfs:comment "记录此处为何这样建模，以及被否决的备选方案。格式：决策编号 + 一句话结论。"@zh .
+##############################################################################
+# 二、顶层划分（Partition）
+#
+# 注意：这 8 个类不是"十大主题域"。主题域是组织单位，这里是语义划分。
+# Finance 能进来（FinancialItem），Internal Organization 进不来（它是 Party 的分支）。
+##############################################################################
+fsldm:BusinessEntity a owl:Class;
+    fsldm:structural true;
+    rdfs:label "业务实体"@zh;
+    rdfs:comment """FS-LDM 中一切被独立标识、独立跟踪的业务对象的根类。
+对应 FS-LDM 的 "Entity" 概念本身，不直接实例化。"""@zh .
+fsldm:Party a owl:Class;
+    rdfs:label "当事人"@zh;
+    skos:altLabel "PARTY";
+    fsldm:subjectArea "Party";
+    fsldm:fsldmEntity "PARTY";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """银行所服务的任意对象，以及感兴趣进行分析的各种对象：个人、机构、家庭、
+潜在客户、代理机构、雇员、分行、部门。同一个当事人可同时承担多种角色。
+原文："A party is any individual, organization or household."
+一个自然人既是客户又是员工时，PARTY 只有一条实例，角色差异由
+fsldm:RoleAssignment 承载 —— 这是 FS-LDM 建立客户单一视图的根基。"""@zh;
+fsldm:decision "D2：角色不入类。不为'客户''员工'各建一个类，而用角色关联表达， 避免类爆炸与多重身份冲突。" .
+fsldm:Agreement a owl:Class;
+    rdfs:label "协议"@zh;
+    skos:altLabel "AGREEMENT";
+    fsldm:subjectArea "Agreement";
+    fsldm:fsldmEntity "AGREEMENT";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """金融机构与当事人之间针对特定产品或服务签立的契约关系。
+账户、保单、贷款合同、信用证、担保合同都是它的具体形态。
+原文："This entity contains information about agreements between two or more parties."
+v7 中 ACCOUNT / POLICY 是它的物理子类型；v10 中二者已无独立物理表，
+但逻辑上仍是它的子类（见 fsldm-agreement.ttl 的版本说明）。"""@zh .
+fsldm:Product a owl:Class;
+    rdfs:label "产品"@zh;
+    skos:altLabel "PRODUCT";
+    fsldm:subjectArea "Product";
+    fsldm:fsldmEntity "PRODUCT";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """可营销的产品、产品包或服务，包括其条款与条件。也涵盖投资工具
+（债券、股权证券、基金）。
+原文："This independent entity contains information about any marketable product, package or service that you or your competitor offers."
+它是"独立实体"——不与协议同生共死，协议引用产品，而非产品属于协议。"""@zh .
+fsldm:Event a owl:Class;
+    rdfs:label "事件"@zh;
+    skos:altLabel "EVENT";
+    fsldm:subjectArea "Event";
+    fsldm:fsldmEntity "EVENT";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """与金融机构发生的一切交互，金融性或非金融性皆可；可与账户有关，
+也可无关；可由客户发起，也可由银行发起。
+原文："This entity keeps track of all interactions with the financial institution. These events may be of a financial or non-financial nature and may or may not affect an account."
+事件是 FS-LDM 里唯一"天然带时间戳"的顶层类，因此它是行为分析、渠道分析、
+漏斗分析的唯一事实来源。"""@zh .
+fsldm:Asset a owl:Class;
+    rdfs:label "资产"@zh;
+    skos:altLabel "PARTY ASSET";
+    fsldm:subjectArea "Asset";
+    fsldm:fsldmEntity "PARTY ASSET";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """当事人拥有或主张权益的、有价值的有形或无形之物：车辆、房产、珠宝、
+机械设备、存货、有价证券。
+同一件资产可以同时是保险标的、贷款抵质押物、被收回对象 —— 这是"一件资产、 多个角色"的典型，因此资产与协议、与当事人的连接必须建模为角色关联。"""@zh .
+fsldm:Locator a owl:Class;
+    rdfs:label "位置"@zh;
+    skos:altLabel "LOCATOR";
+    fsldm:subjectArea "Location";
+    fsldm:fsldmEntity "LOCATOR";
+    rdfs:subClassOf fsldm:BusinessEntity;
+    rdfs:comment """既是地理区域，也是街道地址、邮箱地址、电子地址。
+关键事实：v10 把 LOCATION 主题重构为 LOCATOR —— 位置本身是"值"，
+"谁的什么用途的位置"由 PARTY LOCATOR / AGREEMENT TO LOCATOR /
+CHANNEL TO LOCATOR 等角色实体表达。这是 FS-LDM 自身向"角色化关联"
+演进的直接证据，本本体沿用该结构。"""@zh;
+fsldm:decision "D5：位置不做成 Party 的数据属性（如 party.address），也不做成 Party 的子类。位置是独立实体 + 角色关联，否则无法表达'多个地址、多种用途、 历史变迁'。" .
+fsldm:Channel a owl:Class;
+    rdfs:label "渠道"@zh;
+    skos:altLabel "CHANNEL";
+    fsldm:subjectArea "Channel";
+    fsldm:fsldmEntity "CHANNEL";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """客户与金融机构接触、购买产品、使用服务并交流信息的手段与途径：
+网点、ATM、电话、网银、手机银行、呼叫中心。
+与 fsldm:Event 的区别是 FS-LDM 明确强调的一点：设备（卡）不是渠道；
+卡是"访问手段"，通过 ATM（渠道）访问账户。ACCESS DEVICE 与 CHANNEL 是两个类。"""@zh .
+fsldm:Campaign a owl:Class;
+    rdfs:label "营销活动"@zh;
+    skos:altLabel "CAMPAIGN";
+    fsldm:subjectArea "Campaign";
+    fsldm:fsldmEntity "CAMPAIGN";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """为获取、维护、增强客户关系而开展的有明确起止日期的集中性努力，
+通常由多个促销（PROMOTION）组成，目的是推广产品、树立形象或驱动业务。
+原文："A campaign is a concentrated effort to retain, acquire or consolidate customers or to build an image. It has a specific start and end date and typically consist of multiple promotions." """@zh .
+fsldm:FinancialItem a owl:Class;
+    fsldm:structural true;
+    rdfs:label "财务项"@zh;
+    fsldm:subjectArea "Finance";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """银行内部账务的组织对象：科目、分录、账簿批次、盈利成分、成本类型。
+这是"银行怎么看自己"，与其余七个类是"银行怎么看客户"的镜像。"""@zh .
+# 顶层互斥：这些类别在业务上不可能同时成立。
+# 注意不含 Organization —— Organization 是 Party 的子类，不能与 Party 互斥。
+[] a owl:AllDisjointClasses;
+   owl:members ( fsldm:Agreement fsldm:Product fsldm:Event
+                 fsldm:Asset fsldm:Locator fsldm:Channel
+                 fsldm:Campaign fsldm:FinancialItem ) .
+##############################################################################
+# 三、元模式 1：时态（TimeBound）
+##############################################################################
+fsldm:TimeBound a owl:Class;
+    fsldm:structural true;
+    rdfs:label "在效期内的事物"@zh;
+    rdfs:comment """带生效区间的构造。FS-LDM 的绝大多数关系都是"某段时间内成立"，
+而非"永久成立"；历史表（*_HIST）与 * HISTORY 实体都是它的物化形式。
+本体的处理原则（D4）：
+- 不在 OWL 里做时间推理（OWL 2 DL 无时间维度，4D 化成本极高）
+- 用 validFrom/validUntil 把区间作为一等数据，区间运算交给 SPARQL 与 SHACL
+- 因此本类只声明"有区间"，不声明"区间必须不重叠"——后者由 SHACL 管"""@zh .
+fsldm:validFrom a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "生效时间"@zh;
+    rdfs:comment "该陈述开始成立的时点。对应 FS-LDM 的 Start Date / Effective Date。"@zh;
+    rdfs:range xsd:date .
+fsldm:validUntil a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "失效时间"@zh;
+    rdfs:comment "该陈述停止成立的时点；空值表示至今仍成立。对应 FS-LDM 的 End Date / Expiration Date。"@zh;
+    rdfs:range xsd:date .
+##############################################################################
+# 三-补、时间的三种语义 —— 为什么不能共用一个 validFrom
+#
+# 这是本仓库被信贷验收打回的第一处（见 FS-LDM信贷语义验收.md 第 4 节）。
+# 原来只有 validFrom / validUntil 两个时间属性，ABox 里有 12 类实体都在用它，
+# 结果三种完全不同的时间被压成同一根轴：
+#
+#   ① 业务时间 business time —— 合同自己的时间轴
+#      放款日、到期日、首期应还款日、当期应还款日、最后足额还款日。
+#      由业务事实决定，录错了也改不了事实本身。
+#
+#   ② 记录时间 record time —— 这条陈述何时在系统里成立
+#      validFrom / validUntil。它是数据治理概念，用于版本、重述与追溯。
+#
+#   ③ 观察时间 observation time —— 这个数是在哪天的快照
+#      报表截止日、月末时点。它属于度量，不属于被度量的对象。
+#
+# 为什么必须分开：vintage 分析要算
+#      MOB = 观察时间 − 业务时间
+# 若两者都落在 validFrom 上，表达式编译得过、SPARQL 也跑得动，
+# 但一旦有人把协议资料的 validFrom 改成「数据录入日」（这在真实项目里天天发生），
+# 整条 vintage 曲线的横轴就整体错位 —— 而报表不报错，它只是悄悄错了。
+#
+# 这就是「能解析」与「能用」的分界线：语法检查永远发现不了一个字段承担两种语义。
+# 所以下面把业务时间拆成显式命名的独立属性，validFrom 只留记录时间一种含义。
+##############################################################################
+fsldm:originationDate a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "起息日 / 放款日"@zh;
+    rdfs:domain fsldm:Agreement;
+    rdfs:range xsd:date;
+    rdfs:comment """协议正式生效并开始计息的日期。信贷里就是放款日。
+**vintage 分桶的唯一锚点。** 所有 vintage 曲线都是「按 originationDate 的月份
+分组」得到的，所以它必须是一个可空但一旦有值就不可变的事实。
+与 validFrom 的区别：validFrom 说「这条记录什么时候开始被系统承认」，
+originationDate 说「这笔钱什么时候开始计息」。数据迁移时前者会被改成导入日，
+后者不能改 —— 改了 vintage 曲线整条错位。
+为什么声明 Functional：一笔贷款只有一个起息日。多次放款是多个协议
+（或一个额度协议下的多笔用信），不是同一协议多个起息日。"""@zh .
+fsldm:observationDate a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "观察时点"@zh;
+    rdfs:domain fsldm:Metric;
+    rdfs:range xsd:date;
+    rdfs:comment """这个度量值对应的数据截止日（as-of date）。
+与 validFrom 的分工是本仓库最容易混的一处：
+- validFrom 说「这条度量记录何时生效」——治理概念，可被重述覆盖；
+- observationDate 说「这个数截至哪天」——业务概念，2026-06-30 的余额永远是那天的事实。
+一次月末结账可能重跑三次，产生三条 validFrom 不同、observationDate 相同的记录。
+报表取数必须先按 observationDate 过滤再取最新 validFrom —— 少了这个区分，
+重述会静默叠加，同一个时点的余额被算成两倍。
+挂在 Metric 而不是 TimeBound 上：观察时点是度量的属性，
+分类、角色、协议都不需要它。"""@zh .
+fsldm:maturityDate a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "到期日"@zh;
+    rdfs:domain fsldm:Agreement;
+    rdfs:range xsd:date;
+    rdfs:comment "合同约定的终止日。与 validUntil 不同：validUntil 是记录失效，到期日是合同失效。"@zh .
+fsldm:firstPaymentDate a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "首期应还款日"@zh;
+    rdfs:domain fsldm:Agreement;
+    rdfs:range xsd:date;
+    rdfs:comment """第一期还款的约定日期，FPD（首期逾期率）的判定基准。
+为什么不能靠「起息日 + 30 天」推：首期可能是宽限期后、可能是按季付息、
+可能约定放款次月 20 日。各家银行的规则都不一样，推不出来，只能记。"""@zh .
+fsldm:dueDate a owl:DatatypeProperty;
+    rdfs:label "当期应还款日"@zh;
+    rdfs:domain fsldm:Agreement;
+    rdfs:range xsd:date;
+    rdfs:comment """每一期还款的应还日期，一期一个值，因此**不声明 Functional**。
+它决定「是否逾期」：观察日超过 dueDate 且未足额还款即为逾期。
+严格说它属于还款计划条目而非协议本身，本仓库暂未建 PaymentSchedule 类，
+先挂在协议上并在 SHACL 里限定「不得少于 1 个」（有分期就必须有应还款日）。"""@zh .
+fsldm:lastPaymentDate a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "最后足额还款日"@zh;
+    rdfs:domain fsldm:Agreement;
+    rdfs:range xsd:date;
+    rdfs:comment """最后一次足额还款的日期 —— DPD 的起算锚点。
+只有 DPD=45 这个数是不够的：数据断档、口径调整、系统迁移之后，
+没有锚点就无法重算，也无法判断这个 45 是当前值还是某个历史快照。
+刻意不叫 lastPaymentDate 意义上的「最后交易」：部分还款不算，必须足额。"""@zh .
+fsldm:recordedAt a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "记录写入时间"@zh;
+    rdfs:range xsd:dateTime;
+    rdfs:comment """双时态的另一半：这条陈述何时被写入系统。
+与 validFrom 的区别是「系统承认」与「物理写入」。二者在批量补录、回溯调整时
+会分叉：一条 6 月的数据可能 7 月才写入。审计要区分「当时记错了」与「后来改的」，
+靠的就是这两个时间并存。"""@zh .
+fsldm:sourceSystem a owl:DatatypeProperty;
+    rdfs:label "来源系统"@zh;
+    rdfs:comment "数据来源系统代码。FS-LDM 的每张表几乎都有 Source System Id，是血缘追溯的最小单位。"@zh;
+    rdfs:range xsd:string .
+fsldm:sourceRecordId a owl:DatatypeProperty;
+    rdfs:label "来源记录号"@zh;
+    rdfs:comment "来源系统中的主键，用于回查到具体记录。"@zh;
+    rdfs:range xsd:string .
+##############################################################################
+# 四、元模式 2：角色关联（RoleAssignment）
+#
+# FS-LDM 有 111 个明确定义为 associative entity 的实体，此外还有大量
+# "X TO Y" 形态的关联实体。它们共同的特征：两端 + 一个角色码 + 一个生效期。
+# 这是在 RDF 里必须 reify 的东西 —— 直接用 object property 会丢掉角色与时间。
+##############################################################################
+fsldm:RoleAssignment a owl:Class;
+    fsldm:structural true;
+    rdfs:label "角色关联"@zh;
+    rdfs:comment """把"两端 + 角色 + 有效期"打包成一个可被独立标识、独立引用、独立追溯的个体。
+原文（AGREEMENT PARTY）："This associative entity defines the relationships that this account has with parties... There is one instance for each party/event/role/ start date combination."
+原文（EVENT PARTY）："A Party can have many events and roles with that event."
+最后一句是本体设计的直接依据：**主键 = 参与方 × 角色 × 起始日**。
+这正好是 owl:hasKey 想表达的东西，也正好说明为什么裸属性不够用。"""@zh;
+    rdfs:subClassOf fsldm:TimeBound ,
+        [ a owl:Restriction;
+    owl:onProperty fsldm:ofSubject;
+          owl:minQualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass fsldm:BusinessEntity ] ,
+        [ a owl:Restriction;
+    owl:onProperty fsldm:ofObject;
+          owl:minQualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass fsldm:BusinessEntity ];
+fsldm:decision "D3：关联实体一律建成类（n-ary relation reification）， 不建成 object property。代价是多一跳；收益是角色、生效期、来源系统、 数值（如余额、佣金率）都有地方放，且可被 SHACL 逐条校验。" .
+fsldm:ofSubject a owl:ObjectProperty;
+    rdfs:label "主体端"@zh;
+    rdfs:comment "角色关联中的“被描述方”，通常是 Party（谁持有、谁受益、谁拥有）。"@zh;
+    rdfs:domain fsldm:RoleAssignment;
+    rdfs:range fsldm:BusinessEntity .
+fsldm:ofObject a owl:ObjectProperty;
+    rdfs:label "客体端"@zh;
+    rdfs:comment "角色关联中的“被关联方”，通常是 Agreement / Asset / Event / Product。"@zh;
+    rdfs:domain fsldm:RoleAssignment;
+    rdfs:range fsldm:BusinessEntity .
+fsldm:hasRole a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "角色"@zh;
+    rdfs:comment """角色值，取自 SKOS 角色词表（codes.ttl）。
+例如：账户持有人、共同持有人、借款人、受益人、担保人、执行人、代理人、
+被保险人、受益人、抵押权人、出质人。
+这是 FS-LDM 2180 条关系短语的归宿：短语不是关系类型，是角色。"""@zh;
+    rdfs:domain fsldm:RoleAssignment;
+    rdfs:range skos:Concept .
+fsldm:isPrimaryRole a owl:DatatypeProperty;
+    rdfs:label "是否主角色"@zh;
+    rdfs:comment """同一主体对同一客体可能有多个角色（主持有人与共同持有人），
+该标记区分主次。对应 FS-LDM 的 Primary Indicator 类字段。"""@zh;
+    rdfs:range xsd:boolean .
+##############################################################################
+# 五、元模式 3：分类（Classification）
+#
+# FS-LDM 有 828 个 TYPE 实体 + 3 套 SUBJECT/VALUE 分类体系。
+# 判定规则见指南 D6：能枚举、由业务维护、不参与推理 → SKOS；否则才是 OWL 类。
+##############################################################################
+fsldm:Classification a owl:Class;
+    fsldm:structural true;
+    rdfs:label "分类"@zh;
+    rdfs:comment """把某个实体归入某个分类方案下的某个值。
+对应 FS-LDM 的 PARTY CLASSIFICATION / AGREEMENT CLASSIFICATION /
+PARTY ASSET CLASSIFICATION 三套 SUBJECT + VALUE 结构 —— 这是"元数据驱动"
+的分类：方案本身是数据，不是模型。客户分层、风险分组、行业细分都走这里，
+因此新增一种分类维度不需要改本体。"""@zh;
+    rdfs:subClassOf fsldm:TimeBound ,
+        [ a owl:Restriction;
+    owl:onProperty fsldm:inScheme;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass skos:ConceptScheme ] .
+fsldm:inScheme a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "所属方案"@zh;
+    rdfs:comment "分类方案。如 Party Classification Scheme、Basel Segment Scheme。"@zh;
+    rdfs:range skos:ConceptScheme .
+fsldm:classifies a owl:ObjectProperty;
+    rdfs:label "所分类对象"@zh;
+    rdfs:domain fsldm:Classification;
+    rdfs:range fsldm:BusinessEntity;
+    rdfs:comment """被归类的那一方。FS-LDM 的三套分类结构都有这个"主体"列：
+PARTY ASSET CLASSIFICATION 指向资产、AGREEMENT CLASSIFICATION 指向协议、
+PARTY CLASSIFICATION 指向当事人。
+为什么不用 rdfs:subClassOf 或类型断言来表达归类：分类是会变的事实
+（"去年是 A 级"），不是本质属性。一旦写成类型，等级一改就得改类型，
+历史全部丢失 —— 这正是时态建模要防的事。"""@zh .
+fsldm:hasClassValue a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "分类值"@zh;
+    rdfs:comment "该分类下的具体取值（SKOS Concept）。注意 Scheme 与 Value 要一致，由 SHACL 校验。"@zh;
+    rdfs:range skos:Concept .
+fsldm:hasCode a owl:DatatypeProperty;
+    rdfs:label "代码"@zh;
+    rdfs:comment "业务代码原值。保留原文以便与源系统对账，不参与推理。"@zh;
+    rdfs:range xsd:string .
+##############################################################################
+# 五-补、状态指派（StatusAssignment）—— 状态不是字段，是带时点的断言
+#
+# 留存率、账户流失率、活跃率这一类指标，全部建立在同一个问题上：
+#       **某对象在某一天，是不是还活着？**
+#
+# 有三种建法，只有一种能算：
+#
+#   ✗ 在 Agreement 上放一个 status 字符串字段
+#     销户时覆盖原值。当期报表是对的，但"去年 6 月这个账户还在吗"永远答不出。
+#     留存率一旦要回溯，分母就没了。
+#
+#   ✗ 在 Agreement 上放 status + statusChangedAt 两列
+#     能回答"现在什么状态、什么时候变的"，但答不出"变了两次"和"曾经冻结过"。
+#     客户挽留、休眠唤醒、销户原因分析都要多次变更历史。
+#
+#   ✓ 状态指派作为独立节点，带主体、取值、生效区间
+#     这就是本类。它不是新发明 —— 复用 Classification 的模式（classifies +
+#     hasClassValue + inScheme + validFrom），只是把语义收窄到"生命周期状态"。
+#
+# 与 PartyClassification 的区别：分类是内部判断，可以随时重打标签；
+# 状态是**对象自己的生命周期位置**，有先后顺序与不可逆性（销户不能直接复活，
+# 只能销户后重新开户）。这个不可逆性无法在 OWL 里表达，由 SHACL 校验。
+##############################################################################
+fsldm:StatusAssignment a owl:Class;
+    fsldm:structural true;
+    rdfs:label "状态指派"@zh;
+    rdfs:comment """给某对象在某段时间内定一个生命周期状态。
+典型用法：账户在 2026-03-15 从「有效」变「已销户」，就是一条
+classifies=账户、hasClassValue=已销户、validFrom=2026-03-15 的状态指派。
+**为什么要有它而不是一个 status 字段**：留存率问的是「t0 有、t0+n 还有」。
+若状态只存当前值，历史上任何一天的存活状态都不可重建；而留存率的分母必须
+是 t0 那天的存活集合。这不是"更好的建模"，是能不能算出来的问题。"""@zh;
+    rdfs:subClassOf fsldm:Classification .
+fsldm:hasStatus a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "当前状态"@zh;
+    rdfs:domain fsldm:BusinessEntity;
+    rdfs:range skos:Concept;
+    rdfs:comment """便利属性：直接给出对象的当前状态，供当期报表使用。
+**它不能替代 StatusAssignment。** 它只回答「现在是什么」，不回答「什么时候变的」
+「以前是什么」。凡是需要回溯的指标（留存、迁徙、流失、休眠唤醒）都必须走
+StatusAssignment 节点。
+之所以仍然保留：当期报表占实际查询的绝大多数，每次都去排序找最新状态指派
+既慢又容易写错（最新 validFrom 不等于当前，若有未来生效的指派）。
+两者并存，由数据加工保证一致性，由 SHACL 校验 hasStatus 与最新状态指派相符。"""@zh .
+##############################################################################
+# 六、元模式 4：特性 / 标识 / 度量
+##############################################################################
+fsldm:Feature a owl:Class;
+    fsldm:structural true;
+    rdfs:label "特性"@zh;
+    rdfs:comment """产品的条款与条件、账户的具体约定、设备的规格 —— FS-LDM 用统一的
+FEATURE 概念承载：PRODUCT FEATURE、ACCOUNT FEATURE、AGREEMENT PRODUCT FEATURE、
+COVERAGE FEATURE 都是它的使用形态。
+之所以要抽出统一父类：特性是"可被赋予给任意对象的一段条件"，且同一特性可
+被产品定义、再被账户覆盖（FS-LDM 的 LEEWAY / ELIGIBILITY 就是这个意思）。"""@zh;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound .
+fsldm:FeatureUsage a owl:Class;
+    fsldm:structural true;
+    rdfs:label "特性赋值"@zh;
+    rdfs:comment """把某条特性赋给某个具体对象（产品、账户、保额），并记录其取值与生效期。
+这是 Feature 与"被赋特性的对象"之间的角色关联。"""@zh;
+    rdfs:subClassOf fsldm:RoleAssignment .
+fsldm:Identification a owl:Class;
+    fsldm:structural true;
+    rdfs:label "标识"@zh;
+    rdfs:comment """实体在不同体系中的编号：身份证号、护照号、纳税人识别号、
+统一社会信用代码、SWIFT/BIC、外部产品代码。
+原文（PARTY IDENTIFICATION）："The numbers that may be assigned to a Party for identification purposes, as specified by Party Identification Type."
+关键设计：标识是独立实体而非 Party 的属性，因为一个人可以有多个标识、
+每个标识有有效期与签发机构。"""@zh;
+    rdfs:subClassOf fsldm:TimeBound ,
+        [ a owl:Restriction;
+    owl:onProperty fsldm:identificationValue;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onDatatype xsd:string ] .
+fsldm:identificationValue a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "标识值"@zh;
+    rdfs:range xsd:string .
+fsldm:identificationType a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "标识类型"@zh;
+    rdfs:range skos:Concept .
+fsldm:Metric a owl:Class;
+    fsldm:structural true;
+    rdfs:label "度量"@zh;
+    rdfs:comment """对某对象在某时点上的数量刻画：余额、保额、敞口、成本、收益、
+评分。FS-LDM 的 *_METRIC、* BAL HIST、* VALUE HIST 都是它的物化形式。
+本类不区分"金额"与"数量"，因为两者结构相同：值 + 单位 + 时点 + 口径。
+区分靠 unitOfMeasure。"""@zh;
+    rdfs:subClassOf fsldm:TimeBound ,
+        [ a owl:Restriction;
+    owl:onProperty fsldm:metricValue;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onDatatype xsd:decimal ] .
+fsldm:metricValue a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "度量值"@zh;
+    rdfs:range xsd:decimal .
+fsldm:metricOf a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "度量所属主体"@zh;
+    rdfs:domain fsldm:Metric;
+    rdfs:range fsldm:BusinessEntity;
+    owl:inverseOf fsldm:hasMetric;
+    rdfs:comment """这条数是谁的：某账户的余额、某资产的估值、某机构的资本净额。
+**缺了它，Metric 就是一个飘在空中的数字** —— 有值、有单位、有生效日，
+但不知道该归到哪个账户上。信贷分析的每一个指标都建立在"按主体聚合"之上：
+不良率要知道每个账户的余额与分类，LTV 要知道每笔贷款与它对应的抵押物估值。
+没有主体链接，聚合无从下手。
+它是 6 个 Metric 子类（AssetValue / EventMetric / ValueAtRisk / StressTestResult /
+MarketQuote / ProfitabilityComponent）共同的缺口 —— 子类各自补一条会有 6 种写法，
+所以在抽象层补一次。
+收窄为 Functional 是有意的：一个度量值只能属于一个主体。若某数确实横跨多个主体
+（如集团合并口径），那不是一条 Metric，而是聚合结果 —— 聚合另建节点并注明口径。"""@zh .
+fsldm:hasMetric a owl:ObjectProperty;
+    rdfs:label "拥有度量"@zh;
+    rdfs:domain fsldm:BusinessEntity;
+    rdfs:range fsldm:Metric;
+    owl:inverseOf fsldm:metricOf;
+    rdfs:comment "反向便利属性：从账户直达它的历次余额。查询里更常用这一侧。"@zh .
+fsldm:metricType a owl:ObjectProperty , owl:FunctionalProperty;
+    rdfs:label "度量类型"@zh;
+    rdfs:domain fsldm:Metric;
+    rdfs:range skos:Concept;
+    rdfs:comment """这个数是余额、敞口、拨备、逾期天数，还是额度。
+不加这条的后果：所有金额都长一个样，`metricValue 1800000` 到底是贷款余额、
+授信额度还是抵押物估值，只能靠"它挂在哪个类上"猜。而同一个账户上同时有余额与额度，
+猜不出来 —— 这是报表口径对不上账的第一大原因。
+类型走 SKOS 概念而不是给每个指标建一个子类，理由与码表一致：
+指标会增删，类不该跟着改。
+注意它与 unitOfMeasure 的分工：类型说"是什么数"，单位说"用什么计"。
+逾期天数的类型是「逾期天数」，单位是「天」；余额的类型是「贷款余额」，单位是「CNY」。"""@zh .
+fsldm:unitOfMeasure a owl:ObjectProperty;
+    rdfs:label "计量单位"@zh;
+    rdfs:comment "货币或数量单位。FS-LDM 中 CURRENCY 被引用 87 次，是最高频的维度之一。"@zh;
+    rdfs:range skos:Concept .
+##############################################################################
+# 七、通用关系属性（只保留结构性关系，角色走 hasRole）
+#
+# 这一组是"降维"的结果：7147 条关系、2180 条短语，压到这十几个属性上。
+##############################################################################
+fsldm:hasParty a owl:ObjectProperty;
+    rdfs:label "涉及当事人"@zh;
+    rdfs:comment "便利属性：从协议/事件/资产直达当事人。语义以对应的 RoleAssignment 为准。"@zh;
+    rdfs:range fsldm:Party .
+fsldm:partyOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasParty;
+    rdfs:label "所属当事人"@zh;
+    rdfs:domain fsldm:Party .
+fsldm:hasAgreement a owl:ObjectProperty;
+    rdfs:label "涉及协议"@zh;
+    rdfs:range fsldm:Agreement .
+fsldm:agreementOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasAgreement;
+    rdfs:label "所属协议"@zh;
+    rdfs:domain fsldm:Agreement .
+fsldm:hasProduct a owl:ObjectProperty;
+    rdfs:label "涉及产品"@zh;
+    rdfs:range fsldm:Product .
+fsldm:productOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasProduct;
+    rdfs:label "所属产品"@zh;
+    rdfs:domain fsldm:Product .
+fsldm:hasEvent a owl:ObjectProperty;
+    rdfs:label "涉及事件"@zh;
+    rdfs:range fsldm:Event .
+fsldm:eventOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasEvent;
+    rdfs:label "所属事件"@zh;
+    rdfs:domain fsldm:Event .
+fsldm:hasAsset a owl:ObjectProperty;
+    rdfs:label "涉及资产"@zh;
+    rdfs:range fsldm:Asset .
+fsldm:assetOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasAsset;
+    rdfs:label "所属资产"@zh;
+    rdfs:domain fsldm:Asset .
+fsldm:hasLocator a owl:ObjectProperty;
+    rdfs:label "涉及位置"@zh;
+    rdfs:range fsldm:Locator .
+fsldm:locatorOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasLocator;
+    rdfs:label "位置属于"@zh;
+    rdfs:domain fsldm:Locator .
+fsldm:hasChannel a owl:ObjectProperty;
+    rdfs:label "涉及渠道"@zh;
+    rdfs:range fsldm:Channel .
+fsldm:channelOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasChannel;
+    rdfs:label "渠道属于"@zh;
+    rdfs:domain fsldm:Channel .
+fsldm:hasCampaign a owl:ObjectProperty;
+    rdfs:label "涉及营销活动"@zh;
+    rdfs:range fsldm:Campaign .
+fsldm:campaignOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasCampaign;
+    rdfs:label "营销活动属于"@zh;
+    rdfs:domain fsldm:Campaign .
+fsldm:hasFeature a owl:ObjectProperty;
+    rdfs:label "具有特性"@zh;
+    rdfs:range fsldm:Feature .
+fsldm:featureOf a owl:ObjectProperty;
+    owl:inverseOf fsldm:hasFeature;
+    rdfs:label "特性属于"@zh;
+    rdfs:domain fsldm:Feature .
+fsldm:hasCurrency a owl:ObjectProperty;
+    rdfs:label "币种"@zh;
+    rdfs:comment "统一币种维度。CURRENCY 在 FS-LDM 中被 87 个实体引用，必须一提。"@zh;
+    rdfs:range skos:Concept .
+##############################################################################
+# 八、主键（业务键）
+#
+# FS-LDM 每个实体都有主键；本体用 owl:hasKey 声明。这带来一个非常有用的
+# 副作用：两条记录主键相同即被推为同一个体（sameAs），天然完成实体合并。
+# 但要注意 OWL 无唯一名假设：主键不同不代表实体的不同（可能是不同来源的重复）。
+##############################################################################
+fsldm:partyId a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "当事人编号"@zh;
+    rdfs:domain fsldm:Party;
+    rdfs:range xsd:string .
+fsldm:agreementId a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "协议编号"@zh;
+    rdfs:domain fsldm:Agreement;
+    rdfs:range xsd:string .
+fsldm:productId a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "产品编号"@zh;
+    rdfs:domain fsldm:Product;
+    rdfs:range xsd:string .
+fsldm:eventId a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "事件编号"@zh;
+    rdfs:domain fsldm:Event;
+    rdfs:range xsd:string .
+fsldm:assetId a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "资产编号"@zh;
+    rdfs:domain fsldm:Asset;
+    rdfs:range xsd:string .
+
+# === fsldm-party.ttl ===
+##############################################################################
+# 主题域 1 · Party（当事人）
+#
+# 本域是 FS-LDM 的连接枢纽：PARTY 在附录 A 中被引用 195 次，全模型第一。
+##############################################################################
+<https://w3id.org/fsldm/party> a owl:Ontology;
+    rdfs:label "FS-LDM 主题域：当事人"@zh , "FS-LDM Subject Area: Party"@en;
+    owl:versionInfo "0.1.0";
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 1";
+    rdfs:comment """当事人是银行服务的对象，也是所有分析的起点。本域只放"谁"，不放"谁和谁
+发生了什么" —— 后者是角色关联（Agreement Party / Event Party / Party Locator）。
+一个关键判断：PARTY 是**一条**记录，不是多条。同一个人既是客户又是员工时，
+PARTY 只有一条，两个身份分别落在 AgreementPartyRole 与 AssociateEmployment 上。
+把"客户"和"员工"建成两个子类，是 FS-LDM 客户化时最常见的错误。"""@zh .
+##############################################################################
+# 一、当事人的三种基本形态（互斥）
+##############################################################################
+party:Individual a owl:Class;
+    rdfs:label "个人"@zh;
+    skos:altLabel "INDIVIDUAL";
+    fsldm:fsldmEntity "INDIVIDUAL";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:Party;
+    rdfs:comment """对机构有意义的自然人。原文："This is a subtype entity to PARTY. This entity
+consists of those people that are of interest to the enterprise." """@zh .
+party:Organization a owl:Class;
+    rdfs:label "机构"@zh;
+    skos:altLabel "ORGANIZATION";
+    fsldm:fsldmEntity "ORGANIZATION";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:Party;
+    rdfs:comment """为特定目的由个人（或单个个人）或其他机构组成的团体。
+分内部机构与外部机构两类；内部机构不是法人，法人只能是外部机构。
+原文："An organization can be either an internal organization or an external
+organization. This definition does not include groups of individuals that form a
+segment." 后半句很重要：细分客群（segment）不是机构，不要建成 Organization。"""@zh .
+party:Household a owl:Class;
+    rdfs:label "家庭"@zh;
+    skos:altLabel "HOUSEHOLD";
+    fsldm:fsldmEntity "HOUSEHOLD";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:Party;
+    rdfs:comment """为营销目的由银行人为划定的个人分组，成员可能居住在同一地址。
+原文："A household is a grouping of individuals created by the enterprise for
+marketing purposes."
+注意它是"人为构造"，因此与 PARTY GROUP（人为构造但不含家庭）刻意区分：
+Household 的成员只能是个人，PartyGroup 的成员可以是任意当事人。"""@zh .
+[] a owl:AllDisjointClasses;
+   owl:members ( party:Individual party:Organization party:Household ) .
+##############################################################################
+# 二、当事人的标识、关系、分组
+##############################################################################
+party:PartyIdentification a owl:Class;
+    rdfs:label "当事人标识"@zh;
+    skos:altLabel "PARTY IDENTIFICATION";
+    fsldm:fsldmEntity "PARTY IDENTIFICATION";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:Identification ,
+        [ a owl:Restriction;
+    owl:onProperty party:ofParty;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass fsldm:Party ];
+    rdfs:comment """银行或外部机构赋予当事人的各类编号：身份证、护照、驾驶证、
+纳税人识别号、统一社会信用代码。
+原文："The numbers that may be assigned to a Party for identification purposes,
+as specified by Party Identification Type. Example: Social Security Number,
+Passport Identification, Driver's License..."
+为什么要独立成实体而不是 Party 的属性：一个人有多张证件、每张有有效期与签发机构；
+把身份证号做成属性，就只能存一个。"""@zh .
+party:ofParty a owl:ObjectProperty;
+    rdfs:label "所属当事人"@zh;
+    rdfs:domain party:PartyIdentification;
+    rdfs:range fsldm:Party .
+party:PartyRelationship a owl:Class;
+    rdfs:label "当事人之间的关系"@zh;
+    skos:altLabel "PARTY RELATED";
+    fsldm:fsldmEntity "PARTY RELATED";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:RoleAssignment ,
+        [ a owl:Restriction;
+    owl:onProperty party:relatedFrom;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass fsldm:Party ] ,
+        [ a owl:Restriction;
+    owl:onProperty party:relatedTo;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass fsldm:Party ];
+    rdfs:comment """当事人之间的关系：个人与个人、个人与机构、机构与机构、个人与家庭。
+原文："This entity defines the relationships between parties - individual and
+individual;
+    individual and organization;
+    organization and organization;
+individual and household."
+建模要点：关系本身有方向吗？FS-LDM 原文是"between"，但夫妻、母子是对称的，
+担保、雇佣是不对称的。本体的处理是**保留有向**，对称关系靠关系角色声明
+（codes.ttl 中 PartyRelationshipRole 的 skos:broader + 自定义 symmetric 标记），
+理由：有向是无损的，对称可以从中恢复；反过来不行。"""@zh;
+    owl:hasKey ( party:relatedFrom party:relatedTo fsldm:hasRole fsldm:validFrom ) .
+party:relatedFrom a owl:ObjectProperty;
+    rdfs:label "关系发起方"@zh;
+    rdfs:domain party:PartyRelationship;
+    rdfs:range fsldm:Party;
+    rdfs:subPropertyOf fsldm:ofSubject .
+party:relatedTo a owl:ObjectProperty;
+    rdfs:label "关系指向方"@zh;
+    rdfs:domain party:PartyRelationship;
+    rdfs:range fsldm:Party;
+    rdfs:subPropertyOf fsldm:ofObject .
+party:PartyGroup a owl:Class;
+    rdfs:label "当事人分组"@zh;
+    skos:altLabel "PARTY GROUP";
+    fsldm:fsldmEntity "PARTY GROUP";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """人为划定的当事人集合，不含家庭。
+原文："This entity identifies artificial groupings of parties not including
+households. Examples are all businesses that have anything to do with golf..."
+与 Classification 的区别：Group 是**成员清单**（谁在里面），Classification 是
+**维度取值**（属于哪一类）。前者可枚举成员，后者只能枚举取值。"""@zh .
+party:hasGroupMember a owl:ObjectProperty;
+    rdfs:label "组成员"@zh;
+    rdfs:domain party:PartyGroup;
+    rdfs:range fsldm:Party .
+party:PartyClassification a owl:Class;
+    rdfs:label "当事人分类"@zh;
+    skos:altLabel "PARTY CLASS VALUE";
+    fsldm:fsldmEntity "PARTY CLASS VALUE";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:Classification ,
+        [ a owl:Restriction;
+    owl:onProperty party:classifiedParty;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger;
+          owl:onClass fsldm:Party ];
+    rdfs:comment """把当事人归入某个分类方案下的某个取值。客户分层、风险分组、
+行业细分、Basel 敞口类别都走这里。
+原文："For a given classification scheme these value codes represent the various
+values for a given classification scheme."
+注意"方案"与"取值"都在 codes.ttl 里（SKOS），本类只记录"谁被归到哪个值"。
+这样新增一套分类维度不需要改模型 —— 这正是 FS-LDM 把分类做成 SUBJECT/VALUE
+两张表而不是几十个字段的原因。"""@zh .
+party:classifiedParty a owl:ObjectProperty;
+    rdfs:label "被分类当事人"@zh;
+    rdfs:domain party:PartyClassification;
+    rdfs:range fsldm:Party .
+##############################################################################
+# 三、当事人相关的文档与信用信息
+##############################################################################
+party:PartyFinancialDocument a owl:Class;
+    rdfs:label "当事人财务报告"@zh;
+    skos:altLabel "PARTY FINANCIAL DOCUMENT";
+    fsldm:fsldmEntity "PARTY FINANCIAL DOCUMENT";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """企业当事人提交的财务报表整体：资产负债表、损益表、现金流量表及其
+所属期间。明细科目在 PARTY FINANCIAL DOC ITEM。
+企业信贷的授信测算、财务比率、行业对标全部依赖这一条链路，因此它虽然叫"文档"，
+实质是结构化的财务事实，不是附件。"""@zh .
+party:PartyCreditReport a owl:Class;
+    rdfs:label "当事人征信报告"@zh;
+    skos:altLabel "PARTY CREDIT REPORT";
+    fsldm:fsldmEntity "PARTY CREDIT REPORT";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound;
+    rdfs:comment """外部征信机构返回的当事人信用报告，包含评分、查询记录、
+账户表现等。与 PartyClassification 的区别：征信报告是**外部事实**，
+分类是**内部判断**；前者不可改，后者可随时调整。"""@zh .
+party:financialDocumentOfParty a owl:ObjectProperty;
+    rdfs:label "报告所属当事人"@zh;
+    rdfs:domain party:PartyFinancialDocument;
+    rdfs:range fsldm:Party .
+##############################################################################
+# 七、风险评级：分类里唯一"有顺序"的一种
+#
+# 来源：Reference Guide Book 2 第 8 章 "Score and Rating"（Banking Extension）
+#      + 附录 C 中 PARTY RISK GRADE / RISK GRADE SCHEME / RISK GRADE VALUE 三条定义
+##############################################################################
+party:PartyRiskGrade a owl:Class;
+    rdfs:label "当事人风险等级"@zh;
+    skos:altLabel "PARTY RISK GRADE";
+    fsldm:fsldmEntity "PARTY RISK GRADE";
+    fsldm:subjectArea "Party";
+    rdfs:subClassOf fsldm:Classification;
+    rdfs:comment """给某当事人在某段时间内定的风险等级：内评等级、征信评分档、Basel 段位。
+附录 C 原文是 "the risk grade assignment for a given Party for a given period of time" ——
+三样东西必须同时记：等级值本身、哪套方案（RISK GRADE SCHEME）、以及起止时间。
+少任何一样，"去年 6 月他是 A 级"这句话就还原不出来，而压力测试和历史回溯要的正是这句话。
+它与 PartyClassification 的区别：分类是内部判断、可以随时重打标签；
+风险等级是**有治理流程的评估结果**，会留下复评日、评估频率、依据的数据快照。"""@zh .
+party:riskGradeReviewDate a owl:DatatypeProperty;
+    rdfs:label "复评到期日"@zh;
+    rdfs:domain party:PartyRiskGrade;
+    rdfs:range xsd:date;
+    rdfs:comment """对应 PARTY RISK GRADE NEXT REV DTTM。
+评级不是定了就不动的：监管要求定期复评，逾期未复评的评级在授信审批里应当被判为失效。
+这条属性是"评级有效期"与"数据有效期"分离的体现 ——
+validUntil 说这条记录什么时候不再成立，复评日说这条记录什么时候该被重看。两者可以不等。"""@zh .
+party:riskGradePrecedes a owl:ObjectProperty , owl:TransitiveProperty , owl:AsymmetricProperty;
+    rdfs:label "等级高于"@zh;
+    rdfs:domain skos:Concept;
+    rdfs:range skos:Concept;
+    rdfs:comment """同一套评级方案内，两个等级之间的先后关系（RISK GRADE TYPE ASSOC 的 "has precedence over"）。
+为什么不用 skos:broader：broader 表达的是"上下位概念"，无序且可多父；
+风险等级是**全序**（可比较大小），A 级优于 B 级、B 级优于 C 级，这是可传递的。
+所以单独建一条 Transitive + Asymmetric 的属性。
+写成 Asymmetric 是有代价的：一旦数据里出现环（A 高于 B、B 高于 A），
+OWL 语义下本体直接不一致 —— 而这个仓库没有真正的推理器，拦不住。
+环检测放在 SHACL-SPARQL 里，属于"未执行"清单（见指南第 9 节）。
+上生产前必须用 HermiT/ELK 或 pyshacl 跑一遍。"""@zh .
+party:ratingLowerBound a owl:DatatypeProperty;
+    rdfs:label "等级下界"@zh;
+    rdfs:domain skos:Concept;
+    rdfs:range xsd:decimal;
+    rdfs:comment "等级对应的数值区间下界（含）。如 600-649 分对应 C 级，则下界 600。"@zh .
+party:ratingUpperBound a owl:DatatypeProperty;
+    rdfs:label "等级上界"@zh;
+    rdfs:domain skos:Concept;
+    rdfs:range xsd:decimal;
+    rdfs:comment "等级对应的数值区间上界（含）。附录 C 说 RISK GRADE VALUE 是「expressed as a range」，所以等级本质是一段区间而非一个点。"@zh .
+##############################################################################
+# 八、客户生命周期：留存率的分母从哪里来
+#
+# 留存率 = 期初集合里，期末还剩多少。看似简单，但三个前提缺一不可：
+#   ① 谁是「客户」—— 不是有过交易的都算，是建立了关系的；
+#   ② 从哪天算 —— partySince；
+#   ③ 到哪天算结束 —— 关系全部终止，或显式流失日。
+#
+# 缺 ②，cohort 分不了桶（这和新客获取月报直接相关）；
+# 缺 ③，只能拿「余额归零」当流失，休眠客户会被误判成流失，留存率虚低。
+##############################################################################
+party:partySince a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "建立关系日"@zh;
+    rdfs:domain fsldm:Party;
+    rdfs:range xsd:date;
+    rdfs:comment """客户与本机构建立业务关系的日期 —— 首次开户日，不是首次交易、不是建档日。
+**留存率 cohort 的唯一分桶依据。** 新客留存曲线就是按这个日期分月的。
+为什么不能拿最早那笔协议的 originationDate 代替：
+- 客户可能先建档（反洗钱尽调）后开户，两者差几个月；
+- 一个客户可以有多个产品，最早那个被销户后，他的「客户年龄」不应该重置；
+- 存量客户数据迁移时，最早协议的日期往往缺失，而 partySince 可以按建档日补。
+三种日期在真实系统里都存在且不相等，这是必须在模型层分开的原因。"""@zh .
+party:attritionDate a owl:DatatypeProperty , owl:FunctionalProperty;
+    rdfs:label "流失日"@zh;
+    rdfs:domain fsldm:Party;
+    rdfs:range xsd:date;
+    rdfs:comment """客户关系的终止日：名下最后一个有效关系结束的日期。
+**与「余额归零」是两回事**：零余额账户可能只是休眠，仍在收账户管理费、
+仍有营销价值。把它算成流失，留存率会系统性偏低，且流失原因分析全部失真。
+也要与「销户」区分：可以销掉全部账户但保留客户号（监管要求客户信息留存），
+此时客户仍在册但已无业务 —— 这类介于两者之间的状态，靠 hasStatus 表达。
+本属性可推导（读全部协议状态），但在实践中通常显式落库：
+推导要扫全量关系，且一旦有历史数据缺失，推导结果就不可信。"""@zh .
+
+# === fsldm-agreement.ttl ===
+##############################################################################
+# 主题域 2 · Agreement（协议）
+#
+# 全模型连接度第二高（AGREEMENT 被引用 154 次）。本域是整个模型里
+# "版本差异最大"的一块，必须先说清版本，否则结论会完全相反。
+##############################################################################
+<https://w3id.org/fsldm/agreement> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：协议"@zh , "FS-LDM Subject Area: Agreement"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 2" ;
+    rdfs:comment """协议是金融企业与当事人之间针对特定产品或服务签立的契约，是客户与银行
+往来的载体。
+## 版本差异（必须记录的一条）
+课程 PPT（v7.0，2005）里 ACCOUNT 是独立实体，有自己的主键 Account Num +
+Account Modifier Num，并作为 PARTY 与 EVENT 的连接点。
+v10.00.00 的实体定义表（2705 条）里**没有 ACCOUNT，也没有 POLICY**，
+附录 A 的父子关系表中 AGREEMENT 之下也没有这两个子类型 —— 说明它们在
+v10 物理层被折叠进 AGREEMENT，账户属性直接落在 AGREEMENT 上。
+Reference Guide 图 1-4 进一步确认了 ACCOUNT 的逻辑地位：
+  "Figure 1-4 shows an example of exclusive subtype relationships. The supertype,
+   ACCOUNT, has two exclusive subtype entities, SAVINGS ACCOUNT and CHECKING ACCOUNT."
+即 ACCOUNT 是**逻辑超类**，SAVINGS/CHECKING 是互斥子类型；但 v10 的实体定义表
+里既没有 ACCOUNT 也没有 SAVINGS ACCOUNT —— 物理层已把账户属性合并进 AGREEMENT。
+"逻辑上有、物理上无"正是 LDM 产品与数据库表的正常差异，本体必须建在逻辑层。
+本体的选择：**保留 ACCOUNT 与 POLICY 作为抽象子类**。理由有三：
+1. 本体建在逻辑层，而逻辑层的价值恰恰是保留这些抽象；
+2. 业务人员讨论"账户"与"保单"时指的是不同的东西，合并会丢掉语义；
+3. 保留抽象不影响物理落地——它们没有直接实例，全部实例落在具体子类上。
+这一条写进注释，是为了防止有人拿本体的类数去对 v10 的表数然后得出"对不上"的结论。"""@zh .
+##############################################################################
+# 一、协议的类型层次
+##############################################################################
+agmt:Account a owl:Class ;
+    rdfs:label "账户"@zh ;
+    skos:altLabel "ACCOUNT" ;
+    fsldm:fsldmEntity "ACCOUNT" ;
+    fsldm:modelVersion "7.0 物理存在 / 10.00.00 抽象" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Agreement ;
+    rdfs:comment """客户在金融机构开立的账户：活期、定期、信用卡、贷款、证券买卖、
+基金、养老金等。
+原文（v7 培训材料）："一个帐户由 Account Num 和 Account Modifier Num 唯一识别。
+有些金融机构需要附加的属性来唯一识别帐户，如应用系统代码 Application Id。"
+这是一个"主键不唯一"的典型：业务上认为是一个账户，系统里可能因为应用系统不同
+而拆成多条。本体用 owl:hasKey 声明 Account Num + Modifier Num + 应用系统，
+并显式保留 Source System 字段——否则跨系统合并会静默丢数据。"""@zh ;
+    owl:hasKey ( agmt:accountNumber agmt:accountModifierNumber fsldm:sourceSystem ) .
+agmt:accountNumber a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "账号"@zh ;
+    rdfs:domain agmt:Account ;
+    rdfs:range xsd:string .
+agmt:accountModifierNumber a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "账号修饰号"@zh ;
+    rdfs:comment "同一账号下的子账户/币种序号。对应 FS-LDM 的 Account Modifier Num。"@zh ;
+    rdfs:domain agmt:Account ;
+    rdfs:range xsd:string .
+agmt:Policy a owl:Class ;
+    rdfs:label "保单"@zh ;
+    skos:altLabel "POLICY" ;
+    fsldm:fsldmEntity "POLICY" ;
+    fsldm:modelVersion "10.00.00 抽象（仅存子类型）" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Agreement ;
+    rdfs:comment """保险合同。v10 中没有 POLICY 本体定义，只有三个子类型实体：
+INDIVIDUAL INSURANCE POLICY / GROUP INSURANCE POLICY / COMMERCIAL INSURANCE POLICY。
+这反向证明了 POLICY 是抽象超类 —— 与 ACCOUNT 同一处理方式。
+本体的 fsldm:fsldmEntity 标注为 POLICY（v7 名称），因为 v10 目录中只有三个子类型、
+没有 POLICY 本身。目录文件 catalog/fsldm-entities.json 显式收录了这个 v7 名称，
+因此溯源校验能通过 —— 但 dct:source 会标明它来自 7.0，不会掩盖版本差异。"""@zh .
+agmt:IndividualInsurancePolicy a owl:Class ;
+    rdfs:label "个人保险单"@zh ;
+    skos:altLabel "INDIVIDUAL INSURANCE POLICY" ;
+    fsldm:fsldmEntity "INDIVIDUAL INSURANCE POLICY" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Policy .
+agmt:GroupInsurancePolicy a owl:Class ;
+    rdfs:label "团体保险单"@zh ;
+    skos:altLabel "GROUP INSURANCE POLICY" ;
+    fsldm:fsldmEntity "GROUP INSURANCE POLICY" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Policy .
+agmt:CommercialInsurancePolicy a owl:Class ;
+    rdfs:label "商业保险单"@zh ;
+    skos:altLabel "COMMERCIAL INSURANCE POLICY" ;
+    fsldm:fsldmEntity "COMMERCIAL INSURANCE POLICY" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Policy .
+agmt:CreditAgreement a owl:Class ;
+    rdfs:label "授信协议"@zh ;
+    skos:altLabel "CREDIT AGREEMENT" ;
+    fsldm:fsldmEntity "CREDIT AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Agreement ;
+    rdfs:comment "银行给予客户的授信额度安排。与贷款账户的区别：授信是额度，贷款是提用。"@zh .
+[] a owl:AllDisjointClasses ;
+   owl:members ( agmt:Account agmt:Policy agmt:CreditAgreement ) .
+##############################################################################
+# 二、协议的"前身"：申请与报价
+#
+# 这三者常被误建成协议的子类。它们不是协议 —— 申请可能被拒，报价可能过期，
+# 都不产生契约关系。但它们是"协议从哪来"的唯一线索，漏斗分析全靠这一段。
+##############################################################################
+agmt:Application a owl:Class ;
+    rdfs:label "申请"@zh ;
+    skos:altLabel "APPLICATION" ;
+    fsldm:fsldmEntity "APPLICATION" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """客户提交的产品申请。原文见 APPLICATION TO LOCATOR 的定义：
+"the address in which the application was signed"。
+与协议的关系是 fsldm:RoleAssignment 的子类 agmt:ApplicationToAgreement ——
+"申请可能产生协议"，注意是可能，不是必然。"""@zh .
+agmt:Quotation a owl:Class ;
+    rdfs:label "报价"@zh ;
+    skos:altLabel "QUOTATION" ;
+    fsldm:fsldmEntity "QUOTATION" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """金融机构对某项产品给出的报价（利率、费率、保额、期限的组合）。
+它带有效期，过期即失效。协议可能是客户接受报价的结果（原文："AGREEMENT
+可能是客户接受金融机构关于某项产品报价的结果"）。"""@zh .
+agmt:applicationProducedAgreement a owl:ObjectProperty ;
+    rdfs:label "申请产生的协议"@zh ;
+    rdfs:domain agmt:Application ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment "便利属性；语义以 ApplicationToAgreement 角色关联为准。"@zh .
+agmt:quotationAcceptedBy a owl:ObjectProperty ;
+    rdfs:label "报价被接受为协议"@zh ;
+    rdfs:domain agmt:Quotation ;
+    rdfs:range fsldm:Agreement .
+##############################################################################
+# 三、协议 × 当事人：角色关联（本域最重要的一个类）
+##############################################################################
+agmt:AgreementPartyRole a owl:Class ;
+    rdfs:label "协议当事人角色"@zh ;
+    skos:altLabel "AGREEMENT PARTY" ;
+    fsldm:fsldmEntity "AGREEMENT PARTY" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:RoleAssignment ,
+        [ a owl:Restriction ; owl:onProperty agmt:ofAgreement ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass fsldm:Agreement ] ,
+        [ a owl:Restriction ; owl:onProperty agmt:roleParty ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass fsldm:Party ] ;
+    rdfs:comment """当事人在某个协议上承担的角色：持有人、共同持有人、受益人、受托人、
+担保人、共同签字人、介绍人、发起商户、出资人等。
+原文："This associative entity defines the relationships that this account has with
+parties. For example, relationships include account holder, beneficiary, trustee,
+the car dealer that originated the account, the business or individual that funded
+the deposit money, or another customer that referred this..."
+为什么必须建成类而不是 fsldm:hasParty 一条边：
+1. 同一对（当事人, 协议）可以有多条，靠角色区分 —— 联名户就是典型；
+2. 每条有独立生效/失效时间（共同持有人退出）；
+3. 每条有独立来源系统与文本备注（AGREEMENT PARTY TEXT）；
+4. 业务规则"一个账户有且只有一个主持有人"只能在角色维度上表达。
+裸 object property 会让这四件事全部无处安放。"""@zh ;
+    owl:hasKey ( agmt:ofAgreement agmt:roleParty fsldm:hasRole fsldm:validFrom ) .
+agmt:ofAgreement a owl:ObjectProperty ;
+    rdfs:label "所属协议"@zh ;
+    rdfs:domain agmt:AgreementPartyRole ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:subPropertyOf fsldm:ofObject .
+agmt:roleParty a owl:ObjectProperty ;
+    rdfs:label "承担角色的当事人"@zh ;
+    rdfs:domain agmt:AgreementPartyRole ;
+    rdfs:range fsldm:Party ;
+    rdfs:subPropertyOf fsldm:ofSubject .
+agmt:hasPartyRole a owl:ObjectProperty ;
+    rdfs:label "协议上的当事人角色"@zh ;
+    rdfs:domain fsldm:Agreement ;
+    rdfs:range agmt:AgreementPartyRole ;
+    rdfs:comment "从协议出发的便利属性，指向角色关联实例本身（不是直接指向当事人）。"@zh .
+##############################################################################
+# 四、协议 × 产品：时态关联（本域的"教科书案例"）
+##############################################################################
+agmt:AgreementProductAssignment a owl:Class ;
+    rdfs:label "协议产品适用关系"@zh ;
+    skos:altLabel "ACCOUNT PRODUCT HISTORY" ;
+    fsldm:fsldmEntity "ACCOUNT PRODUCT HISTORY" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:RoleAssignment ,
+        [ a owl:Restriction ; owl:onProperty agmt:ofAgreement ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass fsldm:Agreement ] ,
+        [ a owl:Restriction ; owl:onProperty agmt:appliedProduct ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass fsldm:Product ] ;
+    rdfs:comment """一个协议在某段时间内所适用的产品。
+原文："This entity tracks the products associated with an AGREEMENT at one point
+in time and over time. In banking, it is possible for an account to be associated
+with more than one product over time, but with only one product at any given time."
+业务规则（v7 培训材料）："在一个时间点，一个AGREEMENT只能对应一种产品"。
+这条规则是整份本体里最能说明"为什么 OWL 不够、必须配 SHACL"的例子：
+- 用 OWL 写成 `agmt:appliedProduct max 1` → 会禁止"历史上换过产品"，与事实相反；
+- 用 OWL 写成 `max 1` 再加时态 → OWL 2 DL 没有时间维度，表达不了；
+- 正确写法：OWL 只声明"可以有多个适用关系"，SHACL-SPARQL 校验"同一协议下
+  任意两个适用关系的生效区间不得重叠，且任一时刻至多一条有效"。
+见 fsldm-shapes.ttl 的 AgreementProductNonOverlapShape。"""@zh ;
+    fsldm:decision """D7：凡是“某一时刻至多一个、但历史上可以有多个”的约束，一律交给 SHACL 的区间重叠检查，
+不在 OWL 里写 maxCardinality。这是本本体最容易被写错的一条。""" ;
+    owl:hasKey ( agmt:ofAgreement agmt:appliedProduct fsldm:validFrom ) .
+agmt:appliedProduct a owl:ObjectProperty ;
+    rdfs:label "适用产品"@zh ;
+    rdfs:domain agmt:AgreementProductAssignment ;
+    rdfs:range fsldm:Product ;
+    rdfs:subPropertyOf fsldm:ofObject .
+agmt:hasProductAssignment a owl:ObjectProperty ;
+    rdfs:label "产品适用关系"@zh ;
+    rdfs:domain fsldm:Agreement ;
+    rdfs:range agmt:AgreementProductAssignment .
+##############################################################################
+# 五、协议 × 资产（抵质押）、协议 × 协议（担保/替换）
+##############################################################################
+agmt:AgreementAssetRole a owl:Class ;
+    rdfs:label "协议资产角色"@zh ;
+    skos:altLabel "AGREEMENT ASSET" ;
+    fsldm:fsldmEntity "AGREEMENT ASSET" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """资产在某个协议中承担的角色：抵质押物、保险标的、租赁物、被收回物。
+同一辆车可以同时是车贷的抵押物（协议 A）与车险的保险标的（协议 B），
+甚至还是被收回的对象（协议 C）。三个角色、三个协议、一份资产 ——
+这个例子说明"资产属于协议"这种说法是不成立的，只能是"资产在协议中扮演角色"。"""@zh ;
+    owl:hasKey ( agmt:ofAgreement fsldm:ofObject fsldm:hasRole fsldm:validFrom ) .
+agmt:AgreementRelation a owl:Class ;
+    rdfs:label "协议之间的关系"@zh ;
+    skos:altLabel "AGREEMENT RELATED" ;
+    fsldm:fsldmEntity "AGREEMENT RELATED" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """协议之间的关联：一个账户因筹措资金被另一个账户取代、一个账户为另一个
+账户提供担保、账户合并用于对账单目的等。
+原文："This entity identifies relationships between accounts and identifies the type
+of relationship. An example would be the accounts are related for statement purposes."
+注意它是**协议之间的有向关系**，因此是自反的 RoleAssignment（两端都是 Agreement）。"""@zh .
+agmt:parentAgreement a owl:ObjectProperty ;
+    rdfs:label "父协议"@zh ;
+    rdfs:domain fsldm:Agreement ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment "账户组、保单组的分层关系。对应 ACCOUNT GROUP 的自反 is parent of。"@zh .
+agmt:AgreementGroup a owl:Class ;
+    rdfs:label "协议组"@zh ;
+    skos:altLabel "ACCOUNT GROUP" ;
+    fsldm:fsldmEntity "ACCOUNT GROUP" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """协议的分组：证券化贷款包、一个 tranche、用于合并对账的一组账户。
+原文："This entity represents a grouping of accounts. For example a group could be a
+securitized package of loan accounts or a 'tranche'."
+它是自反结构（ACCOUNT GROUP is parent of ACCOUNT GROUP），因此组可以套组。"""@zh ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty agmt:parentAgreement ;
+                      owl:allValuesFrom agmt:AgreementGroup ] .
+##############################################################################
+# 六、协议的属性载体：特性、标识、对账单、分类
+##############################################################################
+agmt:AccountFeature a owl:Class ;
+    rdfs:label "账户特性"@zh ;
+    skos:altLabel "ACCOUNT FEATURE" ;
+    fsldm:fsldmEntity "ACCOUNT FEATURE" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:FeatureUsage ;
+    rdfs:comment """账户维度的具体约定：利率、透支额度、免息期、年费减免、最低留存额。
+产品定义给出默认值，账户可以覆盖（FS-LDM 用 LEEWAY 表达可浮动范围）。
+这条"产品定义 → 账户覆盖"的两段式，是把产品与账户分开建模的唯一理由：
+如果账户特性只能来自产品，产品变更会污染历史账户；如果账户特性完全独立，
+产品就失去意义。"""@zh .
+agmt:AgreementIdentification a owl:Class ;
+    rdfs:label "协议标识"@zh ;
+    skos:altLabel "AGREEMENT IDENTIFICATION" ;
+    fsldm:fsldmEntity "AGREEMENT IDENTIFICATION" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Identification ;
+    rdfs:comment "协议在各系统中的外部编号：合同号、保单号、借据号、外部系统账号。"@zh .
+agmt:AgreementStatement a owl:Class ;
+    rdfs:label "协议对账单"@zh ;
+    skos:altLabel "AGREEMENT STATEMENT" ;
+    fsldm:fsldmEntity "AGREEMENT STATEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """协议的对账单总信息（周期、寄送方式、介质）。明细行在
+STATEMENT LINE ITEM。
+原文："This entity associates an account with the statement general information."
+它是"协议 + 期间"的函数，因此天然带时态，且对账单一旦生成就不可变 ——
+这类"不可变快照"在本体里应标记为只读，由 SHACL 拒绝后补修改。"""@zh .
+agmt:AgreementClassification a owl:Class ;
+    rdfs:label "协议分类"@zh ;
+    skos:altLabel "AGREEMENT CLASS VALUE" ;
+    fsldm:fsldmEntity "AGREEMENT CLASS VALUE" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment "把协议归入某个分类方案：Basel 敞口类别、产品大类、风险分组、资金用途。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ; owl:onProperty agmt:classifiedAgreement ;
+                      owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+                      owl:onClass fsldm:Agreement ] .
+agmt:classifiedAgreement a owl:ObjectProperty ;
+    rdfs:label "被分类协议"@zh ;
+    rdfs:range fsldm:Agreement .
+##############################################################################
+# 七、理赔：归在 Event 伞下，但实体层不是 EVENT 的子类
+##############################################################################
+agmt:Claim a owl:Class ;
+    rdfs:label "理赔"@zh ;
+    skos:altLabel "CLAIM" ;
+    fsldm:fsldmEntity "CLAIM" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """向保险公司提出的、要求其履行一份或多份保单中一项或多项保障条款的请求。
+原文："A Claim is the request to the insurance company to honor the terms and
+conditions of one or more coverages included in one or more policies."
+**归属这件事，三处原文互相不完全一致，必须同时记住：**
+1. 第 11 章（概念层）："Although claim is not labeled one of the FS-LDM major subject
+   areas, it is a major area for the insurance industry and is included under the
+   **Event umbrella**." —— 不在十大主题域里，但归 Event。
+2. 第 12 章（详细层）：把它单列成 **Claim Subject Area**（12-101 起），与 Party /
+   Party Asset / Product / Agreement 并列 —— 它确实是一个独立的分析视图。
+3. 附录 A（实体层）：CLAIM **不是** EVENT 的子实体。CLAIM 的父实体全是码表
+   （ACCIDENT TYPE / CLAIM CATEGORY TYPE 等），真正的 Event 接点是
+   `CLAIM EVENT`，它同时挂在 CLAIM（"is involved in"）与 EVENT（"involves"）下。
+所以本体的处理是：**实体层不写 ⊑ Event**（否则与附录 A 冲突），
+主题域标注为 Event（跟随第 11 章的伞形归位），
+并用 evt:eventOfClaim 把 Claim 接到 ClaimEvent，补上附录 A 那条双亲关系。
+它也**不是** Agreement 的子类 —— 理赔不是契约，是对契约的主张。
+一个理赔可以牵涉多张保单（CLAIM COVERAGE 多对多），一个保单可以有多次理赔。"""@zh .
+agmt:ClaimCoverage a owl:Class ;
+    rdfs:label "理赔保障项"@zh ;
+    skos:altLabel "CLAIM COVERAGE" ;
+    fsldm:fsldmEntity "CLAIM COVERAGE" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment "理赔所主张的具体保障项及其核赔金额。是协议与理赔的多对多连接。"@zh .
+agmt:ofClaim a owl:ObjectProperty ;
+    rdfs:label "所属理赔"@zh ;
+    rdfs:domain agmt:ClaimCoverage ;
+    rdfs:range agmt:Claim .
+
+# === fsldm-product.ttl ===
+##############################################################################
+# 主题域 3 · Product（产品）
+#
+# 产品是模型中唯一的"独立实体"：它先于客户存在，被协议引用而不属于协议。
+# 产品域的难点全在"特性"上 —— 产品卖的是条款组合，不是名字。
+##############################################################################
+<https://w3id.org/fsldm/product> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：产品"@zh , "FS-LDM Subject Area: Product"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 2" ;
+    rdfs:comment """产品域回答"银行在卖什么"。三个关键判断：
+1. 产品的可辨识身份是"名称 + 生效版本"，不是名称。停售产品必须可查，
+   否则历史协议找不到归属。因此 Product 带 validFrom/validUntil，且**不做删除**。
+2. 产品包（Package）本身也是产品 —— FS-LDM 的 PACKAGE OFFERING 是 PRODUCT 的子类型。
+   不要另建一个顶层类，否则"包可以套包"就表达不了。
+3. 产品层级是两套：ProductGroup 是内部管理口径（可自反递归），
+   ProductPackage 是销售口径（可枚举成分）。两者不可混用 —— 见下方注释。"""@zh .
+##############################################################################
+# 一、产品与产品包
+##############################################################################
+prod:ProductPackage a owl:Class ;
+    rdfs:label "产品包"@zh ;
+    skos:altLabel "PACKAGE OFFERING" ;
+    fsldm:fsldmEntity "PACKAGE OFFERING" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Product ;
+    rdfs:comment """可打包销售的产品组合，同时它自己也是一个可营销产品。
+原文："This is a subtype entity to PRODUCT. A Product may be a Package which is a
+grouping of products that can be offered. A package is also a marketable product."
+"is also a marketable product" 这半句决定了它必须是 Product 的子类，
+否则"套餐里套套餐"无法表达，而现实中（家庭套餐 + 加装包）必然出现。"""@zh .
+prod:hasPackageComponent a owl:ObjectProperty ;
+    rdfs:label "包含产品"@zh ;
+    rdfs:domain prod:ProductPackage ;
+    rdfs:range fsldm:Product ;
+    rdfs:comment "产品包的成分产品。对应 FS-LDM 的 PACKAGE OFFERING → PRODUCT 关系。"@zh .
+prod:ProductGroup a owl:Class ;
+    rdfs:label "产品组"@zh ;
+    skos:altLabel "PRODUCT GROUP" ;
+    fsldm:fsldmEntity "PRODUCT GROUP" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """银行内部的产品分类层级（存款 > 定期 > 大额存单），自反递归。
+原文："This independent recursive entity represents the financial institution's
+internal product groups in a hierarchical structure."
+它**不是**分类方案（Classification），而是真实的层级实体：有节点、有父子、
+可挂指标。区别在于——ProductGroup 的成员是产品，Classification 的取值是代码。
+把两者混用，会导致"调整产品目录"变成"改动码表"，后者通常需要走数据变更流程。"""@zh .
+prod:parentProductGroup a owl:ObjectProperty ;
+    rdfs:label "上级产品组"@zh ;
+    rdfs:domain prod:ProductGroup ;
+    rdfs:range prod:ProductGroup ;
+    rdfs:comment "自反层级。对应 PRODUCT GROUP 的 is parent of 关系。"@zh .
+prod:memberProduct a owl:ObjectProperty ;
+    rdfs:label "组内产品"@zh ;
+    rdfs:domain prod:ProductGroup ;
+    rdfs:range fsldm:Product .
+##############################################################################
+# 二、产品特性：产品的真正内容
+##############################################################################
+prod:ProductFeature a owl:Class ;
+    rdfs:label "产品特性"@zh ;
+    skos:altLabel "PRODUCT FEATURE" ;
+    fsldm:fsldmEntity "PRODUCT FEATURE" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Feature ;
+    rdfs:comment """产品的一条条款或条件：利率、期限、起存金额、免息期、手续费、
+提前支取罚息、保障范围。
+全文最该注意的一点：FS-LDM 没有把"利率"做成 PRODUCT 的一个字段，
+而是做成一条 FEATURE 实例。原因是产品的条款组合是开放的 —— 今天加一条
+"绿色通道"，明天加一条"跨境免手续费"，如果每条都是字段，表结构每周都要改。
+FEATURE 模式把"结构变化"降级为"数据变化"，这是 FS-LDM 能撑住 30 年的关键设计之一。"""@zh ;
+    owl:hasKey ( prod:featureCode fsldm:validFrom ) .
+prod:featureCode a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "特性代码"@zh ;
+    rdfs:domain fsldm:Feature ;
+    rdfs:range xsd:string ;
+    rdfs:comment "特性类型的机器标识。取值来自 codes.ttl 的 FeatureTypeScheme。"@zh .
+prod:featureValue a owl:DatatypeProperty ;
+    rdfs:label "特性取值"@zh ;
+    rdfs:range xsd:string ;
+    rdfs:comment """特性值统一存字符串，由 featureCode 决定如何解释。
+不拆成 rateValue/durationValue/amountValue 三种属性：
+FS-LDM 用 FEATURE + FEATURE TYPE 两张表承载全部条款，本体重蹈其辙。"""@zh .
+prod:ProductFeatureEligibility a owl:Class ;
+    rdfs:label "特性适用条件"@zh ;
+    skos:altLabel "PRODUCT FEATURE ELIGIBILITY" ;
+    fsldm:fsldmEntity "PRODUCT FEATURE ELIGIBILITY" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """某条产品特性在什么条件下才适用：客群限制、渠道限制、地区限制、
+起购金额门槛。
+原文："This entity associates the product feature eligibilities with product features."
+它是"条款的生效条件"，因此天然指向分类（客户分层、渠道类型），而不是指向具体客户。
+指向具体客户的限制在 PRODUCT PARTY / PRODUCT FEATURE PARTY 里，两者别混。"""@zh .
+prod:eligibilityCondition a owl:ObjectProperty ;
+    rdfs:label "适用条件"@zh ;
+    rdfs:domain prod:ProductFeatureEligibility ;
+    rdfs:range skos:Concept ;
+    rdfs:comment "条件取值（客群分层、渠道类型、地区等级等），来自 codes.ttl。"@zh .
+prod:ProductFeatureLeeway a owl:Class ;
+    rdfs:label "特性浮动范围"@zh ;
+    skos:altLabel "PRODUCT FEATURE LEEWAY" ;
+    fsldm:fsldmEntity "PRODUCT FEATURE LEEWAY" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """产品特性的可浮动区间：基准利率 ±N 个基点、手续费可减免上限。
+这是"产品定义"与"账户实际"之间的桥梁：产品给基准值与浮动范围，
+账户在范围内取值。没有这一层，定价审批就只能落在系统外（Excel）。
+基准利率改革（LPR 化）时，这一层是唯一需要改的地方。"""@zh .
+prod:leewayLowerBound a owl:DatatypeProperty ;
+    rdfs:label "下浮下限"@zh ;
+    rdfs:range xsd:decimal .
+prod:leewayUpperBound a owl:DatatypeProperty ;
+    rdfs:label "上浮上限"@zh ;
+    rdfs:range xsd:decimal .
+##############################################################################
+# 三、产品的标识与风险分组
+##############################################################################
+prod:ProductIdentification a owl:Class ;
+    rdfs:label "产品标识"@zh ;
+    skos:altLabel "PRODUCT IDENTIFICATION" ;
+    fsldm:fsldmEntity "PRODUCT IDENTIFICATION" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Identification ;
+    rdfs:comment """产品在各体系中的编号：行内产品码、监管报送码、外部竞品代码、ISIN。
+竞品也进这张表 —— 这是 FS-LDM 支持"竞争产品对标分析"的入口。"""@zh .
+prod:ProductRiskGrade a owl:Class ;
+    rdfs:label "产品风险等级"@zh ;
+    skos:altLabel "PRODUCT RISK GRADE" ;
+    fsldm:fsldmEntity "PRODUCT RISK GRADE" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """产品在某套风险评级体系下的等级（R1-R5、Basel 权重档）。
+带生效期，因为评级会调整，而历史协议的合规判断要用当时的评级。"""@zh .
+prod:ProductPartyRole a owl:Class ;
+    rdfs:label "产品关联当事人角色"@zh ;
+    skos:altLabel "PRODUCT PARTY" ;
+    fsldm:fsldmEntity "PRODUCT PARTY" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """产品与特定当事人的绑定：联名卡的合作商户、代销产品的发行方、
+专属产品的目标企业。这是"产品只卖给某些人"的实现方式，与 Eligibility 的区别是
+前者点名到具体当事人，后者只写条件。"""@zh .
+
+# === fsldm-event.ttl ===
+##############################################################################
+# 主题域 4 · Event（事件）
+#
+# FS-LDM 里唯一"天然带时间戳"的顶层类。行为分析、渠道分析、漏斗分析、
+# 流失预警的事实来源都在这一个域里。
+##############################################################################
+<https://w3id.org/fsldm/event> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：事件"@zh , "FS-LDM Subject Area: Event"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 3" ;
+    rdfs:comment """事件的定义极宽：可与资金有关也可无关，可涉及账户也可不涉及，
+可由客户发起也可由银行发起。这个"宽"是有意为之 —— 它让"客户在 APP 里点了一下"
+与"放了一笔贷款"能落在同一张事实表上，从而支持端到端的行为分析。
+代价是：Event 本身的属性极少（时间、类型、渠道、金额），几乎所有语义都在
+★关联实体★ 上。因此本域的角色关联类比其他域更多，这不是建模冗余，是必然结果。"""@zh .
+##############################################################################
+# 一、事件的类型层次
+##############################################################################
+evt:AccountEvent a owl:Class ;
+    rdfs:label "账户事件"@zh ;
+    skos:altLabel "ACCOUNT EVENT" ;
+    fsldm:fsldmEntity "ACCOUNT EVENT" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:Event ;
+    rdfs:comment """涉及账户的事件：存款、取款、转账、查询、改密、销户。
+原文："This entity is a subtype to EVENT and contains only those events that
+involve accounts." """@zh .
+evt:FinancialEvent a owl:Class ;
+    rdfs:label "金融事件"@zh ;
+    skos:altLabel "FINANCIAL EVENT" ;
+    fsldm:fsldmEntity "FINANCIAL EVENT" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:Event ;
+    rdfs:comment """涉及资金变动的事件，无论是否与账户相关（例如现金交易、内部划转）。
+原文："This is a subtype entity of EVENT. This entity contains all events involved
+with the Financial Institution that are of a financial nature regardless of whether..."
+与 AccountEvent 是**交叉**而非包含：一笔现金存款既是账户事件也是金融事件。
+本体里用多重类型表达（一个实例同属两个子类），不加互斥声明 —— 这一点很容易
+写错，因为直觉上"金融"与"账户"像两个平行分类。"""@zh .
+evt:ContactEvent a owl:Class ;
+    rdfs:label "接触事件"@zh ;
+    skos:altLabel "CONTACT EVENT" ;
+    fsldm:fsldmEntity "CONTACT EVENT" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:Event ;
+    rdfs:comment """客户与机构的直接接触：柜面、电话、ATM、网银、APP、投诉、咨询。
+原文："This is a subtype entity of EVENT and describes all events caused by having a
+direct contact with the Financial Institution either of a personal nature where an
+employee talks to the customer, or an impersonal nature where the customer uses the
+ATM or automatic call center."
+它是"渠道体验"分析的主表：一次接触 = 一个渠道 + 一个时点 + 一个结果。
+注意与 fsldm:Channel 的关系：渠道是**通道**，接触事件是**通过该通道发生的一次交互**。"""@zh .
+evt:ClaimEvent a owl:Class ;
+    rdfs:label "理赔事件"@zh ;
+    skos:altLabel "CLAIM EVENT" ;
+    fsldm:fsldmEntity "CLAIM EVENT" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:Event ;
+    rdfs:comment """与理赔相关的事件：报案、查勘、定损、核赔、赔付。
+原文："This entity contains those events that are related to claims. Although many
+events will be related to only one claim, some events may be related to multiple claims."
+"一个事件可关联多个理赔"是关键约束 —— 它否定了把 claimId 做成事件字段的做法。"""@zh .
+# 刻意不声明互斥。这不是推断，是原文明确写着的（Reference Guide 图 1-5）：
+#   "Figure 1-5 shows an example of inclusive subtype relationships. The supertype,
+#    EVENT, has three inclusive subtype entities: ACCOUNT EVENT, FINANCIAL EVENT,
+#    and CONTACT EVENT... The indicator can be Account, Financial or Contact,
+#    because one instance of EVENT can be any combination of the three types."
+# 换句话说 FS-LDM 用的是**包含式（inclusive）子类型**，一个事件实例可以同时是
+# 三种类型。加 AllDisjointClasses 会让合法数据触发矛盾——本域最容易写错的一处。
+# 对照：协议域的 ACCOUNT 用的是**互斥式（exclusive）子类型**（图 1-4），
+# 所以那边可以声明互斥。同一个模型里两种子类型语义并存，不能一刀切。
+##############################################################################
+# 二、事件的固有属性
+##############################################################################
+evt:eventTimestamp a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "事件发生时间"@zh ;
+    rdfs:domain fsldm:Event ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment """事件发生的时点。必须区分三类时间，混用是事件表最常见的错误：
+发生时间（occurredAt）、记账时间（postedAt）、入库时间（loadedAt）。
+FS-LDM 的事件实体同时保留这三者，本体重蹈其辙。"""@zh .
+evt:eventPostedTimestamp a owl:DatatypeProperty ;
+    rdfs:label "记账时间"@zh ;
+    rdfs:domain fsldm:Event ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "会计入账时间。与发生时间可能跨日（夜间批量），对账必须以它为准。"@zh .
+evt:eventAmount a owl:DatatypeProperty ;
+    rdfs:label "事件金额"@zh ;
+    rdfs:domain fsldm:Event ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "金融事件的金额。非金融事件为空——这正是不能把金额放进 EventParty 的原因。"@zh .
+evt:eventType a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:label "事件类型"@zh ;
+    rdfs:domain fsldm:Event ;
+    rdfs:range skos:Concept ;
+    rdfs:comment """事件类型，来自 codes.ttl 的 EventTypeScheme。
+FS-LDM 用 EVENT ACTIVITY TYPE 两级表达：活动种类（交易类型）→ 活动类型（交易码）。
+本体保留两级：eventType 指向大类，eventSubtype 指向细码。"""@zh .
+evt:eventSubtype a owl:ObjectProperty ;
+    rdfs:label "事件细类"@zh ;
+    rdfs:domain fsldm:Event ;
+    rdfs:range skos:Concept .
+##############################################################################
+# 三、事件 × 当事人 / 产品 / 协议：角色关联
+##############################################################################
+evt:EventPartyRole a owl:Class ;
+    rdfs:label "事件当事人角色"@zh ;
+    skos:altLabel "EVENT PARTY" ;
+    fsldm:fsldmEntity "EVENT PARTY" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:RoleAssignment ,
+        [ a owl:Restriction ; owl:onProperty evt:ofEvent ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass fsldm:Event ] ;
+    rdfs:comment """当事人在事件中的角色：发起人、受影响人、经办人、报案人、受益人、
+致害方、交易对手。
+原文："This associative entity relates parties with events and the roles that a party
+may have with the event. A Party can have many events and roles with that event; and
+an event can involve many parties. There is one instance for each party/event/role/
+start date combination."
+最后一句给出了主键，也顺带证明了"角色 + 起始日"必须进主键 ——
+同一个人同一天可以在同一事件里既是被害人又是报案人。"""@zh ;
+    owl:hasKey ( evt:ofEvent fsldm:ofSubject fsldm:hasRole fsldm:validFrom ) .
+evt:ofEvent a owl:ObjectProperty ;
+    rdfs:label "所属事件"@zh ;
+    rdfs:domain evt:EventPartyRole ;
+    rdfs:range fsldm:Event ;
+    rdfs:subPropertyOf fsldm:ofObject ;
+    rdfs:comment "事件域内三个角色关联共用此属性，是 fsldm:ofObject 的子属性。"@zh .
+evt:EventProductRole a owl:Class ;
+    rdfs:label "事件产品角色"@zh ;
+    skos:altLabel "EVENT PRODUCT" ;
+    fsldm:fsldmEntity "EVENT PRODUCT" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment "事件涉及的产品：购买、咨询、投诉、退订。产品维度的行为分析靠它。"@zh .
+evt:EventFeature a owl:Class ;
+    rdfs:label "事件特性"@zh ;
+    skos:altLabel "EVENT FEATURE" ;
+    fsldm:fsldmEntity "EVENT FEATURE" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:FeatureUsage ;
+    rdfs:comment """事件的附加属性：投诉原因、渠道偏好、满意度、失败代码。
+做成 FeatureUsage 而不是给 Event 加字段，同样是为了让"新增一种事件属性"不必改模型。"""@zh .
+evt:EventMetric a owl:Class ;
+    rdfs:label "事件度量"@zh ;
+    skos:altLabel "EVENT METRIC" ;
+    fsldm:fsldmEntity "EVENT METRIC" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:Metric ;
+    rdfs:comment "事件的量化指标：等待时长、处理时长、金额成分（本金/利息/费用分别多少）。"@zh .
+evt:EventGroup a owl:Class ;
+    rdfs:label "事件组"@zh ;
+    skos:altLabel "EVENT GROUP" ;
+    fsldm:fsldmEntity "EVENT GROUP" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """把多个事件归为一组：一次会话中的多个页面浏览、一次理赔中的多个环节、
+一个业务流程的多次交互。原文见 ACCOUNT GROUP EVENT 与 EVENT GROUP ASSOC。"""@zh .
+##############################################################################
+# 四、接触会话：事件的容器
+##############################################################################
+evt:ContactSession a owl:Class ;
+    rdfs:label "接触会话"@zh ;
+    skos:altLabel "CONTACT SESSION" ;
+    fsldm:fsldmEntity "CONTACT SESSION" ;
+    fsldm:subjectArea "Event" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一次连续接触的边界：从进入网银到退出、从拨通电话到挂断、从进店到离店。
+为什么需要会话这一层：单看"点击了 30 个页面"没有意义，看"在一次会话内
+从产品页走到了申请页"才有意义。会话是行为序列分析的最小完整单元，
+也是漏斗转化率的分母。"""@zh .
+evt:containsEvent a owl:ObjectProperty ;
+    rdfs:label "会话包含事件"@zh ;
+    rdfs:domain evt:ContactSession ;
+    rdfs:range fsldm:Event ;
+    rdfs:comment "会话与事件的组成关系。注意是包含（parthood），不是关联（role）。"@zh .
+
+# === fsldm-asset.ttl ===
+##############################################################################
+# 主题域 5 · Asset（资产）
+#
+# 一句话概括这个域的坑：**一件资产，多个角色**。
+# 同一辆奔驰可以是车贷的抵押物、车险的标的、租赁合同的标的、被收回的对象。
+# 任何"资产属于 X"的建模方式，在这四个角色同时出现时必然崩溃。
+##############################################################################
+<https://w3id.org/fsldm/asset> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：资产"@zh , "FS-LDM Subject Area: Asset"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 2" ;
+    rdfs:comment """资产是"当事人关心且有价值的东西"：车辆、房产、珠宝、机械设备、船舶、
+存货、有价证券。
+原文（PARTY ASSET）："This entity identifies known items of interest to parties.
+These items include tangible and intangible (e.g. financial) items... An asset could
+include any interest..."
+注意原文里 "known items"：资产之所以进模型，是因为银行**知道**它，而不是因为
+它客观存在。因此资产的生命周期是"登记 → 估值 → 变更 → 处置"，与会计上的
+资产（有账面价值）不是一回事。"""@zh .
+##############################################################################
+# 一、资产的形态
+##############################################################################
+asset:CollateralItem a owl:Class ;
+    rdfs:label "抵押物项"@zh ;
+    skos:altLabel "COLLATERAL ITEM" ;
+    fsldm:fsldmEntity "COLLATERAL ITEM" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:Asset ;
+    rdfs:comment """被用作担保的具体物项：房产、设备、存货、应收账款、股权。
+为什么它是 Asset 的子类而不是独立实体：一件资产可以同时是抵押物与保险标的
+（房抵贷 + 家财险），也可以先做抵押、后转租赁。若两者分属不同实体，
+同一套房在系统里就有两条记录，估值、照片、产权证都要维护两份。
+建成一个实体 + 多个角色，是唯一能避免重复的口径。"""@zh .
+asset:RealEstate a owl:Class ;
+    rdfs:label "房地产"@zh ;
+    skos:altLabel "REAL ESTATE" ;
+    fsldm:fsldmEntity "REAL ESTATE" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf asset:CollateralItem ;
+    rdfs:comment "房地产：土地、建筑物及其附属设施。有产权证号、面积、用途、建成年份等专有属性。"@zh .
+asset:InsurableInterest a owl:Class ;
+    rdfs:label "可保利益"@zh ;
+    skos:altLabel "INSURABLE INTEREST" ;
+    fsldm:fsldmEntity "INSURABLE INTEREST" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """投保人对标的存在法律上承认的利益 —— 保险法的基础概念，
+也是 FS-LDM 里少数直接承载监管语义的实体。
+原文："This entity is a higher level abstraction of those things..."
+为什么它不能省：保险赔付的前提不是"物受损"，而是"被保险人对该物有可保利益"。
+把可保利益建成独立实体，才能处理"同一标的、多个投保人、各自不同利益"的情形。"""@zh .
+asset:AssetValue a owl:Class ;
+    rdfs:label "资产估值"@zh ;
+    skos:altLabel "ASSET VALUE HIST" ;
+    fsldm:fsldmEntity "ASSET VALUE HIST" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:Metric ;
+    rdfs:comment """资产在某时点的估值，以及估值方法与调整记录。
+它必须是时间序列而不是字段：抵押率 = 贷款余额 / 最新估值，
+若只存"当前估值"，历史时点的抵押率永远算不出来，而压力测试恰恰要算这个。
+FS-LDM 的做法是 ASSET VALUE HIST（历史表）+ ASSET INSPECTION HIST（查勘记录），
+本体重蹈其辙：Metric 自带 validFrom。"""@zh .
+asset:valuationMethod a owl:ObjectProperty ;
+    rdfs:label "估值方法"@zh ;
+    rdfs:domain asset:AssetValue ;
+    rdfs:range skos:Concept ;
+    rdfs:comment "市场法、收益法、成本法、内部评估、外部评估。方法不同，可比性不同。"@zh .
+asset:AssetRiskGrade a owl:Class ;
+    rdfs:label "资产风险等级"@zh ;
+    skos:altLabel "ASSET RISK GRADE" ;
+    fsldm:fsldmEntity "ASSET RISK GRADE" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment "资产在某套风险评级体系下的等级（Basel 抵质押品类别、折扣率分组）。"@zh .
+asset:AssetClassification a owl:Class ;
+    rdfs:label "资产分类"@zh ;
+    skos:altLabel "PARTY ASSET CLASS VALUE" ;
+    fsldm:fsldmEntity "PARTY ASSET CLASS VALUE" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """资产的多维分类：资产大类、用途、权属状态、新旧程度。
+注意 ASSET CLASS VALUE 是"值"表，真正的分类方案在 ASSET CLASS SCHEME TYPE 里。
+这套 SUBJECT + VALUE 结构在 FS-LDM 中出现三次（Party / Agreement / Asset），
+说明它是刻意复用的模式，本体用统一的 fsldm:Classification 承接。"""@zh .
+##############################################################################
+# 二、资产 × 当事人：所有权与权益
+##############################################################################
+asset:AssetOwnershipRole a owl:Class ;
+    rdfs:label "资产权益角色"@zh ;
+    skos:altLabel "ASSET CONTRACT ROLE TYPE / PARTY ASSET" ;
+    fsldm:fsldmEntity "PARTY ASSET" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """当事人在资产上的权益角色：所有人、共有人、抵押权人、出质人、
+承租人、受益人、主张人（claimant）。
+原文："This entity identifies known items of interest to parties... Track the
+parties/claimants to the asset - e.g. asset owners and asset lien holder."
+"owners **and** lien holder" 这两个词是本节的核心：同一资产同时有所有人与
+抵押权人，因此权益必须是多方多角色的关联，不能是"资产 → 主人"一条边。"""@zh ;
+    owl:hasKey ( fsldm:ofSubject fsldm:ofObject fsldm:hasRole fsldm:validFrom ) .
+asset:ownershipShare a owl:DatatypeProperty ;
+    rdfs:label "权益份额"@zh ;
+    rdfs:domain asset:AssetOwnershipRole ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "共有时各方的份额（0-1）。夫妻共同财产、多人合伙持有都需要它。"@zh .
+##############################################################################
+# 三、资产 × 协议：担保关系
+##############################################################################
+asset:collateralizes a owl:ObjectProperty ;
+    rdfs:label "为协议提供担保"@zh ;
+    rdfs:domain fsldm:Asset ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment """便利属性：资产为哪个协议提供担保。
+语义以 agmt:AgreementAssetRole 的角色关联为准（那里有折扣率、生效期）。
+之所以同时保留这条捷径，是因为"这笔贷款的抵押物是什么"是最高频的查询，
+每次都走两跳在工程上不划算 —— 但写入时必须两者同步，由 SHACL 校验。"""@zh .
+
+# === fsldm-location.ttl ===
+##############################################################################
+# 主题域 6 · Location（位置）
+#
+# 这个域是"FS-LDM 自己已经做对了"的证据，也是本本体最重要的一个范式来源。
+#
+# v7 时代：LOCATION 是一个大杂烩，既放地址也放行政区划，各方直接用外键连过来。
+# v10 时代：拆成 LOCATOR（位置值）+ 一批 "X TO LOCATOR" 角色实体。
+#          PARTY LOCATOR、AGREEMENT TO LOCATOR、CHANNEL TO LOCATOR、
+#          EVENT TO LOCATOR、PARTY ASSET TO LOCATOR 全部是 LOCATOR 的子类型，
+#          各自带一个 usage/relation code。
+#
+# 换句话说：Teradata 用了十年，把"位置"从一个属性演进成了一个角色关联模式。
+# 本本体直接采用 v10 的结论，并把 v7 的形态记录在案，供老项目对照。
+##############################################################################
+<https://w3id.org/fsldm/location> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：位置"@zh , "FS-LDM Subject Area: Location"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 2" ;
+    rdfs:comment """位置既包括传统的行政区划（国家、省、市、区县、邮编），也包括
+街道地址、邮政信箱、电子地址（邮箱、URL）、以及地理坐标。
+一个必须说清的设计：**地址是值，不是属性。**
+把地址写成 party.address1/address2/city/state/zip 五个字段，会同时失去四件事：
+1. 一个人有多个地址（家庭、工作、账单、法律送达）；
+2. 每个地址有各自的有效期与用途；
+3. 同一地址被多个当事人共用（同一栋写字楼里的 200 家公司），无法去重；
+4. 行政区划变更时无法批量重算（撤县设区）。
+FS-LDM v10 用 LOCATOR + 角色实体解决了这四件事，本本体沿用。"""@zh .
+##############################################################################
+# 一、位置值的形态
+##############################################################################
+loc:StreetAddress a owl:Class ;
+    rdfs:label "街道地址"@zh ;
+    skos:altLabel "STREET ADDRESS" ;
+    fsldm:fsldmEntity "STREET ADDRESS" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf fsldm:Locator ;
+    rdfs:comment """门牌级地址：省市区 + 街道 + 门牌 + 楼栋 + 房号。
+明细行在 STREET ADDRESS LINE，补充说明在 STREET ADDRESS DETAIL。
+它是"可投递"的最小单位 —— 判断标准很简单：邮政能不能送到。"""@zh .
+loc:PostOfficeBoxAddress a owl:Class ;
+    rdfs:label "邮政信箱地址"@zh ;
+    skos:altLabel "POST OFFICE BOX ADDRESS" ;
+    fsldm:fsldmEntity "POST OFFICE BOX ADDRESS" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf fsldm:Locator ;
+    rdfs:comment "邮政信箱。与街道地址并列而非其子类：信箱没有门牌，也不需要投递到人。"@zh .
+loc:ElectronicAddress a owl:Class ;
+    rdfs:label "电子地址"@zh ;
+    skos:altLabel "ELECTRONIC ADDRESS" ;
+    fsldm:fsldmEntity "ELECTRONIC ADDRESS" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf fsldm:Locator ;
+    rdfs:comment """邮箱、手机号、URL、微信号、SWIFT/BIC 等电子可达地址。
+把电子地址放进位置域而不是当事人域，是 FS-LDM 一个不显眼但正确的决定：
+"可达性"是一个统一概念，与"是谁"无关。营销触达、账单寄送、风控失联判断
+都只需要问"哪个地址可用"，不需要区分物理还是电子。"""@zh .
+loc:ParcelAddress a owl:Class ;
+    rdfs:label "地块地址"@zh ;
+    skos:altLabel "PARCEL ADDRESS" ;
+    fsldm:fsldmEntity "PARCEL ADDRESS" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf fsldm:Locator ;
+    rdfs:comment "地籍地块地址（宗地号 + 坐标）。抵押登记、产权核验以它为准，而非门牌。"@zh .
+loc:GeographicalArea a owl:Class ;
+    rdfs:label "地理区域"@zh ;
+    skos:altLabel "GEOGRAPHICAL AREA" ;
+    fsldm:fsldmEntity "GEOGRAPHICAL AREA" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf fsldm:Locator ;
+    rdfs:comment """行政区划或统计区域：国家、省、市、区县、邮编区、商圈、自贸区。
+原文："in CREDIT RISK HISTORY / has time zone of / is measured by / has limit of..."
+它在 FS-LDM 里承担了"分析维度"的角色：节假日、时区、经济指标、区域限额
+都挂在它上面。因此它与"具体门牌地址"虽然同属 Locator，用途完全不同。"""@zh .
+loc:Country a owl:Class ;
+    rdfs:label "国家"@zh ;
+    skos:altLabel "COUNTRY" ;
+    fsldm:fsldmEntity "COUNTRY" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:GeographicalArea .
+loc:City a owl:Class ;
+    rdfs:label "城市"@zh ;
+    skos:altLabel "CITY" ;
+    fsldm:fsldmEntity "CITY" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:GeographicalArea .
+loc:administrativeCode a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "行政区划代码"@zh ;
+    rdfs:domain loc:GeographicalArea ;
+    rdfs:range xsd:string ;
+    rdfs:comment """监管报表按行政区分组时用的代码（如 310115 表示浦东新区）。
+为什么必须单独有它，不能靠类名或区域名：
+  1. 区划会调整（撤县设区、合并），代码是历史可比的锚点，名称不是；
+  2. 报表要与外部数据对表，对方只认代码；
+  3. 业务区域（loc:Territory）与行政区划**本来就不一致** —— 授信辖区可能跨两个市，
+     所以 Territory 上这个属性应当允许为空，不能设 minCount。
+这也解释了为什么它挂在 GeographicalArea 而不是 Territory：区划是全行统一的客观事实，
+业务区域是内部管理划分，两者只在某些机构恰好重合。"""@zh .
+loc:Territory a owl:Class ;
+    rdfs:label "区域"@zh ;
+    skos:altLabel "TERRITORY" ;
+    fsldm:fsldmEntity "TERRITORY" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:GeographicalArea ;
+    rdfs:comment "业务划分的区域（销售大区、授信辖区），可与行政区划不一致 —— 这正是要单独建类的原因。"@zh .
+loc:PostalCode a owl:Class ;
+    rdfs:label "邮政编码"@zh ;
+    skos:altLabel "POSTAL CODE" ;
+    fsldm:fsldmEntity "POSTAL CODE" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:GeographicalArea ;
+    rdfs:comment "邮编区。原文：groups STREET ADDRESS / POST OFFICE BOX ADDRESS / PARCEL ADDRESS，即邮编聚合各类地址。"@zh .
+loc:GeospatialLocator a owl:Class ;
+    rdfs:label "地理坐标"@zh ;
+    skos:altLabel "GEOSPATIAL LOCATOR" ;
+    fsldm:fsldmEntity "GEOSPATIAL LOCATOR" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf fsldm:Locator ;
+    rdfs:comment "点/线/面坐标（经纬度、WKT）。网点选址、服务半径、灾害暴露分析使用。"@zh .
+loc:latitude a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "纬度"@zh ;
+    rdfs:domain loc:GeospatialLocator ;
+    rdfs:range xsd:decimal .
+loc:longitude a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "经度"@zh ;
+    rdfs:domain loc:GeospatialLocator ;
+    rdfs:range xsd:decimal .
+[] a owl:AllDisjointClasses ;
+   owl:members ( loc:StreetAddress loc:PostOfficeBoxAddress loc:ElectronicAddress
+                 loc:ParcelAddress loc:GeographicalArea loc:GeospatialLocator ) .
+##############################################################################
+# 二、位置的Usage：角色关联（本域的核心抽象）
+##############################################################################
+loc:LocatorAssignment a owl:Class ;
+    rdfs:label "位置使用关系"@zh ;
+    fsldm:structural true ;
+    rdfs:comment """某个对象"用"某个位置，以及用来做什么。
+这是 FS-LDM v10 的 "X TO LOCATOR" 系列的共同父类。每个子类都带一个
+locatorUsage（用途）与生效期，因为它们回答的不是"这个人在哪"，
+而是"这个人的**哪种**地址在哪、什么时候有效"。"""@zh ;
+    rdfs:subClassOf fsldm:RoleAssignment ,
+        [ a owl:Restriction ; owl:onProperty loc:hasLocator ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass fsldm:Locator ] ,
+        [ a owl:Restriction ; owl:onProperty loc:locatorUsage ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass skos:Concept ] .
+loc:hasLocator a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:label "所用位置"@zh ;
+    rdfs:domain loc:LocatorAssignment ;
+    rdfs:range fsldm:Locator ;
+    rdfs:subPropertyOf fsldm:ofObject .
+loc:locatorUsage a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:label "用途"@zh ;
+    rdfs:range skos:Concept ;
+    rdfs:comment """地址用途：家庭、工作、账单寄送、法律送达、抵押物所在地、
+合同签署地、费率适用地、司法管辖地。
+原文（CONTRACT LOCATOR REL TYPE）："Type of relations may be as follows:
+- the address in which the contract was/will be signed;
+- the area for which rates and tariffs were used to set up the account;
+- the State or Country of which the laws and regulations govern the account;
+- the address of which the account statement will be sent."
+这四种用途作用在同一个地址上，正好证明"用途"是关系属性而不是位置属性。"""@zh .
+loc:PartyLocator a owl:Class ;
+    rdfs:label "当事人位置"@zh ;
+    skos:altLabel "PARTY LOCATOR" ;
+    fsldm:fsldmEntity "PARTY LOCATOR" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:LocatorAssignment ;
+    rdfs:comment """当事人的某个地址及其用途。
+原文（在附录 A 中它是 LOCATOR 的子实体）：LOCATOR[is location for] → PARTY LOCATOR。
+这一行说明 v10 里 PARTY LOCATOR 自己也是 LOCATOR 的一种 —— 物理上它是
+"带 Party Id 的地址记录"。本体选择建为 LocatorAssignment 而不是 Locator 子类，
+理由是语义上它表达的是"使用关系"而非"位置值"；差异在物理落地上体现为
+一张带外键的视图，不影响数据。"""@zh ;
+    owl:hasKey ( fsldm:ofSubject loc:hasLocator loc:locatorUsage fsldm:validFrom ) .
+loc:AgreementLocator a owl:Class ;
+    rdfs:label "协议位置"@zh ;
+    skos:altLabel "AGREEMENT TO LOCATOR" ;
+    fsldm:fsldmEntity "AGREEMENT TO LOCATOR" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:LocatorAssignment ;
+    rdfs:comment """协议相关的地址：签约地、费率适用地、司法管辖地、对账单寄送地。
+原文："This associative entity relates Locators (i.e. addresses) with Agreements.
+The relationship is defined by means of a relation code."
+这个实体是"用途决定语义"的最佳样本 —— 同一个地址，因为关系码不同，
+在合同里承担完全不同的法律角色。"""@zh .
+loc:ChannelLocator a owl:Class ;
+    rdfs:label "渠道位置"@zh ;
+    skos:altLabel "CHANNEL TO LOCATOR" ;
+    fsldm:fsldmEntity "CHANNEL TO LOCATOR" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:LocatorAssignment ;
+    rdfs:comment "渠道的物理位置：ATM 所在楼栋、网点门牌。原文举例：校园内多台 ATM 用楼栋号进一步限定。"@zh .
+loc:EventLocator a owl:Class ;
+    rdfs:label "事件位置"@zh ;
+    skos:altLabel "EVENT TO LOCATOR" ;
+    fsldm:fsldmEntity "EVENT TO LOCATOR" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:LocatorAssignment ;
+    rdfs:comment "事件发生地：交易发生网点、POS 商户地址、IP 归属地。反欺诈的地理异常检测依赖它。"@zh .
+loc:PartyAssetLocator a owl:Class ;
+    rdfs:label "资产位置"@zh ;
+    skos:altLabel "PARTY ASSET TO LOCATOR" ;
+    fsldm:fsldmEntity "PARTY ASSET TO LOCATOR" ;
+    fsldm:subjectArea "Location" ;
+    rdfs:subClassOf loc:LocatorAssignment ;
+    rdfs:comment "资产的所在地：房产坐落、车辆常驻地、设备安装地。抵押物监控与灾害暴露分析使用。"@zh .
+
+# === fsldm-channel.ttl ===
+##############################################################################
+# 主题域 7 · Channel（渠道）
+#
+# 这个域有一条 FS-LDM 反复强调、而几乎所有自建模型都会搞错的区分：
+# **设备不是渠道。** 卡（设备）通过 ATM（渠道）访问账户。
+##############################################################################
+<https://w3id.org/fsldm/channel> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：渠道"@zh , "FS-LDM Subject Area: Channel"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 3" ;
+    rdfs:comment """渠道是客户与金融机构交互的手段：网点柜面、ATM、电话银行、呼叫中心、
+网上银行、手机银行、第三方合作渠道。
+原文（ACCESS DEVICE）："The device is used to access a channel, hence it is not the
+same thing as a channel. For example, a card (device) accesses an ATM (channel) to
+get information about an account."
+把这两者混为一谈的后果很具体：渠道成本分摊会算错（ATM 的场地成本 vs 卡的制卡成本），
+渠道偏好分析也会失效（同一个客户用同一张卡在 ATM 和 POS 上消费，是两种行为）。"""@zh .
+##############################################################################
+# 一、渠道与访问设备
+##############################################################################
+chan:ChannelType a owl:Class ;
+    rdfs:label "渠道类型"@zh ;
+    skos:altLabel "CHANNEL TYPE" ;
+    fsldm:fsldmEntity "CHANNEL TYPE" ;
+    fsldm:subjectArea "Channel" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """渠道的分类：自助/人工、远程/现场、自有/合作。
+FS-LDM 还有 ATM CHANNEL TYPE / CALL CENTER CHANNEL TYPE 等细分类型实体，
+本体统一收敛为一个 ChannelType 分类 + codes.ttl 里的层级词表，
+避免为每种渠道建一个类（那会导致每加一种渠道就要改模型）。"""@zh .
+chan:AccessDevice a owl:Class ;
+    rdfs:label "访问设备"@zh ;
+    skos:altLabel "ACCESS DEVICE" ;
+    fsldm:fsldmEntity "ACCESS DEVICE" ;
+    fsldm:subjectArea "Channel" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """客户访问账户所用的物理或逻辑设备：信用卡、借记卡、钥匙扣卡、
+手机、个人电脑、U 盾、指纹。
+原文："A means by which a customer has access to one or more accounts. Examples of
+types include credit card plastic, key chain card, cell phone, and personal computer.
+... Each instance represents one physical access device."
+"Each instance represents one physical access device" 决定了粒度：
+补发一张卡就是一条新记录，而不是改原记录的卡号 —— 否则挂失前的交易无法归因。"""@zh ;
+    owl:hasKey ( chan:deviceNumber ) .
+chan:deviceNumber a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "设备号"@zh ;
+    rdfs:domain chan:AccessDevice ;
+    rdfs:range xsd:string ;
+    rdfs:comment "卡号、设备序列号、手机号（作为设备标识时）。"@zh .
+chan:deviceStatus a owl:ObjectProperty ;
+    rdfs:label "设备状态"@zh ;
+    rdfs:domain chan:AccessDevice ;
+    rdfs:range skos:Concept ;
+    rdfs:comment """有效、未激活、已停用、挂失、被盗、超限。状态变更历史在
+ACCESS DEVICE STATUS，本体用 TimeBound 承接而非另建历史类。"""@zh .
+chan:usesChannel a owl:ObjectProperty ;
+    rdfs:label "通过渠道访问"@zh ;
+    rdfs:domain chan:AccessDevice ;
+    rdfs:range fsldm:Channel ;
+    rdfs:comment "设备 → 渠道。这条边是「设备不是渠道」这一定性的机器可读形式。"@zh .
+##############################################################################
+# 二、数字渠道：站点、页面、会话、访问
+##############################################################################
+chan:WebSite a owl:Class ;
+    rdfs:label "网站"@zh ;
+    skos:altLabel "WEB SITE" ;
+    fsldm:fsldmEntity "WEB SITE" ;
+    fsldm:subjectArea "Channel" ;
+    rdfs:subClassOf fsldm:Channel ;
+    rdfs:comment """网银、手机银行、官网、活动页。它是 Channel 的子类而非平行实体：
+网站是渠道的一种实现，客户"通过网站"办业务，与"通过网点"办业务是同一类行为。
+原文（WEB SERVER / WEB SITE SECTION / WEB PAGE）构成一个四层结构：
+Site → Section → Page → Page View。本体保留 Site 与 Page 两层，
+Section 用 Page 的 parentPage 表达，避免为展示层级建类。"""@zh .
+chan:WebPage a owl:Class ;
+    rdfs:label "网页"@zh ;
+    skos:altLabel "WEB PAGE" ;
+    fsldm:fsldmEntity "WEB PAGE" ;
+    fsldm:subjectArea "Channel" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment "站点内的一个可访问页面。页面浏览（WEB PAGE VIEW）是事件，不是页面。"@zh .
+chan:parentPage a owl:ObjectProperty ;
+    rdfs:label "父页面"@zh ;
+    rdfs:domain chan:WebPage ;
+    rdfs:range chan:WebPage ;
+    rdfs:comment "站点导航层级。对应 WEB SITE NAVIGATION / WEB SITE SECTION。"@zh .
+chan:WebSession a owl:Class ;
+    rdfs:label "网站会话"@zh ;
+    skos:altLabel "WEB SESSION" ;
+    fsldm:fsldmEntity "WEB SESSION" ;
+    fsldm:subjectArea "Channel" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一次登录到退出的连续访问。它是事件域 ContactSession 在数字渠道的对应物，
+FS-LDM 保留了两者（CONTACT SESSION 与 WEB SESSION），本体重蹈其辙：
+线上会话有 cookie/设备指纹维度，线下会话有柜员/网点维度，属性差异过大不宜合并。"""@zh .
+chan:sessionDuration a owl:DatatypeProperty ;
+    rdfs:label "会话时长（秒）"@zh ;
+    rdfs:domain chan:WebSession ;
+    rdfs:range xsd:integer .
+##############################################################################
+# 三、渠道 × 协议：账户的渠道角色
+##############################################################################
+chan:AccountChannelRole a owl:Class ;
+    rdfs:label "账户渠道角色"@zh ;
+    skos:altLabel "ACCOUNT CHANNEL" ;
+    fsldm:fsldmEntity "ACCOUNT CHANNEL" ;
+    fsldm:subjectArea "Channel" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """渠道在某个协议中扮演的角色。
+原文："This associative entity identifies the various roles that a channel plays with
+a specific account. Roles include 'belongs to', or 'is managed by'."
+这个实体很少被注意到，但它解决了一个真实问题：一个账户可能"归属"某个网点
+（开户行），同时"被"另一个渠道"管理"（客户经理的移动展业终端）。
+两个渠道、两种角色、同时对同一个账户成立 —— 只能用角色关联表达。"""@zh ;
+    owl:hasKey ( fsldm:ofSubject fsldm:ofObject fsldm:hasRole fsldm:validFrom ) .
+
+# === fsldm-campaign.ttl ===
+##############################################################################
+# 主题域 8 · Campaign（营销活动）
+#
+# 四层结构：Campaign（战役）→ Promotion（促销）→ Promotion Cell（投放单元）
+#          → Offer（优惠）。Target Promotion 是 Promotion 的子类型（定向版）。
+##############################################################################
+<https://w3id.org/fsldm/campaign> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：营销活动"@zh , "FS-LDM Subject Area: Campaign"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 3" ;
+    rdfs:comment """营销活动是"有明确起止日期的集中性努力"，通常由多个促销组成。
+原文："A campaign is a concentrated effort to retain, acquire or consolidate customers
+or to build an image. It has a specific start and end date and typically consist of
+multiple promotions. The goal of a campaign is usually to enhance the image of the
+enterprise, and/or drive more business and/or obtain more customers."
+四层结构不是为了好看，是投放管理的实际需要：
+战役定预算与目标，促销定规则，单元定人群与渠道，优惠定给什么。
+拆开的收益是"改优惠不用重开战役，换人群不用改规则"，
+代价是查询要连四张表 —— 这个代价在 FS-LDM 里是明确接受的。"""@zh .
+camp:Promotion a owl:Class ;
+    rdfs:label "促销"@zh ;
+    skos:altLabel "PROMOTION" ;
+    fsldm:fsldmEntity "PROMOTION" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一个具体的促销动作：办卡送积分、首刷立减、存款加息。
+原文：PROMOTION ← CAMPAIGN[may lead to]，即一个战役可以有多个促销。
+注意关系短语是 "may lead to" 而不是 "consists of" —— 促销可以脱离战役单独存在
+（网点自主促销），因此本体的限制是 min 0 而不是 min 1。这是原文措辞给出的线索，
+不是推测。"""@zh .
+camp:TargetPromotion a owl:Class ;
+    rdfs:label "定向促销"@zh ;
+    skos:altLabel "TARGET PROMOTION" ;
+    fsldm:fsldmEntity "TARGET PROMOTION" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf camp:Promotion ;
+    rdfs:comment """面向指定人群的促销。
+原文："This is a subtype entity to PROMOTION. A lowest level CAMPAIGN may be a Target
+Promotion. A target promotion is directed towards individuals based on individual..."
+这个定义里藏着一句重要的话："a lowest level CAMPAIGN may be a Target Promotion" ——
+最低层级的战役本身就可以是定向促销，即战役与促销并非严格的两层，
+而是可以塌缩成一层。本体用子类表达这种塌缩，而不是加一个布尔标志。"""@zh .
+camp:Offer a owl:Class ;
+    rdfs:label "优惠"@zh ;
+    skos:altLabel "OFFER" ;
+    fsldm:fsldmEntity "OFFER" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """给客户的具体优惠条件：利率下浮 20bp、免年费一年、满 100 减 30。
+它独立于促销存在，因为同一个优惠可以被多个促销复用（同一张券投放在不同渠道）。
+这是"规则"与"权益"分离的标准做法：改优惠内容不影响投放配置。"""@zh .
+camp:PromotionCell a owl:Class ;
+    rdfs:label "投放单元"@zh ;
+    skos:altLabel "PROMOTION CELL" ;
+    fsldm:fsldmEntity "PROMOTION CELL" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """促销的最小执行单元：一群目标客户 × 一个渠道 × 一段时间的组合。
+它是 AB 测试与响应率归因的分母 —— 没有单元这一层，"这次促销效果如何"
+只能算出整体数，算不出"哪个人群 × 哪个渠道"有效。"""@zh .
+camp:hasPromotion a owl:ObjectProperty ;
+    rdfs:label "包含促销"@zh ;
+    rdfs:domain fsldm:Campaign ;
+    rdfs:range camp:Promotion .
+camp:hasCell a owl:ObjectProperty ;
+    rdfs:label "包含投放单元"@zh ;
+    rdfs:domain camp:Promotion ;
+    rdfs:range camp:PromotionCell .
+camp:offeredIncentive a owl:ObjectProperty ;
+    rdfs:label "提供优惠"@zh ;
+    rdfs:domain camp:PromotionCell ;
+    rdfs:range camp:Offer .
+camp:CampaignPartyRole a owl:Class ;
+    rdfs:label "活动当事人角色"@zh ;
+    skos:altLabel "CAMPAIGN PARTY" ;
+    fsldm:fsldmEntity "CAMPAIGN PARTY" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """当事人在营销活动中的角色：目标客户、响应者、拒绝者、
+执行机构、合作方。
+它同时承担"活动名单"的职能 —— 谁被选中参加这次活动，就是这条关联的存在与否。
+因此它的基数会很大（一次全行活动可能几百万条），在物理上应视为事实表而非维表。"""@zh .
+camp:CampaignProductRole a owl:Class ;
+    rdfs:label "活动产品角色"@zh ;
+    skos:altLabel "CAMPAIGN PRODUCT" ;
+    fsldm:fsldmEntity "CAMPAIGN PRODUCT" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment "活动推广哪些产品，以及产品在活动中的角色（主推、搭售、赠品）。"@zh .
+camp:CampaignCondition a owl:Class ;
+    rdfs:label "活动条件"@zh ;
+    skos:altLabel "CAMPAIGN CONDITION" ;
+    fsldm:fsldmEntity "CAMPAIGN CONDITION" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """参加活动的门槛：资产达标、近 90 天未持有、新客、代发工资客户。
+它与 ProductFeatureEligibility 是同一个思想在两个域的实现（条件即数据）。
+区别在于：产品特性条件是"长期有效"的准入，活动条件是"本次有效"的筛选。"""@zh .
+camp:conditionExpression a owl:DatatypeProperty ;
+    rdfs:label "条件表达式"@zh ;
+    rdfs:domain camp:CampaignCondition ;
+    rdfs:range xsd:string ;
+    rdfs:comment """条件的机器可读表达（SQL 片段、规则引擎 DSL 或指标阈值）。
+存表达式而不是拆成字段，是因为营销条件的变化速度远高于模型变更速度。"""@zh .
+camp:PromotionResponse a owl:Class ;
+    rdfs:label "促销响应"@zh ;
+    skos:altLabel "PROMOTION STEP RESPONSE" ;
+    fsldm:fsldmEntity "PROMOTION STEP RESPONSE" ;
+    fsldm:subjectArea "Campaign" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """客户对某一步促销的响应，以及据此决定的下一个动作（含超时无响应）。
+原文："This entity contains the next step given a response to a promotion step for a
+cell. The response may be no response in which case the next step is a 'timeout'..."
+"无响应也是一种响应，对应 timeout 分支" —— 这句话决定了它不能建成
+"响应事件"的列表，而必须建成状态机的一步，否则沉默客户会被静默丢弃。"""@zh .
+
+# === fsldm-org.ttl ===
+##############################################################################
+# 主题域 9 · Internal Organization（内部机构）
+#
+# 这一域存在的最大意义，是给"主题域 ≠ 类层次"提供一个活证据。
+# 它被列为十大主题域之一，但在类层次上它只是 Party 的一个分支：
+#   Party → Organization → InternalOrganization
+# 如果把十大主题域建成十个并列的顶层类，InternalOrganization 就会同时属于
+# Party 与 InternalOrganization 两棵树，一落地立刻矛盾。
+##############################################################################
+<https://w3id.org/fsldm/org> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：内部机构"@zh , "FS-LDM Subject Area: Internal Organization"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 1" ;
+    rdfs:comment """内部机构是银行自身的组织单元：分行、支行、网点、部门、子公司。
+白皮书一语道破："内部机构……也可能是任何一个法人机构当事人的内部组织，
+严格意义上这些也是一种特殊的 PARTY。"
+因此本域的根类不是新的顶层类，而是 party:Organization 的子类。
+这个决定影响很大：它让"分行既是考核主体又是交易对手"这类双重身份可以被自然表达。"""@zh .
+##############################################################################
+# 一、机构层次
+##############################################################################
+org:InternalOrganization a owl:Class ;
+    rdfs:label "内部机构"@zh ;
+    skos:altLabel "INTERNAL ORGANIZATION" ;
+    fsldm:fsldmEntity "INTERNAL ORGANIZATION" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf party:Organization ;
+    rdfs:comment """银行内部的组织单元。
+原文："This is a subtype to ORGANIZATION. It is an organization that is internal to
+an enterprise such as a department or subsidiary. An internal organization is not a
+legal entity. Legal entities are instances of EXTERNAL ORGANIZATION."
+"不是法人"这一条是硬约束：内部机构不能独立对外签约，因此它不能成为协议的
+法律主体，只能作为经办机构（见 AGREEMENT 的经办角色）。这一区分在合规检查里
+必须能自动判定，所以要写进本体而不是文档里。"""@zh .
+org:ExternalOrganization a owl:Class ;
+    rdfs:label "外部机构"@zh ;
+    skos:altLabel "EXTERNAL ORGANIZATION" ;
+    fsldm:fsldmEntity "EXTERNAL ORGANIZATION" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf party:Organization ;
+    rdfs:comment "独立法人：企业客户、同业机构、监管机构、合作商户。可以独立成为协议主体。"@zh .
+[] a owl:AllDisjointClasses ;
+   owl:members ( org:InternalOrganization org:ExternalOrganization ) .
+org:partOfOrganization a owl:ObjectProperty , owl:TransitiveProperty ;
+    rdfs:label "上级机构"@zh ;
+    rdfs:domain party:Organization ;
+    rdfs:range party:Organization ;
+    rdfs:comment """机构的自反层级：支行 → 分行 → 总行。
+声明为传递属性（TransitiveProperty），因此"某支行属于总行"可以由两跳推出，
+不需要在数据里重复存储全路径。但要注意：传递性 + 开放世界意味着推理机会
+推出很多隐含关系，如果数据里有环（人为录入错误），整个层级会塌成一个等价类 ——
+所以 SHACL 里必须有一条"机构层级不得成环"的检查。见 fsldm-shapes.ttl。"""@zh .
+org:OrganizationLevel a owl:Class ;
+    rdfs:label "机构层级"@zh ;
+    skos:altLabel "ORGANIZATION LEVEL" ;
+    fsldm:fsldmEntity "ORGANIZATION LEVEL" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """层级的定义：总行/一级分行/二级分行/支行/网点，以及每层的管理口径。
+它是"层级"的元数据，不是层级本身 —— 这个区分让"调整层级定义"不必改数据。"""@zh .
+##############################################################################
+# 二、岗位与任职
+##############################################################################
+org:Position a owl:Class ;
+    rdfs:label "岗位"@zh ;
+    skos:altLabel "HR POSITION" ;
+    fsldm:fsldmEntity "HR POSITION" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """可被任职的岗位：支行行长、客户经理、柜员、风险经理。
+原文："A HR POSITION that can be filled by an ASSOCIATE (e.g. manager, assistant
+manager, sales clerk). Specific functional role within an organization with defined job..."
+岗位与人是两个东西：岗位有编制、有职责、有汇报关系，人来了又走。因此岗位先建，
+任职关系后建 —— 顺序反了，人员离职就会带走岗位定义。"""@zh .
+org:Associate a owl:Class ;
+    rdfs:label "员工"@zh ;
+    skos:altLabel "ASSOCIATE" ;
+    fsldm:fsldmEntity "ASSOCIATE" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf party:Individual ;
+    rdfs:comment """被企业雇佣的个人（员工、外包、劳务派遣）。
+原文："An individual who is employed by the enterprise. Dependent on the enterprise,
+this could constitute employees, contractors and contingent workers."
+它是 Individual 的子类 —— 这就是"同一个人既是客户又是员工时 PARTY 只有一条"
+的本体表达：Associate 与"客户"不是互斥的两个类，而是同一实体的两种身份，
+其中员工身份用子类、客户身份用角色关联。若两者都建成子类，一个人就会
+同时属于两个互斥类，系统直接矛盾。"""@zh .
+org:AssociateEmployment a owl:Class ;
+    rdfs:label "任职关系"@zh ;
+    skos:altLabel "ASSOCIATE EMPLOYMENT" ;
+    fsldm:fsldmEntity "ASSOCIATE EMPLOYMENT" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf fsldm:RoleAssignment ,
+        [ a owl:Restriction ; owl:onProperty org:employedAssociate ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass org:Associate ] ,
+        [ a owl:Restriction ; owl:onProperty org:employingOrganization ;
+          owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+          owl:onClass party:Organization ] ;
+    rdfs:comment """员工在某机构某岗位上的任职，带起止时间与主/兼职标记。
+原文（附录 A）：ASSOCIATE[is employed by] → ASSOCIATE EMPLOYMENT；
+ORGANIZATION[employs] → ASSOCIATE EMPLOYMENT。
+两侧都是"employ"，说明这是一个双向外键的关联实体，正是 n-ary 关系的形状。"""@zh ;
+    owl:hasKey ( org:employedAssociate org:employingOrganization fsldm:validFrom ) .
+org:employedAssociate a owl:ObjectProperty ;
+    rdfs:label "任职员工"@zh ;
+    rdfs:domain org:AssociateEmployment ;
+    rdfs:range org:Associate ;
+    rdfs:subPropertyOf fsldm:ofSubject .
+org:employingOrganization a owl:ObjectProperty ;
+    rdfs:label "任职机构"@zh ;
+    rdfs:domain org:AssociateEmployment ;
+    rdfs:range party:Organization ;
+    rdfs:subPropertyOf fsldm:ofObject .
+org:occupiesPosition a owl:ObjectProperty ;
+    rdfs:label "担任岗位"@zh ;
+    rdfs:domain org:AssociateEmployment ;
+    rdfs:range org:Position .
+org:InternalOrgCategory a owl:Class ;
+    rdfs:label "内部机构类别"@zh ;
+    skos:altLabel "INTERNAL ORG CATEG" ;
+    fsldm:fsldmEntity "INTERNAL ORG CATEG" ;
+    fsldm:subjectArea "Internal Organization" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment "内部机构在管理口径上的分类：利润中心/成本中心、前台/中台/后台、自营/代理。"@zh .
+
+# === fsldm-finance.ttl ===
+##############################################################################
+# 主题域 10 · Finance（财务）
+#
+# 这是唯一一个"看自己"的域：其余九个域描述客户与业务，这个域描述银行内部账务。
+# 它的结构最规范（复式记账六百年没变），也最容易被误建 ——
+# 常见的错误是把总账账户当成会计科目树，把分录行当成交易。
+##############################################################################
+<https://w3id.org/fsldm/finance> a owl:Ontology ;
+    rdfs:label "FS-LDM 主题域：财务"@zh , "FS-LDM Subject Area: Finance"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Appendices, Appendix A/C；NCR FS-LDM 培训材料 DAY 3" ;
+    rdfs:comment """财务域记录银行的总账信息：科目组织、控制、内部核算、预算管理。
+原文（白皮书）："该主题抽象地描述了银行内部帐务的组织模式，能够适应不同的科目
+组织体系。"
+"适应不同的科目组织体系"是这一域的设计目标，也因此它必须把
+"科目结构"做成数据（CHART OF ACCOUNT + 层级 + 映射），而不是硬编码成字段。
+不同国家的会计科目体系差异极大，硬编码意味着换一个国家就要重做模型。"""@zh .
+##############################################################################
+# 一、科目体系
+##############################################################################
+fin:GLMainAccount a owl:Class ;
+    rdfs:label "总账科目"@zh ;
+    skos:altLabel "GL MAIN ACCOUNT" ;
+    fsldm:fsldmEntity "GL MAIN ACCOUNT" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:FinancialItem ;
+    rdfs:comment """会计科目树上的一个节点：资产、负债、权益、收入、费用下的明细科目。
+原文（附录 A）：GL MAIN ACCOUNT[contains] → GL MAIN ACCOUNT，即自反层级；
+另有 GL MAIN ACCOUNT CATEGORY 做分类、GL SUB ACCOUNT 做子科目。
+所以"科目"是三层而非两层：主科目树 + 子科目 + 分类口径。
+注意科目编码在不同机构间不可比 —— 这正是需要 chart of account 映射层的原因。
+本体不在科目上写死"资产/负债"，而是用分类关联表达，因为同一科目在不同
+监管口径下可能被归到不同类别（如"以公允价值计量的金融资产"）。"""@zh ;
+    owl:hasKey ( fin:glAccountNumber ) .
+fin:glAccountNumber a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "科目号"@zh ;
+    rdfs:domain fin:GLMainAccount ;
+    rdfs:range xsd:string .
+fin:parentGLAccount a owl:ObjectProperty ;
+    rdfs:label "上级科目"@zh ;
+    rdfs:domain fin:GLMainAccount ;
+    rdfs:range fin:GLMainAccount ;
+    rdfs:comment "科目树。对应 GL MAIN ACCOUNT 自反的 contains 关系。"@zh .
+fin:GLSubAccount a owl:Class ;
+    rdfs:label "子科目"@zh ;
+    skos:altLabel "GL SUB ACCOUNT" ;
+    fsldm:fsldmEntity "GL SUB ACCOUNT" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:FinancialItem , fsldm:TimeBound ;
+    rdfs:comment """与主科目组合使用、进一步限定性质的子科目。
+原文："The entity that indicates sub accounts used in combination with GL Accounts to
+further define the nature of the GL Account."
+为什么不用"科目号再多加两位"：子科目的组合关系会变（一个子科目可以挂在多个
+主科目下），做成独立实体才能表达多对多。"""@zh .
+fin:ChartOfAccount a owl:Class ;
+    rdfs:label "科目表"@zh ;
+    skos:altLabel "CHART OF ACCOUNT" ;
+    fsldm:fsldmEntity "CHART OF ACCOUNT" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一套完整的科目体系及其适用法人/地区/监管口径。
+一个集团有多套科目表（母子公司、不同国家），合并报表的关键就是
+"科目表之间的映射"。AGREEMENT TO CHART OF ACCOUNT 实体负责把业务账户
+挂到某套科目表上 —— 这条链路是"业务数据能不能自动入账"的分水岭。"""@zh .
+##############################################################################
+# 二、记账事实
+##############################################################################
+fin:JournalEntryHeader a owl:Class ;
+    rdfs:label "记账凭证"@zh ;
+    skos:altLabel "JOURNAL ENTRY HEADER" ;
+    fsldm:fsldmEntity "JOURNAL ENTRY HEADER" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一笔业务触发的记账凭证：凭证号、日期、摘要、来源业务类型、总金额。
+它是"业务事件"到"会计事实"的转换结果。一笔贷款放款 = 一张凭证，
+但凭证与事件不是一一对应（批量计息会生成一张汇总凭证），因此两者必须分开建。"""@zh .
+fin:JournalEntryLine a owl:Class ;
+    rdfs:label "分录行"@zh ;
+    skos:altLabel "JOURNAL ENTRY LINE" ;
+    fsldm:fsldmEntity "JOURNAL ENTRY LINE" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:FinancialItem ;
+    rdfs:comment """凭证下的一条借贷记录：科目、借贷方向、金额、币种、成本中心。
+原文（GL REPORTING PRODUCT / COST TYPE 等）：分录行是财务域唯一的事实原子。
+所有财务分析——盈利归因、成本分摊、FTP、监管报送——都在这一层做聚合。
+一条硬约束（复式记账）：同一凭证下 Σ借方 = Σ贷方（按币种）。
+这条不能用 OWL 表达（需要聚合），必须写成 SHACL-SPARQL 或入库校验。
+见 fsldm-shapes.ttl 的 JournalBalanceShape。"""@zh ;
+    owl:hasKey ( fin:ofJournalEntry fin:lineNumber ) .
+fin:lineNumber a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:label "行号"@zh ;
+    rdfs:domain fin:JournalEntryLine ;
+    rdfs:range xsd:integer .
+fin:debitAmount a owl:DatatypeProperty ;
+    rdfs:label "借方金额"@zh ;
+    rdfs:domain fin:JournalEntryLine ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "借方金额。与贷方金额互斥，同一行只能有一个非零 —— 这是「借贷分开两列」而非「一列正负」的关键。"@zh .
+fin:creditAmount a owl:DatatypeProperty ;
+    rdfs:label "贷方金额"@zh ;
+    rdfs:domain fin:JournalEntryLine ;
+    rdfs:range xsd:decimal .
+fin:ofJournalEntry a owl:ObjectProperty ;
+    rdfs:label "所属凭证"@zh ;
+    rdfs:domain fin:JournalEntryLine ;
+    rdfs:range fin:JournalEntryHeader ;
+    rdfs:comment "分录行 → 凭证。这条边使「凭证平衡」这一约束可被局部校验。"@zh .
+fin:postedAccount a owl:ObjectProperty ;
+    rdfs:label "记账科目"@zh ;
+    rdfs:domain fin:JournalEntryLine ;
+    rdfs:range fin:GLMainAccount .
+fin:LedgerBatch a owl:Class ;
+    rdfs:label "记账批次"@zh ;
+    skos:altLabel "LEDGER BATCH" ;
+    fsldm:fsldmEntity "LEDGER BATCH" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:FinancialItem , fsldm:TimeBound ;
+    rdfs:comment """一次批量记账的边界：日终计息、月末摊销、年结。
+它存在的理由是**可重跑与可回滚**：出问题时要能整体冲销重记，而不是逐条改。
+没有批次这一层，财务对账就只能靠时间戳猜边界。"""@zh .
+fin:ProfitabilityComponent a owl:Class ;
+    rdfs:label "盈利成分"@zh ;
+    skos:altLabel "PROFITABILITY COMPONENT" ;
+    fsldm:fsldmEntity "PROFITABILITY COMPONENT" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:Metric ;
+    rdfs:comment """把一笔业务的利润拆成成分：资金成本（FTP）、运营成本、风险成本、
+资本成本、税费、净利。
+它是"客户级盈利分析"的唯一可靠来源 —— 只看科目余额永远算不出单客户利润，
+因为成本必须按规则分摊下来。FS-LDM 用 PROFIT TYPE / COST TYPE / REVENUE TYPE
+三套码表配合，本体把它们收敛为 codes.ttl 中的分类方案。"""@zh .
+fin:FinanceExposureAgreement a owl:Class ;
+    rdfs:label "财务敞口协议"@zh ;
+    skos:altLabel "FINANCE EXPOSURE AGREEMENT" ;
+    fsldm:fsldmEntity "FINANCE EXPOSURE AGREEMENT" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """财务口径下、某协议形成的敞口及其分类。
+它是财务域与协议域的唯一刚性连接：业务系统说"这是一笔贷款"，
+财务系统要问"它在账上算哪类敞口、余额多少、计提多少拨备"。
+两个问题的答案不同，所以需要这条关联而不是直接读协议金额。"""@zh .
+fin:ofExposureAgreement a owl:ObjectProperty ;
+    rdfs:label "敞口对应协议"@zh ;
+    rdfs:domain fin:FinanceExposureAgreement ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:subPropertyOf fsldm:ofObject .
+
+# === fsldm-ext-banking.ttl ===
+##############################################################################
+# 扩展层 · Banking（银行）
+#
+# 来源：Reference Guide Book 2 第 5–8 章
+#   第 5 章 定位    第 6 章 业务价值
+#   第 7 章 高层与概念模型（Party and Party Asset / Product / Agreement /
+#           Event / Campaign）
+#   第 8 章 详细模型（Party、Party Asset、Product、Agreement、Event、Finance
+#           六个视图 + 一个 Cross Subject Area）
+#
+# 第 8 章最值得注意的是最后那个 **Cross Subject Area**（8-177 起）：
+#   抵押物 / 风险缓释 / 风险等级 / Basel II 信用风险 / 交易对手 / 风险池 /
+#   情景与度量 / 支柱三披露 / 操作风险 / 市场风险（标准法 + 内部模型）
+# 也就是说银行扩展的**实质增量是「风险」这一层**，而不是新的客户或账户类型。
+# 客户、账户、产品在 Foundation 里已经有了；银行扩展加的是「这些业务承担了什么风险、
+# 用什么缓释、按什么监管口径计量」。
+#
+# 这解释了一个常见误解：以为银行扩展会带来一大堆银行专有的账户实体。
+# 实际上它带来的是 RISK MITIGANT / COLLATERAL ITEM / HAIRCUT / BASEL APPROACH
+# 这类**计量与合规**实体。
+##############################################################################
+<https://w3id.org/fsldm/banking> a owl:Ontology ;
+    rdfs:label "FS-LDM 扩展层：银行"@zh , "FS-LDM Banking Extension"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Reference Guide Book 2, Chapters 5-8；Appendices 附录 C" ;
+    rdfs:comment """银行扩展。只动 Party（评分评级）、Party Asset（查勘）、Product（Basel 风险权重、
+特性细分）、Agreement（抵押、缓释、账户组、信用证、证券化）、Event（票据、卡交易）、
+Finance（资产/费用/负债/收入账户），外加一个横跨全域的 Cross Subject Area 做风险计量。
+本模块建的是风险侧骨架：抵押与缓释、折扣率、优先级、证券化、VaR 与压力测试。
+贷款、存款、租赁这些基础协议形态在协议域已有对应类，这里不重复造。"""@zh .
+##############################################################################
+# 一、抵押与风险缓释
+#
+# 这一组是整个银行扩展里最容易建错的地方：三个概念长得很像，语义完全不同。
+#   抵押物（Collateral）  —— 违约时可处置的**物**
+#   缓释协议（Risk Mitigant）—— 第三方承担的**责任**（担保、保险、信用衍生）
+#   折扣率（Haircut）     —— 对抵押物价值的**折价系数**，是参数不是属性
+##############################################################################
+bank:CollateralAgreement a owl:Class ;
+    rdfs:label "抵押协议"@zh ;
+    skos:altLabel "COLLATERAL AGREEMENT" ;
+    fsldm:fsldmEntity "COLLATERAL AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Agreement ;
+    rdfs:comment """以特定资产为某笔（或某组）债权提供担保的协议。
+为什么它是独立的 Agreement 而不是贷款上的 collateralId 字段：
+抵押关系本身有法律形式（抵质押合同）、有期限、有当事人（抵押人未必是借款人）、
+有登记与解除。把它压成一个外键，会同时丢掉这三样。"""@zh .
+bank:RiskMitigantAgreement a owl:Class ;
+    rdfs:label "风险缓释协议"@zh ;
+    skos:altLabel "RISK MITIGANT AGREEMENT" ;
+    fsldm:fsldmEntity "RISK MITIGANT AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Agreement ;
+    rdfs:comment """第三方为债务人履约提供的保障：保证、信用衍生、保险、备用信用证。
+与抵押协议的区别必须分清：
+- 抵押是**物权**——处置特定资产受偿，资产价值决定保障上限；
+- 缓释是**债权**——向第三方索赔，保障上限是对方的偿付能力。
+两者在 Basel 下的资本计量的处理完全不同（折扣率 vs 替代法/违约概率替换），
+所以绝不能合成一个「担保物」概念。"""@zh .
+bank:CollateralAssignment a owl:Class ;
+    rdfs:label "抵押物指配"@zh ;
+    skos:altLabel "AGREEMENT COLLATERAL ITEM" ;
+    fsldm:fsldmEntity "AGREEMENT COLLATERAL ITEM" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """协议 × 抵押资产 × 生效期的三元组，附带分摊金额。
+**先分清两个名字很像的实体**（源模型里是两个，不是一个）：
+- `COLLATERAL ITEM`（对应 asset:CollateralItem）—— 抵押物**本身**，是 Asset 的子类；
+- `AGREEMENT COLLATERAL ITEM`（本类）—— 抵押物与协议的**指配关系**，带金额与生效期。
+本类不是 Asset 的子类，也不是 Agreement 的子类，它是二者之间的角色关联。
+把两者合成一个类，会让同一处房产在每次被重新抵押时产生一条新记录，
+产权证、估值、照片要重复维护 —— 这正是 asset 域当初把 COLLATERAL ITEM 建成
+Asset 子类要避免的问题。
+**这是本模块最该讲清的一个类。** 它的主键在源模型里就是三列组合，不是代理键。
+建成 RoleAssignment 之后能自然表达三件事，而这三件事用字段全都表达不了：
+1. 同一处房产同时抵押给两家银行（分别为第一、第二顺位）—— 一对多；
+2. 同一笔贷款由三处房产共同担保 —— 多对一；
+3. 去年这套抵押方案、今年换成另一套 —— 时间维度。
+金额要落在明细上而不是协议上：一笔 500 万的贷款可能由 300 万房产 + 200 万存单共同覆盖。
+把金额记在协议头，就算不出每项抵押物的覆盖率。"""@zh .
+bank:CollateralHaircut a owl:Class ;
+    rdfs:label "抵押物折扣率参数"@zh ;
+    skos:altLabel "BASEL COLLATERAL HAIRCUT PARAM" ;
+    fsldm:fsldmEntity "BASEL COLLATERAL HAIRCUT PARAM" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """按抵押物类型与监管口径给定的折价系数：现金 0%、国债 2%、公司债 15%……
+为什么必须建成带有效期的实体而不是常量表：
+1. 监管会改（Basel II 到 Basel III 的折扣率整体上调过）；
+2. 同一类抵押物在标准法与内评法下取值不同；
+3. 历史回溯算监管资本时，必须用**当时**的折扣率，不是今天的。
+把折扣率硬编码进计算逻辑，是这类系统最常见的、也是最难事后修复的错误 ——
+因为改的时候算不出来旧数据是怎么算的。"""@zh .
+bank:SeniorityLevel a owl:Class ;
+    rdfs:label "受偿优先级"@zh ;
+    skos:altLabel "SENIORITY LEVEL TYPE" ;
+    fsldm:fsldmEntity "SENIORITY LEVEL TYPE" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """债权在清偿顺序中的位次（优先、次级、后偿……）。
+它决定违约损失率（LGD），因此不是描述性字段而是风险参数。
+一笔债权的优先级可以因**协议重组**而变化，所以源模型里还有
+RISK MTGNT AGMT SENIORITY HIST —— 优先级是有历史的。"""@zh .
+bank:SeniorityHistory a owl:Class ;
+    rdfs:label "缓释协议优先级历史"@zh ;
+    skos:altLabel "RISK MTGNT AGMT SENIORITY HIST" ;
+    fsldm:fsldmEntity "RISK MTGNT AGMT SENIORITY HIST" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """优先级的变化记录。它证明了一件事：在监管语境下「当前值」是不够的，
+任何进入资本计量的属性都必须可回溯到某一时点。"""@zh .
+##############################################################################
+# 二、Basel 计量口径
+##############################################################################
+bank:BaselApproach a owl:Class ;
+    rdfs:label "Basel 计量方法"@zh ;
+    skos:altLabel "BASEL II APPROACH" ;
+    fsldm:fsldmEntity "BASEL II APPROACH" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """信用风险计量方法的选择（标准法、 foundation IRB、advanced IRB）。
+它是 Classification 而不是机构级的一个配置项 —— 因为**同一家银行可以对不同资产池
+采用不同方法**。把方法存成机构参数，就再也算不清「这个组合到底按哪套方法计提」，
+而监管报表恰恰要按方法分组披露。
+模型本身给了证据：实体表里同时存在 ORGANIZATION BASEL APPROACH（机构级）
+与 FINANCIAL AGMT BASEL II APRCH（协议级）两个实体 —— 方法在多个层级被指定，
+正是「不能压成单一全局参数」的直接证明。"""@zh .
+bank:BaselAssetClass a owl:Class ;
+    rdfs:label "Basel 资产类别"@zh ;
+    skos:altLabel "BASEL II ASSET CLASS" ;
+    fsldm:fsldmEntity "BASEL II ASSET CLASS" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment "按监管口径划分的敞口类别（主权、金融机构、公司、零售、股权、已证券化）。它不由会计科目决定，由交易对手与产品性质共同决定。"@zh .
+bank:Basel1RiskWeight a owl:Class ;
+    rdfs:label "Basel I 风险权重"@zh ;
+    skos:altLabel "BASEL 1 WEIGHT" ;
+    fsldm:fsldmEntity "BASEL 1 WEIGHT" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """Basel I 口径的风险权重。
+它和 Basel II 参数**同时存在于模型里**，这是一个重要的建模事实：
+监管口径不是替换关系，是**并存关系**。老口径要继续支持（历史报表、过渡期并行计算、
+部分司法辖区仍在使用），新口径要新增。因此任何「监管参数」都必须能标注
+「属于哪一版框架」，否则两套数会互相污染。"""@zh .
+##############################################################################
+# 三、证券化
+##############################################################################
+bank:SecuritizationPool a owl:Class ;
+    rdfs:label "证券化资产池"@zh ;
+    skos:altLabel "SECURITIZATION POOL" ;
+    fsldm:fsldmEntity "SECURITIZATION POOL" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment "被真实出售、从发起人资产负债表出表的资产集合。是否出表取决于风险与报酬是否转移，而不是合同名称 —— 所以资产池必须能独立追溯其构成。"@zh .
+bank:SecuritizationTranche a owl:Class ;
+    rdfs:label "证券化分层"@zh ;
+    skos:altLabel "SECURITIZATION TRANCHE" ;
+    fsldm:fsldmEntity "SECURITIZATION TRANCHE" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """优先级 / 中间级 / 权益级分层。
+分层的意义在于**损失吸收顺序**：池子里的损失先吃权益级，吃完才轮到中间级。
+所以分层不能建成资产池上的几个字段（面值、评级），它是一个带顺序关系的实体集合，
+且这个顺序与受偿优先级（SeniorityLevel）用的是同一套语义。"""@zh .
+##############################################################################
+# 四、风险度量：VaR 与压力测试
+##############################################################################
+bank:ValueAtRisk a owl:Class ;
+    rdfs:label "在险价值"@zh ;
+    skos:altLabel "PORTFOLIO VALUE AT RISK" ;
+    fsldm:fsldmEntity "PORTFOLIO VALUE AT RISK" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:Metric ;
+    rdfs:comment """给定置信水平与持有期下的最大预期损失。
+建成 Metric 而不是组合上的一个 var 字段，因为一个组合可以在**同一天**有多个 VaR：
+99%/1 天、99%/10 天、95%/1 天，历史模拟法、方差协方差法、蒙特卡洛法各一个。
+存成字段就必须选一个主口径，其余全部丢失 —— 而监管报表与内部限额用的往往不是同一个。
+置信水平、持有期、方法这三项是 VaR 的**身份**，不是可选备注。"""@zh .
+bank:StressTestResult a owl:Class ;
+    rdfs:label "压力测试结果"@zh ;
+    skos:altLabel "STRESS TEST RESULT" ;
+    fsldm:fsldmEntity "STRESS TEST RESULT" ;
+    fsldm:subjectArea "Finance" ;
+    rdfs:subClassOf fsldm:Metric ;
+    rdfs:comment """在指定情景（利率跳升 200bp、房价下跌 30%、失业率翻倍）下的损失估计。
+与 VaR 的区别必须记住：VaR 回答「正常市场下最坏能坏到哪（概率意义）」，
+压力测试回答「极端情景下会坏到什么程度（不由概率约束）」。
+两者不可互相替代，监管要求同时具备 —— 所以模型里必须是两个实体，不是两个字段。"""@zh .
+##############################################################################
+# 五、账户组与票据
+##############################################################################
+bank:AccountGroup a owl:Class ;
+    rdfs:label "账户组"@zh ;
+    skos:altLabel "ACCOUNT GROUP" ;
+    fsldm:fsldmEntity "ACCOUNT GROUP" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """把多个账户归集以做额度管理、合并计息、统一对账的业务单元。
+它与「当事人持有的账户」不是一回事：一个账户组可以跨产品（活期 + 定期 + 透支额度），
+一个账户也可以同时属于多个组（利息组、额度组、报表组）。
+所以是独立实体 + 多对多，不能在账户上放一个 groupId。"""@zh .
+bank:LetterOfCreditAgreement a owl:Class ;
+    rdfs:label "信用证协议"@zh ;
+    skos:altLabel "LETTER OF CREDIT AGREEMENT" ;
+    fsldm:fsldmEntity "LETTER OF CREDIT AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Agreement ;
+    rdfs:comment "开证行对受益人作出的有条件付款承诺。它的特殊之处在于：一笔信用证同时是**银行的负债**（对受益人）与**客户的授信**（对申请人），两侧都要能查。"@zh .
+bank:AssetInspection a owl:Class ;
+    rdfs:label "资产查勘记录"@zh ;
+    skos:altLabel "ASSET INSPECTION HIST" ;
+    fsldm:fsldmEntity "ASSET INSPECTION HIST" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment "抵押物/租赁物的现场查勘记录。它存在的理由是：抵押物会灭失、损毁、被二次抵押，估值不能只靠登记时的合同价，必须有定期核实的痕迹。"@zh .
+##############################################################################
+# 六、属性
+##############################################################################
+bank:collateralForAgreement a owl:ObjectProperty ;
+    rdfs:label "抵押所担保的协议"@zh ;
+    rdfs:domain bank:CollateralAssignment ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment "被担保的债权。为空表示该抵押物当前未被占用（已释放或尚未设立）。"@zh .
+bank:collateralAsset a owl:ObjectProperty ;
+    rdfs:label "抵押资产"@zh ;
+    rdfs:domain bank:CollateralAssignment ;
+    rdfs:range fsldm:Asset ;
+    rdfs:comment "提供担保的资产本身。注意与 fsldm:ofObject 的分工：ofObject 表达角色关联的通用客体，这里收窄到 Asset 以便类型检查。"@zh .
+bank:mitigatesAgreement a owl:ObjectProperty ;
+    rdfs:label "所缓释的协议"@zh ;
+    rdfs:domain bank:RiskMitigantAgreement ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment """被这份缓释协议覆盖的债权。
+方向必须是「缓释协议 → 被缓释协议」，不能反过来在被担保协议上挂 mitigantId：
+一份担保可以同时覆盖多笔贷款（最高额保证），
+而一笔贷款也可以叠加多层缓释（抵押 + 保证 + 保险）。"""@zh .
+bank:haircutOfCollateral a owl:ObjectProperty ;
+    rdfs:label "适用的折扣率"@zh ;
+    rdfs:domain bank:CollateralAssignment ;
+    rdfs:range bank:CollateralHaircut ;
+    rdfs:comment "该抵押物适用的折扣率参数版本。指向具体版本而非具体数值，这样监管口径变更时只新增版本、不改历史计算。"@zh .
+
+# === fsldm-ext-insurance.ttl ===
+##############################################################################
+# 扩展层 · Insurance（保险）
+#
+# 来源：Reference Guide Book 2 第 9–12 章
+#   第 9 章  定位（Life / P&C，个人与团体）
+#   第 10 章 业务价值
+#   第 11 章 高层与概念模型（Party / Party Asset / Product / Agreement /
+#            Events / Claim and Event）
+#   第 12 章 详细模型（Party、Party Asset、Product、Agreement、Claim 五个视图）
+#
+# 为什么单独一层，而不是塞进十个主题域模块：
+#   Teradata 自己的分层就是 Foundation + Extensions。扩展"build on the Foundation"
+#   并且"share common entities"（第 9 章原文），即扩展类是基础类的**子类**，
+#   基础类不该知道扩展的存在。塞进域模块会让 Foundation 反向依赖扩展。
+#
+# 依赖方向：domain ← ext ← all。扩展 import 域，域不 import 扩展。
+##############################################################################
+<https://w3id.org/fsldm/insurance> a owl:Ontology ;
+    rdfs:label "FS-LDM 扩展层：保险"@zh , "FS-LDM Insurance Extension"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Reference Guide Book 2, Chapters 9-12；Appendices 附录 C" ;
+    rdfs:comment """保险扩展。概念层只动四个域中的三个半：Party（新增 Agent / Provider /
+Party Risk）、Party Asset（新增可保利益与残值）、Product（新增保障类特性）、
+Agreement（新增承保、保费、再保），外加一个 Claim and Event 视图。
+注意第 11 章的原文："Although claim is not labeled one of the FS-LDM major subject
+areas, it is a major area for the insurance industry and is included under the Event
+umbrella." —— Claim 不是一个主题域，但也不是 Agreement 的东西。"""@zh .
+##############################################################################
+# 一、协议：保单与再保
+##############################################################################
+ins:InsuranceAgreement a owl:Class ;
+    rdfs:label "保险合同（保单）"@zh ;
+    skos:altLabel "INSURANCE AGREEMENT" ;
+    fsldm:fsldmEntity "INSURANCE AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Agreement ;
+    rdfs:comment """保单。原文：「An INSURANCE AGREEMENT that is a policy can be structured to
+support PRODUCTs or product PACKAGEs that provide insurance coverage for a party's
+life expectancy and well being (LIFE POLICY), or for financial recovery for property
+and casualty (P&C POLICY).」
+三个必须记住的点：
+1. 它是 Agreement 的子类，不是新顶层类 —— 保单同样有期限、有当事人角色、有状态历史；
+2. 团体保单与成员保单之间是对等关系（AGREEMENT RELATED），不是父子。
+   团体保单不是成员保单的父实体，两者都是 AGREEMENT，靠 AgreementRelation 连接；
+3. 保单可以承保资产（A PARTY ASSET can be insured by an AGREEMENT），
+   这条关系走 fsldm:AgreementAssetRole，不要建成 Agreement 上的 assetId 字段 —
+   一张保单可以承保多份资产，一份资产也可以被多张保单承保。"""@zh .
+ins:ReinsuranceAgreement a owl:Class ;
+    rdfs:label "再保合同"@zh ;
+    skos:altLabel "REINSURANCE AGREEMENT" ;
+    fsldm:fsldmEntity "REINSURANCE AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Agreement ;
+    rdfs:comment """再保：分出方把承保风险的一部分转移给分入方。
+原文：「REINSURANCE agreements are a type of AGREEMENT that identifies another
+AGREEMENT that establishes stakeholders (PARTYs) who participate in liability payouts
+as a result of a CLAIM.」
+为什么它是 Agreement 的直接子类、而不是 InsuranceAgreement 的子类：
+再保合同承保的对象是**保险公司的赔付责任**，不是投保人的生命或财产。
+把它挂在保单下面会推出「再保合同的投保人是被保险人」这种错误结论。
+分出关系用 AgreementRelation，方向是 再保合同 → 原保单。"""@zh .
+##############################################################################
+# 二、产品：保险产品与保障特性
+##############################################################################
+ins:InsuranceProduct a owl:Class ;
+    rdfs:label "保险产品"@zh ;
+    skos:altLabel "INSURANCE PRODUCT" ;
+    fsldm:fsldmEntity "INSURANCE PRODUCT" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf prod:Product ;
+    rdfs:comment "可销售或可交易的保险产品定义。注意寿险与财险的差异体现在保障特性上，不在产品类层级上。"@zh .
+ins:Coverage a owl:Class ;
+    rdfs:label "保障项"@zh ;
+    skos:altLabel "COVERAGE FEATURE" ;
+    fsldm:fsldmEntity "COVERAGE FEATURE" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Feature ;
+    rdfs:comment """保障条款（财产损失、人身伤害、医疗、齿科……）作为**特性**存在，不是独立实体家族。
+原文：「insurance COVERAGE, such as Property Damage, and SERVICE features, such as
+home inspections, are types of FEATUREs that can be associated with an AGREEMENT.」
+**这里有个必须留意的命名陷阱**：概念模型（第 11 章）里它叫 COVERAGE，
+实体表里它叫 COVERAGE FEATURE。按概念名写 fsldm:fsldmEntity 会让溯源校验直接报错 ——
+概念层做了抽象，名字会变（第 11 章原文自己承认：「An entity name in the Conceptual
+Model may be different from the entity name in the Detailed Model.」）。"""@zh .
+ins:ClaimServiceFeature a owl:Class ;
+    rdfs:label "理赔服务特性"@zh ;
+    skos:altLabel "CLAIM SERVICE FEATURE" ;
+    fsldm:fsldmEntity "CLAIM SERVICE FEATURE" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Feature ;
+    rdfs:comment "理赔环节可附加的服务（拖车、代步车、法律协助）。它是特性而非理赔的字段，因为同一服务可被多张保单共享，也可单独定价。"@zh .
+##############################################################################
+# 三、分类：核保等级与风险类别
+##############################################################################
+ins:UnderwritingClass a owl:Class ;
+    rdfs:label "核保等级"@zh ;
+    skos:altLabel "UNDERWRITE CLASS" ;
+    fsldm:fsldmEntity "UNDERWRITE CLASS" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """核保后给这份风险打的等级（标准体、次标准体、拒保……）。
+原文：「Underwriting an AGREEMENT involves categorizing and pricing risk for the
+AGREEMENT... The underwriting class assigned to an AGREEMENT is shown in the
+relationship between AGREEMENT and UNDERWRITING CLASS.」
+为什么是 Classification 而不是 Agreement 的字段：保单可以**重新核保**。
+第一次按标准体承保、三年后体检异常转为次标准体加费，这段历史必须留。
+写成字段就只能存"当前等级"，加费争议时无从举证。"""@zh .
+ins:InsuranceRiskCategory a owl:Class ;
+    rdfs:label "保险风险类别"@zh ;
+    skos:altLabel "INSURANCE RISK CATEGORY" ;
+    fsldm:fsldmEntity "INSURANCE RISK CATEGORY" ;
+    fsldm:subjectArea "Party" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """被保对象的风险类别（职业类别、既往症、建筑结构、地区洪水带……）。
+与 UnderwritingClass 的区别：风险类别是**输入**（标的本身有多危险），
+核保等级是**输出**（公司决定按什么条件承保）。两者都可能随时间变化，但变化的驱动不同。"""@zh .
+##############################################################################
+# 四、资产：可保利益与残值
+##############################################################################
+ins:InsurableInterest a owl:Class ;
+    rdfs:label "可保利益"@zh ;
+    skos:altLabel "INSURABLE INTEREST" ;
+    fsldm:fsldmEntity "INSURABLE INTEREST" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """当事人对某标的的利害关系 —— 没有它，保单在法律上不成立（保险利益原则）。
+它是**三角关系**：当事人 × 标的 × 关系类型（所有权、抵押权、租赁权、经营权）。
+所以只能建成 RoleAssignment：建成 Party 上的一个布尔标记会丢掉"对哪个标的"，
+建成 Asset 上的一个字段会丢掉"哪个人"。
+同一份资产可以同时有多个有可保利益的人：房主、抵押权人（银行）、承租人，
+出险时赔付顺序按利益比例分配 —— 这是财产险理赔的常见争议点。"""@zh .
+ins:SalvageRecord a owl:Class ;
+    rdfs:label "残值处置"@zh ;
+    skos:altLabel "PARTY ASSET SALVAGE SUMMARY" ;
+    fsldm:fsldmEntity "PARTY ASSET SALVAGE SUMMARY" ;
+    fsldm:subjectArea "Asset" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """全损或推定全损后，受损标的的剩余价值归保险人，由其处置（拍卖、拆解）。
+它影响赔付净额：赔款 = 损失金额 − 免赔额 − 残值回收。
+因此残值必须能追溯到具体理赔与具体标的，不能只记一个总额。"""@zh .
+ins:Subrogation a owl:Class ;
+    rdfs:label "代位求偿"@zh ;
+    skos:altLabel "SUBROGATION" ;
+    fsldm:fsldmEntity "SUBROGATION" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """保险人赔付后，依法取得向责任第三方追偿的权利。
+它是**权利的转移**，不是一份新合同：所以不建在 Agreement 下，
+而是挂在 Claim 上（赔付发生后产生），并指向责任方当事人。
+追偿成功会冲减赔款成本，这是财险公司核算赔付率时必须拆出来的一项。"""@zh .
+##############################################################################
+# 五、属性
+##############################################################################
+ins:insuresAsset a owl:ObjectProperty ;
+    rdfs:label "承保资产"@zh ;
+    rdfs:domain ins:InsuranceAgreement ;
+    rdfs:range fsldm:Asset ;
+    rdfs:comment "保单承保的标的资产。多对多：一张保单可承保多份资产，一份资产可被多张保单承保（如房贷险 + 家财险）。"@zh .
+ins:coverageOfAgreement a owl:ObjectProperty ;
+    rdfs:label "保障所属保单"@zh ;
+    rdfs:domain ins:Coverage ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment "保障项挂在具体协议上。产品层的保障定义是模板，协议层的保障是实例化后的实际条款（可能有加保、批改）。"@zh .
+ins:underwritingClassOf a owl:ObjectProperty ;
+    rdfs:label "核保等级所属协议"@zh ;
+    rdfs:domain ins:UnderwritingClass ;
+    rdfs:range fsldm:Agreement ;
+    rdfs:comment "把分类对象指向协议。fsldm:classifies 的 range 是 BusinessEntity，这里收窄到 Agreement 以便类型检查。"@zh .
+
+# === fsldm-ext-investment.ttl ===
+##############################################################################
+# 扩展层 · Investment（投资 / 经纪）
+#
+# 来源：Reference Guide Book 2 第 13–16 章
+#   第 13 章 定位（经纪业务、寿险与养老金的投资产品、企业自有投资）
+#   第 14 章 业务价值
+#   第 15 章 高层与概念模型
+#   第 16 章 详细模型（Product 视图下逐个金融工具：债券 / 股票 / 期权 /
+#            衍生 / 货币市场 / ABS / REIT；Agreement 视图下：衍生 / 互换 /
+#            利率互换 / 信用衍生 / 回购 / 持仓与头寸 / 组合 / 结算指令）
+#
+# 第 15 章有一句最有价值的话，直接给出了扩展的边界：
+#   "This Conceptual Model extends the following FS-LDM Major Subject Areas:
+#    Party, Product, Agreement, Event."
+#   "The following FS-LDM Major Subject Areas are not affected by the Investment
+#    Extension: Party Asset, Internal Organization, Location, Campaign, Channel."
+#
+# 这句是「扩展不新增主题域」的官方证据 —— 不是我的推断。
+##############################################################################
+<https://w3id.org/fsldm/investment> a owl:Ontology ;
+    rdfs:label "FS-LDM 扩展层：投资"@zh , "FS-LDM Investment Extension"@en ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "Teradata FS-LDM 10.00.00 Reference Guide Book 2, Chapters 13-16；Appendices 附录 C" ;
+    rdfs:comment """投资扩展。只动 Party / Product / Agreement / Event 四个域，
+明确声明不影响 Party Asset / Internal Organization / Location / Campaign / Channel。
+本模块只建骨架：金融工具的**主类层级**、组合与头寸、行情报价、投资目标。
+债券的摊销表、赎回条款、转股安排这类明细（BOND AMORTIZATION SCHEDULE 等
+十余个实体）留在目录里按需展开。"""@zh .
+##############################################################################
+# 一、金融工具：产品的子类层级
+#
+# 第 16 章把每种工具作为 Product 视图下的一节单独描述，说明它们都是产品，
+# 不是新的一类顶层实体。这一点很容易搞错 —— 看到「债券」就想建一个平行体系。
+##############################################################################
+inv:InvestmentProduct a owl:Class ;
+    rdfs:label "投资产品"@zh ;
+    skos:altLabel "INVESTMENT PRODUCT" ;
+    fsldm:fsldmEntity "INVESTMENT PRODUCT" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf prod:Product ;
+    rdfs:comment "可投资的产品定义。与保险产品同理：它是 Product 的子类，与存款、贷款共享同一套特性、适用条件、定价结构。"@zh .
+inv:Bond a owl:Class ;
+    rdfs:label "债券"@zh ;
+    skos:altLabel "BOND" ;
+    fsldm:fsldmEntity "BOND" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf inv:InvestmentProduct ;
+    rdfs:comment "固定收益工具。实体表里围绕它还有 BOND AMORTIZATION SCHEDULE / CALL SCHEDULE / PUT SCHEDULE / CONVERSION SCHEDULE 等十余个明细实体 —— 这些不是子类，是同一债券的时间序列条款，属于 Metric 与 Feature 的展开形态。"@zh .
+inv:Stock a owl:Class ;
+    rdfs:label "股票"@zh ;
+    skos:altLabel "STOCK" ;
+    fsldm:fsldmEntity "STOCK" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf inv:InvestmentProduct ;
+    rdfs:comment "权益工具。注意 STOCK SHARE CLASS TYPE 这类实体说明「同一只股票的不同类别」是分类问题而非子类问题。"@zh .
+inv:OptionProduct a owl:Class ;
+    rdfs:label "期权"@zh ;
+    skos:altLabel "OPTION PRODUCT" ;
+    fsldm:fsldmEntity "OPTION PRODUCT" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf inv:InvestmentProduct ;
+    rdfs:comment "期权作为**产品**。它与 OPTION AGREEMENT（期权合约）是两件事：前者是可交易的条款定义，后者是双方签订的具体合约。混为一谈会让「同一期权被多次交易」无法表达。"@zh .
+inv:MoneyMarketProduct a owl:Class ;
+    rdfs:label "货币市场工具"@zh ;
+    skos:altLabel "MONEY MARKET PRODUCT" ;
+    fsldm:fsldmEntity "MONEY MARKET PRODUCT" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf inv:InvestmentProduct ;
+    rdfs:comment "短期高流动性工具（同业存单、商业票据、回购）。期限短不等于结构简单 —— 它的估值依赖折现率曲线，而不是票面价格。"@zh .
+inv:Reit a owl:Class ;
+    rdfs:label "房地产投资信托"@zh ;
+    skos:altLabel "REAL ESTATE INVESTMENT TRUST" ;
+    fsldm:fsldmEntity "REAL ESTATE INVESTMENT TRUST" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf inv:InvestmentProduct ;
+    rdfs:comment "REIT。它是「基金形式持有不动产」，所以在产品域而不在资产域 —— 持有人持有的是份额，不是房产权属。"@zh .
+##############################################################################
+# 二、协议：投资合约
+##############################################################################
+inv:InvestmentAgreement a owl:Class ;
+    rdfs:label "投资协议"@zh ;
+    skos:altLabel "INVESTMENT AGREEMENT" ;
+    fsldm:fsldmEntity "INVESTMENT AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf agmt:Agreement ;
+    rdfs:comment """经纪账户、托管协议、投资管理协议这一类合约的统称。
+与保单同理：它是 Agreement 的子类，共享期限、当事人角色、状态历史。
+持仓不是协议的字段，是 Position 实体 —— 因为一个账户可以同时持有很多产品。"""@zh .
+inv:SwapAgreement a owl:Class ;
+    rdfs:label "互换协议"@zh ;
+    skos:altLabel "SWAP AGREEMENT" ;
+    fsldm:fsldmEntity "SWAP AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf inv:InvestmentAgreement ;
+    rdfs:comment """互换。关键结构：一份互换协议有**两条腿**（SWAP AGREEMENT LEG），
+每条腿有自己的支付方向、重置日、摊销表。所以现金流不能记在协议头，
+必须记在腿上 —— 这是衍生品建模最容易偷懒的地方。"""@zh .
+inv:RepurchaseAgreement a owl:Class ;
+    rdfs:label "回购协议"@zh ;
+    skos:altLabel "REPURCHASE AGREEMENT" ;
+    fsldm:fsldmEntity "REPURCHASE AGREEMENT" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf inv:InvestmentAgreement ;
+    rdfs:comment """回购：现在卖出、约定日期买回，本质是**以券质押的短期融资**。
+为什么不能建成两条独立的买卖交易：回购的法律与经济实质分离 ——
+法律上是两笔买卖，经济上是一笔有担保的借贷。只建买卖会丢掉融资成本，
+只建借贷会丢掉标的券的权属转移。FS-LDM 用一笔协议加质押明细来表达。"""@zh .
+##############################################################################
+# 三、组合与头寸
+##############################################################################
+inv:Portfolio a owl:Class ;
+    rdfs:label "投资组合"@zh ;
+    skos:altLabel "PORTFOLIO" ;
+    fsldm:fsldmEntity "PORTFOLIO" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一组持仓的归集单位。可以属于一个当事人，也可以属于一个业务单元。
+组合与账户不是同一层：一个组合可以跨多个账户，一个账户也可以服务多个组合
+（典型如全权委托下的模型组合）。所以它是独立实体，不是账户的属性。"""@zh .
+inv:InvestmentPosition a owl:Class ;
+    rdfs:label "投资头寸"@zh ;
+    skos:altLabel "INVESTMENT POSITION" ;
+    fsldm:fsldmEntity "INVESTMENT POSITION" ;
+    fsldm:subjectArea "Agreement" ;
+    rdfs:subClassOf fsldm:RoleAssignment ;
+    rdfs:comment """某组合在某时点持有某产品的数量与成本。
+建成 RoleAssignment 而不是三张表之间的连接表：因为头寸天然带有效期
+（今天持有、明天清仓），而 RoleAssignment 已经带 validFrom/validUntil。
+数量与成本放在 fsldm:Metric 上挂，这样「持仓市值」「持仓成本」「浮动盈亏」
+可以共用一套度量语义，不必每个字段造一个属性。"""@zh .
+##############################################################################
+# 四、行情与目标
+##############################################################################
+inv:MarketQuote a owl:Class ;
+    rdfs:label "行情报价"@zh ;
+    skos:altLabel "MARKET QUOTE" ;
+    fsldm:fsldmEntity "MARKET QUOTE" ;
+    fsldm:subjectArea "Product" ;
+    rdfs:subClassOf fsldm:Metric ;
+    rdfs:comment """某产品在某时点某市场的报价（价格、收益率、买卖价差）。
+建成 Metric 而不是产品上的 price 字段：报价是**时序**且**多源**的。
+同一只债券在同一天可能有做市商报价、交易所收盘价、估值模型价三种，
+彼此不等。存成一个字段必然要选一个，选哪个都会在某个场景下算错。"""@zh .
+inv:InvestmentObjective a owl:Class ;
+    rdfs:label "投资目标"@zh ;
+    skos:altLabel "PARTY INVESTMENT OBJECTIVE" ;
+    fsldm:fsldmEntity "PARTY INVESTMENT OBJECTIVE" ;
+    fsldm:subjectArea "Party" ;
+    rdfs:subClassOf fsldm:Classification ;
+    rdfs:comment """客户声明的投资目标（保值、增值、收益、投机）。
+它是 Classification 而非 Party 的字段：目标会变，且**变更需要留下适当性证据**。
+监管检查「这款高风险产品是否卖给过保守型客户」时，查的就是目标的历史快照，
+不是当前值。"""@zh .
+##############################################################################
+# 五、属性
+##############################################################################
+inv:portfolioOfParty a owl:ObjectProperty ;
+    rdfs:label "组合所属当事人"@zh ;
+    rdfs:domain inv:Portfolio ;
+    rdfs:range fsldm:Party ;
+    rdfs:comment "组合归属。可为空 —— 自营组合属于机构自身，不属于外部当事人。"@zh .
+inv:positionInPortfolio a owl:ObjectProperty ;
+    rdfs:label "头寸所属组合"@zh ;
+    rdfs:domain inv:InvestmentPosition ;
+    rdfs:range inv:Portfolio ;
+    rdfs:comment "头寸的归集单位。为空表示头寸挂在账户上而未归入组合（散户常见）。"@zh .
+inv:quotedProduct a owl:ObjectProperty ;
+    rdfs:label "报价标的"@zh ;
+    rdfs:domain inv:MarketQuote ;
+    rdfs:range inv:InvestmentProduct ;
+    rdfs:comment "报价针对的产品。行情必须绑标的，否则只是一串无意义的数字。"@zh .
+

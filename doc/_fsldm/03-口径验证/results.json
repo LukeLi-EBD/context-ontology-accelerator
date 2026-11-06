@@ -1,0 +1,148 @@
+{
+  "round1": {
+    "table_rows": 79,
+    "declared": {
+      "total": 79,
+      "bank": 36,
+      "ins": 30,
+      "cust": 13,
+      "gradeA": 35,
+      "gradeB": 4,
+      "gradeC": 15,
+      "gradeD": 25,
+      "status可用": 36,
+      "status仅定义": 41,
+      "status不可计算": 2
+    },
+    "actual": {
+      "total": 79,
+      "bank": 36,
+      "ins": 30,
+      "cust": 13,
+      "gradeA": 35,
+      "gradeB": 4,
+      "gradeC": 15,
+      "gradeD": 25,
+      "status可用": 36,
+      "status仅定义": 41,
+      "status不可计算": 2
+    },
+    "duplicate_ids": [],
+    "unresolved_variants": [],
+    "d_grade_not_definition_only": [],
+    "registered_conflict_b_usable": [
+      "FIN-INS-012",
+      "FIN-INS-013",
+      "FIN-INS-020"
+    ]
+  },
+  "round2_sparql": {
+    "DPD": [
+      {
+        "n": "10",
+        "overdue": "6",
+        "gt30": "5",
+        "gt90": "2",
+        "sum_dpd": "380"
+      }
+    ],
+    "RFM-R": [
+      {
+        "with_txn": "5",
+        "le30": "3",
+        "b30_90": "1",
+        "gt90": "1"
+      }
+    ],
+    "AUM": [
+      {
+        "holders": "3",
+        "total": "2250",
+        "avg": "750"
+      }
+    ],
+    "concentration": [
+      {
+        "p": "urn:s14h02:party_P001",
+        "bal": "1600",
+        "ratio": "0.16"
+      },
+      {
+        "p": "urn:s14h02:party_P004",
+        "bal": "1400",
+        "ratio": "0.14"
+      },
+      {
+        "p": "urn:s14h02:party_P002",
+        "bal": "950",
+        "ratio": "0.095"
+      },
+      {
+        "p": "urn:s14h02:party_P005",
+        "bal": "450",
+        "ratio": "0.045"
+      },
+      {
+        "p": "urn:s14h02:party_P003",
+        "bal": "300",
+        "ratio": "0.03"
+      },
+      {
+        "p": "urn:s14h02:party_P006",
+        "bal": "50",
+        "ratio": "0.005"
+      }
+    ]
+  },
+  "round3_python": {
+    "dpd_overdue": 6,
+    "dpd_gt30": 5,
+    "dpd_gt90": 2,
+    "dpd_sum": 380,
+    "rfm_with_txn": 5,
+    "rfm_le30": 3,
+    "rfm_30_90": 1,
+    "rfm_gt90": 1,
+    "aum_holders": 3,
+    "aum_total": 2250,
+    "aum_avg": 750.0,
+    "conc_max": 0.16,
+    "conc_over_10pct": 2,
+    "dpd_by_account": {
+      "A001": 90,
+      "A002": 91,
+      "A003": 0,
+      "A004": 0,
+      "A005": 31,
+      "A006": 30,
+      "A007": 0,
+      "A008": 0,
+      "A009": 92,
+      "A010": 46
+    },
+    "conc_by_party": {
+      "P001": 0.16,
+      "P002": 0.095,
+      "P003": 0.03,
+      "P004": 0.14,
+      "P005": 0.045,
+      "P006": 0.005
+    }
+  },
+  "round3_sparql": {
+    "dpd_overdue": 6.0,
+    "dpd_gt30": 5.0,
+    "dpd_gt90": 2.0,
+    "dpd_sum": 380.0,
+    "rfm_with_txn": 5.0,
+    "rfm_le30": 3.0,
+    "rfm_30_90": 1.0,
+    "rfm_gt90": 1.0,
+    "aum_holders": 3.0,
+    "aum_total": 2250.0,
+    "aum_avg": 750.0,
+    "conc_max": 0.16,
+    "conc_over_10pct": 2.0
+  },
+  "failures": []
+}

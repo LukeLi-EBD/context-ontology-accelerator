@@ -1,0 +1,126 @@
+@prefix fsldm: <https://w3id.org/fsldm/core#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix ins: <https://w3id.org/fsldm/insurance#> .
+
+# S14-H-04 期次事实扩展分册（独立文件，不并入 fsldm-merged.ttl）。
+#
+# 与既有 156 类的衔接方式：
+#   * 两个新类都 `rdfs:subClassOf fsldm:BusinessEntity, fsldm:TimeBound`，
+#     沿用 fsldm 的“业务实体 + 在效期”骨架，不另起命名空间；
+#   * 还款计划条目通过既有 `fsldm:agreementOf` 指向 `fsldm:Agreement`；
+#     缴费记录通过 `fsldm:agreementOf` 指向 `ins:InsuranceAgreement`；
+#     险种/产品维度通过既有 `fsldm:productOf` 指向 `fsldm:Product`；
+#   * 不新增对象属性，只补期次级数据属性，避免与既有 111 个关联实体重复。
+#
+# 为什么不直接改 fsldm-merged.ttl：该文件由 merge_fsldm.ps1 从 D:\FS-LDM
+# 只读源装配而成（2961 三元组、156 类版本），手改会让下一次合并覆盖且
+# 无法对账。本分册可由 rdflib 单独解析，需要时再并入装配脚本的模块列表。
+
+<https://w3id.org/fsldm/s14h04-facts> a owl:Ontology ;
+    rdfs:label "S14-H-04 期次事实扩展"@zh ;
+    owl:versionInfo "0.1.0" ;
+    dct:source "S14-H-04 实体建模与可计算性扩容（fixture-only）" ;
+    rdfs:comment "只补支撑 FIN-INS-021 与 FIN-BANK-001 的最小时间序列实体；不覆盖全量还款计划/缴费状态模型。"@zh .
+
+##########################################################################
+# 1. 缴费记录（保险·期次级，状态历史）
+##########################################################################
+fsldm:InsurancePaymentRecord a owl:Class ;
+    rdfs:label "缴费记录"@zh ;
+    skos:altLabel "PAYMENT RECORD" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一张保单一个期次在某一状态观察日的缴费与有效性状态，
+是 FIN-INS-021（13 个月继续率）的期间事实载体。
+
+时间序列的语义：
+- 期间归属看 installmentDueDate（第几期在哪个观察窗到期）；
+- 状态取 statusAsOf 最新的那一条，早期快照保留以便重放；
+- 不允许把某一时点的状态值直接当作整个观察期的值。
+同一 (policyNo, installmentNo, statusAsOf) 只应有一条记录。"""@zh .
+
+fsldm:policyNumber a owl:DatatypeProperty ;
+    rdfs:label "保单号"@zh ;
+    rdfs:domain fsldm:InsurancePaymentRecord ;
+    rdfs:range xsd:string ;
+    rdfs:comment "指向 ins:InsuranceAgreement 的业务键；不复制保单本身的属性。"@zh .
+
+fsldm:paymentStatus a owl:DatatypeProperty ;
+    rdfs:label "缴费状态"@zh ;
+    rdfs:domain fsldm:InsurancePaymentRecord ;
+    rdfs:range xsd:string ;
+    rdfs:comment "期次缴费状态：paid / unpaid / waived。与保单有效性状态分离，二者不可混用。"@zh .
+
+fsldm:policyStatus a owl:DatatypeProperty ;
+    rdfs:label "保单状态（期次快照）"@zh ;
+    rdfs:domain fsldm:InsurancePaymentRecord ;
+    rdfs:range xsd:string ;
+    rdfs:comment """该期次到期时的保单有效性：in_force / lapsed / surrendered / cancelled。
+它是期次级快照，不是全量保单状态历史；需要更细的状态迁移时再建
+fsldm:StatusAssignment 序列，本分册不预建。"""@zh .
+
+##########################################################################
+# 2. 分期还款计划条目（银行·期次级）
+##########################################################################
+fsldm:LoanInstallmentPlan a owl:Class ;
+    rdfs:label "分期还款计划条目"@zh ;
+    skos:altLabel "PAYMENT SCHEDULE ENTRY" ;
+    rdfs:subClassOf fsldm:BusinessEntity , fsldm:TimeBound ;
+    rdfs:comment """一笔协议的一个期数在某一状态观察日的应还、实还与逾期天数，
+是 FIN-BANK-001（逾期天数 DPD）的期次事实载体。
+
+与既有模型的关系：`fsldm:dueDate` 目前挂在 Agreement 上并注明
+“本仓库暂未建 PaymentSchedule 类”。本类补的就是这个缺口，期次日期
+改挂 installmentDueDate，协议级 dueDate 保留作汇总/兼容用途，二者不合并。
+时点口径只取 statusAsOf = 观察日的行，其它观察日的逾期天数不得混入。"""@zh .
+
+fsldm:agreementNumber a owl:DatatypeProperty ;
+    rdfs:label "协议号"@zh ;
+    rdfs:domain fsldm:LoanInstallmentPlan ;
+    rdfs:range xsd:string ;
+    rdfs:comment "指向 fsldm:Agreement 的业务键；对象关系用既有 fsldm:agreementOf。"@zh .
+
+fsldm:overdueDays a owl:DatatypeProperty ;
+    rdfs:label "逾期天数"@zh ;
+    rdfs:domain fsldm:LoanInstallmentPlan ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "截至 statusAsOf 的期次逾期天数；已结清期为 0，未知为空。非负整数。"@zh .
+
+##########################################################################
+# 3. 两类事实共用的期次属性
+##########################################################################
+fsldm:installmentNo a owl:DatatypeProperty ;
+    rdfs:label "期次"@zh ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "从 1 开始的期次序号；保险缴费的第 13 期即“13 个月”继续率的观察锚点。"@zh .
+
+fsldm:installmentDueDate a owl:DatatypeProperty ;
+    rdfs:label "期次应缴/应还日"@zh ;
+    rdfs:range xsd:date ;
+    rdfs:comment """该期次的约定到期日，是观察期归属的唯一锚点。
+与既有 fsldm:dueDate（协议级）区分：期次级事实必须落在自己的期次日期上。"""@zh .
+
+fsldm:dueAmount a owl:DatatypeProperty ;
+    rdfs:label "应缴/应还金额"@zh ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "该期次合同约定的应缴（保险）或应还（贷款）金额，非负。"@zh .
+
+fsldm:paidAmount a owl:DatatypeProperty ;
+    rdfs:label "实缴/实还金额"@zh ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "该期次实际入账金额，非负；未缴为 0，不用空值表示 0。"@zh .
+
+fsldm:paidDate a owl:DatatypeProperty ;
+    rdfs:label "实缴/实还日"@zh ;
+    rdfs:range xsd:date ;
+    rdfs:comment "该期次实际入账日期；未缴时为空。"@zh .
+
+fsldm:statusAsOf a owl:DatatypeProperty ;
+    rdfs:label "状态观察日"@zh ;
+    rdfs:range xsd:date ;
+    rdfs:comment """该行状态对应的观察时点。同一期次可有多条不同 statusAsOf 的快照，
+计算时按期次取最新一条；它回答“状态截至哪天”，不回答“期间合计”。"""@zh .

@@ -1,0 +1,63 @@
+# shapesId=fsldm-shapes version=sv-861d1a9d39b6 namespace=https://w3id.org/fsldm/ contentHash=861d1a9d39b63126b58e130e3b34143b37a347b987f9f3c8802cae4590a66399 triples=6 format=turtle
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix fsldm: <https://w3id.org/fsldm/> .
+
+fsldm:ClassLabelShape a sh:NodeShape ;
+    sh:targetClass owl:Class ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ;
+        sh:message "owl:Class must carry rdfs:label" ;
+    ] .
+
+# shapesId=shapes-core version=sv-7634668832a2 namespace=urn:platform:default: contentHash=7634668832a21b2c2109668058d70347208a78b6bf2b553604ec2a7ac8105bbb triples=13 format=turtle
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix platform: <urn:platform:rel:> .
+
+# locatedIn is a strong, entity-level relation: its object must be an IRI.
+# Unresolved place mentions are weakly annotated with hasLocationLabel (string)
+# and go through the human approval queue instead (OQ-35).
+<urn:platform:shape:LocatedInObject>
+    a sh:NodeShape ;
+    sh:targetSubjectsOf platform:locatedIn ;
+    sh:property [
+        sh:path platform:locatedIn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "locatedIn must point to an entity IRI, not a literal" ;
+    ] .
+
+# hasLocationLabel is optional; when present it must be a single string.
+<urn:platform:shape:LocationLabel>
+    a sh:NodeShape ;
+    sh:targetSubjectsOf platform:hasLocationLabel ;
+    sh:property [
+        sh:path platform:hasLocationLabel ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:message "hasLocationLabel takes at most one xsd:string literal" ;
+    ] .
+
+# shapesId=test-g01-shapes version=sv-f8d74d046c17 namespace=urn:test:g01:tbox contentHash=f8d74d046c176b32d6c3514aa75f237f336717d0b667bffce436f568a52affa8 triples=12 format=turtle
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix fsldm: <https://w3id.org/fsldm/> .
+
+fsldm:ClassLabelShape a sh:NodeShape ;
+    sh:targetClass owl:Class ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ;
+        sh:message "owl:Class must carry rdfs:label" ;
+    ] .
+
+fsldm:AgreementLabelShape a sh:NodeShape ;
+    sh:targetClass fsldm:Agreement ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ;
+        sh:message "fsldm:Agreement must carry rdfs:label (v2)" ;
+    ] .

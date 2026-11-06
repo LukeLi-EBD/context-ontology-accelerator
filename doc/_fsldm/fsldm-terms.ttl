@@ -1,0 +1,441 @@
+# =============================================================================
+# FS-LDM 术语层第一批（L1）· SKOS 别名注解层
+#
+# 状态：已落库（2026-11-06）。本文件与 fsldm-merged.ttl 分文件、只加注解三元组，
+# 不合并类体系；发布时由 wrapper 通过 owl:imports 与 merged 同图加载。
+# 依据：_fsldm/05-术语层-设计与分析.md；裁定见 _design/24-术语层落地-方案.md §7。
+#   A 档 6 条  -> §4.3「A 档 6 条」表（05#A-01 … 05#A-06）
+#   B 档 12 条 -> §4.3「B 档 12 条」表（05#B-01 … 05#B-12）
+# 追踪：每条 TermEntry 的 term:docRef 指向上述条目编号，dct:source 指向文档行号。
+#
+# 边界：
+#   1. 只新增注解三元组；不新增类、不改 owl:Class 定义、不改 rdfs:label。
+#   2. 不写 skos:broader / skos:narrower：类上下位只走 rdfs:subClassOf。
+#   3. 不写 skos:closeMatch：本批无跨词表映射需求。
+#   4. skos:definition 不在本批内；最小必填集=挂 term:termBatch 的 15 类，由 T1 补齐（24 号方案 §7-4）。
+#   5. 类节点未显式声明 a skos:Concept：SKOS 语义由 skos:prefLabel 的 domain 推导
+#      （OWL 2 punning），避免与既有 owl:Class 声明重复。
+#   6. provenance 只走 prov:wasGeneratedBy（不另写注释三元组），见 24 号方案 §3。
+#   7. 2026-11-06 五项裁定已写入 term:decision（canonical / guard / 词面抑制），见 24 号方案 §7。
+# =============================================================================
+
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+
+@prefix fsldm: <https://w3id.org/fsldm/core#> .
+@prefix party: <https://w3id.org/fsldm/party#> .
+@prefix agmt:  <https://w3id.org/fsldm/agreement#> .
+@prefix asset: <https://w3id.org/fsldm/asset#> .
+@prefix bank:  <https://w3id.org/fsldm/banking#> .
+@prefix ins:   <https://w3id.org/fsldm/insurance#> .
+
+@prefix term: <https://w3id.org/fsldm/terms#> .
+
+# =============================================================================
+# 1. 类级 SKOS 注解（prefLabel 与既有 rdfs:label@zh 强制相等，见 24 号方案 §4）
+# =============================================================================
+
+# ---- A 档：有原文证据 --------------------------------------------------------
+# fsldm-merged.ttl L1543
+agmt:Account
+    skos:prefLabel "账户"@zh ;
+    skos:prefLabel "Account"@en ;
+    skos:altLabel "帐户"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1598
+agmt:CreditAgreement
+    skos:prefLabel "授信协议"@zh ;
+    skos:prefLabel "Credit Agreement"@en ;
+    skos:altLabel "授信合同"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1275
+party:Individual
+    skos:prefLabel "个人"@zh ;
+    skos:prefLabel "Individual"@en ;
+    skos:altLabel "自然人"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1331
+party:PartyRelationship
+    skos:prefLabel "当事人之间的关系"@zh ;
+    skos:prefLabel "Party Related"@en ;
+    skos:altLabel "当事人关系"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L2195
+asset:CollateralItem
+    skos:prefLabel "抵押物项"@zh ;
+    skos:prefLabel "Collateral Item"@en ;
+    skos:altLabel "抵押物"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L3047
+bank:CollateralAgreement
+    skos:prefLabel "抵押协议"@zh ;
+    skos:prefLabel "Collateral Agreement"@en ;
+    skos:altLabel "抵押合同"@zh ;
+    term:termBatch 1 .
+
+# ---- B 档：LLM 两轮判定 keep ------------------------------------------------
+# fsldm-merged.ttl L722
+fsldm:Party
+    skos:prefLabel "当事人"@zh ;
+    skos:prefLabel "Party"@en ;
+    skos:altLabel "当事方"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1366
+party:PartyGroup
+    skos:prefLabel "当事人分组"@zh ;
+    skos:prefLabel "Party Group"@en ;
+    skos:altLabel "当事人组"@zh ;
+    skos:altLabel "当事方分组"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1567
+agmt:Policy
+    skos:prefLabel "保单"@zh ;
+    skos:prefLabel "Policy"@en ;
+    skos:altLabel "保险单"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1580
+agmt:IndividualInsurancePolicy
+    skos:prefLabel "个人保险单"@zh ;
+    skos:prefLabel "Individual Insurance Policy"@en ;
+    skos:altLabel "个人保单"@zh ;
+    skos:altLabel "个险保单"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1586
+agmt:GroupInsurancePolicy
+    skos:prefLabel "团体保险单"@zh ;
+    skos:prefLabel "Group Insurance Policy"@en ;
+    skos:altLabel "团体保单"@zh ;
+    skos:altLabel "团险保单"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L1592
+agmt:CommercialInsurancePolicy
+    skos:prefLabel "商业保险单"@zh ;
+    skos:prefLabel "Commercial Insurance Policy"@en ;
+    skos:altLabel "商业保单"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L3284
+ins:InsuranceAgreement
+    skos:prefLabel "保险合同（保单）"@zh ;
+    skos:prefLabel "Insurance Agreement"@en ;
+    skos:altLabel "保险契约"@zh ;
+    term:termBatch 1 ;
+    # T6 裁定（2026-11-06）：保单类词的 canonical 是 agmt:Policy；
+    # 本类保留自身同义词，但把"保单/保险单"这一歧义词让给 canonical 类。
+    term:canonicalFor agmt:Policy ;
+    term:suppressedSurface "保单"@zh .
+
+# fsldm-merged.ttl L3057
+bank:RiskMitigantAgreement
+    skos:prefLabel "风险缓释协议"@zh ;
+    skos:prefLabel "Risk Mitigant Agreement"@en ;
+    skos:altLabel "风险缓释合同"@zh ;
+    term:termBatch 1 .
+
+# fsldm-merged.ttl L3325
+ins:Coverage
+    skos:prefLabel "保障项"@zh ;
+    skos:prefLabel "Coverage Feature"@en ;
+    skos:altLabel "保障项目"@zh ;
+    term:termBatch 1 .
+
+# =============================================================================
+# 2. 可核查词条记录（TermEntry）
+#    类上是"消费面"，TermEntry 是"证据面"；两者由 SHACL 做集合相等校验。
+# =============================================================================
+
+term:TermEntry a rdfs:Class ;
+    rdfs:label "术语词条记录"@zh ;
+    rdfs:comment "每个带语言标签的 skos:altLabel 对应一条 TermEntry，记录档位、出处或置信度。"@zh .
+
+term:canonicalFor a owl:AnnotationProperty ;
+    rdfs:label "canonical 让位指向"@zh ;
+    rdfs:comment "非 canonical 类声明某个歧义词的 canonical 类；检索扩展遇到该歧义词只取 canonical。"@zh .
+
+term:guardRegex a owl:AnnotationProperty ;
+    rdfs:label "命中守卫正则"@zh ;
+    rdfs:comment "Python re 语法，匹配整条查询句；不匹配则丢弃该命中并计入 guardRejected。加载期必须 re.compile 成功。"@zh .
+
+term:decision a owl:AnnotationProperty ;
+    rdfs:label "裁定留痕"@zh ;
+    rdfs:comment "记录 2026-11-06 的裁定结论与依据，供回退时定位。"@zh .
+
+term:suppressedSurface a owl:AnnotationProperty ;
+    rdfs:label "不索引词面"@zh ;
+    rdfs:comment "该词面出现在本类 prefLabel 中但不得被词典索引（歧义词让位给 term:canonicalFor 目标）。"@zh .
+
+term:EvidenceType a rdfs:Class ;
+    rdfs:label "证据类型"@zh .
+
+term:CorpusChunk a term:EvidenceType ;
+    rdfs:label "语料切片"@zh .
+
+term:OntologyComment a term:EvidenceType ;
+    rdfs:label "本体注释"@zh .
+
+term:OntologySource a term:EvidenceType ;
+    rdfs:label "FS-LDM 原文实体定义"@zh .
+
+# ---- A 档（6 条）------------------------------------------------------------
+
+term:entry-A01
+    a term:TermEntry ;
+    term:forClass agmt:Account ;
+    term:label "帐户"@zh ;
+    term:status term:evidenced ;
+    term:evidenceType term:CorpusChunk , term:OntologyComment ;
+    term:source "453_FSLDM课堂练习.pdf p20/seq19; document_id=08b15dc6c1fcac79603efa96716b305e4e4328b34190b27f90e4883623cdae5a; 本体注释 fsldm-merged.ttl L1552" ;
+    term:docRef "05#A-01" ;
+    dct:source "05-术语层-设计与分析.md#L340" .
+
+term:entry-A02
+    a term:TermEntry ;
+    term:forClass agmt:CreditAgreement ;
+    term:label "授信合同"@zh ;
+    term:status term:evidenced ;
+    term:evidenceType term:CorpusChunk ;
+    term:source "SPDB-LDM.pdf p30/seq44; document_id=2c99ce56ddd8b9fd1b4fdd1575258cc355c55f92950dd79549374ca76d40b541; Book2 L4247" ;
+    term:docRef "05#A-02" ;
+    dct:source "05-术语层-设计与分析.md#L341" .
+
+term:entry-A03
+    a term:TermEntry ;
+    term:forClass party:Individual ;
+    term:label "自然人"@zh ;
+    term:status term:evidenced ;
+    term:evidenceType term:CorpusChunk , term:OntologySource ;
+    term:source "SPDB-LDM.pdf p22/seq34; document_id=2c99ce56ddd8b9fd1b4fdd1575258cc355c55f92950dd79549374ca76d40b541; Book1 L5184" ;
+    term:docRef "05#A-03" ;
+    dct:source "05-术语层-设计与分析.md#L342" .
+
+term:entry-A04
+    a term:TermEntry ;
+    term:forClass party:PartyRelationship ;
+    term:label "当事人关系"@zh ;
+    term:status term:evidenced ;
+    term:evidenceType term:CorpusChunk , term:OntologyComment ;
+    term:source "FS-LDM-1.txt p1/seq10; document_id=22c84924a40eedad4a0b6eb5766954b362c3c26d31c3fde12ca74f66a2143334; 本体注释 L1331" ;
+    term:docRef "05#A-04" ;
+    dct:source "05-术语层-设计与分析.md#L343" .
+
+term:entry-A05
+    a term:TermEntry ;
+    term:forClass asset:CollateralItem ;
+    term:label "抵押物"@zh ;
+    term:status term:evidenced ;
+    term:evidenceType term:CorpusChunk , term:OntologySource ;
+    term:source "SPDB-LDM.pdf p15/seq22; document_id=2c99ce56ddd8b9fd1b4fdd1575258cc355c55f92950dd79549374ca76d40b541; Book1 L17305" ;
+    term:docRef "05#A-05" ;
+    dct:source "05-术语层-设计与分析.md#L344" .
+
+term:entry-A06
+    a term:TermEntry ;
+    term:forClass bank:CollateralAgreement ;
+    term:label "抵押合同"@zh ;
+    term:status term:evidenced ;
+    term:evidenceType term:CorpusChunk , term:OntologySource ;
+    term:source "SPDB-LDM.pdf p37/seq68; document_id=2c99ce56ddd8b9fd1b4fdd1575258cc355c55f92950dd79549374ca76d40b541; Book2 L4231" ;
+    term:docRef "05#A-06" ;
+    dct:source "05-术语层-设计与分析.md#L345" .
+
+# ---- B 档（12 条）------------------------------------------------------------
+
+term:entry-B01
+    a term:TermEntry ;
+    term:forClass fsldm:Party ;
+    term:label "当事方"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch1 ;
+    term:docRef "05#B-01" ;
+    dct:source "05-术语层-设计与分析.md#L351" .
+
+term:entry-B02
+    a term:TermEntry ;
+    term:forClass party:PartyGroup ;
+    term:label "当事人组"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch1 ;
+    term:docRef "05#B-02" ;
+    dct:source "05-术语层-设计与分析.md#L352" .
+
+term:entry-B03
+    a term:TermEntry ;
+    term:forClass party:PartyGroup ;
+    term:label "当事方分组"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch1 ;
+    term:docRef "05#B-03" ;
+    dct:source "05-术语层-设计与分析.md#L353" .
+
+term:entry-B04
+    a term:TermEntry ;
+    term:forClass agmt:Policy ;
+    term:label "保险单"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch2 ;
+    term:docRef "05#B-04" ;
+    term:decision "T6(2026-11-06)：canonical=agmt:Policy；保险单属被保留的歧义词，只挂 canonical 类" ;
+    dct:source "05-术语层-设计与分析.md#L354" .
+
+term:entry-B05
+    a term:TermEntry ;
+    term:forClass agmt:IndividualInsurancePolicy ;
+    term:label "个人保单"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch3 ;
+    term:docRef "05#B-05" ;
+    dct:source "05-术语层-设计与分析.md#L355" .
+
+term:entry-B06
+    a term:TermEntry ;
+    term:forClass agmt:IndividualInsurancePolicy ;
+    term:label "个险保单"@zh ;
+    term:status term:inferred ;
+    term:confidence term:medium ;
+    prov:wasGeneratedBy term:review-batch3 ;
+    term:docRef "05#B-06" ;
+    term:decision "语境约束(2026-11-06)：保留 medium；命中需查询句满足 guardRegex，否则丢弃并计入 guardRejected" ;
+    term:guardRegex "(个险|个人保险)[^，。？！]{0,6}(保单|保险单)" ;
+    dct:source "05-术语层-设计与分析.md#L356" .
+
+term:entry-B07
+    a term:TermEntry ;
+    term:forClass agmt:GroupInsurancePolicy ;
+    term:label "团体保单"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch3 ;
+    term:docRef "05#B-07" ;
+    dct:source "05-术语层-设计与分析.md#L357" .
+
+term:entry-B08
+    a term:TermEntry ;
+    term:forClass agmt:GroupInsurancePolicy ;
+    term:label "团险保单"@zh ;
+    term:status term:inferred ;
+    term:confidence term:medium ;
+    prov:wasGeneratedBy term:review-batch3 ;
+    term:docRef "05#B-08" ;
+    term:decision "语境约束(2026-11-06)：保留 medium；命中需查询句满足 guardRegex，否则丢弃并计入 guardRejected" ;
+    term:guardRegex "(团险|团体保险)[^，。？！]{0,6}(保单|保险单)" ;
+    dct:source "05-术语层-设计与分析.md#L358" .
+
+term:entry-B09
+    a term:TermEntry ;
+    term:forClass agmt:CommercialInsurancePolicy ;
+    term:label "商业保单"@zh ;
+    term:status term:inferred ;
+    term:confidence term:medium ;
+    prov:wasGeneratedBy term:review-batch3 ;
+    term:docRef "05#B-09" ;
+    term:decision "语境约束(2026-11-06)：保留 medium；guardRegex 为弱约束（别名自带商业限定），medium 主要用于审计分级" ;
+    term:guardRegex "(商业[^，。？！]{0,2})(保单|保险单)" ;
+    dct:source "05-术语层-设计与分析.md#L359" .
+
+term:entry-B10
+    a term:TermEntry ;
+    term:forClass ins:InsuranceAgreement ;
+    term:label "保险契约"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch3 ;
+    term:docRef "05#B-10" ;
+    term:decision "T6(2026-11-06)：canonical=agmt:Policy；保险契约是 保险合同 的同义词，不属让出的歧义词（保单/保险单），故保留在本类" ;
+    dct:source "05-术语层-设计与分析.md#L360" .
+
+term:entry-B11
+    a term:TermEntry ;
+    term:forClass bank:RiskMitigantAgreement ;
+    term:label "风险缓释合同"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch5 ;
+    term:docRef "05#B-11" ;
+    dct:source "05-术语层-设计与分析.md#L361" .
+
+term:entry-B12
+    a term:TermEntry ;
+    term:forClass ins:Coverage ;
+    term:label "保障项目"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    prov:wasGeneratedBy term:review-batch5 ;
+    term:docRef "05#B-12" ;
+    dct:source "05-术语层-设计与分析.md#L362" .
+
+# =============================================================================
+# 3. Provenance：按批次一个 Activity（B 档别名只走 prov:wasGeneratedBy）
+#    评审记录未提供逐批时间戳，故不写 prov:startedAtTime，改由 dct:source 指向记录小节。
+# =============================================================================
+
+term:review-batch1 a prov:Activity ;
+    rdfs:label "术语别名 LLM 两轮评审 · Batch1（Party/Individual/Organization/Household/PartyGroup）"@zh ;
+    prov:used term:model-deepseek-v4-1-flash-261017 ;
+    prov:wasAssociatedWith term:runner-term-review ;
+    term:reviewProtocol "Round1 生成 -> Round2 自我反驳；drop 条件：营销词/网络说法/内部简称/多义/非同义/与类名重复" ;
+    term:reviewRecord "05-术语层-LLM判定记录.md#Round1-Batch1 / #Round2-Batch1" .
+
+term:review-batch2 a prov:Activity ;
+    rdfs:label "术语别名 LLM 两轮评审 · Batch2（PartyRiskGrade/Agreement/Account/CreditAgreement/Policy）"@zh ;
+    prov:used term:model-deepseek-v4-1-flash-261017 ;
+    prov:wasAssociatedWith term:runner-term-review ;
+    term:reviewProtocol "同 Batch1" ;
+    term:reviewRecord "05-术语层-LLM判定记录.md#Round1-Batch2 / #Round2-Batch2" .
+
+term:review-batch3 a prov:Activity ;
+    rdfs:label "术语别名 LLM 两轮评审 · Batch3（Individual/Group/CommercialInsurancePolicy/InsuranceAgreement/Product）"@zh ;
+    prov:used term:model-deepseek-v4-1-flash-261017 ;
+    prov:wasAssociatedWith term:runner-term-review ;
+    term:reviewProtocol "同 Batch1" ;
+    term:reviewRecord "05-术语层-LLM判定记录.md#Round1-Batch3 / #Round2-Batch3" .
+
+term:review-batch5 a prov:Activity ;
+    rdfs:label "术语别名 LLM 两轮评审 · Batch5（RiskMitigantAgreement/Claim/ClaimCoverage/Coverage/FinancialEvent）"@zh ;
+    prov:used term:model-deepseek-v4-1-flash-261017 ;
+    prov:wasAssociatedWith term:runner-term-review ;
+    term:reviewProtocol "同 Batch1" ;
+    term:reviewRecord "05-术语层-LLM判定记录.md#Round1-Batch5 / #Round2-Batch5" .
+
+term:model-deepseek-v4-1-flash-261017 a prov:Entity ;
+    rdfs:label "deepseek-v4-1-flash-261017" ;
+    term:provider "ark" ;
+    term:temperature "0.2" ;
+    dct:source "05-术语层-LLM判定记录.md#L6" .
+
+term:runner-term-review a prov:SoftwareAgent ;
+    rdfs:label "term-review-runner（一次性脚本，未入库）"@zh .
+
+# =============================================================================
+# 4. 置信等级词表（只用于 B 档 inferred）
+# =============================================================================
+
+term:ConfidenceLevel a rdfs:Class ;
+    rdfs:label "别名置信等级"@zh ;
+    rdfs:comment "仅用于 B 档 inferred 别名；evidenced 别名不使用等级。"@zh .
+
+term:high a term:ConfidenceLevel ;
+    rdfs:label "高"@zh ;
+    skos:definition "同义明确、无多义、两轮判定一致 keep。"@zh .
+
+term:medium a term:ConfidenceLevel ;
+    rdfs:label "中"@zh ;
+    skos:definition "同义成立但存在语境依赖（条线简称、合同类型歧义），扩展时需上下文约束。"@zh .

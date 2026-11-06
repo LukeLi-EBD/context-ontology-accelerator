@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "purpose": "S14-H-02 结构可计算/双算法对账的合成探针数据",
+    "synthetic": true,
+    "disclaimer": "Synthetic，非业务结论",
+    "observation_date": "2025-12-31",
+    "capital_net": 10000
+  },
+  "accounts": [
+    {"id": "A001", "party": "P001", "balance": 1200, "due_date": "2025-10-02", "status": "active", "last_payment_date": null},
+    {"id": "A002", "party": "P002", "balance": 800, "due_date": "2025-10-01", "status": "active", "last_payment_date": null},
+    {"id": "A003", "party": "P003", "balance": 300, "due_date": "2025-12-31", "status": "active", "last_payment_date": null},
+    {"id": "A004", "party": "P004", "balance": 500, "due_date": "2025-12-20", "status": "settled", "last_payment_date": "2025-12-15"},
+    {"id": "A005", "party": "P001", "balance": 400, "due_date": "2025-11-30", "status": "active", "last_payment_date": null},
+    {"id": "A006", "party": "P005", "balance": 200, "due_date": "2025-12-01", "status": "active", "last_payment_date": null},
+    {"id": "A007", "party": "P002", "balance": 150, "due_date": "2024-12-31", "status": "settled", "last_payment_date": "2025-01-15"},
+    {"id": "A008", "party": "P006", "balance": 50, "due_date": "2025-12-31", "status": "active", "last_payment_date": null},
+    {"id": "A009", "party": "P004", "balance": 900, "due_date": "2025-09-30", "status": "active", "last_payment_date": null},
+    {"id": "A010", "party": "P005", "balance": 250, "due_date": "2025-11-15", "status": "active", "last_payment_date": null}
+  ],
+  "events": [
+    {"id": "E001", "party": "P001", "timestamp": "2025-12-30T10:00:00", "amount": 100},
+    {"id": "E002", "party": "P001", "timestamp": "2025-11-01T09:00:00", "amount": 60},
+    {"id": "E003", "party": "P002", "timestamp": "2025-12-21T15:00:00", "amount": 200},
+    {"id": "E004", "party": "P004", "timestamp": "2025-10-02T11:00:00", "amount": 300},
+    {"id": "E005", "party": "P005", "timestamp": "2025-09-03T08:00:00", "amount": 120},
+    {"id": "E006", "party": "P006", "timestamp": "2025-12-31T23:00:00", "amount": 50}
+  ],
+  "assets": [
+    {"id": "AV001", "party": "P001", "value": 1000, "as_of": "2025-12-31"},
+    {"id": "AV002", "party": "P001", "value": 900, "as_of": "2025-12-15"},
+    {"id": "AV003", "party": "P002", "value": 500, "as_of": "2025-12-31"},
+    {"id": "AV004", "party": "P004", "value": 750, "as_of": "2025-12-31"}
+  ]
+}
