@@ -1,0 +1,313 @@
+{
+  "collectedAt": "2026-11-07T07:47:07.801273+08:00",
+  "baseline": {
+    "metricSchemeConcepts": 85,
+    "termNsConcepts": 85,
+    "termNsNotInMetricScheme": 0,
+    "metricSchemeVariants": 0,
+    "metricConceptsWithUnit": 0,
+    "conceptSchemes": 19,
+    "schemeList": [
+      {
+        "iri": "https://w3id.org/fsldm/codes#FeatureTypeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#LocatorUsageScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#PartyAgreementRoleScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#EventTypeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/terms#MetricScheme",
+        "label": "FS-LDM Metric Vocabulary"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/terms#MetricScheme",
+        "label": "FS-LDM 指标词表"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#PartyRelationshipRoleScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#MeasureUnitScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#IndustryScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#AgreementStatusScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#DelinquencyBucketScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#LoanClassificationScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#CustomerSegmentScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#ProvisionTypeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#ChannelTypeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#RestructureTypeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#RiskGradeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#CurrencyScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#MetricTypeScheme",
+        "label": null
+      },
+      {
+        "iri": "https://w3id.org/fsldm/codes#IdentificationTypeScheme",
+        "label": null
+      }
+    ],
+    "anchorClasses": 15,
+    "anchorList": [
+      {
+        "iri": "https://w3id.org/fsldm/agreement#Account",
+        "label": "Account",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#Account",
+        "label": "账户",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#CommercialInsurancePolicy",
+        "label": "商业保险单",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#CommercialInsurancePolicy",
+        "label": "Commercial Insurance Policy",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#CreditAgreement",
+        "label": "授信协议",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#CreditAgreement",
+        "label": "Credit Agreement",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#GroupInsurancePolicy",
+        "label": "团体保险单",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#GroupInsurancePolicy",
+        "label": "Group Insurance Policy",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#IndividualInsurancePolicy",
+        "label": "个人保险单",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#IndividualInsurancePolicy",
+        "label": "Individual Insurance Policy",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#Policy",
+        "label": "Policy",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/agreement#Policy",
+        "label": "保单",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/asset#CollateralItem",
+        "label": "Collateral Item",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/asset#CollateralItem",
+        "label": "抵押物项",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/banking#CollateralAgreement",
+        "label": "抵押协议",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/banking#CollateralAgreement",
+        "label": "Collateral Agreement",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+        "label": "Risk Mitigant Agreement",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+        "label": "风险缓释协议",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/core#Party",
+        "label": "Party",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/core#Party",
+        "label": "当事人",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/insurance#Coverage",
+        "label": "保障项",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/insurance#Coverage",
+        "label": "Coverage Feature",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/insurance#InsuranceAgreement",
+        "label": "Insurance Agreement",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/insurance#InsuranceAgreement",
+        "label": "保险合同（保单）",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/party#Individual",
+        "label": "Individual",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/party#Individual",
+        "label": "个人",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/party#PartyGroup",
+        "label": "Party Group",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/party#PartyGroup",
+        "label": "当事人分组",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/party#PartyRelationship",
+        "label": "Party Related",
+        "batch": "1"
+      },
+      {
+        "iri": "https://w3id.org/fsldm/party#PartyRelationship",
+        "label": "当事人之间的关系",
+        "batch": "1"
+      }
+    ],
+    "termEntries": 18,
+    "entriesByStatus": {
+      "https://w3id.org/fsldm/terms#evidenced": 6,
+      "https://w3id.org/fsldm/terms#inferred": 12
+    },
+    "altLabelZhOnAnchors": 15,
+    "prefLabelZhOnAnchors": 15
+  },
+  "classify": {
+    "classCount": 156,
+    "propCount": 129,
+    "classClassify": {
+      "时间事实字段": 1,
+      "时效制度": 0,
+      "流程制度": 1,
+      "阈值制度": 0,
+      "政策约束": 4
+    },
+    "propClassify": {
+      "时间事实字段": 14,
+      "时效制度": 0,
+      "流程制度": 0,
+      "阈值制度": 2,
+      "政策约束": 0
+    },
+    "classHits": {
+      "时间事实字段": [
+        "TimeBound|在效期内的事物"
+      ],
+      "时效制度": [],
+      "流程制度": [
+        "SalvageRecord|残值处置"
+      ],
+      "阈值制度": [],
+      "政策约束": [
+        "IndividualInsurancePolicy|个人保险单",
+        "Policy|保单",
+        "GroupInsurancePolicy|团体保险单",
+        "CommercialInsurancePolicy|商业保险单"
+      ]
+    },
+    "propHits": {
+      "时间事实字段": [
+        "eventTimestamp|事件发生时间",
+        "maturityDate|到期日",
+        "originationDate|起息日 / 放款日",
+        "lastPaymentDate|最后足额还款日",
+        "firstPaymentDate|首期应还款日",
+        "riskGradeReviewDate|复评到期日",
+        "observationDate|观察时点",
+        "recordedAt|记录写入时间",
+        "dueDate|当期应还款日",
+        "attritionDate|流失日",
+        "validFrom|生效时间",
+        "eventPostedTimestamp|记账时间",
+        "validUntil|失效时间",
+        "partySince|建立关系日"
+      ],
+      "时效制度": [],
+      "流程制度": [],
+      "阈值制度": [
+        "leewayUpperBound|上浮上限",
+        "leewayLowerBound|下浮下限"
+      ],
+      "政策约束": []
+    },
+    "propertiesTsv": "D:/agentABC/wt/r-qa-integration/doc/_qa/knowledge-gap/properties_20261107T074707.tsv"
+  }
+}

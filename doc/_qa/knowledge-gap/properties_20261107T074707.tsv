@@ -1,0 +1,130 @@
+iri	local	label	domain	range
+https://w3id.org/fsldm/agreement#accountModifierNumber	accountModifierNumber	账号修饰号	https://w3id.org/fsldm/agreement#Account	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/agreement#accountNumber	accountNumber	账号	https://w3id.org/fsldm/agreement#Account	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/agreement#applicationProducedAgreement	applicationProducedAgreement	申请产生的协议	https://w3id.org/fsldm/agreement#Application	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/agreement#appliedProduct	appliedProduct	适用产品	https://w3id.org/fsldm/agreement#AgreementProductAssignment	https://w3id.org/fsldm/core#Product
+https://w3id.org/fsldm/agreement#classifiedAgreement	classifiedAgreement	被分类协议		https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/agreement#hasPartyRole	hasPartyRole	协议上的当事人角色	https://w3id.org/fsldm/core#Agreement	https://w3id.org/fsldm/agreement#AgreementPartyRole
+https://w3id.org/fsldm/agreement#hasProductAssignment	hasProductAssignment	产品适用关系	https://w3id.org/fsldm/core#Agreement	https://w3id.org/fsldm/agreement#AgreementProductAssignment
+https://w3id.org/fsldm/agreement#ofAgreement	ofAgreement	所属协议	https://w3id.org/fsldm/agreement#AgreementPartyRole	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/agreement#ofClaim	ofClaim	所属理赔	https://w3id.org/fsldm/agreement#ClaimCoverage	https://w3id.org/fsldm/agreement#Claim
+https://w3id.org/fsldm/agreement#parentAgreement	parentAgreement	父协议	https://w3id.org/fsldm/core#Agreement	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/agreement#quotationAcceptedBy	quotationAcceptedBy	报价被接受为协议	https://w3id.org/fsldm/agreement#Quotation	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/agreement#roleParty	roleParty	承担角色的当事人	https://w3id.org/fsldm/agreement#AgreementPartyRole	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/asset#collateralizes	collateralizes	为协议提供担保	https://w3id.org/fsldm/core#Asset	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/asset#ownershipShare	ownershipShare	权益份额	https://w3id.org/fsldm/asset#AssetOwnershipRole	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/asset#valuationMethod	valuationMethod	估值方法	https://w3id.org/fsldm/asset#AssetValue	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/banking#collateralAsset	collateralAsset	抵押资产	https://w3id.org/fsldm/banking#CollateralAssignment	https://w3id.org/fsldm/core#Asset
+https://w3id.org/fsldm/banking#collateralForAgreement	collateralForAgreement	抵押所担保的协议	https://w3id.org/fsldm/banking#CollateralAssignment	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/banking#haircutOfCollateral	haircutOfCollateral	适用的折扣率	https://w3id.org/fsldm/banking#CollateralAssignment	https://w3id.org/fsldm/banking#CollateralHaircut
+https://w3id.org/fsldm/banking#mitigatesAgreement	mitigatesAgreement	所缓释的协议	https://w3id.org/fsldm/banking#RiskMitigantAgreement	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/campaign#conditionExpression	conditionExpression	条件表达式	https://w3id.org/fsldm/campaign#CampaignCondition	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/campaign#hasCell	hasCell	包含投放单元	https://w3id.org/fsldm/campaign#Promotion	https://w3id.org/fsldm/campaign#PromotionCell
+https://w3id.org/fsldm/campaign#hasPromotion	hasPromotion	包含促销	https://w3id.org/fsldm/core#Campaign	https://w3id.org/fsldm/campaign#Promotion
+https://w3id.org/fsldm/campaign#offeredIncentive	offeredIncentive	提供优惠	https://w3id.org/fsldm/campaign#PromotionCell	https://w3id.org/fsldm/campaign#Offer
+https://w3id.org/fsldm/channel#deviceNumber	deviceNumber	设备号	https://w3id.org/fsldm/channel#AccessDevice	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/channel#deviceStatus	deviceStatus	设备状态	https://w3id.org/fsldm/channel#AccessDevice	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/channel#parentPage	parentPage	父页面	https://w3id.org/fsldm/channel#WebPage	https://w3id.org/fsldm/channel#WebPage
+https://w3id.org/fsldm/channel#sessionDuration	sessionDuration	会话时长（秒）	https://w3id.org/fsldm/channel#WebSession	http://www.w3.org/2001/XMLSchema#integer
+https://w3id.org/fsldm/channel#usesChannel	usesChannel	通过渠道访问	https://w3id.org/fsldm/channel#AccessDevice	https://w3id.org/fsldm/core#Channel
+https://w3id.org/fsldm/core#agreementId	agreementId	协议编号	https://w3id.org/fsldm/core#Agreement	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#agreementOf	agreementOf	所属协议	https://w3id.org/fsldm/core#Agreement	
+https://w3id.org/fsldm/core#assetId	assetId	资产编号	https://w3id.org/fsldm/core#Asset	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#assetOf	assetOf	所属资产	https://w3id.org/fsldm/core#Asset	
+https://w3id.org/fsldm/core#campaignOf	campaignOf	营销活动属于	https://w3id.org/fsldm/core#Campaign	
+https://w3id.org/fsldm/core#channelOf	channelOf	渠道属于	https://w3id.org/fsldm/core#Channel	
+https://w3id.org/fsldm/core#classifies	classifies	所分类对象	https://w3id.org/fsldm/core#Classification	https://w3id.org/fsldm/core#BusinessEntity
+https://w3id.org/fsldm/core#dueDate	dueDate	当期应还款日	https://w3id.org/fsldm/core#Agreement	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#eventId	eventId	事件编号	https://w3id.org/fsldm/core#Event	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#eventOf	eventOf	所属事件	https://w3id.org/fsldm/core#Event	
+https://w3id.org/fsldm/core#featureOf	featureOf	特性属于	https://w3id.org/fsldm/core#Feature	
+https://w3id.org/fsldm/core#firstPaymentDate	firstPaymentDate	首期应还款日	https://w3id.org/fsldm/core#Agreement	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#hasAgreement	hasAgreement	涉及协议		https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/core#hasAsset	hasAsset	涉及资产		https://w3id.org/fsldm/core#Asset
+https://w3id.org/fsldm/core#hasCampaign	hasCampaign	涉及营销活动		https://w3id.org/fsldm/core#Campaign
+https://w3id.org/fsldm/core#hasChannel	hasChannel	涉及渠道		https://w3id.org/fsldm/core#Channel
+https://w3id.org/fsldm/core#hasClassValue	hasClassValue	分类值		http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#hasCode	hasCode	代码		http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#hasCurrency	hasCurrency	币种		http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#hasEvent	hasEvent	涉及事件		https://w3id.org/fsldm/core#Event
+https://w3id.org/fsldm/core#hasFeature	hasFeature	具有特性		https://w3id.org/fsldm/core#Feature
+https://w3id.org/fsldm/core#hasLocator	hasLocator	涉及位置		https://w3id.org/fsldm/core#Locator
+https://w3id.org/fsldm/core#hasMetric	hasMetric	拥有度量	https://w3id.org/fsldm/core#BusinessEntity	https://w3id.org/fsldm/core#Metric
+https://w3id.org/fsldm/core#hasParty	hasParty	涉及当事人		https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/core#hasProduct	hasProduct	涉及产品		https://w3id.org/fsldm/core#Product
+https://w3id.org/fsldm/core#hasRole	hasRole	角色	https://w3id.org/fsldm/core#RoleAssignment	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#hasStatus	hasStatus	当前状态	https://w3id.org/fsldm/core#BusinessEntity	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#identificationType	identificationType	标识类型		http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#identificationValue	identificationValue	标识值		http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#inScheme	inScheme	所属方案		http://www.w3.org/2004/02/skos/core#ConceptScheme
+https://w3id.org/fsldm/core#isPrimaryRole	isPrimaryRole	是否主角色		http://www.w3.org/2001/XMLSchema#boolean
+https://w3id.org/fsldm/core#lastPaymentDate	lastPaymentDate	最后足额还款日	https://w3id.org/fsldm/core#Agreement	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#locatorOf	locatorOf	位置属于	https://w3id.org/fsldm/core#Locator	
+https://w3id.org/fsldm/core#maturityDate	maturityDate	到期日	https://w3id.org/fsldm/core#Agreement	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#metricOf	metricOf	度量所属主体	https://w3id.org/fsldm/core#Metric	https://w3id.org/fsldm/core#BusinessEntity
+https://w3id.org/fsldm/core#metricType	metricType	度量类型	https://w3id.org/fsldm/core#Metric	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#metricValue	metricValue	度量值		http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/core#observationDate	observationDate	观察时点	https://w3id.org/fsldm/core#Metric	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#ofObject	ofObject	客体端	https://w3id.org/fsldm/core#RoleAssignment	https://w3id.org/fsldm/core#BusinessEntity
+https://w3id.org/fsldm/core#ofSubject	ofSubject	主体端	https://w3id.org/fsldm/core#RoleAssignment	https://w3id.org/fsldm/core#BusinessEntity
+https://w3id.org/fsldm/core#originationDate	originationDate	起息日 / 放款日	https://w3id.org/fsldm/core#Agreement	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#partyId	partyId	当事人编号	https://w3id.org/fsldm/core#Party	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#partyOf	partyOf	所属当事人	https://w3id.org/fsldm/core#Party	
+https://w3id.org/fsldm/core#productId	productId	产品编号	https://w3id.org/fsldm/core#Product	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#productOf	productOf	所属产品	https://w3id.org/fsldm/core#Product	
+https://w3id.org/fsldm/core#recordedAt	recordedAt	记录写入时间		http://www.w3.org/2001/XMLSchema#dateTime
+https://w3id.org/fsldm/core#sourceRecordId	sourceRecordId	来源记录号		http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#sourceSystem	sourceSystem	来源系统		http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/core#unitOfMeasure	unitOfMeasure	计量单位		http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/core#validFrom	validFrom	生效时间		http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/core#validUntil	validUntil	失效时间		http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/event#containsEvent	containsEvent	会话包含事件	https://w3id.org/fsldm/event#ContactSession	https://w3id.org/fsldm/core#Event
+https://w3id.org/fsldm/event#eventAmount	eventAmount	事件金额	https://w3id.org/fsldm/core#Event	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/event#eventPostedTimestamp	eventPostedTimestamp	记账时间	https://w3id.org/fsldm/core#Event	http://www.w3.org/2001/XMLSchema#dateTime
+https://w3id.org/fsldm/event#eventSubtype	eventSubtype	事件细类	https://w3id.org/fsldm/core#Event	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/event#eventTimestamp	eventTimestamp	事件发生时间	https://w3id.org/fsldm/core#Event	http://www.w3.org/2001/XMLSchema#dateTime
+https://w3id.org/fsldm/event#eventType	eventType	事件类型	https://w3id.org/fsldm/core#Event	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/event#ofEvent	ofEvent	所属事件	https://w3id.org/fsldm/event#EventPartyRole	https://w3id.org/fsldm/core#Event
+https://w3id.org/fsldm/finance#creditAmount	creditAmount	贷方金额	https://w3id.org/fsldm/finance#JournalEntryLine	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/finance#debitAmount	debitAmount	借方金额	https://w3id.org/fsldm/finance#JournalEntryLine	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/finance#glAccountNumber	glAccountNumber	科目号	https://w3id.org/fsldm/finance#GLMainAccount	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/finance#lineNumber	lineNumber	行号	https://w3id.org/fsldm/finance#JournalEntryLine	http://www.w3.org/2001/XMLSchema#integer
+https://w3id.org/fsldm/finance#ofExposureAgreement	ofExposureAgreement	敞口对应协议	https://w3id.org/fsldm/finance#FinanceExposureAgreement	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/finance#ofJournalEntry	ofJournalEntry	所属凭证	https://w3id.org/fsldm/finance#JournalEntryLine	https://w3id.org/fsldm/finance#JournalEntryHeader
+https://w3id.org/fsldm/finance#parentGLAccount	parentGLAccount	上级科目	https://w3id.org/fsldm/finance#GLMainAccount	https://w3id.org/fsldm/finance#GLMainAccount
+https://w3id.org/fsldm/finance#postedAccount	postedAccount	记账科目	https://w3id.org/fsldm/finance#JournalEntryLine	https://w3id.org/fsldm/finance#GLMainAccount
+https://w3id.org/fsldm/insurance#coverageOfAgreement	coverageOfAgreement	保障所属保单	https://w3id.org/fsldm/insurance#Coverage	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/insurance#insuresAsset	insuresAsset	承保资产	https://w3id.org/fsldm/insurance#InsuranceAgreement	https://w3id.org/fsldm/core#Asset
+https://w3id.org/fsldm/insurance#underwritingClassOf	underwritingClassOf	核保等级所属协议	https://w3id.org/fsldm/insurance#UnderwritingClass	https://w3id.org/fsldm/core#Agreement
+https://w3id.org/fsldm/investment#portfolioOfParty	portfolioOfParty	组合所属当事人	https://w3id.org/fsldm/investment#Portfolio	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/investment#positionInPortfolio	positionInPortfolio	头寸所属组合	https://w3id.org/fsldm/investment#InvestmentPosition	https://w3id.org/fsldm/investment#Portfolio
+https://w3id.org/fsldm/investment#quotedProduct	quotedProduct	报价标的	https://w3id.org/fsldm/investment#MarketQuote	https://w3id.org/fsldm/investment#InvestmentProduct
+https://w3id.org/fsldm/location#administrativeCode	administrativeCode	行政区划代码	https://w3id.org/fsldm/location#GeographicalArea	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/location#hasLocator	hasLocator	所用位置	https://w3id.org/fsldm/location#LocatorAssignment	https://w3id.org/fsldm/core#Locator
+https://w3id.org/fsldm/location#latitude	latitude	纬度	https://w3id.org/fsldm/location#GeospatialLocator	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/location#locatorUsage	locatorUsage	用途		http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/location#longitude	longitude	经度	https://w3id.org/fsldm/location#GeospatialLocator	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/org#employedAssociate	employedAssociate	任职员工	https://w3id.org/fsldm/org#AssociateEmployment	https://w3id.org/fsldm/org#Associate
+https://w3id.org/fsldm/org#employingOrganization	employingOrganization	任职机构	https://w3id.org/fsldm/org#AssociateEmployment	https://w3id.org/fsldm/party#Organization
+https://w3id.org/fsldm/org#occupiesPosition	occupiesPosition	担任岗位	https://w3id.org/fsldm/org#AssociateEmployment	https://w3id.org/fsldm/org#Position
+https://w3id.org/fsldm/org#partOfOrganization	partOfOrganization	上级机构	https://w3id.org/fsldm/party#Organization	https://w3id.org/fsldm/party#Organization
+https://w3id.org/fsldm/party#attritionDate	attritionDate	流失日	https://w3id.org/fsldm/core#Party	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/party#classifiedParty	classifiedParty	被分类当事人	https://w3id.org/fsldm/party#PartyClassification	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/party#financialDocumentOfParty	financialDocumentOfParty	报告所属当事人	https://w3id.org/fsldm/party#PartyFinancialDocument	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/party#hasGroupMember	hasGroupMember	组成员	https://w3id.org/fsldm/party#PartyGroup	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/party#ofParty	ofParty	所属当事人	https://w3id.org/fsldm/party#PartyIdentification	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/party#partySince	partySince	建立关系日	https://w3id.org/fsldm/core#Party	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/party#ratingLowerBound	ratingLowerBound	等级下界	http://www.w3.org/2004/02/skos/core#Concept	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/party#ratingUpperBound	ratingUpperBound	等级上界	http://www.w3.org/2004/02/skos/core#Concept	http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/party#relatedFrom	relatedFrom	关系发起方	https://w3id.org/fsldm/party#PartyRelationship	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/party#relatedTo	relatedTo	关系指向方	https://w3id.org/fsldm/party#PartyRelationship	https://w3id.org/fsldm/core#Party
+https://w3id.org/fsldm/party#riskGradePrecedes	riskGradePrecedes	等级高于	http://www.w3.org/2004/02/skos/core#Concept	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/party#riskGradeReviewDate	riskGradeReviewDate	复评到期日	https://w3id.org/fsldm/party#PartyRiskGrade	http://www.w3.org/2001/XMLSchema#date
+https://w3id.org/fsldm/product#eligibilityCondition	eligibilityCondition	适用条件	https://w3id.org/fsldm/product#ProductFeatureEligibility	http://www.w3.org/2004/02/skos/core#Concept
+https://w3id.org/fsldm/product#featureCode	featureCode	特性代码	https://w3id.org/fsldm/core#Feature	http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/product#featureValue	featureValue	特性取值		http://www.w3.org/2001/XMLSchema#string
+https://w3id.org/fsldm/product#hasPackageComponent	hasPackageComponent	包含产品	https://w3id.org/fsldm/product#ProductPackage	https://w3id.org/fsldm/core#Product
+https://w3id.org/fsldm/product#leewayLowerBound	leewayLowerBound	下浮下限		http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/product#leewayUpperBound	leewayUpperBound	上浮上限		http://www.w3.org/2001/XMLSchema#decimal
+https://w3id.org/fsldm/product#memberProduct	memberProduct	组内产品	https://w3id.org/fsldm/product#ProductGroup	https://w3id.org/fsldm/core#Product
+https://w3id.org/fsldm/product#parentProductGroup	parentProductGroup	上级产品组	https://w3id.org/fsldm/product#ProductGroup	https://w3id.org/fsldm/product#ProductGroup

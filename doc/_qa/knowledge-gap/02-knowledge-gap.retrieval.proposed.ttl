@@ -1,0 +1,55 @@
+@prefix policy: <https://w3id.org/fsldm/policy#> .
+@prefix term:   <https://w3id.org/fsldm/terms#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+
+# =============================================================================
+# B 线 · 知识供给 seed 草稿（检索绑定版）—— 会移动 A 线术语门禁的高水位计数
+#
+# !!! 不要直接导入、不要发布 !!!
+#
+# 与 01-knowledge-gap.proposed.ttl 的差异只有三项：
+#   1. 给 2 个新类挂 term:termBatch 2      -> 锚点类 15 -> 17
+#   2. 给 2 个新类加带语言标签的 altLabel  -> tagged altLabel 18 -> 20
+#   3. 补 2 条 term:TermEntry              -> TermEntry 18 -> 20
+#
+# 为什么需要它：termlex 的 class_query 只读 term:termBatch 锚点，
+# answerable 的覆盖度虽然读全图 label，但要让新知识进入检索词表，
+# 必须挂 termBatch。这一步正是与 A 主尺子的冲突点，需 A 线批准后再启用。
+#
+# 已验证：候选词面 "记录保留" / "处置流程" 在全图 855 条 label/prefLabel/altLabel
+# 中 0 冲突（collision_check.py，2026-11-07）。
+# =============================================================================
+
+policy:RetentionRule
+    term:termBatch 2 ;
+    skos:altLabel "记录保留"@zh .
+
+policy:RetentionRule
+    skos:prefLabel "历史记录保留"@zh ;
+    skos:prefLabel "Record Retention Rule"@en ;
+    skos:definition "对某类业务记录的保留期限、起算时点、例外情形与到期处置作出规定的制度性规则。"@zh .
+
+policy:DisposalProcedure
+    term:termBatch 2 ;
+    skos:altLabel "处置流程"@zh .
+
+policy:DisposalProcedure
+    skos:prefLabel "处置流程"@zh ;
+    skos:prefLabel "Disposal Procedure"@en ;
+    skos:definition "由触发条件启动、按固定步骤执行并要求时限与责任角色约束的业务处置程序。"@zh .
+
+# ---- TermEntry：满足 AltLabelProvenanceShape（每个 tagged altLabel 一条） ----
+term:entry-KG01_Retention a term:TermEntry ;
+    term:forClass policy:RetentionRule ;
+    term:label "记录保留"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    dct:source "doc/_qa/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §3（候选词面判定）" .
+
+term:entry-KG02_Disposal a term:TermEntry ;
+    term:forClass policy:DisposalProcedure ;
+    term:label "处置流程"@zh ;
+    term:status term:inferred ;
+    term:confidence term:high ;
+    dct:source "doc/_qa/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §3（候选词面判定）" .
