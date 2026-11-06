@@ -1,0 +1,771 @@
+# =============================================================================
+# FS-LDM 指标词表 · SKOS 术语层（B-05）
+#
+# 来源：platform.metric_definition（85 行 = 79 主 + 6 变体）。
+# 每行一个 skos:Concept：prefLabel@zh=name_zh，altLabel=display_name/唯一简称，
+# notation=metric_id，definition=definition 首句；变体 skos:broader 指向族索引。
+# 公式/窗口/聚合/grain/unit/fact_function 等计算字段仍在 PostgreSQL，不入 SKOS。
+# 概念默认挂 term: 命名空间；与 18 条业务别名词面冲突者改挂 metric: 命名空间。
+# 生成：doc/_fsldm/build_metrics_skos.py（只读 PG，不改 PG）。
+# =============================================================================
+
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:    <http://purl.org/dc/terms/> .
+@prefix term:   <https://w3id.org/fsldm/terms#> .
+@prefix metric: <https://w3id.org/fsldm/metrics#> .
+
+# ---- 词表声明 --------------------------------------------------------------
+term:MetricScheme a skos:ConceptScheme ;
+    skos:prefLabel "FS-LDM 指标词表"@zh ;
+    skos:prefLabel "FS-LDM Metric Vocabulary"@en ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-001 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "RFM-R（最近一次行为）"@zh ;
+    skos:altLabel "RFM-R"@zh ;
+    skos:notation "CUST-001" ;
+    skos:definition "距客户最近一次有效行为（交易/还款/缴费/保单生效）的天数，越短越活跃。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-002 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "RFM-F（频次）"@zh ;
+    skos:altLabel "RFM-F"@zh ;
+    skos:notation "CUST-002" ;
+    skos:definition "统计窗口内客户有效交易（或缴费）次数，反映交互频次。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-003 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "RFM-M（金额）"@zh ;
+    skos:altLabel "RFM-M"@zh ;
+    skos:notation "CUST-003" ;
+    skos:definition "统计窗口内客户有效交易金额合计，反映客户贡献规模。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-004 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "RFM 分档（五分位）"@zh ;
+    skos:altLabel "RFM 分档"@zh ;
+    skos:altLabel "RFM分档（五分位）"@zh ;
+    skos:notation "CUST-004" ;
+    skos:definition "对 R/F/M 三个维度分别按分位数切 5 档（1–5 分），组合为三位 RFM 码用于客户分层。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-005 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "RFM-R（无交易代理口径）"@zh ;
+    skos:altLabel "RFM-R"@zh ;
+    skos:notation "CUST-005" ;
+    skos:definition "无有效交易客户用注册/开卡/首单/保单生效日作为代理最近行为日计算 R，并单独标记未激活"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-006 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "客户留存率（cohort）"@zh ;
+    skos:altLabel "客户留存率"@zh ;
+    skos:notation "CUST-006" ;
+    skos:definition "按获客起始期分组（cohort），第 N 月仍活跃的客户占该 cohort 初始客户数的比例。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-007 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "客户流失率"@zh ;
+    skos:notation "CUST-007" ;
+    skos:definition "期初客户中在观察窗口内无任何有效行为的客户占比。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-008 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "月度滚动留存率"@zh ;
+    skos:notation "CUST-008" ;
+    skos:definition "本月活跃客户中上月也活跃的比例，逐月滚动观察整体客户盘留存。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-009 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "产品持有数"@zh ;
+    skos:notation "CUST-009" ;
+    skos:definition "客户在观察时点持有的有效产品数量，按产品大类去重"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-010 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "人均产品数"@zh ;
+    skos:notation "CUST-010" ;
+    skos:definition "客户平均持有有效产品数，反映交叉销售深度"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-011 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "钱包份额（SOW）"@zh ;
+    skos:altLabel "钱包份额"@zh ;
+    skos:notation "CUST-011" ;
+    skos:definition "本公司在该客户某品类获得的业务额占该客户该品类总消费的比例。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-012 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "AUM（时点）"@zh ;
+    skos:altLabel "AUM"@zh ;
+    skos:notation "CUST-012" ;
+    skos:definition "客户在观察时点在本行/集团持有的可计入资产市值合计（存款、理财、基金、保险、国债等）。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-CUST-013 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "AUM（日均）"@zh ;
+    skos:altLabel "AUM"@zh ;
+    skos:notation "CUST-013" ;
+    skos:definition "观察期内客户每日 AUM 的平均值，用于平滑时点波动。"@zh ;
+    dct:subject "customer"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-001 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "逾期天数（DPD）"@zh ;
+    skos:altLabel "逾期天数"@zh ;
+    skos:notation "FIN-BANK-001" ;
+    skos:definition "贷款合同到期（含批准展期后到期）未归还时，自到期日次日起至观察日累计的自然日天数。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-002 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "逾期分档（M0–M6）"@zh ;
+    skos:altLabel "逾期分档"@zh ;
+    skos:notation "FIN-BANK-002" ;
+    skos:definition "按逾期天数将账户划入 M0–M6 月度分桶，M0 未逾期、M1 逾期 1–30 天、M2 逾期 31–60 天，其余每 30 天一档至 M6"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-003 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "逾期90天→至少次级"@zh ;
+    skos:altLabel "逾期90天至少次级"@zh ;
+    skos:notation "FIN-BANK-003" ;
+    skos:definition "本金、利息或收益逾期超过 90 天的金融资产，风险分类下限至少为次级类。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-004 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "逾期90天→Stage 3"@zh ;
+    skos:altLabel "逾期90天→Stage3"@zh ;
+    skos:altLabel "逾期90天Stage 3"@zh ;
+    skos:notation "FIN-BANK-004" ;
+    skos:definition "把逾期超过 90 天作为已发生信用减值（credit-impaired）的判断依据之一，据此划入 IFRS 9 第三阶段。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-005 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "Stage 2“30 天显著增加”"@zh ;
+    skos:altLabel "Stage2“30天显著增加”"@zh ;
+    skos:notation "FIN-BANK-005" ;
+    skos:definition "自初始确认后信用风险显著增加但尚未发生信用减值的金融资产划入第二阶段，30 天逾期作为可推翻的显著增加假设"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-006 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "部分还款/最低还款逾期判定"@zh ;
+    skos:notation "FIN-BANK-006" ;
+    skos:definition "未按合同还足当期应还金额（含信用卡最低还款额）时判定该期逾期，按整期逾期而非仅未还部分"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-007 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "五级分类结果"@zh ;
+    skos:notation "FIN-BANK-007" ;
+    skos:definition "按债务人偿债能力、逾期与减值情况，把金融资产划分为正常、关注、次级、可疑、损失五类，后三类合称不良。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-008 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "不良贷款率"@zh ;
+    skos:notation "FIN-BANK-008" ;
+    skos:definition "不良贷款余额占各项贷款余额的比重，衡量信贷资产质量。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-009 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "交叉违约触发不良"@zh ;
+    skos:notation "FIN-BANK-009" ;
+    skos:definition "同一非零售债务人在本行被分为不良的债权超过 10% 时，该债务人在本行的全部债权归为不良。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-010 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "重组贷款（现行）"@zh ;
+    skos:altLabel "重组贷款"@zh ;
+    skos:notation "FIN-BANK-010" ;
+    skos:definition "因债务人财务困难而作出有利于债务人的合同调整或提供再融资所形成的资产，观察期至少 1 年且不少于连续 2 个还款期。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-011 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "重组贷款（旧规）"@zh ;
+    skos:altLabel "重组贷款"@zh ;
+    skos:notation "FIN-BANK-011" ;
+    skos:definition "2007 指引口径下需要重组的贷款至少归为次级，观察期内不得上调分类。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-012 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "展期/借新还旧归类"@zh ;
+    skos:notation "FIN-BANK-012" ;
+    skos:definition "通过展期、借新还旧或其他债务融资方式偿还的资产，按重组规则归类并适用分类下限。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-013 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "正常类贷款迁徙率"@zh ;
+    skos:notation "FIN-BANK-013" ;
+    skos:definition "期初正常类贷款中在报告期内迁徙到后四类的金额，占期初正常类余额扣期间减少后的比重。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-014 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "关注类贷款迁徙率"@zh ;
+    skos:notation "FIN-BANK-014" ;
+    skos:definition "期初关注类贷款中在报告期内迁徙为不良的金额，占期初关注类余额扣期间减少后的比重。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-015 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "次级类贷款迁徙率"@zh ;
+    skos:notation "FIN-BANK-015" ;
+    skos:definition "期初次级类贷款中在报告期内迁徙为可疑或损失的金额，占期初次级类余额扣期间减少后的比重。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-016 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "可疑类贷款迁徙率"@zh ;
+    skos:notation "FIN-BANK-016" ;
+    skos:definition "期初可疑类贷款中在报告期内迁徙为损失的金额，占期初可疑类余额扣期间减少后的比重。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-017 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "逾期迁徙率 30→60"@zh ;
+    skos:altLabel "逾期迁徙率30→60"@zh ;
+    skos:altLabel "逾期迁徙率 3060"@zh ;
+    skos:notation "FIN-BANK-017" ;
+    skos:definition "期初逾期 30–59 天的账户在观察期末迁徙到 60 天及以上的比例"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-018 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "逾期迁徙率 60→90"@zh ;
+    skos:altLabel "逾期迁徙率60→90"@zh ;
+    skos:altLabel "逾期迁徙率 6090"@zh ;
+    skos:notation "FIN-BANK-018" ;
+    skos:definition "期初逾期 60–89 天的账户在观察期末迁徙到 90 天及以上的比例"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-019 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "30→90 累计迁徙率"@zh ;
+    skos:altLabel "30→90累计迁徙率"@zh ;
+    skos:altLabel "3090 累计迁徙率"@zh ;
+    skos:notation "FIN-BANK-019" ;
+    skos:definition "期初 DPD30–59 的同批账户在连续两个自然月内累计迁徙到 90 天以上的比例"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-020 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "迁徙率（户数口径变体）"@zh ;
+    skos:altLabel "迁徙率"@zh ;
+    skos:notation "FIN-BANK-020" ;
+    skos:definition "以户数而非余额计算的迁徙率变体：期初该分类客户中期末迁徙到更高分类的客户占比；"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-021 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "迁徙率（期末余额口径变体）"@zh ;
+    skos:altLabel "迁徙率（五级分类迁徙矩阵）"@zh ;
+    skos:altLabel "迁徙率"@zh ;
+    skos:notation "FIN-BANK-021" ;
+    skos:definition "五级分类迁徙矩阵口径：期初正常类与关注类贷款在观察期末迁徙为不良（次级/可疑/损失）的比例；"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-022 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "拨备覆盖率"@zh ;
+    skos:notation "FIN-BANK-022" ;
+    skos:definition "贷款损失准备余额对不良贷款余额的覆盖程度，监管基本标准 150%。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-023 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "贷款拨备率"@zh ;
+    skos:notation "FIN-BANK-023" ;
+    skos:definition "贷款损失准备余额占各项贷款余额的比重，监管基本标准 2.5%。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-024 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "IFRS 9 三阶段划分"@zh ;
+    skos:altLabel "IFRS9三阶段划分"@zh ;
+    skos:notation "FIN-BANK-024" ;
+    skos:definition "按信用风险自初始确认后是否显著增加、是否发生信用减值，把金融资产划入三个阶段并分别按 12 个月或存续期 ECL 计量。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-025 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "单一客户贷款集中度"@zh ;
+    skos:notation "FIN-BANK-025" ;
+    skos:definition "对同一借款人的贷款余额占商业银行资本余额的比重，监管上限 10%。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-026 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "单一非同业客户风险暴露/一级资本净额"@zh ;
+    skos:notation "FIN-BANK-026" ;
+    skos:definition "对非同业单一客户的风险暴露占一级资本净额的比重（上限 15%）；"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-027 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "非同业关联客户风险暴露集中度"@zh ;
+    skos:notation "FIN-BANK-027" ;
+    skos:definition "对一组非同业关联客户的风险暴露占一级资本净额的比重，监管上限 20%。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-028 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "单一集团客户授信集中度"@zh ;
+    skos:notation "FIN-BANK-028" ;
+    skos:definition "最大一家集团客户的授信总额占资本净额的比重，监管上限 15%。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-029 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "全部关联度"@zh ;
+    skos:notation "FIN-BANK-029" ;
+    skos:definition "全部关联方授信总额占资本净额的比重，监管上限 50%。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-030 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "大额风险暴露认定"@zh ;
+    skos:notation "FIN-BANK-030" ;
+    skos:definition "对单一客户或一组关联客户的风险暴露超过一级资本净额 2.5% 时，认定为大额风险暴露。"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-031 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "申请通过率"@zh ;
+    skos:notation "FIN-BANK-031" ;
+    skos:definition "统计期内首次受理的信贷申请中，在观察截止日（期末+30 天）前完成审批且结论为通过的申请笔数占比"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-032 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "额度使用率"@zh ;
+    skos:notation "FIN-BANK-032" ;
+    skos:definition "同一时点已用授信本金占已批复且有效授信额度的比例"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-033 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "首逾率（FPD）"@zh ;
+    skos:altLabel "首逾率"@zh ;
+    skos:notation "FIN-BANK-033" ;
+    skos:definition "新发放贷款在首个还款期即发生逾期的账户占比（固定账户口径变体 A）"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-034 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "早期预警（EWS）"@zh ;
+    skos:altLabel "早期预警"@zh ;
+    skos:notation "FIN-BANK-034" ;
+    skos:definition "按可配置规则集监测资产质量恶化信号，命中对象进入预警清单，按规则严重度与命中数输出 L1–L3"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-035 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "催收回收率"@zh ;
+    skos:notation "FIN-BANK-035" ;
+    skos:definition "观察期初在催账户的本金在观察期内现金回收的比例"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-036 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "不良处置率/处置回收率"@zh ;
+    skos:altLabel "不良处置率/处置回收率（口径族·索引）"@zh ;
+    skos:notation "FIN-BANK-036" ;
+    skos:definition "口径族索引：不良处置率（-v1，默认）与处置回收率（-v2）并列；"@zh ;
+    dct:subject "bank"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-036-v1 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "不良处置率"@zh ;
+    skos:notation "FIN-BANK-036-v1" ;
+    skos:definition "期内完成处置的不良资产账面金额（gross，含核销）占期初不良资产余额的比例。"@zh ;
+    dct:subject "bank"@zh ;
+    skos:broader term:M-FIN-BANK-036 ;
+    metric:variant true ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-BANK-036-v2 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "处置回收率"@zh ;
+    skos:notation "FIN-BANK-036-v2" ;
+    skos:definition "报告期内完成处置的不良资产实际回收金额占期内处置标的账面金额的比例，衡量处置回收效率。"@zh ;
+    dct:subject "bank"@zh ;
+    skos:broader term:M-FIN-BANK-036 ;
+    metric:variant true ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-001 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "原保险保费收入"@zh ;
+    skos:notation "FIN-INS-001" ;
+    skos:definition "按保险合同确认的保费收入，不含保户投资款新增交费和投连险独立账户新增交费。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-002 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "签单保费"@zh ;
+    skos:notation "FIN-INS-002" ;
+    skos:definition "统计期内销售的保单保费总额，按销售/承保时点归集，批改按批单调整。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-003 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "实收保费"@zh ;
+    skos:notation "FIN-INS-003" ;
+    skos:definition "按收付实现制，统计期内实际收到的保费扣除批退与退费"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-004 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "续期保费（签单口径）"@zh ;
+    skos:altLabel "续期保费"@zh ;
+    skos:notation "FIN-INS-004" ;
+    skos:definition "期交保单项下第二个保单年度及以后各期应收（签单）保费之和。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-005 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "趸交/期交与首年保费"@zh ;
+    skos:notation "FIN-INS-005" ;
+    skos:definition "按缴费方式区分趸交与期交，并计算新单首年保费（首年期交保费 + 趸交保费）。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-006 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "保费达成率"@zh ;
+    skos:notation "FIN-INS-006" ;
+    skos:definition "实际保费完成额占计划保费的比重"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-007 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "简单赔付率"@zh ;
+    skos:notation "FIN-INS-007" ;
+    skos:definition "赔款支出占保费收入的比重（简单口径，不调未决准备金与再保摊回）"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-008 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合赔付率（财产险·规则18）"@zh ;
+    skos:altLabel "综合赔付率"@zh ;
+    skos:notation "FIN-INS-008" ;
+    skos:definition "财产险口径下，赔付支出（含未决赔款准备金变动、扣摊回）占自留保费（扣未到期责任准备金变动）的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-009 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合赔付率（短期健康险）"@zh ;
+    skos:altLabel "综合赔付率"@zh ;
+    skos:notation "FIN-INS-009" ;
+    skos:definition "一年期及以下个人短期健康险的再保后综合赔付率。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-010 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合赔付率（财政部）"@zh ;
+    skos:altLabel "综合赔付率"@zh ;
+    skos:notation "FIN-INS-010" ;
+    skos:definition "按财政部绩效评价口径，赔付相关支出占已赚保费的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-011 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合成本率（财产险当期）"@zh ;
+    skos:altLabel "综合成本率"@zh ;
+    skos:notation "FIN-INS-011" ;
+    skos:definition "财产险当期赔付与费用合计占自留保费（扣未到期责任准备金变动）的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-012 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "两年综合成本率（2003）"@zh ;
+    skos:altLabel "两年综合成本率"@zh ;
+    skos:notation "FIN-INS-012" ;
+    skos:definition "两年费用与赔付合计占两年自留保费净额的比重（2003 旧规口径的代数合并式）"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-013 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "两年赔付率（2003）"@zh ;
+    skos:altLabel "两年赔付率"@zh ;
+    skos:notation "FIN-INS-013" ;
+    skos:definition "旧规两年口径赔付率：两年赔款及准备金提转差合计占两年自留保费（扣准备金提转差）的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-014 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "未决赔款准备金"@zh ;
+    skos:notation "FIN-INS-014" ;
+    skos:definition "评估时点对已发生未结案赔案计提的准备金，含已报案、IBNR 与理赔费用准备金。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-015 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "案均已决金额"@zh ;
+    skos:notation "FIN-INS-015" ;
+    skos:definition "统计期内正常结案赔案的平均赔款金额。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-016 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "案均未决金额"@zh ;
+    skos:notation "FIN-INS-016" ;
+    skos:definition "评估时点未决赔案的平均未决估损金额。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-017 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "报案率"@zh ;
+    skos:notation "FIN-INS-017" ;
+    skos:definition "统计期内报案件数占有效保单件数的比例"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-018 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "报案立案率"@zh ;
+    skos:notation "FIN-INS-018" ;
+    skos:definition "立案数量占有效报案数量的比例（有效报案剔除注销报案）。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-019 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合退保率（现行）"@zh ;
+    skos:altLabel "综合退保率"@zh ;
+    skos:notation "FIN-INS-019" ;
+    skos:definition "长期险及投资型业务退保金合计占期初责任准备金与本年签单保费合计的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-020 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "退保率（2003 公式）"@zh ;
+    skos:altLabel "退保率"@zh ;
+    skos:altLabel "退保率（2003公式）"@zh ;
+    skos:notation "FIN-INS-020" ;
+    skos:definition "旧规口径退保金占上年末长期险责任准备金与本年长期险保费收入之和的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-021 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "13 个月继续率（有效保单件数）"@zh ;
+    skos:altLabel "13 个月继续率"@zh ;
+    skos:altLabel "13个月继续率（有效保单件数）"@zh ;
+    skos:notation "FIN-INS-021" ;
+    skos:definition "上年可比季度末的长期寿险有效保单在本季度末仍有效的比例（13 个月继续率，件数口径）。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-022 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "13 个月保费继续率"@zh ;
+    skos:altLabel "13 个月保费继续率（口径族·索引）"@zh ;
+    skos:altLabel "13个月保费继续率"@zh ;
+    skos:notation "FIN-INS-022" ;
+    skos:definition "口径族索引：13 个月保费继续率按宽限期口径（FIN-INS-022-v1）与自然月口径（FIN-INS-022-v2）并列；"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-022-v1 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "13 个月保费继续率（宽限期口径）"@zh ;
+    skos:altLabel "13个月保费继续率（宽限期口径）"@zh ;
+    skos:notation "FIN-INS-022-v1" ;
+    skos:definition "族索引，默认 v1 宽限期口径，第 1 个保单年度结束后宽限期内实收第 2 个保单年度首期规模保费占首年实收规模保费的比例"@zh ;
+    dct:subject "insurance"@zh ;
+    skos:broader term:M-FIN-INS-022 ;
+    metric:variant true ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-022-v2 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "13 个月保费继续率（自然月口径）"@zh ;
+    skos:altLabel "13个月保费继续率（自然月口径）"@zh ;
+    skos:notation "FIN-INS-022-v2" ;
+    skos:definition "评价期前溯 12 个月承保的个人期交新单，在保单进入第 13 个保单月（第 2 个保单年度首月，按保单周年日对齐）所在自然月内实收的第 2 个保单年度首期规模保费，占该批新单首个保单年度实收规模保费的比例。"@zh ;
+    dct:subject "insurance"@zh ;
+    skos:broader term:M-FIN-INS-022 ;
+    metric:variant true ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-023 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "25 个月继续率"@zh ;
+    skos:altLabel "25 个月继续率（口径族·索引）"@zh ;
+    skos:altLabel "25个月继续率"@zh ;
+    skos:notation "FIN-INS-023" ;
+    skos:definition "口径族索引：25 个月继续率按宽限期口径（FIN-INS-023-v1）与自然月口径（FIN-INS-023-v2）并列；"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-023-v1 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "25 个月保费继续率（宽限期口径）"@zh ;
+    skos:altLabel "25个月保费继续率（宽限期口径）"@zh ;
+    skos:notation "FIN-INS-023-v1" ;
+    skos:definition "族索引，默认 v1 宽限期口径，第 2 个保单年度结束后宽限期内实收第 3 个保单年度首期规模保费占首年实收规模保费的比例"@zh ;
+    dct:subject "insurance"@zh ;
+    skos:broader term:M-FIN-INS-023 ;
+    metric:variant true ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-023-v2 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "25 个月保费继续率（自然月口径）"@zh ;
+    skos:altLabel "25个月保费继续率（自然月口径）"@zh ;
+    skos:notation "FIN-INS-023-v2" ;
+    skos:definition "评价期前溯 24 个月承保的个人期交新单，在保单进入第 25 个保单月（第 3 个保单年度首月，按保单周年日对齐）所在自然月内实收的第 3 个保单年度首期规模保费，占该批新单首个保单年度实收规模保费的比例。"@zh ;
+    dct:subject "insurance"@zh ;
+    skos:broader term:M-FIN-INS-023 ;
+    metric:variant true ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-024 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "续保率（车险）"@zh ;
+    skos:altLabel "续保率"@zh ;
+    skos:notation "FIN-INS-024" ;
+    skos:definition "到期应续保车辆中实际在本司续保的比例"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-025 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "保单件均（个人营销渠道）"@zh ;
+    skos:altLabel "保单件均"@zh ;
+    skos:notation "FIN-INS-025" ;
+    skos:definition "个人营销渠道新单首年保费除以新单件数。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-026 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "渠道费用率"@zh ;
+    skos:notation "FIN-INS-026" ;
+    skos:definition "单一渠道费用支出占该渠道签单保费的比例"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-027 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合费用率"@zh ;
+    skos:notation "FIN-INS-027" ;
+    skos:definition "财产险口径下业务及管理费、手续费佣金、分保费用与税金等费用合计占自留保费（扣未到期责任准备金变动）的比重。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-028 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "手续费及佣金占比"@zh ;
+    skos:notation "FIN-INS-028" ;
+    skos:definition "手续费及佣金支出占保费收入的比例，衡量渠道成本结构。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-029 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "综合偿付能力充足率"@zh ;
+    skos:notation "FIN-INS-029" ;
+    skos:definition "保险公司实际资本与最低资本的比值，衡量资本总体充足状况，监管达标线 ≥100%。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+term:M-FIN-INS-030 a skos:Concept ;
+    skos:inScheme term:MetricScheme ;
+    skos:prefLabel "核心偿付能力充足率"@zh ;
+    skos:notation "FIN-INS-030" ;
+    skos:definition "保险公司核心资本与最低资本的比值，监管达标线 ≥50%。"@zh ;
+    dct:subject "insurance"@zh ;
+    dct:source "platform.metric_definition" .
+
+# 变体上界校验标记：6 个变体必须写 skos:broader（见 data/shapes/fsldm/metrics.ttl）

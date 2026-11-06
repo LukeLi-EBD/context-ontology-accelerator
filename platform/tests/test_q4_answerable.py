@@ -36,7 +36,7 @@ DSN = os.environ.get(
     ),
 )
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://host.docker.internal:7878")
-PINNED_VERSION = os.environ.get("Q4_ONTOLOGY_VERSION", "ont-3f57d8ce6636")
+PINNED_VERSION = os.environ.get("Q4_ONTOLOGY_VERSION", "ont-11f92ebb3326")
 
 
 class AnswerableTests(unittest.TestCase):

@@ -1,0 +1,93 @@
+# FS-LDM metric vocabulary shapes (B-05). All shapes are Warning-only: they
+# inform, they never block an import or a publish (pyshacl runs with
+# allow_warnings=True).
+# Deployed as data/shapes/fsldm/metrics.ttl and discovered by
+# ShaclValidator.shapes("fsldm") -- no registry change needed.
+@prefix sh:     <http://www.w3.org/ns/shacl#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix term:   <https://w3id.org/fsldm/terms#> .
+@prefix metric: <https://w3id.org/fsldm/metrics#> .
+
+# 1) Every metric concept carries exactly one notation (metric_id).
+metric:MetricNotationShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf skos:notation ;
+    sh:property [
+        sh:path skos:notation ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "每个指标概念必须有且仅有 1 个 skos:notation（metric_id）"@zh ;
+    ] .
+
+# 2) notation is unique across the vocabulary.
+metric:MetricNotationUniqueShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf skos:notation ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "skos:notation 在指标词表内必须唯一"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2004/02/skos/core#notation> ?n .
+              BIND(STR(?n) AS ?value)
+              ?other <http://www.w3.org/2004/02/skos/core#notation> ?n2 .
+              FILTER(?other != $this && STR(?n2) = STR(?n))
+            }
+        """ ;
+    ] .
+
+# 3) prefLabel@zh is mandatory; definition@zh is mandatory.
+metric:MetricPrefLabelShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf skos:notation ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "指标概念必须有 1 个 skos:prefLabel@zh"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2004/02/skos/core#notation> ?n .
+              BIND("missing-prefLabel-zh" AS ?value)
+              FILTER NOT EXISTS {
+                $this <http://www.w3.org/2004/02/skos/core#prefLabel> ?p .
+                FILTER(lang(?p) = "zh")
+              }
+            }
+        """ ;
+    ] .
+
+metric:MetricDefinitionShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf skos:notation ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "指标概念必须有非空 skos:definition@zh（definition 首句）"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2004/02/skos/core#notation> ?n .
+              BIND("missing-definition" AS ?value)
+              FILTER NOT EXISTS {
+                $this <http://www.w3.org/2004/02/skos/core#definition> ?d .
+                FILTER(lang(?d) = "zh" && STRLEN(STR(?d)) > 0)
+              }
+            }
+        """ ;
+    ] .
+
+# 4) A variant (metric:variant true) must name its family index via skos:broader.
+metric:MetricVariantBroaderShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf metric:variant ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "变体指标必须有 skos:broader 指向族索引"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <https://w3id.org/fsldm/metrics#variant> ?v .
+              BIND("variant-without-broader" AS ?value)
+              FILTER NOT EXISTS {
+                $this <http://www.w3.org/2004/02/skos/core#broader> ?b .
+              }
+            }
+        """ ;
+    ] .

@@ -15,7 +15,7 @@ from platform_core.assembly import assemble
 from platform_core.config import load_config
 
 
-TBOX_VERSION = "ont-3f57d8ce6636"
+TBOX_VERSION = "ont-11f92ebb3326"
 
 
 def _layer(payload, name):

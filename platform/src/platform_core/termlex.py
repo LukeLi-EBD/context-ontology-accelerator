@@ -38,6 +38,26 @@ SELECT ?s ?p ?o FROM <{graph_iri}> WHERE {{
 """
 
 
+def concept_query(graph_iri: str) -> str:
+    """B-05: metric concepts in the term vocabulary (skos:Concept + notation).
+
+    They live next to the class aliases in the T-Box but are not termBatch
+    anchors, so they need their own read: surface -> concept IRI, which
+    /context/resolve turns into a seed (the concept's definition triples).
+    """
+    return f"""
+SELECT ?s ?p ?o FROM <{graph_iri}> WHERE {{
+  ?s a <{SKOS}Concept> ;
+     <{SKOS}notation> ?n ;
+     <{SKOS}inScheme> <{TERM}MetricScheme> .
+  VALUES ?p {{
+    <{SKOS}prefLabel> <{SKOS}altLabel> <{RDFS_LABEL}>
+  }}
+  ?s ?p ?o .
+}}
+"""
+
+
 def entry_query(graph_iri: str) -> str:
     return f"""
 SELECT ?e ?c ?l ?conf ?guard ?status FROM <{graph_iri}> WHERE {{
@@ -88,6 +108,35 @@ class TermHit:
     source: str  # "pref" | "alt" | "legacy-label"
 
 
+def _absorb(result: Any, nodes: dict[str, dict[str, Any]]) -> None:
+    """Merge annotation rows into the surface nodes (classes and concepts)."""
+    for row in result.get("bindings", []):
+        values = row.get("values", {})
+        subject = (values.get("s") or {}).get("iri")
+        predicate = (values.get("p") or {}).get("iri")
+        obj = values.get("o") or {}
+        if not subject or not predicate:
+            continue
+        node = nodes.setdefault(
+            subject,
+            {"pref": {}, "alt": {}, "label": {}, "suppressed": set(), "canonicalFor": None},
+        )
+        text = str(obj.get("value", ""))
+        lang = str(obj.get("lang") or "")
+        if predicate == f"{SKOS}prefLabel":
+            node["pref"][lang] = text
+        elif predicate == f"{SKOS}altLabel":
+            if lang:
+                node["alt"].setdefault(lang, set()).add(text)
+            # untagged legacy machine codes stay out of the lexicon (L1-01)
+        elif predicate == RDFS_LABEL:
+            node["label"][lang] = text
+        elif predicate == f"{TERM}suppressedSurface":
+            node["suppressed"].add(text)
+        elif predicate == f"{TERM}canonicalFor":
+            node["canonicalFor"] = obj.get("iri")
+
+
 class TermLexicon:
     """Surface -> canonical class dictionary built from one T-Box version."""
 
@@ -101,29 +150,10 @@ class TermLexicon:
     @classmethod
     def build(cls, graph: Any, tbox_graph: str) -> "TermLexicon":
         classes: dict[str, dict[str, Any]] = {}
-        result = graph.query(class_query(tbox_graph))
-        for row in result.get("bindings", []):
-            values = row.get("values", {})
-            subject = (values.get("s") or {}).get("iri")
-            predicate = (values.get("p") or {}).get("iri")
-            obj = values.get("o") or {}
-            if not subject or not predicate:
-                continue
-            node = classes.setdefault(subject, {"pref": {}, "alt": {}, "label": {}, "suppressed": set(), "canonicalFor": None})
-            text = str(obj.get("value", ""))
-            lang = str(obj.get("lang") or "")
-            if predicate == f"{SKOS}prefLabel":
-                node["pref"][lang] = text
-            elif predicate == f"{SKOS}altLabel":
-                if lang:
-                    node["alt"].setdefault(lang, set()).add(text)
-                # untagged legacy machine codes stay out of the lexicon (L1-01)
-            elif predicate == RDFS_LABEL:
-                node["label"][lang] = text
-            elif predicate == f"{TERM}suppressedSurface":
-                node["suppressed"].add(text)
-            elif predicate == f"{TERM}canonicalFor":
-                node["canonicalFor"] = obj.get("iri")
+        _absorb(graph.query(class_query(tbox_graph)), classes)
+        # B-05: metric concepts share the namespace but are not class anchors;
+        # their pref/alt labels become seeds pointing at the concept IRI.
+        _absorb(graph.query(concept_query(tbox_graph)), classes)
 
         entries_result = graph.query(entry_query(tbox_graph))
         compiled_guards: dict[tuple[str, str], re.Pattern[str]] = {}
