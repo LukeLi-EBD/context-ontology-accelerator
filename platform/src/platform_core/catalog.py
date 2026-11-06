@@ -15,6 +15,7 @@ Scope and boundaries:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -58,6 +59,75 @@ SOURCE_KINDS: tuple[str, ...] = ("pg", "mysql", "glue")
 BINDING_METHODS: tuple[str, ...] = ("explicit", "name_match", "manual", "none")
 
 NAME_MATCH_CONFIDENCE = 0.800
+MANUAL_CONFIDENCE = 1.000
+
+# Mappable-column definition (O-01): a column is *mappable* only when the
+# published T-Box contains a literal-valued property with a 1:1 meaning for the
+# column. Generic containers are deliberately excluded: numeric measures would
+# need a Metric node plus metricType, and object properties (hasStatus,
+# hasCurrency, channelOf, productOf) point at entities, so a bare column cannot
+# bind to them without inventing an entity. The denominator stays honest even
+# though it makes the mappable share small.
+#
+# Rules are column-name based where the meaning is table-independent, plus a
+# small explicit pair list for columns whose semantics only hold in one table.
+MAPPABLE_BY_COLUMN_NAME = frozenset(
+    {
+        "customer_no",
+        "policy_no",
+        "asset_id",
+        "agreement_id",
+        "event_id",
+        "event_type",
+        "due_date",
+        "maturity_date",
+        "disbursed_date",
+        "first_payment_due_date",
+        "effective_from",
+        "effective_to",
+        "issue_date",
+        "period_start",
+        "period_end",
+        "as_of",
+        "status_as_of",
+        "product",
+        "paid_date",
+        "installment_no",
+    }
+)
+MAPPABLE_PAIRS = frozenset(
+    {
+        ("bank_collection_recovery", "recovery_date"),
+        ("bank_disposal_event", "completion_date"),
+        ("bank_disposal_event", "disposal_type"),
+        ("cust_transaction", "txn_date"),
+        ("cust_transaction", "txn_type"),
+        ("ins_policy_event", "event_date"),
+        # Weak candidates: mappable in principle, left unbound until an operator
+        # confirms them through the manual binding entry.
+        ("bank_loan_account", "period_start"),
+        ("cust_master", "registration_date"),
+    }
+)
+# Candidate property for the two weak pairs. They are not auto-bound: the
+# semantics are close but not identical, so the dictionary keeps them ``none``
+# with a reason until a human writes a manual binding.
+MAPPABLE_CANDIDATES: dict[tuple[str, str], dict[str, Any]] = {
+    ("bank_loan_account", "period_start"): {
+        "iri": "https://w3id.org/fsldm/core#validFrom",
+        "note": (
+            "可映射候选：报告期起点近似 validFrom；观察窗口起点与记录生效时间"
+            "不完全等价，待人工确认后写 manual 绑定"
+        ),
+    },
+    ("cust_master", "registration_date"): {
+        "iri": "https://w3id.org/fsldm/party#partySince",
+        "note": (
+            "可映射候选：注册日近似 partySince；注册日不等于成为当事人日，"
+            "待人工确认后写 manual 绑定"
+        ),
+    },
+}
 
 # Explicit bindings win over name normalisation. ``("*", column)`` applies to
 # every fact table; a table-specific entry overrides the wildcard.
@@ -112,6 +182,68 @@ EXPLICIT_BINDINGS: dict[tuple[str, str], dict[str, Any]] = {
         "iri": "https://w3id.org/fsldm/core#validUntil",
         "confidence": 0.9,
         "note": "显式绑定：统计期间终点 validUntil（语义近似）",
+    },
+    # O-01: observation dates. ``as_of`` / ``status_as_of`` are the data cutoff
+    # of snapshot rows, which is exactly core:observationDate.
+    ("*", "as_of"): {
+        "iri": "https://w3id.org/fsldm/core#observationDate",
+        "confidence": 0.9,
+        "note": "显式绑定：快照观察时点 as_of 即 observationDate",
+    },
+    ("*", "status_as_of"): {
+        "iri": "https://w3id.org/fsldm/core#observationDate",
+        "confidence": 0.9,
+        "note": "显式绑定：状态/指标截至日 status_as_of 即 observationDate",
+    },
+    # O-01: product codes. The column holds the product identifier (e.g.
+    # mortgage / life_term), the same literal core:productId carries.
+    ("*", "product"): {
+        "iri": "https://w3id.org/fsldm/core#productId",
+        "confidence": 0.8,
+        "note": "显式绑定：产品代码即产品编号 productId（语义近似）",
+    },
+    # O-01: event occurrence dates. These tables are event/schedule facts, so
+    # the business date is the event timestamp rather than a validity boundary.
+    ("*", "paid_date"): {
+        "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+        "confidence": 0.8,
+        "note": "显式绑定：还款/缴费发生日即事件时间 eventTimestamp（语义近似）",
+    },
+    ("ins_policy_event", "event_date"): {
+        "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+        "confidence": 0.9,
+        "note": "显式绑定：保单事件发生日 eventTimestamp",
+    },
+    ("cust_transaction", "txn_date"): {
+        "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+        "confidence": 0.9,
+        "note": "显式绑定：交易发生日 eventTimestamp",
+    },
+    ("bank_collection_recovery", "recovery_date"): {
+        "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+        "confidence": 0.8,
+        "note": "显式绑定：催收回款发生日 eventTimestamp（语义近似）",
+    },
+    ("bank_disposal_event", "completion_date"): {
+        "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+        "confidence": 0.8,
+        "note": "显式绑定：处置完成日 eventTimestamp（语义近似）",
+    },
+    ("cust_transaction", "txn_type"): {
+        "iri": "https://w3id.org/fsldm/event#eventType",
+        "confidence": 0.8,
+        "note": "显式绑定：交易类型即事件类型 eventType（语义近似）",
+    },
+    ("bank_disposal_event", "disposal_type"): {
+        "iri": "https://w3id.org/fsldm/event#eventSubtype",
+        "confidence": 0.8,
+        "note": "显式绑定：处置方式即事件子类型 eventSubtype（语义近似）",
+    },
+    # O-01: installment sequence is the schedule line number.
+    ("*", "installment_no"): {
+        "iri": "https://w3id.org/fsldm/finance#lineNumber",
+        "confidence": 0.8,
+        "note": "显式绑定：期次序号即分录行号 lineNumber（语义近似）",
     },
 }
 
@@ -259,6 +391,12 @@ LOCAL_KEY_SUFFIXES = ("_id", "_no", "_key")
 SOURCE_UNAVAILABLE = "E_DICT_SOURCE_UNREACHABLE"
 SOURCE_UNKNOWN = "E_DICT_SOURCE_UNKNOWN"
 TABLE_NOT_FOUND = "E_DICT_TABLE_NOT_FOUND"
+COLUMN_NOT_FOUND = "E_DICT_COLUMN_NOT_FOUND"
+BINDING_INVALID = "E_DICT_BINDING_INVALID"
+VIEW_INVALID = "E_DICT_VIEW_INVALID"
+
+# Views used by the read-only /browse dictionary panel.
+DICT_VIEWS: tuple[str, ...] = ("all", "missing_comment", "unbound", "mappable_unbound")
 
 
 def normalize_name(value: str) -> str:
@@ -280,6 +418,137 @@ def build_property_index(
     return index
 
 
+def is_mappable(table: str, column: str) -> bool:
+    """True when the T-Box has a literal-valued property that fits this column."""
+    return column in MAPPABLE_BY_COLUMN_NAME or (table, column) in MAPPABLE_PAIRS
+
+
+def _mappable_rule_sql() -> str:
+    names = ", ".join(
+        "'" + value.replace("'", "''") + "'"
+        for value in sorted(MAPPABLE_BY_COLUMN_NAME)
+    )
+    pairs = ", ".join(
+        "('" + table.replace("'", "''") + "', '" + column.replace("'", "''") + "')"
+        for table, column in sorted(MAPPABLE_PAIRS)
+    )
+    return (
+        f"(column_name IN ({names}) "
+        f"OR (table_name, column_name) IN ({pairs}))"
+    )
+
+
+MAPPABLE_SQL = _mappable_rule_sql()
+
+
+def binding_coverage(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Binding rate on the mappable denominator, never on total columns.
+
+    A row counts as mappable when a rule matches or when it already carries a
+    binding (manual bindings can name a property outside the static rules).
+    """
+    total = mappable = bound = 0
+    unbound: list[dict[str, str]] = []
+    for row in rows:
+        total += 1
+        table = row.get("table_name") or row.get("table") or ""
+        column = row.get("column_name") or row.get("column") or ""
+        method = row.get("binding_method") or row.get("bindingMethod") or "none"
+        if not (is_mappable(table, column) or method != "none"):
+            continue
+        mappable += 1
+        if method != "none":
+            bound += 1
+        else:
+            unbound.append({"table": table, "column": column})
+    rate = round(bound / mappable, 4) if mappable else None
+    return {
+        "total": total,
+        "mappable": mappable,
+        "bound": bound,
+        "unbound": mappable - bound,
+        "mappableShare": round(mappable / total, 4) if total else None,
+        "rate": rate,
+        "ratePercent": None if rate is None else round(rate * 100, 2),
+        "unboundColumns": unbound,
+    }
+
+
+def column_coverage(
+    introspected: Iterable[dict[str, Any]],
+    stored_rows: Iterable[dict[str, Any]],
+) -> dict[str, Any]:
+    """Per-table column coverage: every physical column must have a dictionary row."""
+    expected: dict[str, set[str]] = {}
+    for item in introspected:
+        expected.setdefault(item["table"], set()).add(item["column"])
+    actual: dict[str, set[str]] = {}
+    for row in stored_rows:
+        table = row.get("table_name") or row.get("table") or ""
+        column = row.get("column_name") or row.get("column") or ""
+        actual.setdefault(table, set()).add(column)
+    items: list[dict[str, Any]] = []
+    for table in sorted(set(expected) | set(actual)):
+        want = expected.get(table, set())
+        have = actual.get(table, set())
+        items.append(
+            {
+                "table": table,
+                "expectedColumns": len(want),
+                "dictionaryRows": len(have),
+                "missingColumns": sorted(want - have),
+                "extraColumns": sorted(have - want),
+            }
+        )
+    missing_total = sum(len(item["missingColumns"]) for item in items)
+    extra_total = sum(len(item["extraColumns"]) for item in items)
+    return {
+        "items": items,
+        "totals": {
+            "tables": len(items),
+            "expectedColumns": sum(item["expectedColumns"] for item in items),
+            "dictionaryRows": sum(item["dictionaryRows"] for item in items),
+            "missingColumns": missing_total,
+            "extraColumns": extra_total,
+        },
+        "complete": missing_total == 0 and extra_total == 0,
+    }
+
+
+def encode_manual_note(
+    operator: str,
+    basis: str,
+    at: str,
+    note: str | None = None,
+) -> str:
+    payload = {"audit": "manual", "operator": operator, "basis": basis, "at": at}
+    if note:
+        payload["note"] = note
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def parse_manual_note(value: str | None) -> dict[str, Any] | None:
+    if not value:
+        return None
+    try:
+        payload = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict) or payload.get("audit") != "manual":
+        return None
+    return payload
+
+
+def manual_note_text(payload: dict[str, Any]) -> str:
+    text = (
+        f"人工绑定：操作者 {payload.get('operator') or '—'}；"
+        f"依据 {payload.get('basis') or '—'}；时间 {payload.get('at') or '—'}"
+    )
+    if payload.get("note"):
+        text += f"；备注 {payload['note']}"
+    return text
+
+
 def unbound_reason(table: str, column: str, key: str) -> str:
     if column in AUDIT_COLUMNS:
         return "系统/审计列（data_source/fixture/created_at），本体无对应属性"
@@ -292,6 +561,9 @@ def unbound_reason(table: str, column: str, key: str) -> str:
         return "观察时点列；本体仅有 observationDate，名称不相等，未自动绑定"
     if column == "account_id":
         return "本体 T-Box 无 accountId 属性，账号按本地业务编号保留未绑定"
+    candidate = MAPPABLE_CANDIDATES.get((table, column))
+    if candidate:
+        return candidate["note"]
     if column.endswith(LOCAL_KEY_SUFFIXES):
         return "事实表本地编号列，本体无同名属性"
     return f"名称未命中本体属性（归一化 '{key}'）"
@@ -514,6 +786,41 @@ class CatalogRepository:
             (catalog, schema, table),
         )
 
+    def table_row(
+        self, catalog: str, schema: str, table: str, column: str
+    ) -> dict[str, Any] | None:
+        rows = self._metadata.query(
+            f"SELECT {self.COLUMNS} FROM platform.data_dictionary "
+            "WHERE catalog_name = %s AND schema_name = %s "
+            "AND table_name = %s AND column_name = %s",
+            (catalog, schema, table, column),
+        )
+        return rows[0] if rows else None
+
+    def set_manual_binding(
+        self,
+        catalog: str,
+        schema: str,
+        table: str,
+        column: str,
+        property_iri: str,
+        confidence: float,
+        note: str,
+    ) -> None:
+        self._metadata.execute(
+            """
+            UPDATE platform.data_dictionary
+               SET property_iri = %s,
+                   binding_method = 'manual',
+                   confidence = %s,
+                   binding_note = %s,
+                   observed_at = now()
+             WHERE catalog_name = %s AND schema_name = %s
+               AND table_name = %s AND column_name = %s
+            """,
+            (property_iri, confidence, note, catalog, schema, table, column),
+        )
+
     def distinct_tables(self, catalog: str, schema: str) -> list[str]:
         rows = self._metadata.query(
             "SELECT DISTINCT table_name FROM platform.data_dictionary "
@@ -593,6 +900,14 @@ class CatalogRepository:
                 "OR COALESCE(comment, '') ILIKE %s)"
             )
             params.extend([f"%{query}%"] * 3)
+        if filters.get("missingComment"):
+            clauses.append("(comment IS NULL OR comment = '')")
+        if filters.get("unbound"):
+            clauses.append("binding_method = 'none'")
+        if filters.get("mappable"):
+            clauses.append(f"(binding_method <> 'none' OR {MAPPABLE_SQL})")
+        if filters.get("mappableUnbound"):
+            clauses.append(f"(binding_method = 'none' AND {MAPPABLE_SQL})")
         return (" WHERE " + " AND ".join(clauses)) if clauses else "", tuple(params)
 
 
@@ -655,6 +970,118 @@ class CatalogService:
             "source": "data_dictionary",
         }
 
+    def coverage(
+        self, catalog: str = "platform", schema: str = "platform"
+    ) -> dict[str, Any]:
+        """Read-only column coverage: physical columns vs stored dictionary rows."""
+        introspected = self._introspect_source("pg", schema, FACT_TABLES)
+        rows = list(self._repo.existing(catalog, schema, FACT_TABLES).values())
+        report = column_coverage(introspected, rows)
+        report["binding"] = binding_coverage(rows)
+        report["catalog"] = catalog
+        report["schema"] = schema
+        report["source"] = "data_dictionary"
+        return report
+
+    def record_manual_binding(
+        self,
+        table: str,
+        column: str,
+        property_iri: str,
+        operator: str,
+        basis: str,
+        note: str | None = None,
+        catalog: str = "platform",
+        schema: str = "platform",
+    ) -> dict[str, Any]:
+        """Write a manual binding with an audit trail.
+
+        This only changes the dictionary row. It never feeds a publish gate and
+        is not an ontology authority; ``property_iri`` remains a binding hint.
+        """
+        table = (table or "").strip()
+        column = (column or "").strip()
+        property_iri = (property_iri or "").strip()
+        operator = (operator or "").strip()
+        basis = (basis or "").strip()
+        note = (note or "").strip() or None
+
+        def invalid(message: str, **details: Any) -> PortError:
+            return PortError(
+                code="InvalidArgument",
+                message=message,
+                provider="platform",
+                provider_code=BINDING_INVALID,
+                details=details,
+            )
+
+        if not table or not column:
+            raise invalid(
+                "table and column are required",
+                field="table/column",
+                table=table,
+                column=column,
+            )
+        if not operator:
+            raise invalid("operator is required", field="operator", table=table, column=column)
+        if not basis:
+            raise invalid("basis is required", field="basis", table=table, column=column)
+        if len(operator) > 120:
+            raise invalid("operator is too long", field="operator", maxLength=120)
+        if len(basis) > 500:
+            raise invalid("basis is too long", field="basis", maxLength=500)
+        if note and len(note) > 500:
+            raise invalid("note is too long", field="note", maxLength=500)
+        if not property_iri.startswith(("http://", "https://", "urn:")):
+            raise invalid(
+                "propertyIri must be an absolute IRI",
+                field="propertyIri",
+                value=property_iri,
+            )
+
+        row = self._repo.table_row(catalog, schema, table, column)
+        if row is None:
+            raise PortError(
+                code="NotFound",
+                message=f"dictionary column not found: {table}.{column}",
+                provider="platform",
+                provider_code=COLUMN_NOT_FOUND,
+                details={
+                    "catalog": catalog,
+                    "schema": schema,
+                    "table": table,
+                    "column": column,
+                },
+            )
+
+        live_index, _version = live_property_index(self._runtime)
+        known = {iri for _name, iri in STATIC_PROPERTIES}
+        if live_index:
+            known |= {entry["iri"] for entry in live_index.values()}
+        if property_iri not in known:
+            raise invalid(
+                "propertyIri is not a published T-Box property",
+                field="propertyIri",
+                value=property_iri,
+            )
+
+        at = datetime.now(timezone.utc).isoformat()
+        note_json = encode_manual_note(operator, basis, at, note)
+        self._repo.set_manual_binding(
+            catalog, schema, table, column, property_iri, MANUAL_CONFIDENCE, note_json
+        )
+        updated = dict(row)
+        updated.update(
+            {
+                "property_iri": property_iri,
+                "binding_method": "manual",
+                "confidence": MANUAL_CONFIDENCE,
+                "binding_note": note_json,
+                "observed_at": at,
+            }
+        )
+        return self._row_json(updated)
+
     def refresh(
         self,
         sources: Sequence[str] | None = None,
@@ -703,6 +1130,14 @@ class CatalogService:
         for entry in entries:
             key = (catalog, schema, entry["table"], entry["column"])
             previous = existing.get(key)
+            if previous is not None and previous.get("binding_method") == "manual":
+                # Manual bindings are operator decisions: a metadata refresh must
+                # update physical facts but never overwrite the binding or its
+                # audit note.
+                entry["propertyIri"] = previous.get("property_iri")
+                entry["bindingMethod"] = "manual"
+                entry["confidence"] = previous.get("confidence")
+                entry["bindingNote"] = previous.get("binding_note")
             if previous is None:
                 inserted += 1
                 mark = True
@@ -786,7 +1221,7 @@ class CatalogService:
     def _row_json(row: dict[str, Any]) -> dict[str, Any]:
         confidence = row.get("confidence")
         observed = row.get("observed_at")
-        return {
+        result = {
             "catalog": row.get("catalog_name"),
             "schema": row.get("schema_name"),
             "table": row.get("table_name"),
@@ -801,3 +1236,13 @@ class CatalogService:
             "bindingNote": row.get("binding_note"),
             "observedAt": observed.isoformat() if hasattr(observed, "isoformat") else observed,
         }
+        if result["bindingMethod"] == "manual":
+            audit = parse_manual_note(result["bindingNote"])
+            if audit:
+                result["bindingNote"] = manual_note_text(audit)
+                result["manualOperator"] = audit.get("operator")
+                result["manualBasis"] = audit.get("basis")
+                result["manualAt"] = audit.get("at")
+                result["manualNote"] = audit.get("note")
+                result["manual"] = audit
+        return result
