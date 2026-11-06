@@ -3622,6 +3622,35 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         payload = flow(runtime.metadata, versionId)
         payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
         return payload
+
+    # ---- O-03 change impact analysis (read-only) -------------------------
+
+    @app.get("/ontology/impact")
+    def ontology_impact(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+        sample: int = Query(5, ge=0, le=10),
+    ) -> dict[str, Any]:
+        from . import impact as impact_module
+
+        return impact_module.analyze(runtime, from_, to, sample)
+
+    @app.get("/ontology/impact/export")
+    def ontology_impact_export(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+        sample: int = Query(5, ge=0, le=10),
+        format: str = Query("markdown"),
+    ) -> Response:
+        from . import impact as impact_module
+
+        report = impact_module.analyze(runtime, from_, to, sample)
+        filename, media_type, body = impact_module.export(report, format)
+        return Response(
+            content=body,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
     # --- end G1 ---
 
     return app
