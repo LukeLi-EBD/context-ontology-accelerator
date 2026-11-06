@@ -40,6 +40,10 @@
 | 2026-11-07 04:24 | `acceptance-s0s13-platform-acceptance-20261107-042456-b53314a.log` | **全新库终态（S0–S13）**：44 passed / 0 failed / 0 skipped，exit 0；`pointer_before=ont-4066f8835772` → `pointer restored exit=0` |
 | 2026-11-07 04:35 | `acceptance-s14-platform-acceptance-20261107-043532-b53314a.log` | 全新库 S14 首跑：418 discovered / 418 executed / 417 passed / 1 failed / 0 skipped，exit 1；`test_q7_ontology_init.test_2` 依赖历史 semver，已修为前提自洽 |
 | 2026-11-07 04:37 | `acceptance-s14-platform-acceptance-20261107-043746-b53314a.log` | **全新库终态（S14 全量）**：418 discovered / 418 executed / 418 passed / 0 skipped，exit 0 |
+| 2026-11-07 05:18 | `acceptance-s0s13-platform-acceptance-20261107-051812-7e5f9c2.log` | **无效**：HEAD `7e5f9c2` 的 `purposeVerified` 关键字回归证据（smoke 全部 TypeError/exit 70），且被我自己的拆栈操作中途打断，不作结论 |
+| 2026-11-07 05:21 | `acceptance-s0s13-platform-acceptance-20261107-052142-7e5f9c2.log` | **token 加固后全新库（S0–S13）**：44 passed / 0 failed / 0 skipped，exit 0（`7e5f9c2` + 关键字修复） |
+| 2026-11-07 05:26 | `acceptance-s14-platform-acceptance-20261107-052657-7e5f9c2.log` | **token 加固后全新库（S14 全量）**：421 discovered / 421 executed / 421 passed / 0 skipped，exit 0 |
+| 2026-11-07 05:28 | `smoke-token-proof-platform-acceptance-20261107-052844-7e5f9c2.log` | token 定向实证：无 token / 错误 token 均 409 + `TERM_VOCAB_ZERO_EXEMPTION_FORGED`；正确 token 200 + `TERM_VOCAB_ZERO_EXEMPTED` |
 
 隔离栈 S14 的早期失败定性（**未跳过、未删除用例**）。其中"环境夹具缺失"一类已在
 2026-11-07 04:37 从根因修复（测试改为解析活指针、词表随 bootstrap 播种），见 69 第 9 节：

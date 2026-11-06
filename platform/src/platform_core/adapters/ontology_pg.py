@@ -1129,8 +1129,8 @@ def publish_import(
                 purpose, env_name=getattr(terms_cfg, "smoke_token_env", None),
                 remote_addr=remote_addr,
             )
-            purpose_verified = env_ctx["purposeVerified"]
-            purpose_status = env_ctx["purposeStatus"]
+            purpose_verified = env_ctx["purpose_verified"]
+            purpose_status = env_ctx["purpose_status"]
         baseline: dict[str, Any] | None = None
         baseline_error: str | None = None
         high_water: dict[str, Any] | None = None

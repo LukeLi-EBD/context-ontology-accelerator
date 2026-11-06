@@ -98,16 +98,16 @@ def smoke_env_context(
     """
     if str(purpose or "").strip().lower() != SMOKE_PURPOSE:
         return {
-            "purposeVerified": None,
-            "purposeStatus": "not_claimed",
-            "remoteAddr": remote_addr,
+            "purpose_verified": None,
+            "purpose_status": "not_claimed",
+            "remote_addr": remote_addr,
         }
     value = os.environ.get(env_name or SMOKE_TOKEN_ENV) or None
     verified, status = check_smoke_token(value, value)
     return {
-        "purposeVerified": verified,
-        "purposeStatus": status,
-        "remoteAddr": remote_addr,
+        "purpose_verified": verified,
+        "purpose_status": status,
+        "remote_addr": remote_addr,
     }
 
 
