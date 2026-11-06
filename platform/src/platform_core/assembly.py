@@ -28,6 +28,7 @@ from .metrics import MetricService
 from .rules import RuleExecutor
 from .parsers import LocalDocumentParser
 from .ports import EnvSecretProvider, UnsupportedPort
+from .prov import ProvService
 from .reasoning import ReasoningService
 from .search import SearchService
 from .shapes import ShapesRegistry
@@ -51,6 +52,7 @@ class Runtime:
     search: SearchService
     metrics: MetricService
     rules: RuleExecutor
+    prov: ProvService
     llm: LlmClient
     facts: FactLedger
     extraction: ExtractionService
@@ -117,6 +119,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     search = SearchService(cfg.search, metadata, embedding, vectors, search_index)
     metrics = MetricService(metadata)
     rules = RuleExecutor(metadata)
+    prov = ProvService(metadata, graph)
     llm = LlmClient(cfg.llm, secrets)
     facts = FactLedger(metadata, graph)
     extraction = ExtractionService(cfg.extraction, metadata, graph, llm, facts)
@@ -186,6 +189,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         search=search,
         metrics=metrics,
         rules=rules,
+        prov=prov,
         llm=llm,
         facts=facts,
         extraction=extraction,

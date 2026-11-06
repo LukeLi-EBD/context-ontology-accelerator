@@ -10,6 +10,7 @@ import json
 import re
 import shutil
 import time
+import uuid
 from datetime import date, datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -35,6 +36,7 @@ from .assembly import Runtime
 from .bootstrap import CheckResult
 from .errors import PortError
 from . import webui
+from . import prov as prov_module
 from . import source_ref
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
@@ -965,6 +967,7 @@ def _qa_answer(
     metric_id: str | None = None,
     top_k: int = 5,
     strategy: str = "lexical",
+    request_id: str | None = None,
 ) -> dict[str, Any]:
     coverage = _qa_answerable(
         runtime,
@@ -1359,6 +1362,39 @@ def _qa_answer(
             "missing": missing,
         }
     )
+    # B-02: every answer that refuses, or that applies a metric's口径判定,
+    # appends one PROV activity. The chain is append-only; nothing is rewritten.
+    payload["requestId"] = request_id or f"req-{uuid.uuid4().hex[:12]}"
+    payload["prov"] = None
+    recorder = getattr(runtime, "prov", None)
+    if recorder is not None:
+        try:
+            if refused:
+                record = recorder.record_refusal(
+                    query=query,
+                    coverage=payload,
+                    retrieve=retrieve,
+                    request_id=payload["requestId"],
+                    strategy=strategy,
+                    top_k=top_k,
+                )
+            elif selected_metric:
+                record = recorder.record_decision(
+                    str(selected_metric["metricId"]),
+                    reason="answer",
+                    request_id=payload["requestId"],
+                )
+            else:
+                record = None
+            if record:
+                payload["prov"] = {
+                    "graph": prov_module.PROV_GRAPH,
+                    "activityId": record["activityId"],
+                    "activityIri": record["activityIri"],
+                    "kind": record["kind"],
+                }
+        except Exception as exc:  # provenance must not break answering
+            payload["prov"] = {"graph": prov_module.PROV_GRAPH, "error": str(exc)}
     return payload
 
 
@@ -1807,6 +1843,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         metricId: str | None = Query(default=None),
         topK: int = Query(default=5, ge=1, le=20),
         strategy: str = Query(default="lexical"),
+        requestId: str | None = Query(default=None),
     ) -> dict[str, Any]:
         if strategy not in ("lexical", "vector", "hybrid"):
             raise PortError(
@@ -1822,6 +1859,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             metric_id=metricId,
             top_k=topK,
             strategy=strategy,
+            request_id=requestId,
         )
 
     @app.post("/answer")
@@ -1847,6 +1885,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             metric_id=_qa_metric_id(body),
             top_k=top_k,
             strategy=strategy,
+            request_id=body.get("requestId"),
         )
 
     @app.get("/browse/facts")
@@ -1923,11 +1962,72 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.post("/metrics/{metric_id}/rules")
     def metric_rules(metric_id: str, body: dict[str, Any] = Body(...)) -> dict[str, Any]:
-        return runtime.rules.execute(
+        executed = runtime.rules.execute(
             metric_id,
             list(body.get("facts") or []),
             as_of=body.get("asOf"),
         )
+        # B-02: one PROV activity per triggered rule instance.
+        prov = runtime.prov.record_rule_execution(
+            metric_id,
+            executed,
+            actor=str(body.get("actor") or "system:rule-executor"),
+            request_id=body.get("requestId"),
+        )
+        return {**executed, "prov": prov, "provGraph": prov_module.PROV_GRAPH}
+
+    @app.post("/metrics/{metric_id}/decision")
+    def metric_decision(
+        metric_id: str, body: dict[str, Any] | None = Body(default=None)
+    ) -> dict[str, Any]:
+        """Record (or re-record) one口径判定. A re-judgement derives from the previous."""
+        payload = body or {}
+        return runtime.prov.record_decision(
+            metric_id,
+            actor=str(payload.get("actor") or "operator"),
+            reason=payload.get("reason"),
+            request_id=payload.get("requestId"),
+        )
+
+    # ---- B-02 PROV reverse lookups -------------------------------------
+
+    @app.get("/prov/decisions")
+    def prov_decisions(
+        metricId: str = Query(min_length=1),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        return runtime.prov.decision_history(metricId, limit=limit)
+
+    @app.get("/prov/rules")
+    def prov_rules(
+        ruleId: str = Query(min_length=1),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        return runtime.prov.rule_triggers(ruleId, limit=limit)
+
+    @app.get("/prov/refusals")
+    def prov_refusals(
+        requestId: str | None = Query(default=None),
+        query: str | None = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        return runtime.prov.refusal(
+            request_id=requestId, query=query, limit=limit
+        )
+
+    @app.get("/prov/verify")
+    def prov_verify() -> dict[str, Any]:
+        return {**runtime.prov.verify(), "separation": runtime.prov.separation()}
+
+    @app.post("/prov/graph/guard")
+    def prov_graph_guard(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        """Pure check: only <urn:platform:prov> may receive PROV triples."""
+        return runtime.prov.guard(body.get("graph"))
+
+    @app.delete("/prov/activities/{activity_id}")
+    def prov_delete(activity_id: str) -> dict[str, Any]:
+        runtime.prov.refuse_delete(activity_id)
+        return {"ok": False}
 
     @app.get("/browse/metrics")
     def browse_metrics(
@@ -2648,7 +2748,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.get("/ontology/verify")
     def ontology_verify() -> dict[str, Any]:
-        return runtime.ontology.verify_events()
+        result = runtime.ontology.verify_events()
+        # B-02: same verification surface, second chain (prov_event).
+        result["prov"] = runtime.prov.verify()
+        return result
 
     # ---- governance console: controlled write endpoints -------------------
     # Every write reuses the ontology service method the CLI calls, so SHACL,
