@@ -81,8 +81,11 @@ def formula_to_sql(expr: str) -> str:
         if isinstance(node, ast.Name):
             if node.id == "numerator":
                 # Cast counts to numeric: PostgreSQL integer division would turn
-                # 1/2 into 0 before the ratio is scaled.
-                return "(num.numerator)::numeric"
+                # 1/2 into 0 before the ratio is scaled. COALESCE keeps the
+                # formula consistent with the selected ``numerator`` column:
+                # an entity that only appears in the denominator CTE has no
+                # numerator row, and that must evaluate as 0, not NULL.
+                return "COALESCE(num.numerator, 0)::numeric"
             if node.id == "denominator":
                 return "(den.denominator)::numeric"
             raise _err("", EXPR_UNSUPPORTED, f"unknown identifier {node.id!r}")
