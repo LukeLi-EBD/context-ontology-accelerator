@@ -366,11 +366,11 @@ class PublishGateTests(unittest.TestCase):
     def setUpClass(cls):
         cls.meta = MetadataPg(DSN)
         cls.meta.open(retry_seconds=15)
-        # The live stack may still run an image whose schema stops at V42. Apply
-        # the V43 DDL directly (idempotent) instead of bumping schema_version
-        # under that older image; the next migrate() will pick V43 up normally.
+        # The live stack may still run an image whose schema stops at V34. Apply
+        # the V44 DDL directly (idempotent) instead of bumping schema_version
+        # under that older image; the next migrate() will pick V44 up normally.
         ddl = (
-            files("platform_core").joinpath("sql/V43__term_high_water.sql")
+            files("platform_core").joinpath("sql/V44__term_high_water.sql")
             .read_text(encoding="utf-8")
         )
         for statement in split_sql_statements(ddl):

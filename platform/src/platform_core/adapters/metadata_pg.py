@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 43
+SUPPORTED_SCHEMA_VERSION = 44
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -53,10 +53,10 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (32, "V32__ontology_lifecycle.sql", "O-02 lifecycle transitions + O-04 publish evidence registry"),
     (33, "V33__term_governance.sql", "O-05 term check/import registry"),
     (34, "V34__metrics_core_m01_m06.sql", "G2 metrics-core: M-01 binding fixes + M-06 readiness ledger"),
-    # 35..42 are owned by the integration line (O-04 evidence pack, orphan mark,
-    # upstream goldens). This worktree starts from V34, so the new table is
-    # registered as V43 to stay above any already-applied MAX(version).
-    (43, "V43__term_high_water.sql", "O-05 vocab guard: effective term-set high-water mark"),
+    # 迁移号以 doc/_design/54 §2.2 登记表为唯一权威：V41 指标观测 synthetic、
+    # V42 悬空行标记、V43 字典绑定（feat/dict-comments）由集成线按序合入；
+    # 本线（feat/terms-gate）让到 V44，合入前不得占用 V41/V42/V43。
+    (44, "V44__term_high_water.sql", "O-05 vocab guard: effective term-set high-water mark"),
 ]
 
 

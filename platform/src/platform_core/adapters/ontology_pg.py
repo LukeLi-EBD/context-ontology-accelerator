@@ -76,7 +76,7 @@ def read_term_high_water(meta: Any) -> dict[str, Any] | None:
             "FROM platform.term_high_water WHERE scope = %s",
             (TERM_HIGH_WATER_SCOPE,),
         )
-    except Exception:  # table missing before V43 is applied
+    except Exception:  # table missing before V44 is applied
         return None
     if not rows:
         return None
