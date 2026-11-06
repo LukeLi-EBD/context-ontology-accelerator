@@ -109,6 +109,47 @@ def _fake_answerable(_runtime, query, **_kwargs):
     }
 
 
+def _citation(kind, **extra):
+    item = {"kind": kind, "ref": kind + "-ref", "id": "urn:test:" + kind}
+    item.update(extra)
+    return item
+
+
+def _fake_answer(_runtime, query, **_kwargs):
+    if any(word in query for word in ("量子", "火星", "超导")):
+        return {
+            "query": query,
+            "refused": True,
+            "answerType": "refusal",
+            "answerMode": "none",
+            "reasonCode": "NO_LAYER_COVERAGE",
+            "citations": [],
+            "missing": [
+                {"layer": "ontology", "code": "NO_CLASS_MATCH", "what": "no class"},
+                {"layer": "metrics", "code": "NO_METRIC_MATCH", "what": "no metric"},
+            ],
+            "degraded": False,
+        }
+    citations = [_citation("ontology-version", id="ont-test")]
+    if "13个月继续率" in query:
+        citations = [
+            _citation("metric-definition", metricId="FIN-INS-001"),
+            _citation("formula", metricId="FIN-INS-001"),
+        ]
+    if "逾期分档" in query:
+        citations = [_citation("rule-set", metricId="FIN-BANK-002")]
+    return {
+        "query": query,
+        "refused": False,
+        "answerType": "rule_set" if "逾期分档" in query else "definition",
+        "answerMode": "definition",
+        "reasonCode": "OK",
+        "citations": citations,
+        "missing": [],
+        "degraded": False,
+    }
+
+
 class AnswerablePanelTests(unittest.TestCase):
     def test_panel_aggregates_four_layers_missing_candidates_and_trend(self):
         with patch.object(api_module, "_qa_answerable", _fake_answerable):
@@ -169,6 +210,76 @@ class AnswerablePanelTests(unittest.TestCase):
         self.assertEqual(payload["emptyReason"], "runtime_unavailable")
         self.assertTrue(payload["degraded"])
         self.assertEqual(len(payload["errors"]), 24)
+
+
+class AnswerQualityTests(unittest.TestCase):
+    def test_ten_case_golden_set_passes_with_citations_and_refusal_layers(self):
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with _client() as client:
+                payload = client.get("/answer/quality").json()
+        summary = payload["summary"]
+        self.assertEqual(payload["goldenSet"]["count"], 10)
+        self.assertEqual(summary["cases"], 10)
+        self.assertEqual(summary["passed"], 10, payload["cases"])
+        self.assertEqual(summary["failed"], 0)
+        self.assertGreater(summary["citations"], 0)
+        self.assertEqual(summary["brokenLinkRate"], 0.0)
+        self.assertFalse(summary["regression"])
+        self.assertEqual(payload["refusalsWithoutLayers"], [])
+        self.assertEqual(payload["brokenLinks"], [])
+        refused = [item for item in payload["cases"] if item["actual"]["refused"]]
+        self.assertEqual(len(refused), 4)
+        for item in refused:
+            self.assertTrue(item["actual"]["missingLayers"])
+        self.assertTrue(payload["refusalsByReason"])
+
+    def test_case_id_drill_down(self):
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with _client() as client:
+                one = client.get("/answer/quality", params={"caseId": "G01"}).json()
+                missing = client.get("/answer/quality", params={"caseId": "ZZ"}).json()
+        self.assertEqual(one["goldenSet"]["evaluated"], 1)
+        self.assertEqual(len(one["cases"]), 1)
+        self.assertEqual(one["cases"][0]["id"], "G01")
+        self.assertIn("caseId=G01", one["cases"][0]["drillDownUrl"])
+        self.assertTrue(missing["empty"])
+        self.assertEqual(missing["emptyReason"], "case_not_found")
+
+    def test_refusal_without_layers_and_broken_citation_are_flagged(self):
+        def bad(_runtime, query, **_kwargs):
+            if any(word in query for word in ("量子", "火星", "超导")):
+                return {
+                    "refused": True,
+                    "answerType": "refusal",
+                    "answerMode": "none",
+                    "reasonCode": "NO_LAYER_COVERAGE",
+                    "citations": [],
+                    "missing": [],
+                    "degraded": False,
+                }
+            return {
+                "refused": False,
+                "answerType": "definition",
+                "answerMode": "definition",
+                "reasonCode": "OK",
+                "citations": [{"kind": "mystery-kind", "ref": None, "id": None}],
+                "missing": [],
+                "degraded": False,
+            }
+
+        with patch.object(api_module, "_qa_answer", bad):
+            with _client() as client:
+                payload = client.get("/answer/quality").json()
+        self.assertGreater(payload["summary"]["failed"], 0)
+        self.assertTrue(payload["summary"]["regression"])
+        self.assertGreater(payload["summary"]["brokenLinkRate"], 0.0)
+        self.assertGreaterEqual(len(payload["refusalsWithoutLayers"]), 4)
+
+    def test_invalid_strategy_is_rejected(self):
+        with _client() as client:
+            response = client.get("/answer/quality", params={"strategy": "magic"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"]["providerCode"], "E_ANSWER_STRATEGY_INVALID")
 
 
 ENTITY_DETAIL = {

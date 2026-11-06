@@ -3620,6 +3620,81 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         {"id": "C6", "group": "C", "query": "今年退保率是多少？", "expectedClasses": ("https://w3id.org/fsldm/agreement#Policy", "https://w3id.org/fsldm/core#Metric")},
         {"id": "C7", "group": "C", "query": "本年客户AUM是多少？", "expectedClasses": ("https://w3id.org/fsldm/core#Party", "https://w3id.org/fsldm/core#Metric")},
     )
+    # Ten golden cases: six already regression-tested in tests/test_answer_layers.py,
+    # four refusal cases built from concepts absent in the published T-Box.
+    _G4_GOLDEN_SET = (
+        {
+            "id": "G01",
+            "query": "产品包的产品特性有哪些",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("ontology-version",),
+        },
+        {
+            "id": "G02",
+            "query": "13个月继续率（有效保单件数）的口径是什么",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("metric-definition", "formula"),
+        },
+        {
+            "id": "G03",
+            "query": "逾期分档（M0–M6）是什么",
+            "type": "rule_set",
+            "expectRefused": False,
+            "requiredCitationKinds": ("rule-set",),
+        },
+        {
+            "id": "G04",
+            "query": "13个月继续率是多少",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("metric-definition",),
+            "allowDegraded": True,
+        },
+        {
+            "id": "G05",
+            "query": "当事人关系历史记录保留多久",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("ontology-version",),
+        },
+        {
+            "id": "G06",
+            "query": "抵押物价值发生巨大变化时银行如何处理",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("ontology-version",),
+        },
+        {
+            "id": "G07",
+            "query": "量子计算机的制冷功率是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+        {
+            "id": "G08",
+            "query": "火星探测器电池功率是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+        {
+            "id": "G09",
+            "query": "量子退火机的能耗是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+        {
+            "id": "G10",
+            "query": "超导磁悬浮列车的时速是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+    )
     _g4_term_cache: dict[str, Any] = {}
 
     def _g4_query_catalog() -> list[dict[str, Any]]:
@@ -3973,6 +4048,251 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "items": items,
         }
 
+    def _g4_citation_view(citation: dict[str, Any]) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        kind = str(citation.get("kind") or "")
+        ref = citation.get("ref")
+        source = citation.get("sourceRef") or {}
+        url = source.get("resolveUrl") if isinstance(source, dict) else None
+        if not url:
+            if kind == "ontology-version":
+                url = "/ui/ontology.html"
+            elif kind in ("rdfs-term", "skos-term"):
+                url = "/ui/entity.html?iri=" + quote(str(citation.get("id") or ""), safe="")
+            elif kind in ("metric-definition", "formula", "rule-set"):
+                metric_id = citation.get("metricId")
+                url = (
+                    "/ui/browse.html?tab=metrics&metricId=" + quote(str(metric_id), safe="")
+                    if metric_id
+                    else "/ui/browse.html?tab=metrics"
+                )
+            elif kind == "fact-table":
+                url = "/browse/facts?table=" + quote(str(ref or ""), safe="")
+            elif kind in ("fact-table-field", "fact-projection"):
+                url = "/ui/browse.html?tab=metrics"
+            elif kind == "chunk":
+                url = "/ui/search.html"
+        resolvable = bool(url) or bool(kind in _G4_CITATION_KINDS and ref)
+        return {
+            **citation,
+            "resolveUrl": url,
+            "resolvable": resolvable,
+        }
+
+    def _g4_answer_quality_data(
+        strategy: str, limit: int, case_id: str | None = None
+    ) -> dict[str, Any]:
+        golden = list(_G4_GOLDEN_SET)
+        if case_id:
+            golden = [item for item in golden if item["id"] == case_id]
+        cases = []
+        for case in golden[:limit]:
+            try:
+                result = _qa_answer(
+                    runtime,
+                    case["query"],
+                    top_k=5,
+                    strategy=strategy,
+                    request_id="g4-golden-" + case["id"],
+                )
+            except PortError as exc:
+                result = {
+                    "refused": True,
+                    "answerType": "error",
+                    "answerMode": "none",
+                    "reasonCode": exc.provider_code or exc.code,
+                    "citations": [],
+                    "missing": [],
+                    "degraded": True,
+                    "error": exc.message,
+                }
+            except Exception as exc:
+                result = {
+                    "refused": True,
+                    "answerType": "error",
+                    "answerMode": "none",
+                    "reasonCode": "E_G4_ANSWER_FAILED",
+                    "citations": [],
+                    "missing": [],
+                    "degraded": True,
+                    "error": str(exc)[:200],
+                }
+            citations = [_g4_citation_view(item) for item in result.get("citations") or []]
+            missing = list(result.get("missing") or [])
+            missing_layers = sorted(
+                {str(item.get("layer") or "unknown") for item in missing}
+            )
+            kinds = {str(item.get("kind") or "") for item in citations}
+            failures = []
+            if bool(result.get("refused")) != bool(case["expectRefused"]):
+                failures.append(
+                    "expected refused="
+                    + str(bool(case["expectRefused"])).lower()
+                    + ", got "
+                    + str(bool(result.get("refused"))).lower()
+                )
+            if result.get("refused"):
+                if not missing:
+                    failures.append("refusal has no missing layer")
+                for name in case.get("expectedMissingLayers") or ():
+                    if name not in missing_layers:
+                        failures.append("missing layer not reported: " + name)
+            else:
+                required = list(case.get("requiredCitationKinds") or ())
+                absent = [kind for kind in required if kind not in kinds]
+                if absent:
+                    failures.append("missing citation kinds: " + ",".join(absent))
+                if not citations:
+                    failures.append("answer has no citation")
+            if not case.get("allowDegraded") and result.get("degraded"):
+                failures.append("unexpected degraded=true")
+            unresolvable = [item for item in citations if not item.get("resolvable")]
+            if unresolvable:
+                failures.append("unresolvable citations: " + str(len(unresolvable)))
+            cases.append(
+                {
+                    "id": case["id"],
+                    "query": case["query"],
+                    "type": case["type"],
+                    "expectRefused": bool(case["expectRefused"]),
+                    "actual": {
+                        "refused": bool(result.get("refused")),
+                        "answerType": result.get("answerType"),
+                        "answerMode": result.get("answerMode"),
+                        "reasonCode": result.get("reasonCode"),
+                        "degraded": bool(result.get("degraded")),
+                        "citations": citations,
+                        "citationKinds": sorted(kinds),
+                        "missingLayers": missing_layers,
+                    },
+                    "pass": not failures,
+                    "failures": failures,
+                    "drillDownUrl": (
+                        "/answer/quality?caseId="
+                        + case["id"]
+                        + "&strategy="
+                        + strategy
+                    ),
+                }
+            )
+
+        by_type: dict[str, dict[str, Any]] = {}
+        by_reason: dict[tuple[str, str], int] = {}
+        refusals_without_layers = []
+        for item in cases:
+            actual = item["actual"]
+            entry = by_type.setdefault(
+                item["type"],
+                {
+                    "type": item["type"],
+                    "cases": 0,
+                    "refused": 0,
+                    "withCitations": 0,
+                    "citations": 0,
+                    "resolvable": 0,
+                },
+            )
+            entry["cases"] += 1
+            entry["refused"] += 1 if actual["refused"] else 0
+            entry["citations"] += len(actual["citations"])
+            entry["resolvable"] += sum(1 for c in actual["citations"] if c.get("resolvable"))
+            entry["withCitations"] += 1 if actual["citations"] else 0
+            if actual["refused"]:
+                reason = str(actual.get("reasonCode") or "UNSPECIFIED")
+                by_reason[(item["type"], reason)] = by_reason.get((item["type"], reason), 0) + 1
+                if not actual["missingLayers"]:
+                    refusals_without_layers.append(
+                        {"id": item["id"], "query": item["query"], "type": item["type"]}
+                    )
+
+        cases_total = len(cases)
+        citations_total = sum(len(item["actual"]["citations"]) for item in cases)
+        citations_resolvable = sum(
+            1 for item in cases for c in item["actual"]["citations"] if c.get("resolvable")
+        )
+        broken = [
+            {"id": item["id"], "query": item["query"], "citation": c}
+            for item in cases
+            for c in item["actual"]["citations"]
+            if not c.get("resolvable")
+        ]
+        by_type_rows = []
+        for key in sorted(by_type):
+            entry = by_type[key]
+            by_type_rows.append(
+                {
+                    **entry,
+                    "citationCoverageRate": round(entry["withCitations"] / entry["cases"], 4)
+                    if entry["cases"]
+                    else 0.0,
+                    "resolvableRate": round(entry["resolvable"] / entry["citations"], 4)
+                    if entry["citations"]
+                    else 0.0,
+                }
+            )
+        return {
+            "strategy": strategy,
+            "goldenSet": {
+                "id": "r02-golden-10",
+                "count": len(_G4_GOLDEN_SET),
+                "evaluated": cases_total,
+                "caseId": case_id,
+            },
+            "summary": {
+                "cases": cases_total,
+                "passed": sum(1 for item in cases if item["pass"]),
+                "failed": sum(1 for item in cases if not item["pass"]),
+                "passRate": round(
+                    sum(1 for item in cases if item["pass"]) / cases_total, 4
+                )
+                if cases_total
+                else 0.0,
+                "casesWithCitations": sum(1 for item in cases if item["actual"]["citations"]),
+                "citationCoverageRate": round(
+                    sum(1 for item in cases if item["actual"]["citations"]) / cases_total, 4
+                )
+                if cases_total
+                else 0.0,
+                "citations": citations_total,
+                "resolvableCitations": citations_resolvable,
+                "citationResolvableRate": round(citations_resolvable / citations_total, 4)
+                if citations_total
+                else 0.0,
+                "brokenLinkRate": round(len(broken) / citations_total, 4)
+                if citations_total
+                else 0.0,
+                "baselineBrokenLinkRate": 0.0,
+                "regression": bool(broken),
+            },
+            "citationCoverageByType": by_type_rows,
+            "refusalsByReason": [
+                {"type": type_name, "reasonCode": reason, "count": count}
+                for (type_name, reason), count in sorted(by_reason.items())
+            ],
+            "refusalsByType": [
+                {
+                    "type": entry["type"],
+                    "cases": entry["cases"],
+                    "refused": entry["refused"],
+                    "refusalRate": round(entry["refused"] / entry["cases"], 4)
+                    if entry["cases"]
+                    else 0.0,
+                }
+                for entry in by_type_rows
+            ],
+            "refusalsWithoutLayers": refusals_without_layers,
+            "brokenLinks": broken,
+            "cases": cases,
+            "empty": cases_total == 0,
+            "emptyReason": (
+                "case_not_found"
+                if cases_total == 0 and case_id
+                else ("no_golden_cases" if cases_total == 0 else None)
+            ),
+            "readOnly": True,
+        }
+
     @app.get("/answerable/panel")
     def g4_answerable_panel(
         intent: str = Query(default="all"),
@@ -4060,6 +4380,21 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             payload["emptyReason"] = "runtime_unavailable"
             payload["degraded"] = True
         return payload
+
+    @app.get("/answer/quality")
+    def g4_answer_quality(
+        strategy: str = Query(default="lexical"),
+        limit: int = Query(default=10, ge=1, le=10),
+        caseId: str | None = Query(default=None, max_length=10),
+    ) -> dict[str, Any]:
+        if strategy not in ("lexical", "vector", "hybrid"):
+            raise PortError(
+                code="InvalidArgument",
+                message="strategy must be lexical/vector/hybrid",
+                provider="platform",
+                provider_code="E_ANSWER_STRATEGY_INVALID",
+            )
+        return _g4_answer_quality_data(strategy, limit, caseId)
 
     # --- end G4 ---
 
