@@ -53,8 +53,8 @@
   }
 
   // ---- tabs ---------------------------------------------------------------
-  const VIEWS = ['ontology', 'metrics', 'terms', 'triples', 'sparql', 'answer'];
-  const loaded = { ontology: false, metrics: false, terms: false, triples: false, sparql: false, answer: false };
+  const VIEWS = ['ontology', 'metrics', 'terms', 'dictionaries', 'triples', 'sparql', 'answer'];
+  const loaded = { ontology: false, metrics: false, terms: false, dictionaries: false, triples: false, sparql: false, answer: false };
   const tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -71,6 +71,7 @@
     if (view === 'ontology') return loadOntology();
     if (view === 'metrics') return loadMetrics();
     if (view === 'terms') return loadTerms();
+    if (view === 'dictionaries') return loadDictionaries();
     if (view === 'triples') return loadTriples();
     if (view === 'sparql') return loadSparql();
     if (view === 'answer') return null;
@@ -793,6 +794,131 @@
       empty.textContent = '加载失败：' + err.message;
     }
   }
+
+  // ---- dictionaries -------------------------------------------------------
+  const dictState = { limit: 20, offset: 0, total: 0 };
+
+  function dictQueryUrl() {
+    const params = new URLSearchParams();
+    params.set('limit', String(dictState.limit));
+    params.set('offset', String(dictState.offset));
+    const table = el('dict-table').value.trim();
+    const column = el('dict-column').value.trim();
+    const source = el('dict-source').value;
+    const binding = el('dict-binding').value;
+    if (table) { params.set('table', table); }
+    if (column) { params.set('column', column); }
+    if (source) { params.set('sourceKind', source); }
+    if (binding) { params.set('bindingMethod', binding); }
+    return '/catalog/dictionaries?' + params.toString();
+  }
+
+  function dictCell(value, mono) {
+    const td = document.createElement('td');
+    td.textContent = value == null || value === '' ? '—' : value;
+    if (mono) { td.className = 'mono'; }
+    return td;
+  }
+
+  async function loadDictionaries() {
+    const table = el('dict-table-view');
+    const empty = el('dict-empty');
+    const status = el('dict-status');
+    table.hidden = true;
+    empty.hidden = true;
+    status.textContent = '加载中…';
+    try {
+      const data = await getJson(dictQueryUrl());
+      dictState.total = data.total || 0;
+      status.textContent = '· 共 ' + dictState.total + ' 行';
+      const items = data.items || [];
+      if (items.length === 0) {
+        empty.hidden = false;
+        renderDictPager();
+        return;
+      }
+      const tbody = table.querySelector('tbody');
+      tbody.innerHTML = '';
+      items.forEach(function (item) {
+        const tr = document.createElement('tr');
+        const tableCell = dictCell(item.table);
+        const link = document.createElement('a');
+        link.href = '#';
+        link.className = 'class-link';
+        link.textContent = item.table;
+        link.title = '只看这张表';
+        link.addEventListener('click', function (event) {
+          event.preventDefault();
+          el('dict-table').value = item.table;
+          el('dict-column').value = '';
+          dictState.offset = 0;
+          loadDictionaries();
+        });
+        tableCell.textContent = '';
+        tableCell.appendChild(link);
+        tr.appendChild(tableCell);
+        tr.appendChild(dictCell(item.column));
+        tr.appendChild(dictCell(item.dataType));
+        tr.appendChild(dictCell(item.isNullable ? 'YES' : 'NO'));
+        tr.appendChild(dictCell(item.comment));
+        tr.appendChild(dictCell(item.sourceKind));
+        tr.appendChild(dictCell(item.bindingMethod));
+        tr.appendChild(dictCell(item.propertyIri, true));
+        tr.appendChild(dictCell(item.confidence == null ? '—' : item.confidence));
+        tr.appendChild(dictCell(item.bindingNote));
+        tbody.appendChild(tr);
+      });
+      table.hidden = false;
+      renderDictPager();
+    } catch (err) {
+      status.textContent = '';
+      renderError(empty, err);
+      empty.hidden = false;
+    }
+  }
+
+  function renderDictPager() {
+    const page = Math.floor(dictState.offset / dictState.limit) + 1;
+    const pages = Math.max(1, Math.ceil(dictState.total / dictState.limit));
+    el('dict-page').textContent = '第 ' + page + ' / ' + pages + ' 页';
+    el('dict-prev').disabled = dictState.offset <= 0;
+    el('dict-next').disabled = dictState.offset + dictState.limit >= dictState.total;
+  }
+
+  el('dict-query').addEventListener('click', function () {
+    dictState.offset = 0;
+    loadDictionaries();
+  });
+  el('dict-table').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') { event.preventDefault(); dictState.offset = 0; loadDictionaries(); }
+  });
+  el('dict-column').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') { event.preventDefault(); dictState.offset = 0; loadDictionaries(); }
+  });
+  el('dict-prev').addEventListener('click', function () {
+    dictState.offset = Math.max(0, dictState.offset - dictState.limit);
+    loadDictionaries();
+  });
+  el('dict-next').addEventListener('click', function () {
+    dictState.offset += dictState.limit;
+    loadDictionaries();
+  });
+  el('dict-refresh').addEventListener('click', async function () {
+    el('dict-status').textContent = '刷新中…';
+    try {
+      const result = await postJson('/catalog/dictionaries/refresh', { sources: ['pg'] });
+      el('dict-status').textContent =
+        '· 处理 ' + result.processed + ' 列 · 新增 ' + result.inserted +
+        ' · 更新 ' + result.updated + ' · 未变 ' + result.unchanged +
+        ' · 显式 ' + (result.binding || {}).explicit +
+        ' · 名称匹配 ' + (result.binding || {}).name_match +
+        ' · 未绑定 ' + (result.binding || {}).none;
+      loaded.dictionaries = true;
+      loadDictionaries();
+    } catch (err) {
+      el('dict-status').textContent = '刷新失败：' + err.message;
+    }
+  });
 
   // ---- answer / coverage --------------------------------------------------
   const QA_LAYER_LABELS = {

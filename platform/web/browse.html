@@ -28,6 +28,7 @@
         <button class="tab active" data-view="ontology" role="tab">本体</button>
         <button class="tab" data-view="metrics" role="tab">口径卡</button>
         <button class="tab" data-view="terms" role="tab">术语别名</button>
+        <button class="tab" data-view="dictionaries" role="tab">数据字典</button>
         <button class="tab" data-view="triples" role="tab">三元组</button>
         <button class="tab" data-view="sparql" role="tab">SPARQL</button>
         <button class="tab" data-view="answer" role="tab">问答</button>
@@ -115,6 +116,54 @@
               <tbody></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <div id="view-dictionaries" class="view" hidden>
+        <div class="filters">
+          <label>表名
+            <input type="text" id="dict-table" placeholder="留空为全部，如 bank_loan_account">
+          </label>
+          <label>列名
+            <input type="text" id="dict-column" placeholder="留空为全部">
+          </label>
+          <label>来源
+            <select id="dict-source">
+              <option value="">全部</option>
+              <option value="pg">pg</option>
+              <option value="mysql">mysql</option>
+              <option value="glue">glue</option>
+            </select>
+          </label>
+          <label>绑定档位
+            <select id="dict-binding">
+              <option value="">全部</option>
+              <option value="explicit">explicit</option>
+              <option value="name_match">name_match</option>
+              <option value="manual">manual</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <button id="dict-query">查询</button>
+          <button id="dict-refresh">刷新字典</button>
+          <span id="dict-status" class="sub"></span>
+        </div>
+        <div class="hint">只读浏览：GET /catalog/dictionaries。刷新按钮调用 POST /catalog/dictionaries/refresh（只读内省，重放不产生重复行）；
+          绑定只作字典用途，不参与发布门禁。</div>
+        <div id="dict-empty" class="empty" hidden>当前条件下没有字典行（接口返回 0 条）。</div>
+        <table id="dict-table-view" class="data-table" hidden>
+          <thead>
+            <tr>
+              <th>表</th><th>列</th><th>类型</th><th>可空</th><th>注释</th>
+              <th>来源</th><th>绑定方法</th><th>绑定属性</th><th>confidence</th><th>说明</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="pager">
+          <button id="dict-prev" disabled>上一页</button>
+          <span id="dict-page" class="sub"></span>
+          <button id="dict-next" disabled>下一页</button>
         </div>
       </div>
 

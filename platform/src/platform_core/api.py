@@ -36,6 +36,7 @@ from .answerable import PUNCT as _ANSWER_PUNCT
 from .answerable import STOPWORDS as _ANSWER_STOPWORDS
 from .assembly import Runtime
 from .bootstrap import CheckResult
+from . import catalog as catalog_module
 from .errors import PortError
 from . import webui
 from . import prov as prov_module
@@ -2404,6 +2405,77 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "inferred": inferred,
             },
         }
+
+    # ---- B-06 data dictionary ---------------------------------------------
+
+    def _catalog_service() -> catalog_module.CatalogService:
+        return catalog_module.CatalogService(runtime)
+
+    @app.get("/catalog/dictionaries")
+    def catalog_dictionaries(
+        catalog: str | None = None,
+        schema: str | None = None,
+        table: str | None = None,
+        column: str | None = None,
+        sourceKind: str | None = None,
+        bindingMethod: str | None = None,
+        q: str | None = None,
+        limit: int = Query(default=20, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        for value, allowed, code in (
+            (sourceKind, catalog_module.SOURCE_KINDS, "E_DICT_FILTER_INVALID"),
+            (bindingMethod, catalog_module.BINDING_METHODS, "E_DICT_FILTER_INVALID"),
+        ):
+            if value and value not in allowed:
+                raise _browse_error(
+                    code,
+                    f"unsupported filter value: {value}",
+                    {"value": value, "allowed": list(allowed)},
+                )
+        filters = {
+            "catalog": catalog,
+            "schema": schema,
+            "table": table,
+            "column": column,
+            "sourceKind": sourceKind,
+            "bindingMethod": bindingMethod,
+            "q": q,
+        }
+        return _catalog_service().list(filters, limit=limit, offset=offset)
+
+    @app.get("/catalog/dictionaries/{table}")
+    def catalog_dictionary_table(
+        table: str,
+        catalog: str = "platform",
+        schema: str = "platform",
+    ) -> dict[str, Any]:
+        return _catalog_service().table(table, catalog=catalog, schema=schema)
+
+    @app.post("/catalog/dictionaries/refresh")
+    def catalog_dictionaries_refresh(
+        body: dict[str, Any] | None = Body(default=None),
+    ) -> dict[str, Any]:
+        payload = body or {}
+        sources = payload.get("sources")
+        if sources is not None and not isinstance(sources, list):
+            raise _browse_error(
+                "E_DICT_SOURCE_UNKNOWN",
+                "sources must be a list of source kinds",
+                {"allowed": list(catalog_module.SOURCE_KINDS)},
+            )
+        tables = payload.get("tables")
+        if tables is not None and not isinstance(tables, list):
+            raise _browse_error(
+                "E_DICT_FILTER_INVALID",
+                "tables must be a list of table names",
+            )
+        return _catalog_service().refresh(
+            sources=sources,
+            catalog=payload.get("catalog") or "platform",
+            schema=payload.get("schema") or "platform",
+            tables=tables,
+        )
 
     # ---- S4 extraction ---------------------------------------------------
 
