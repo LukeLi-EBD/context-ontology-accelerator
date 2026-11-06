@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import quote
 
 from . import source_ref
+from .datagen_abox import SYNTHETIC_GRAPH
 from .errors import PortError
 
 RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -135,7 +136,19 @@ def _graphs(runtime: Any) -> list[str]:
     for graph in abox:
         if graph and graph not in graphs:
             graphs.append(str(graph))
+    # The datagen A-Box is a real named instance graph; expose it read-only so
+    # the entity page can resolve those IRIs even though reasoning.abox_graphs
+    # (which also feeds materialization) deliberately stays on the fact graph.
+    if SYNTHETIC_GRAPH not in graphs and _graph_exists(runtime, SYNTHETIC_GRAPH):
+        graphs.append(SYNTHETIC_GRAPH)
     return graphs
+
+
+def _graph_exists(runtime: Any, graph: str) -> bool:
+    try:
+        return bool(runtime.graph.ask(f"ASK {{ GRAPH <{graph}> {{ ?s ?p ?o }} }}"))
+    except Exception:
+        return False
 
 
 def _safe_current(runtime: Any) -> dict[str, Any] | None:
@@ -166,18 +179,24 @@ def _inferred_graph(runtime: Any) -> str | None:
     return str(graph) if graph else None
 
 
-def _triples_query(graphs: list[str], iri: str) -> str:
+def _outgoing_triples_query(graphs: list[str], iri: str) -> str:
     values = " ".join(f"<{g}>" for g in graphs)
     return (
         "SELECT ?g ?s ?p ?o WHERE { "
         f"VALUES ?g {{ {values} }} "
-        "GRAPH ?g { { BIND(<" + iri + "> AS ?s) ?s ?p ?o } UNION { ?s ?p <" + iri + "> } } "
+        f"GRAPH ?g {{ BIND(<{iri}> AS ?s) ?s ?p ?o }} "
         f"}} LIMIT {MAX_EDGES}"
     )
 
 
-def _single_graph_triples_query(graph: str, iri: str) -> str:
-    return _triples_query([graph], iri)
+def _incoming_triples_query(graphs: list[str], iri: str) -> str:
+    values = " ".join(f"<{g}>" for g in graphs)
+    return (
+        "SELECT ?g ?s ?p ?o WHERE { "
+        f"VALUES ?g {{ {values} }} "
+        f"GRAPH ?g {{ BIND(<{iri}> AS ?o) ?s ?p ?o }} "
+        f"}} LIMIT {MAX_EDGES}"
+    )
 
 
 def _edges(result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -197,6 +216,18 @@ def _edges(result: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return edges
+
+
+def _dedupe_edges(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Outgoing/incoming lookups are disjoint except self-loops; keep one row."""
+    seen: set[tuple[Any, ...]] = set()
+    unique: list[dict[str, Any]] = []
+    for edge in edges:
+        key = (edge["graph"], edge["s"], edge["p"], edge["o"].get("value"))
+        if key not in seen:
+            seen.add(key)
+            unique.append(edge)
+    return unique
 
 
 def _class_map(runtime: Any, graph: str) -> dict[str, dict[str, Any]]:
@@ -511,7 +542,11 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
     asserted: list[dict[str, Any]] = []
     if graphs:
         try:
-            asserted = _edges(runtime.graph.query(_triples_query(graphs, iri)))
+            # Two plain one-hop lookups instead of `GRAPH ?g { ... UNION ... }`:
+            # Oxigraph hangs on union-under-variable-graph (measured >25s), while
+            # the split queries answer in milliseconds on the same graphs.
+            asserted = _edges(runtime.graph.query(_outgoing_triples_query(graphs, iri)))
+            asserted += _edges(runtime.graph.query(_incoming_triples_query(graphs, iri)))
         except Exception as exc:
             raise PortError(
                 code="Unavailable",
@@ -526,12 +561,17 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
     if inferred_graph:
         try:
             inferred = _edges(
-                runtime.graph.query(_single_graph_triples_query(inferred_graph, iri))
+                runtime.graph.query(_outgoing_triples_query([inferred_graph], iri))
+            )
+            inferred += _edges(
+                runtime.graph.query(_incoming_triples_query([inferred_graph], iri))
             )
         except Exception:
             inferred = []
 
     # An inferred graph may also be listed in abox_graphs; keep the two views disjoint.
+    inferred = _dedupe_edges(inferred)
+    asserted = _dedupe_edges(asserted)
     inferred_edges = [edge for edge in inferred if edge["graph"] == inferred_graph]
     asserted_edges = [edge for edge in asserted if edge["graph"] != inferred_graph]
 

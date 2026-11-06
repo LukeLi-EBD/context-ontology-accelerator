@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+from .datagen_abox import SYNTHETIC_GRAPH
 from .errors import PortError
 from .ontology_lifecycle import summarize as _lifecycle_summary
 
@@ -84,6 +85,27 @@ def _abox_graphs(runtime: Any) -> list[str]:
 
 def _values(graphs: list[str]) -> str:
     return " ".join(f"<{graph}>" for graph in graphs)
+
+
+def _graph_exists(runtime: Any, graph: str) -> bool:
+    try:
+        return bool(runtime.graph.ask(f"ASK {{ GRAPH <{graph}> {{ ?s ?p ?o }} }}"))
+    except Exception:
+        return False
+
+
+def _view_graphs(runtime: Any) -> list[str]:
+    """A-Box graphs the dashboard should report on.
+
+    ``reasoning.abox_graphs`` is the materialization input and stays on the
+    governed fact graph. The datagen A-Box is a separate real instance graph;
+    include it when present so coverage is measured against actual data instead
+    of reporting 0 for an empty fact graph.
+    """
+    graphs = _abox_graphs(runtime)
+    if SYNTHETIC_GRAPH not in graphs and _graph_exists(runtime, SYNTHETIC_GRAPH):
+        graphs.append(SYNTHETIC_GRAPH)
+    return graphs
 
 
 def _classes(runtime: Any, graph: str) -> dict[str, Any]:
@@ -184,7 +206,7 @@ def _orphans(runtime: Any, graphs: list[str]) -> int:
         "GRAPH ?g { ?s a ?t } "
         "FILTER NOT EXISTS { "
         "GRAPH ?g2 { ?s ?p ?o . "
-        f"FILTER(?p != <{RDF_TYPE}> && ?p != <{RDFS_LABEL}>) }} "
+        f"FILTER(?p != <{RDF_TYPE}> && ?p != <{RDFS_LABEL}>) }}}} "
         "FILTER NOT EXISTS { GRAPH ?g3 { ?x ?q ?s } } "
         "}"
     )
@@ -636,7 +658,7 @@ def _lifecycle_block(runtime: Any, version_ids: list[str]) -> dict[str, Any]:
 
 def dashboard(runtime: Any) -> dict[str, Any]:
     sampled_at = _now()
-    graphs = _abox_graphs(runtime)
+    graphs = _view_graphs(runtime)
     pointer = _pointer(runtime)
     tbox_graph = (pointer or {}).get("graph")
 
