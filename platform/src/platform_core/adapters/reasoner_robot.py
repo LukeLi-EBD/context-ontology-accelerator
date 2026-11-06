@@ -35,7 +35,8 @@ class ReasonerClient:
             capabilities=["reason.materialize", "reason.consistent", "reason.rdfs"],
             limits={
                 "timeout_ms": self._config.timeout_ms,
-                "max_input_bytes": self._config.max_input_bytes,
+                "max_source_bytes": self._config.max_source_bytes,
+                "max_assembly_bytes": self._config.max_assembly_bytes,
             },
             notes={
                 "slice": "S5",
@@ -90,16 +91,20 @@ class ReasonerClient:
         consistency_first: bool | None = None,
     ) -> dict[str, Any]:
         payload_bytes = len(tbox_nt) + len(abox_nt)
-        if payload_bytes > self._config.max_input_bytes:
+        if payload_bytes > self._config.max_assembly_bytes:
             raise PortError(
                 code="ResourceExhausted",
                 message=(
-                    f"reasoning input is {payload_bytes} bytes, "
-                    f"limit reasoning.max_input_bytes={self._config.max_input_bytes}"
+                    f"reasoning assembly input is {payload_bytes} bytes, "
+                    f"limit reasoning.max_assembly_bytes={self._config.max_assembly_bytes}"
                 ),
                 provider="robot",
                 provider_code="E_REASONING_INPUT_TOO_LARGE",
-                details={"bytes": payload_bytes, "limit": self._config.max_input_bytes},
+                details={
+                    "layer": "assembly",
+                    "bytes": payload_bytes,
+                    "limit": self._config.max_assembly_bytes,
+                },
             )
         body = {
             "tbox": tbox_nt.decode("utf-8"),
@@ -164,16 +169,20 @@ class ReasonerClient:
     def rdfs_closure(self, tbox_nt: bytes, abox_nt: bytes) -> dict[str, Any]:
         """OQ-39 stage 1: run Jena's RDFS closure inside the reasoner container."""
         payload_bytes = len(tbox_nt) + len(abox_nt)
-        if payload_bytes > self._config.max_input_bytes:
+        if payload_bytes > self._config.max_source_bytes:
             raise PortError(
                 code="ResourceExhausted",
                 message=(
-                    f"RDFS input is {payload_bytes} bytes, "
-                    f"limit reasoning.max_input_bytes={self._config.max_input_bytes}"
+                    f"RDFS source input is {payload_bytes} bytes, "
+                    f"limit reasoning.max_source_bytes={self._config.max_source_bytes}"
                 ),
                 provider="jena",
                 provider_code="E_REASONING_INPUT_TOO_LARGE",
-                details={"bytes": payload_bytes, "limit": self._config.max_input_bytes},
+                details={
+                    "layer": "source",
+                    "bytes": payload_bytes,
+                    "limit": self._config.max_source_bytes,
+                },
             )
         body = {"tbox": tbox_nt.decode("utf-8"), "abox": abox_nt.decode("utf-8")}
         try:

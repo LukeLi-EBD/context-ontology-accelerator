@@ -123,3 +123,5 @@ reasoning:
   shapes_dir: /data/shapes    # SHACL shapes 目录
   consistency_first: true
   max_violations: 200
+  max_source_bytes: 52428800     # stage 1（RDFS 闭包）源输入上限
+  max_assembly_bytes: 52428800   # stage 2（ROBOT/ELK）组装输入上限

@@ -269,7 +269,13 @@ class ReasoningConfig(_Strict):
     shapes_dir: str = "/data/shapes"
     consistency_first: bool = True
     max_violations: int = Field(default=200, ge=1, le=5000)
-    max_input_bytes: int = Field(default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024)
+    # Split of the former single max_input_bytes. Stage 1 (RDFS closure) bounds
+    # the source bytes, stage 2 (ROBOT/ELK) bounds the assembled payload
+    # (source + closure). Both default to 50MiB, so behaviour is unchanged.
+    max_source_bytes: int = Field(default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024)
+    max_assembly_bytes: int = Field(
+        default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024
+    )
 
 
 class LogConfig(_Strict):
