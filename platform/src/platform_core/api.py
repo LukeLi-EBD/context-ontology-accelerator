@@ -3564,4 +3564,37 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ],
         }
 
+    # --- G2 metrics-core routes ---
+    @app.get("/metrics/{metric_id}/compute")
+    def metric_compute(
+        metric_id: str,
+        internal: bool = False,
+        as_of: date | None = Query(None, alias="asOf"),
+        period_start: date | None = Query(None, alias="periodStart"),
+        period_end: date | None = Query(None, alias="periodEnd"),
+        data_source: str = Query("fixture", alias="dataSource"),
+    ) -> dict[str, Any]:
+        """Scheme-A compute: direct fact-table aggregation, no observation cache.
+
+        Non-executable metrics return a stable provider code plus the missing
+        reason (E_METRIC_NOT_STRUCTURALLY_COMPUTABLE / E_METRIC_BINDING_MISSING /
+        E_METRIC_RULE_SET_ONLY / E_METRIC_WINDOW_INSUFFICIENT ...), never 0.
+        """
+        from .metric_compiler import MetricCompiler
+
+        start, end = period_start, period_end
+        if as_of is not None and start is None and end is None:
+            start = end = as_of
+        compiler = MetricCompiler(runtime.metadata)
+        result = compiler.execute(
+            metric_id, start=start, end=end, internal=internal, data_source=data_source
+        )
+        return {
+            **result,
+            "rowCount": len(result["rows"]),
+            "computedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+    # --- end G2 ---
+
     return app
