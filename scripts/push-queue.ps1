@@ -154,6 +154,33 @@ $SecretScanAllowlist = @(
         Reason     = 'variable assignment; value is resolved at runtime by Get-PgPassword, no literal secret in the diff'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester, explicit approval of option 1)'
+    },
+    [pscustomobject]@{
+        File       = 'doc/evidence/acceptance-s14-platform-acceptance-20261107-034044-b2c534a.log'
+        Line       = 556
+        Pattern    = 'assigned-secret'
+        Text       = 'S14 ACCEPTANCE NOT PASS' + ': coverage_mismatch:discovered=418 executed=415 missing=3'
+        Reason     = 'acceptance verdict text; "NOT PASS:" + coverage_mismatch identifier trips the assigned-secret rule, no credential value present'
+        ApprovedOn = '2026-11-07'
+        ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+    },
+    [pscustomobject]@{
+        File       = 'doc/evidence/acceptance-s14-platform-acceptance-20261107-043532-b53314a.log'
+        Line       = 491
+        Pattern    = 'assigned-secret'
+        Text       = 'S14 ACCEPTANCE NOT PASS' + ': tests_failed'
+        Reason     = 'acceptance verdict text; "NOT PASS:" + tests_failed identifier trips the assigned-secret rule, no credential value present'
+        ApprovedOn = '2026-11-07'
+        ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+    },
+    [pscustomobject]@{
+        File       = 'platform/tests/test_g8_terms_gate.py'
+        Line       = 467
+        Pattern    = 'assigned-secret'
+        Text       = 'cls._previous_token' + ' = os.environ.get("PLATFORM_SMOKE_TOKEN")'
+        Reason     = 'reads an env var into a local; the token value is a random uuid generated at runtime, no literal secret in the diff'
+        ApprovedOn = '2026-11-07'
+        ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
     }
 )
 
