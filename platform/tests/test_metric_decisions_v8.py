@@ -121,10 +121,14 @@ class MetricDecisionsV8Test(unittest.TestCase):
             self.assertIsNotNone(row["metric_kind"], metric_id)
             self.assertIsNotNone(row["formula_expr"], metric_id)
             self.assertIsNotNone(row["window_kind"], metric_id)
-            self.assertIsNone(row["missing"], metric_id)
+            if row["computability_tier"] == "blocked_semantics":
+                # V25 kept a few partials blocked and recorded the exact gap/owner.
+                self.assertIsNotNone(row["missing"], metric_id)
+            else:
+                self.assertIsNone(row["missing"], metric_id)
+                self.assertEqual(row["decision_owner"], "业务待签", metric_id)
             self.assertTrue(row["inference"], metric_id)
             self.assertFalse(row["publishable"], metric_id)
-            self.assertEqual(row["decision_owner"], "业务待签", metric_id)
             self.assertIsInstance(row["decision_recommendation"], dict, metric_id)
             rec = row["decision_recommendation"]
             for key in ("decisionId", "status", "reason", "impact", "changePoint"):
@@ -221,10 +225,10 @@ class MetricDecisionsV8Test(unittest.TestCase):
             " FROM platform.metric_definition GROUP BY 1"
         )
         counts = {r["computability_tier"]: r["n"] for r in rows}
-        self.assertEqual(counts.get("structurally_computable"), 30)
+        self.assertEqual(counts.get("structurally_computable"), 74)
         self.assertEqual(counts.get("blocked_rule"), None)
         self.assertEqual(counts.get("blocked_external"), 3)
-        self.assertEqual(counts.get("blocked_semantics"), 52)
+        self.assertEqual(counts.get("blocked_semantics"), 8)
         self.assertEqual(sum(counts.values()), 85)
 
     def test_10_cust002_binding_registered(self) -> None:

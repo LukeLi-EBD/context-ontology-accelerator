@@ -80,9 +80,11 @@ def formula_to_sql(expr: str) -> str:
             return repr(node.value)
         if isinstance(node, ast.Name):
             if node.id == "numerator":
-                return "num.numerator"
+                # Cast counts to numeric: PostgreSQL integer division would turn
+                # 1/2 into 0 before the ratio is scaled.
+                return "(num.numerator)::numeric"
             if node.id == "denominator":
-                return "den.denominator"
+                return "(den.denominator)::numeric"
             raise _err("", EXPR_UNSUPPORTED, f"unknown identifier {node.id!r}")
         if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
             op = "-" if isinstance(node.op, ast.USub) else "+"

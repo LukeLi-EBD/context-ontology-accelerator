@@ -132,7 +132,8 @@ class MetricDefinitionV5Test(unittest.TestCase):
     # ---- 1. schema -----------------------------------------------------
 
     def test_1_schema_version_and_new_columns(self) -> None:
-        self.assertEqual(SUPPORTED_SCHEMA_VERSION, 24)
+        # V25 added the v7 fact model; later migrations may raise the ceiling.
+        self.assertGreaterEqual(SUPPORTED_SCHEMA_VERSION, 25)
         rows = self.meta.query(
             "SELECT column_name, data_type FROM information_schema.columns "
             "WHERE table_schema = 'platform' AND table_name = 'metric_definition'"
@@ -145,7 +146,7 @@ class MetricDefinitionV5Test(unittest.TestCase):
         version = self.meta.query(
             "SELECT MAX(version) AS v FROM platform.schema_version"
         )
-        self.assertEqual(int(version[0]["v"]), 24)
+        self.assertEqual(int(version[0]["v"]), SUPPORTED_SCHEMA_VERSION)
 
     # ---- 2. idempotency -------------------------------------------------
 

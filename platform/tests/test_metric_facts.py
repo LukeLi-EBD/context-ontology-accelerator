@@ -96,7 +96,8 @@ class MetricFactsTest(unittest.TestCase):
     # ---- migration -----------------------------------------------------
 
     def test_v20_migration_is_reentrant(self) -> None:
-        self.assertEqual(SUPPORTED_SCHEMA_VERSION, 24)
+        # V25 added the v7 fact model; later migrations may raise the ceiling.
+        self.assertGreaterEqual(SUPPORTED_SCHEMA_VERSION, 25)
         sql = files("platform_core").joinpath("sql/V20__metric_entities.sql").read_text(
             encoding="utf-8"
         )
