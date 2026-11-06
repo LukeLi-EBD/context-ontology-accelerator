@@ -529,7 +529,7 @@ class MetricProjector:
         data_source: str = "fixture",
         apply: bool = True,
     ) -> dict[str, Any]:
-        fixture = data_source == "fixture"
+        fixture = data_source in ("fixture", "synthetic")
         base: dict[str, Any] = {
             "ok": False,
             "metricId": metric_id,
@@ -564,8 +564,8 @@ class MetricProjector:
                 raise _Reject(FACT_INVALID, f"invalid fact function name: {function!r}")
 
             window_kind = definition["window_kind"]
-            if data_source not in ("fixture", "business"):
-                raise _Reject(SOURCE_INVALID, "dataSource must be fixture or business")
+            if data_source not in ("fixture", "business", "synthetic"):
+                raise _Reject(SOURCE_INVALID, "dataSource must be fixture, business or synthetic")
             if window_kind == "instant":
                 if window_start != window_end:
                     raise _Reject(
@@ -589,6 +589,7 @@ class MetricProjector:
                 f"SELECT * FROM {function}(%s, %s, %s)",
                 (window_start, window_end, data_source),
             )
+            fixture = False
             base["rowsValid"] = len(fact_rows)
             base["rowsBefore"] = self._count(metric_id, definition["definition_version"])
 
@@ -597,9 +598,14 @@ class MetricProjector:
                 base["ok"] = True
                 return base
 
+            fixtures = {bool(row.get("fixture")) for row in fact_rows}
+            if len(fixtures) > 1:
+                raise _Reject(FACT_INVALID, "fact rows mix fixture and non-fixture provenance")
+            fixture = fixtures.pop() if fixtures else False
+
             params: list[tuple[Any, ...]] = []
             for row in fact_rows:
-                if row.get("data_source") != data_source or bool(row.get("fixture")) != fixture:
+                if row.get("data_source") != data_source:
                     raise _Reject(
                         FACT_INVALID,
                         "fact row provenance does not match the requested source",
