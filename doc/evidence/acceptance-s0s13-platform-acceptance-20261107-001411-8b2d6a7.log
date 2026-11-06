@@ -1,0 +1,362 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261107001411
+Username: UVSFUJSA\cpslau
+RunAs User: UVSFUJSA\cpslau
+Configuration Name: 
+Machine: UVSFUJSA (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\acceptance.ps1
+Process ID: 56548
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+S0-S13 acceptance start ts=20261107-001411 git=8b2d6a7 project=platform-acceptance api=http://127.0.0.1:8082 pg=5433 reasoner=7882 data=D:\agentABC\data-acceptance evidence_file=D:\agentABC\coa\doc\evidence\acceptance-s0s13-platform-acceptance-20261107-001411-8b2d6a7.log
+heavy_lock=free
+== compose config ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:208 char:1
++ docker @composeArgs config *> $null
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] docker compose config exit=125
+== containers (no blind 'compose up -d') ==
+docker.exe : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:212 char:15
++ $services = @(& docker @composeArgs config --services 2>$null)
++               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+docker.exe : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:213 char:14
++ ... psLines = @(& docker @composeArgs ps -a --format '{{.Service}}|{{.Sta ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[PASS] containers running (no restart needed) services=0
+acquired owner=UVSFUJSA\cpslau#56548 pid=56548 host=UVSFUJSA purpose=acceptance full run (platform-acceptance)
+lock_acquired owner=UVSFUJSA\cpslau#56548 ttl=10min lock_file=D:\agentABC\coa\platform\.lock\platform-acceptance.heavy.lock
+lock_release_on_exit: powershell -ExecutionPolicy Bypass -File scripts\compose-guard.ps1 release -Owner 'UVSFUJSA\cpslau#56548'
+[PASS] healthz 200
+[PASS] readyz 200
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:191 char:12
++     $raw = docker @composeArgs exec -T platform platform graph-count  ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+demo abox baseline triples=-1
+== smoke ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke exit=125 passed=0/-1
+== smoke S1 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s1 exit=125
+== smoke S2 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s2 exit=125
+== smoke S3 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s3 exit=125
+== smoke S4 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s4 exit=125
+== smoke S5 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s5 exit=125
+== smoke S6 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s6 exit=125
+== smoke S7 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s7 exit=125
+== smoke S8 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s8 exit=125
+== smoke S9 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s9 exit=125
+== smoke S10 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s10 exit=125
+== smoke S11 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s11 exit=125
+== smoke S12 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s12 exit=125
+== smoke S13 ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-s13 exit=125 passed=0/-1
+== smoke S13b embedding partitions ==
+unknown shorthand flag: 'p' in -p
+System.Management.Automation.RemoteException
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+System.Management.Automation.RemoteException
+Run 'docker --help' for more information
+[FAIL] platform smoke-embed exit=125 passed=0/-1
+== demo abox purity (OQ-31) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:191 char:12
++     $raw = docker @composeArgs exec -T platform platform graph-count  ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:191 char:12
++     $raw = docker @composeArgs exec -T platform platform graph-count  ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:191 char:12
++     $raw = docker @composeArgs exec -T platform platform graph-count  ...
++            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] demo abox purity baseline=-1 after=-1 testGraphs=-1 smokeSubjects=-1
+== audit export ==
+[FAIL] facts-export count exit=125 count=-1 lines=-1
+
+[FAIL] facts-verify ok exit=125
+
+[FAIL] facts-replay dry-run exit=125
+
+[PASS] facts-verify rejects tampering exit=125 expected!=0
+
+[PASS] facts-replay rejects tampering exit=125 expected!=0
+== config good ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:395 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config good exit=125
+== config bad (type error) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:399 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad type exit=125 expected=78
+== config bad (invalid provider) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:403 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad provider exit=125 expected=78
+== config bad (chunk overlap) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:407 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad chunk overlap exit=125 expected=78
+== config bad (search range) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:411 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad search range exit=125 expected=78
+== config bad (extraction rule) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:415 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad extraction rule exit=125 expected=78
+== config bad (reasoning profile) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:419 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad reasoning profile exit=125 expected=78
+== config bad (context budget) ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:423 char:1
++ docker @composeArgs exec -T platform platform check-config --config / ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] check-config bad context budget exit=125 expected=78
+== failure path: reasoner container stopped ==
+[SKIPPED_DEPENDENCY] stop reasoner reasoner profile not started in this stack
+[PASS] healthz 200 with reasoner down status=200
+[FAIL] materialize 503 E_REASONER_UNAVAILABLE status=200
+[SKIPPED_DEPENDENCY] start reasoner reasoner profile not started in this stack
+[SKIPPED_DEPENDENCY] reasoner recovers to 200 reasoner profile not started in this stack
+== failure path: graph unavailable ==
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:459 char:1
++ docker @composeArgs stop oxigraph *> $null
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] stop oxigraph exit=125
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:462 char:1
++ docker @composeArgs exec -T platform platform probe --config /data/pl ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] probe fails fast (69) exit=125 expected=69
+[FAIL] readyz 503 while graph down status=200
+docker : unknown shorthand flag: 'p' in -p
+At D:\agentABC\coa\platform\tests\acceptance.ps1:468 char:1
++ docker @composeArgs start oxigraph *> $null
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (unknown shorthand flag: 'p' in -p:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+Usage:  docker [OPTIONS] COMMAND [ARG...]
+
+Run 'docker --help' for more information
+[FAIL] start oxigraph exit=125
+[PASS] readyz recovers to 200
+
+ACCEPTANCE passed=7 failed=33 skipped=3 degraded=0 checks=43 evidence=D:\agentABC\coa\doc\evidence\acceptance-s0s13-platform-acceptance-20261107-001411-8b2d6a7.log
+released owner=UVSFUJSA\cpslau#56548
+**********************
+Windows PowerShell transcript end
+End time: 20261107001418
+**********************

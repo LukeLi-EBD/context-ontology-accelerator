@@ -1,0 +1,33 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261106233605
+Username: UVSFUJSA\cpslau
+RunAs User: UVSFUJSA\cpslau
+Configuration Name: 
+Machine: UVSFUJSA (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\acceptance-s14.ps1
+Process ID: 42376
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+S14 acceptance start ts=20261106-233605 git=6ca8561 image=agent-platform:0.1-s5 network=agent-platform_default api=http://127.0.0.1:8080
+evidence_file=D:\agentABC\coa\doc\evidence\acceptance-s14-20261106-233605-6ca8561.log excludes=
+readyz=200 network=agent-platform_default image=agent-platform:0.1-s5
+acquired owner=UVSFUJSA\cpslau#42376 pid=42376 host=UVSFUJSA purpose=S14 acceptance (full unittest tree)
+usage: _acceptance_runner.py [-h] [--start-dir START_DIR]
+                             [--top-level TOP_LEVEL] [--pattern PATTERN]
+                             [--exclude EXCLUDE]
+_acceptance_runner.py: error: argument --exclude: expected one argument
+released owner=UVSFUJSA\cpslau#42376
+S14 ACCEPTANCE discovered_total=0 excluded=0 discovered=0 executed=0 passed=0 failed=1 skipped=0 exit=2 note=runner_protocol_missing
+evidence=D:\agentABC\coa\doc\evidence\acceptance-s14-20261106-233605-6ca8561.log
+**********************
+Windows PowerShell transcript end
+End time: 20261106233606
+**********************

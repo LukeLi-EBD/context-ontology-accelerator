@@ -37,7 +37,10 @@ param(
     [int]$ProbeSeconds = 5,
     [switch]$RemoveDataRoot,
     [switch]$AssumeLock,
-    [string]$Owner = ''
+    [string]$Owner = '',
+    # 追加的 compose override（相对 platform/ 或绝对路径），用于独立验收栈把
+    # 只读模型资产挂进 embedding；不改变默认共享栈行为。
+    [string[]]$ExtraComposeFiles = @()
 )
 $ErrorActionPreference = 'Stop'
 
@@ -48,6 +51,9 @@ $Services = @($Services | ForEach-Object { $_ -split ',' } | ForEach-Object { $_
 $composeFiles = @('-f', 'docker-compose.yml')
 $useOxigraphPort = ($OxigraphPort -gt 0)
 if ($useOxigraphPort) { $composeFiles += @('-f', 'docker-compose.oxigraph-host.yml') }
+foreach ($extra in @($ExtraComposeFiles)) {
+    if ($extra) { $composeFiles += @('-f', $extra) }
+}
 
 # Compose bind mounts want forward slashes; keep the caller's display form too.
 $dataRootNormalized = ($DataRoot -replace '\\', '/')
@@ -201,6 +207,21 @@ switch ($Action) {
         Initialize-DataRoot
 
         $already = (Get-ProjectContainersOnPort $ApiPort).Count -gt 0
+        if ($already -and $Services.Count -gt 0) {
+            # API 端口已在本项目上，不代表本次请求的服务都在跑（例如给已有独立栈
+            # 补起 embedding）。逐个核对请求的服务，缺了就继续 up（幂等）。
+            $psRows = @(& docker compose -p $Name $composeFiles ps --format '{{.Service}}|{{.State}}' 2>$null)
+            $stateByService = @{}
+            foreach ($row in $psRows) {
+                $cols = $row -split '\|'
+                if ($cols.Count -ge 2) { $stateByService[$cols[0]] = $cols[1] }
+            }
+            $missing = @($Services | Where-Object { $stateByService[$_] -ne 'running' })
+            if ($missing.Count -gt 0) {
+                Write-Host "[stack] starting missing service(s) on existing project '$Name': $($missing -join ',')"
+                $already = $false
+            }
+        }
         if ($already) {
             Write-Host "[stack] project '$Name' already publishes api port $ApiPort; skipping compose up."
         } else {

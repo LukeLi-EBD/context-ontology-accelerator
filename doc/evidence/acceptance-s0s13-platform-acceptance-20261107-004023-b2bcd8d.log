@@ -1,0 +1,34 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261107004023
+Username: UVSFUJSA\cpslau
+RunAs User: UVSFUJSA\cpslau
+Configuration Name: 
+Machine: UVSFUJSA (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\acceptance.ps1
+Process ID: 74264
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+S0-S13 acceptance start ts=20261107-004023 git=b2bcd8d project=platform-acceptance api=http://127.0.0.1:8082 pg=5433 reasoner=7882 data=D:\agentABC\data-acceptance evidence_file=D:\agentABC\coa\doc\evidence\acceptance-s0s13-platform-acceptance-20261107-004023-b2bcd8d.log
+heavy_lock=busy owner=SIMULATED\other-session#999 purpose=simulated concurrent smoke
+[FAIL] E_BUILD_CONFLICT: heavy.lock 被其他任务持有，验收已在任何检查/smoke 之前中止。
+  holder.owner=SIMULATED\other-session#999
+  holder.pid=999 host=UVSFUJSA
+  holder.purpose=simulated concurrent smoke
+  holder.started_at=2026-11-06T16:40:22.7682409Z heartbeat_at=2026-11-06T16:40:22.7682409Z age=0min
+  lock_file=D:\agentABC\coa\platform\.lock\platform-acceptance.heavy.lock
+  处理: 等 holder 结束；若确认其已退出，执行
+        powershell -ExecutionPolicy Bypass -File scripts\compose-guard.ps1 release -Owner 'SIMULATED\other-session#999'
+        然后复核: powershell -ExecutionPolicy Bypass -File scripts\compose-guard.ps1 check
+  不要使用 compose up -d / restart 绕过。
+**********************
+Windows PowerShell transcript end
+End time: 20261107004024
+**********************

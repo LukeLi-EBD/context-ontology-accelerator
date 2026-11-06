@@ -1,0 +1,7 @@
+# 独立验收栈专用 override：只把 BGE-M3 模型目录（只读静态资产）挂进 embedding。
+# 这是唯一跨栈复用的文件系统内容：模型不随运行变化，且以 :ro 挂载；数据库、图库、
+# 对象存储、指针仍各自独立。ACCEPTANCE_MODELS_DIR 由 scripts/acceptance-stack.ps1 注入。
+services:
+  embedding:
+    volumes:
+      - ${ACCEPTANCE_MODELS_DIR:-D:/agentABC/data/models}:/data/models:ro

@@ -2615,6 +2615,9 @@ class OntologyRegistry:
         # input: which graphs, how many triples each, the total, and a hash.
         # Missing input is stated explicitly (aboxGraphs: [] + emptyAbox: true)
         # instead of being hidden by defaults.
+        # ``verdict`` must not claim a pass on an empty A-Box: an empty input can
+        # never falsify consistency, so the gate reports ``not_applicable`` while
+        # keeping the reasoner's raw ``consistent`` answer for the record.
         abox = b""
         abox_graphs: list[str] = list(self._abox_graphs) if include_abox else []
         abox_graph_triples: dict[str, int] = {}
@@ -2674,7 +2677,25 @@ class OntologyRegistry:
                 provider_code="E_ONTOLOGY_INCONSISTENT",
                 details={"profile": self._reason_profile, "input": evidence},
             )
-        return {"consistent": True, "profile": self._reason_profile, **evidence}
+        checked = not evidence["emptyAbox"]
+        if checked:
+            empty_reason = None
+        elif abox_unavailable:
+            empty_reason = "configured A-Box graphs are unreadable"
+        elif not abox_graphs:
+            empty_reason = "no A-Box graphs configured"
+        else:
+            empty_reason = "configured A-Box graphs hold no triples"
+        return {
+            "consistent": True,
+            "profile": self._reason_profile,
+            # No A-Box means consistency was not actually exercised; never report
+            # that as a pass in the gate result or the evidence pack.
+            "verdict": "pass" if checked else "not_applicable",
+            "checked": checked,
+            "emptyAboxReason": empty_reason,
+            **evidence,
+        }
 
     def publish(
         self,

@@ -1,0 +1,32 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261107003732
+Username: UVSFUJSA\cpslau
+RunAs User: UVSFUJSA\cpslau
+Configuration Name: 
+Machine: UVSFUJSA (Microsoft Windows NT 10.0.19045.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\acceptance-s14.ps1
+Process ID: 32308
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+S14 acceptance start ts=20261107-003732 git=b2bcd8d image=agent-platform:0.1-s5 network=_default api=http://127.0.0.1:8082
+evidence_file=D:\agentABC\coa\doc\evidence\acceptance-s14--20261107-003732-b2bcd8d.log excludes=
+readyz=200 network=_default image=agent-platform:0.1-s5
+acquired owner=UVSFUJSA\cpslau#32308 pid=32308 host=UVSFUJSA purpose=S14 acceptance (full unittest tree, )
+docker: Error response from daemon: failed to set up container networking: network _default not found
+
+Run 'docker run --help' for more information
+released owner=UVSFUJSA\cpslau#32308
+S14 ACCEPTANCE discovered_total=0 excluded=0 discovered=0 executed=0 passed=0 failed=1 skipped=0 exit=2 note=runner_protocol_missing
+evidence=D:\agentABC\coa\doc\evidence\acceptance-s14--20261107-003732-b2bcd8d.log
+**********************
+Windows PowerShell transcript end
+End time: 20261107003732
+**********************

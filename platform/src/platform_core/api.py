@@ -1665,6 +1665,12 @@ def _governance_publish_dry_run(
                 "ok": True,
                 "consistent": consistency.get("consistent", True),
                 "profile": consistency.get("profile"),
+                # No A-Box input means consistency was never exercised: expose the
+                # honest verdict instead of letting the console render a pass.
+                "verdict": consistency.get("verdict", "pass"),
+                "checked": consistency.get("checked", True),
+                "emptyAbox": consistency.get("emptyAbox"),
+                "emptyAboxReason": consistency.get("emptyAboxReason"),
             }
         except PortError as exc:
             result["gates"]["consistency"] = {
