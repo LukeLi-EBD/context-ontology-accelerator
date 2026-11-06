@@ -438,6 +438,43 @@ def _build_parser() -> argparse.ArgumentParser:
         help="fixture flag written to every row (must match --data-source)",
     )
 
+    datagen = sub.add_parser(
+        "datagen",
+        help="generate schema-driven synthetic fact data and verify it",
+    )
+    datagen.add_argument("--config", default="/data/platform.yaml")
+    datagen.add_argument("--seed", type=int, default=42)
+    datagen.add_argument("--scale", type=float, default=1.0)
+    datagen.add_argument(
+        "--schema",
+        default="platform",
+        help="write target: platform (requires datagen.allow_official_schema) or synthetic",
+    )
+    datagen.add_argument("--rows-per-table", dest="rows_per_table", type=int, default=1000)
+    datagen.add_argument(
+        "--clean",
+        action="store_true",
+        help="delete existing data_source='synthetic' rows before generating",
+    )
+    datagen.add_argument(
+        "--clean-only",
+        dest="clean_only",
+        action="store_true",
+        help="delete synthetic rows and stop; never touches fixture/business rows",
+    )
+    datagen.add_argument("--dry-run", dest="dry_run", action="store_true")
+    datagen.add_argument(
+        "--verify",
+        action="store_true",
+        help="run FK/time/money/coverage checks and the fixed 30-metric e2e set",
+    )
+    datagen.add_argument(
+        "--skip-repro",
+        dest="skip_repro",
+        action="store_true",
+        help="skip the second seed-identical generation used for reproducibility proof",
+    )
+
     smoke = sub.add_parser("smoke", help="run the S0 acceptance smoke suite")
     smoke.add_argument("--config", default="/data/platform.yaml")
     smoke.add_argument("--base-url", default="http://127.0.0.1:8080")
@@ -554,6 +591,7 @@ def main(argv: list[str] | None = None) -> int:
         "bench-embed",
         "graph-count",
         "metrics",
+        "datagen",
     ):
         runtime = assemble(bundle)
         try:
@@ -733,6 +771,38 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                 return EXIT_OK if result.get("ok") else 1
+            if args.command == "datagen":
+                from .datagen import clean_only, run_datagen
+
+                allow_official = bool(bundle.config.datagen.allow_official_schema)
+                if args.clean_only:
+                    result = clean_only(
+                        runtime.metadata,
+                        target_schema=args.schema,
+                        allow_official=allow_official,
+                    )
+                    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                    return EXIT_OK
+                if args.verify and args.schema != "platform":
+                    print(
+                        "datagen --verify only runs against the platform schema",
+                        file=sys.stderr,
+                    )
+                    return EXIT_USAGE
+                result = run_datagen(
+                    runtime.metadata,
+                    seed=args.seed,
+                    scale=args.scale,
+                    target_schema=args.schema,
+                    allow_official=allow_official,
+                    rows_per_table=args.rows_per_table,
+                    clean=args.clean,
+                    dry_run=args.dry_run,
+                    verify=args.verify,
+                    check_repro=not args.skip_repro,
+                )
+                print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                return EXIT_OK if result.get("status") in ("completed", "dry-run") else 1
             if args.command == "facts-export":
                 from .fact_export import export_meta, write_export
 

@@ -263,6 +263,18 @@ class LogConfig(_Strict):
     format: Literal["json", "text"] = "json"
 
 
+class DatagenConfig(_Strict):
+    """Synthetic-data generator safety switch.
+
+    Writing to the official ``platform`` schema is allowed only in explicitly
+    designated test environments. The default (false) keeps the generator in
+    the isolated ``synthetic`` schema. Turning this back to false is the
+    pre-production isolation gate.
+    """
+
+    allow_official_schema: bool = False
+
+
 class PlatformConfig(_Strict):
     mode: Literal["dev", "single", "test"] = "single"
     config_version: int = 1
@@ -283,6 +295,7 @@ class PlatformConfig(_Strict):
     search: SearchConfig = Field(default_factory=SearchConfig)
     context: ContextConfig = Field(default_factory=ContextConfig)
     extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
+    datagen: DatagenConfig = Field(default_factory=DatagenConfig)
     jobs: dict[str, Any] = Field(default_factory=dict)
     server: dict[str, Any] = Field(default_factory=dict)
     requirements: dict[str, list[str]] = Field(
