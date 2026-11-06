@@ -32,6 +32,7 @@ from platform_core.sqlsplit import split_sql_statements
 CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
 SQL_NAME = "V21__metric_definition_v5.sql"
 SQL_NAME_V22 = "V22__fact_model_v6.sql"
+SQL_NAME_V30 = "V30__metric_decisions_v9.sql"
 
 FAMILY_IDS = ("FIN-INS-022", "FIN-INS-023", "FIN-BANK-036")
 VARIANT_IDS = (
@@ -85,6 +86,9 @@ class MetricDefinitionV5Test(unittest.TestCase):
         cls.sql_v22 = files("platform_core").joinpath(f"sql/{SQL_NAME_V22}").read_text(
             encoding="utf-8"
         )
+        cls.sql_v30 = files("platform_core").joinpath(f"sql/{SQL_NAME_V30}").read_text(
+            encoding="utf-8"
+        )
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -94,9 +98,13 @@ class MetricDefinitionV5Test(unittest.TestCase):
 
     def _apply_v21(self, times: int = 1) -> None:
         # Replaying a migration means V21 then V22, in order: V22 sits on top
-        # (rule specs, projection bindings) and must survive the replay.
-        statements = split_sql_statements(self.sql) + split_sql_statements(
-            self.sql_v22
+        # (rule specs, projection bindings) and must survive the replay. V30
+        # closes the chain so the shared database keeps the v9 final ruling
+        # instead of being left at the v8/v6 state.
+        statements = (
+            split_sql_statements(self.sql)
+            + split_sql_statements(self.sql_v22)
+            + split_sql_statements(self.sql_v30)
         )
         for _ in range(times):
             with self.meta.tx() as tx:
@@ -203,7 +211,8 @@ class MetricDefinitionV5Test(unittest.TestCase):
             self.assertEqual(card["variantOf"], family, metric_id)
             self.assertEqual(card["outputMode"], "value", metric_id)
             self.assertEqual(card["effectiveDate"], "2026-11-06", metric_id)
-            self.assertFalse(card["publishable"], metric_id)
+            released = metric_id.endswith("-v1")
+            self.assertEqual(card["publishable"], released, metric_id)
             self.assertTrue(card["inference"], metric_id)
             self.assertEqual(card["evidenceBasis"], "industry", metric_id)
             self.assertEqual(card["source"], "INDUSTRY", metric_id)
@@ -213,6 +222,9 @@ class MetricDefinitionV5Test(unittest.TestCase):
             self.assertTrue(self._row(metric_id)["formula_text"], metric_id)
             self.assertTrue(self._row(metric_id)["denominator_text"], metric_id)
 
+            if released:
+                self.assertEqual(self.metrics.output(metric_id)["metricId"], metric_id)
+                continue
             with self.assertRaises(PortError) as caught:
                 self.metrics.output(metric_id)
             self.assertEqual(

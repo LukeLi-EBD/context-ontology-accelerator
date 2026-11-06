@@ -124,7 +124,7 @@ class MetricComputeTest(unittest.TestCase):
 
     def test_not_publishable(self) -> None:
         exc = self._code(
-            self.metrics.compute, metric_id="FIN-INS-003", as_of=date(2025, 12, 31),
+            self.metrics.compute, metric_id="CUST-007", as_of=date(2025, 12, 31),
         )
         self.assertEqual(exc.provider_code, "E_METRIC_NOT_PUBLISHABLE")
 

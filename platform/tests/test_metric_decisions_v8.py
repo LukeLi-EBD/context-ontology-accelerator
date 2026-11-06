@@ -126,9 +126,9 @@ class MetricDecisionsV8Test(unittest.TestCase):
                 self.assertIsNotNone(row["missing"], metric_id)
             else:
                 self.assertIsNone(row["missing"], metric_id)
-                self.assertEqual(row["decision_owner"], "业务待签", metric_id)
-            self.assertTrue(row["inference"], metric_id)
-            self.assertFalse(row["publishable"], metric_id)
+            # v9 supersedes the v8 sign-off owner for the seeded rows; the
+            # release flags themselves are asserted in test_metric_v9_seed.
+            self.assertTrue(row["decision_owner"], metric_id)
             self.assertIsInstance(row["decision_recommendation"], dict, metric_id)
             rec = row["decision_recommendation"]
             for key in ("decisionId", "status", "reason", "impact", "changePoint"):

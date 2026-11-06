@@ -1650,7 +1650,9 @@ def verify_metrics(meta: MetadataPg) -> dict[str, Any]:
         d = _metric_definition(meta, metric_id)
         probe = dict(PROBES.get(metric_id) or {})
         if d["window_kind"] == "instant" or ("as_of" in probe and "start" not in probe):
-            as_of = probe.get("as_of")
+            # v9 releases instant metrics that v8 refused before probing; they need
+            # an explicit as-of date, so fall back to the shared default snapshot.
+            as_of = probe.get("as_of") or DEFAULT_PROBE["as_of"]
             probe.update(start=as_of, end=None, as_of=as_of)
         elif probe:
             probe.setdefault("start", "2025-01-01")

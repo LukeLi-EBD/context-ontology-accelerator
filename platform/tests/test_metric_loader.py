@@ -24,7 +24,7 @@ FIX = Path(__file__).resolve().parent / "fixtures" / "metrics"
 DPD = "FIN-BANK-001"
 CONCENTRATION = "FIN-BANK-025"
 CONTINUATION = "FIN-INS-021"
-UNPUBLISHABLE = "FIN-INS-003"
+UNPUBLISHABLE = "CUST-001"
 
 
 class MetricLoaderTest(unittest.TestCase):

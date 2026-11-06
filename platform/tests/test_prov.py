@@ -57,8 +57,8 @@ class ProvDatabaseTest(unittest.TestCase):
             METRIC, actor="operator:test-prov", reason="b02-positive"
         )
         self.assertEqual(first["kind"], "decision")
-        self.assertFalse(first["conclusion"]["publishable"])
-        self.assertTrue(first["conclusion"]["inference"])
+        self.assertTrue(first["conclusion"]["publishable"])
+        self.assertFalse(first["conclusion"]["inference"])
         recommendation = first["conclusion"]["decisionRecommendation"]
         self.assertEqual(recommendation["recommendation"]["formulaExpr"], "band(dpd, 30, 6)")
         self.assertEqual(recommendation["status"], "recommended_pending_business_signoff")

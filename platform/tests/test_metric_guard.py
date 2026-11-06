@@ -38,43 +38,41 @@ class MetricGuardTest(unittest.TestCase):
             self.metrics.output(metric_id, internal=internal)
         return caught.exception
 
-    def test_bank020_no_source_is_rejected(self) -> None:
-        exc = self._rejected("FIN-BANK-020")
-        self.assertEqual(exc.provider_code, "E_METRIC_NOT_PUBLISHABLE")
-        self.assertEqual(exc.code, "PermissionDenied")
-        self.assertEqual(exc.details["missing"], "source")
-
-    def test_bank031_v5_industry_denominator_is_internal_only(self) -> None:
-        # v5 closed the no-source denominator: basis none -> industry, so an
-        # internal read is allowed, but external release still is not.
-        card = self.metrics.output("FIN-BANK-031", internal=True)
+    def test_bank020_is_released_without_regulatory_source(self) -> None:
+        # v9 releases the v8 "no source" rows as internal industry baselines.
+        card = self.metrics.output("FIN-BANK-020")
         self.assertEqual(card["source"], "INDUSTRY")
         self.assertTrue(card["inference"])
         self.assertEqual(card["evidenceBasis"], "industry")
-        self.assertFalse(card["publishable"])
+        self.assertTrue(card["publishable"])
+
+    def test_bank031_v5_industry_denominator_is_internal_only(self) -> None:
+        # v9 moved the denominator to industry and released the metric as an
+        # industry baseline; it is still marked inference and never regulatory.
+        card = self.metrics.output("FIN-BANK-031")
+        self.assertEqual(card["source"], "INDUSTRY")
+        self.assertTrue(card["inference"])
+        self.assertEqual(card["evidenceBasis"], "industry")
+        self.assertTrue(card["publishable"])
         self.assertEqual(card["effectiveDate"], "2026-11-06")
         self.assertIsNone(card["variantOf"])
         self.assertIsNone(card["ruleSet"])
 
-    def test_bank031_no_source_is_rejected_externally(self) -> None:
-        exc = self._rejected("FIN-BANK-031")
-        self.assertEqual(exc.provider_code, "E_METRIC_NOT_PUBLISHABLE")
-        self.assertEqual(exc.details["missing"], "regulatory_source")
-
     def test_ins003_industry_output_is_marked(self) -> None:
         card = self.metrics.output("FIN-INS-003", internal=True)
         self.assertEqual(card["source"], "INDUSTRY")
-        self.assertTrue(card["inference"])
+        self.assertFalse(card["inference"])
         self.assertEqual(card["evidenceBasis"], "industry")
         self.assertEqual(card["evidenceStatus"], "EVIDENCE_MISSING")
-        self.assertFalse(card["publishable"])
+        self.assertTrue(card["publishable"])
 
     def test_cust009_industry_output_is_marked(self) -> None:
         card = self.metrics.output("CUST-009", internal=True)
         self.assertEqual(card["source"], "INDUSTRY")
-        self.assertTrue(card["inference"])
+        self.assertFalse(card["inference"])
         self.assertEqual(card["evidenceBasis"], "industry")
         self.assertEqual(card["evidenceStatus"], "EVIDENCE_MISSING")
+        self.assertTrue(card["publishable"])
 
     def test_bank001_regulatory_output_is_unchanged(self) -> None:
         card = self.metrics.output("FIN-BANK-001")
