@@ -98,11 +98,24 @@ class FakeMetadata:
 
     def query(self, sql, params=()):
         self.calls.append((sql, params))
-        return list(self.rows)
+        rows = list(self.rows)
+        if "WHERE metric_id = %s" in sql:
+            rows = [row for row in rows if row["metric_id"] == params[0]]
+        return rows
 
 
-def _client(rows=ROWS):
+class FakeProv:
+    def __init__(self, count=0):
+        self.count = count
+
+    def decision_history(self, metric_id, limit=20):
+        return {"metricId": metric_id, "count": self.count, "items": []}
+
+
+def _client(rows=ROWS, prov=None):
     runtime = SimpleNamespace(metadata=FakeMetadata(rows))
+    if prov is not None:
+        runtime.prov = prov
     return TestClient(api_module.create_app(runtime, []))
 
 
@@ -423,6 +436,61 @@ class FamilyTests(unittest.TestCase):
         for variant in family["variants"]:
             self.assertEqual(variant["internalNotice"], "内部基线、不外报")
             self.assertFalse(variant["externalEligible"])
+
+
+class CardTests(unittest.TestCase):
+    def test_1_main_metric_has_built_card_with_clickable_chain(self):
+        with _client(FAMILY_ROWS) as client:
+            payload = client.get("/browse/metrics/FIN-BANK-001/card").json()
+        self.assertTrue(payload["cardExists"])
+        self.assertEqual(payload["cardStateLabel"], "已建卡")
+        self.assertTrue(payload["docPath"].endswith("FIN-BANK-001.md"))
+        section_keys = [section["key"] for section in payload["sections"]]
+        self.assertEqual(
+            section_keys,
+            ["definition", "formula", "denominator", "window", "grain",
+             "evidence", "pipeline", "gap"],
+        )
+        badge_keys = [badge["key"] for badge in payload["badges"]]
+        self.assertEqual(
+            badge_keys, ["evidence", "publishable", "external", "computability"]
+        )
+        self.assertIn("/prov/decisions?metricId=FIN-BANK-001", payload["prov"]["decisionsUrl"])
+        self.assertEqual(payload["prov"]["graph"], "urn:platform:prov")
+        self.assertIn("/metrics/FIN-BANK-001/output", payload["links"]["output"])
+        self.assertIn("运行时可无 PROV", payload["prov"]["decisionLabel"])
+
+    def test_2_variant_without_card_shows_not_built(self):
+        with _client(FAMILY_ROWS) as client:
+            payload = client.get("/browse/metrics/FIN-BANK-036-v1/card").json()
+        self.assertFalse(payload["cardExists"])
+        self.assertEqual(payload["cardState"], "not_built")
+        self.assertIn("未建卡", payload["cardStateLabel"])
+        self.assertIsNone(payload["docPath"])
+        self.assertEqual(payload["card"]["variantOf"], "FIN-BANK-036")
+
+    def test_3_industry_card_carries_internal_notice_badge(self):
+        with _client(FAMILY_ROWS) as client:
+            payload = client.get("/browse/metrics/FIN-BANK-036-v1/card").json()
+        evidence_badge = [badge for badge in payload["badges"] if badge["key"] == "evidence"][0]
+        self.assertIn("内部基线、不外报", evidence_badge["label"])
+        self.assertEqual(evidence_badge["tone"], "warn")
+        evidence_section = [s for s in payload["sections"] if s["key"] == "evidence"][0]
+        self.assertIn("内部基线、不外报", evidence_section["text"])
+
+    def test_4_prov_decision_badge_reflects_runtime(self):
+        with _client(FAMILY_ROWS, prov=FakeProv(count=3)) as client:
+            payload = client.get("/browse/metrics/FIN-BANK-001/card").json()
+        self.assertEqual(payload["prov"]["decisionCount"], 3)
+        self.assertEqual(payload["prov"]["decisionLabel"], "PROV 判定 3 条")
+        prov_badge = [badge for badge in payload["badges"] if badge["key"] == "prov"][0]
+        self.assertEqual(prov_badge["tone"], "ok")
+
+    def test_5_unknown_metric_card_is_typed_404(self):
+        with _client(FAMILY_ROWS) as client:
+            response = client.get("/browse/metrics/NOPE-404/card")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"]["providerCode"], "E_METRIC_NOT_FOUND")
 
 
 if __name__ == "__main__":

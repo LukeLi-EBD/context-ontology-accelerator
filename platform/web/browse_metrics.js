@@ -7,7 +7,9 @@
   var G3 = {
     selectedMetricId: null,
     familyCache: { items: null, promise: null },
+    manifestCache: { byId: null, meta: null, promise: null },
     detailTimers: {},
+    rowObserver: null,
     injected: false
   };
 
@@ -55,7 +57,11 @@
       '.g3-variants tr.selected{background:#ebf8ff}',
       '.g3-variants td.g3-mono{font-family:monospace}',
       '.g3-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}',
-      '.g3-link{font-size:12px}'
+      '.g3-link{font-size:12px;margin-right:10px}',
+      '.g3-field{display:flex;gap:8px;font-size:12px;margin:3px 0}',
+      '.g3-field-name{min-width:64px;color:#4a5568;flex:0 0 auto}',
+      '.g3-field-value{white-space:pre-wrap;word-break:break-word}',
+      '.g3-card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}'
     ].join('\n');
     document.head.appendChild(style);
   }
@@ -85,10 +91,225 @@
     })[0] || null;
   }
 
-  function clearG3(box) {
-    Array.prototype.slice.call(box.querySelectorAll('[data-g3]')).forEach(function (node) {
+  function manifestIndex() {
+    if (G3.manifestCache.byId) { return Promise.resolve(G3.manifestCache.byId); }
+    if (!G3.manifestCache.promise) {
+      G3.manifestCache.promise = getJson(window.BrowseUrls.manifest('all'))
+        .then(function (data) {
+          var byId = {};
+          (data.items || []).forEach(function (item) { byId[item.metricId] = item; });
+          G3.manifestCache.byId = byId;
+          G3.manifestCache.meta = data.meta || {};
+          return byId;
+        })
+        .catch(function (err) {
+          G3.manifestCache.promise = null;
+          throw err;
+        });
+    }
+    return G3.manifestCache.promise;
+  }
+
+  function badge(text, tone) {
+    var span = document.createElement('span');
+    span.className = 'g3-badge ' + (tone || 'muted');
+    span.textContent = text;
+    return span;
+  }
+
+  function link(href, text, title, sameTab) {
+    var anchor = document.createElement('a');
+    anchor.className = 'g3-link';
+    anchor.href = href;
+    anchor.textContent = text;
+    if (title) { anchor.title = title; }
+    if (!sameTab) {
+      anchor.target = '_blank';
+      anchor.rel = 'noopener';
+    }
+    return anchor;
+  }
+
+  function externalTone(status) {
+    if (status === 'external_candidate') { return 'ok'; }
+    if (status === 'internal_baseline') { return 'warn'; }
+    return 'bad';
+  }
+
+  function tableCell(text, tone) {
+    var td = document.createElement('td');
+    if (tone) {
+      td.appendChild(badge(text, tone));
+    } else {
+      td.textContent = text;
+    }
+    return td;
+  }
+
+  function ensureHeader(table) {
+    if (!table || !table.tHead || !table.tHead.rows.length) { return; }
+    if (table.getAttribute('data-g3-header') === '1') { return; }
+    var headRow = table.tHead.rows[0];
+    ['口径卡', '可算性', '对外状态'].forEach(function (label) {
+      var th = document.createElement('th');
+      th.textContent = label;
+      headRow.appendChild(th);
+    });
+    table.setAttribute('data-g3-header', '1');
+  }
+
+  function enhanceRows(table, byId) {
+    if (!table) { return; }
+    var tbody = table.querySelector('tbody');
+    if (!tbody) { return; }
+    Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function (row) {
+      if (row.getAttribute('data-g3-row') === '1') { return; }
+      if (!row.cells || !row.cells[0]) { return; }
+      var metricId = row.cells[0].textContent.trim();
+      var item = byId[metricId];
+      if (!item) { return; }
+      row.appendChild(tableCell(
+        item.variantOf ? '未建卡' : '已建卡',
+        item.variantOf ? 'warn' : 'ok'
+      ));
+      row.appendChild(tableCell(
+        item.computabilityLabel,
+        item.computabilityTone || 'muted'
+      ));
+      row.appendChild(tableCell(
+        item.externalLabel,
+        externalTone(item.externalStatus)
+      ));
+      row.setAttribute('data-g3-row', '1');
+    });
+  }
+
+  function startRowObserver() {
+    var table = el('metrics-table');
+    if (!table) { return; }
+    manifestIndex().then(function (byId) {
+      ensureHeader(table);
+      enhanceRows(table, byId);
+      if (G3.rowObserver || !window.MutationObserver) { return; }
+      var tbody = table.querySelector('tbody');
+      if (!tbody) { return; }
+      G3.rowObserver = new MutationObserver(function () {
+        manifestIndex()
+          .then(function (map) {
+            ensureHeader(table);
+            enhanceRows(table, map);
+          })
+          .catch(function () { /* 清单不可用时保持 browse.js 原表 */ });
+      });
+      G3.rowObserver.observe(tbody, { childList: true });
+    }).catch(function () { /* 清单不可用时保持 browse.js 原表 */ });
+  }
+
+  function clearG3(box, scope) {
+    Array.prototype.slice.call(
+      box.querySelectorAll(scope ? '[data-g3="' + scope + '"]' : '[data-g3]')
+    ).forEach(function (node) {
       node.parentNode.removeChild(node);
     });
+  }
+
+  function renderCardBox(box, card) {
+    clearG3(box, 'card');
+    var wrap = document.createElement('div');
+    wrap.className = 'g3-box';
+    wrap.setAttribute('data-g3', 'card');
+
+    var head = document.createElement('div');
+    head.className = 'g3-card-head';
+    var title = document.createElement('h4');
+    title.textContent = '口径卡 · ' + card.metricId;
+    head.appendChild(title);
+    head.appendChild(badge(
+      card.cardStateLabel,
+      card.cardExists ? 'ok' : 'warn'
+    ));
+    wrap.appendChild(head);
+
+    if (!card.cardExists) {
+      var notBuilt = document.createElement('div');
+      notBuilt.className = 'g3-warn';
+      notBuilt.textContent = '未建卡：该指标为族变体，没有独立口径卡；'
+        + '请先在族索引中选择变体并回填 metric_id。以下展示的是库内口径字段，不是独立卡。';
+      wrap.appendChild(notBuilt);
+    } else if (card.docPath) {
+      var source = document.createElement('div');
+      source.className = 'g3-note';
+      source.textContent = '卡源：' + card.docPath;
+      wrap.appendChild(source);
+    }
+
+    var badges = document.createElement('div');
+    badges.className = 'g3-badges';
+    (card.badges || []).forEach(function (item) {
+      badges.appendChild(badge(item.label, item.tone));
+    });
+    wrap.appendChild(badges);
+
+    (card.sections || []).forEach(function (section) {
+      var row = document.createElement('div');
+      row.className = 'g3-field';
+      var name = document.createElement('span');
+      name.className = 'g3-field-name';
+      name.textContent = section.title;
+      var value = document.createElement('span');
+      value.className = 'g3-field-value';
+      value.textContent = section.text;
+      if (section.key === 'formula') {
+        value.appendChild(document.createTextNode(' '));
+        value.appendChild(link(
+          card.links.output,
+          '查看输出端点',
+          '/metrics/' + card.metricId + '/output（后端可能返回 E_METRIC_VARIANT_REQUIRED 等结构化错误）'
+        ));
+      }
+      if (section.key === 'evidence') {
+        value.appendChild(document.createTextNode(' '));
+        value.appendChild(link(
+          card.links.detailApi,
+          '查看证据详情',
+          '只读 /browse/metrics/' + card.metricId
+        ));
+      }
+      row.appendChild(name);
+      row.appendChild(value);
+      wrap.appendChild(row);
+    });
+
+    var provWrap = document.createElement('div');
+    provWrap.className = 'g3-box';
+    var provTitle = document.createElement('h4');
+    provTitle.textContent = 'PROV 判定链';
+    provWrap.appendChild(provTitle);
+    var provNote = document.createElement('div');
+    provNote.className = 'g3-note';
+    provNote.textContent = card.prov.decisionLabel
+      + ' · 图 ' + card.prov.graph;
+    provWrap.appendChild(provNote);
+    var provLinks = document.createElement('div');
+    provLinks.className = 'g3-actions';
+    provLinks.appendChild(link(
+      card.prov.decisionsUrl,
+      'PROV 判定记录'
+        + (card.prov.decisionCount == null ? '' : '（' + card.prov.decisionCount + '）'),
+      '只读 /prov/decisions'
+    ));
+    provLinks.appendChild(link(card.prov.verifyUrl, 'PROV 图校验', '只读 /prov/verify'));
+    // 跨 tab 跳转：URL 由 BrowseUrls 集中生成（R-04 约定未定，见 browse_urls.js TODO）。
+    provLinks.appendChild(link(
+      window.BrowseUrls.provTriplesTab(),
+      '在三元组 tab 查看 PROV 图',
+      '跨 tab 跳转占位约定',
+      true
+    ));
+    provWrap.appendChild(provLinks);
+    wrap.appendChild(provWrap);
+
+    box.appendChild(wrap);
   }
 
   function selectVariant(family, metricId) {
@@ -117,7 +338,7 @@
   }
 
   function renderFamilyBox(box, family, selectedId) {
-    clearG3(box);
+    clearG3(box, 'family');
     var wrap = document.createElement('div');
     wrap.className = 'g3-box';
     wrap.setAttribute('data-g3', 'family');
@@ -225,6 +446,14 @@
   }
 
   function enhanceDetail(box, metricId) {
+    clearG3(box);
+    getJson(window.BrowseUrls.metricCard(metricId)).then(function (card) {
+      var title = box.querySelector('h3');
+      if (title && title.textContent.indexOf(metricId + ' · ') === 0) {
+        renderCardBox(box, card);
+      }
+    }).catch(function () { /* 卡不可用不影响既有详情 */ });
+
     familyIndex().then(function (families) {
       var family = familyFor(families, metricId);
       if (family && family.variants && family.variants.length) {
@@ -235,6 +464,7 @@
 
   function wire() {
     injectStyle();
+    startRowObserver();
 
     document.addEventListener('click', function (event) {
       var target = event.target;
@@ -244,17 +474,19 @@
       if (metricId) { watchDetail(metricId); }
     }, true);
 
+    // 深链占位约定：browse.html?tab=<view>&metric=<metricId>（R-04 未定，见 browse_urls.js）。
     var params = new URLSearchParams(window.location.search);
     var tab = params.get(window.BrowseUrls.VIEW_PARAM);
     var metricId = params.get(window.BrowseUrls.METRIC_PARAM);
-    if (tab === 'metrics' || metricId) {
-      var tabButton = document.querySelector('.tab[data-view="metrics"]');
-      if (tabButton && !document.querySelector('#view-metrics').hidden) {
-        if (metricId) { watchDetail(metricId); }
-      } else if (tabButton) {
-        tabButton.click();
-      }
-      if (metricId && !findMetricRow(metricId)) {
+    var desired = metricId ? 'metrics' : tab;
+    if (desired && /^[a-z-]+$/.test(desired)) {
+      var tabButton = document.querySelector('.tab[data-view="' + desired + '"]');
+      var view = el('view-' + desired);
+      if (tabButton && view && view.hidden) { tabButton.click(); }
+    }
+    if (metricId) {
+      watchDetail(metricId);
+      if (!findMetricRow(metricId)) {
         var tries = 0;
         var timer = setInterval(function () {
           tries += 1;

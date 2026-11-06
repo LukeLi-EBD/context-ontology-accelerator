@@ -4027,6 +4027,163 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             details={"familyId": family_id},
         )
 
+    # M-04: 口径卡可视化 + PROV 判定徽标。
+    # 79 张主卡 = variant_of IS NULL 的行（与 doc/_fsldm/01-指标卡 的 79 个文件逐一对应）；
+    # 6 条族变体没有独立卡，明确显示“未建卡”，不伪造卡内容。
+
+    _G3_CARD_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit, effective_date,
+               variant_of, output_mode, provenance_label, computability_tier,
+               definition, denominator_text
+          FROM platform.metric_definition
+         WHERE metric_id = %s
+    """
+
+    def _g3_tone_for_external(status: str) -> str:
+        if status == "external_candidate":
+            return "ok"
+        if status == "internal_baseline":
+            return "warn"
+        return "bad"
+
+    @app.get("/browse/metrics/{metric_id}/card")
+    def browse_metric_card(metric_id: str) -> dict[str, Any]:
+        rows = runtime.metadata.query(_G3_CARD_SQL, (metric_id,))
+        if not rows:
+            raise PortError(
+                code="NotFound",
+                message=f"metric not found: {metric_id}",
+                provider="platform",
+                provider_code="E_METRIC_NOT_FOUND",
+                details={"metricId": metric_id},
+            )
+        row = rows[0]
+        base = _g3_metric_row(row)
+        evidence = _g3_evidence(row)
+        card_exists = row.get("variant_of") is None
+        if card_exists:
+            card_state = "built"
+            card_state_label = "已建卡"
+            doc_path = f"doc/_fsldm/01-指标卡/{metric_id}.md"
+        else:
+            card_state = "not_built"
+            card_state_label = "未建卡（族变体，无独立口径卡）"
+            doc_path = None
+
+        badges = [
+            {
+                "key": "evidence",
+                "label": evidence["basisLabel"]
+                + (f" · {_G3_INDUSTRY_NOTICE}" if evidence.get("notice") else ""),
+                "tone": (
+                    "ok" if evidence["code"] == "regulatory"
+                    else ("warn" if evidence["code"] == "industry" else "bad")
+                ),
+            },
+            {
+                "key": "publishable",
+                "label": "可发布（内部）" if base["publishable"] else "不可发布",
+                "tone": "ok" if base["publishable"] else "warn",
+            },
+            {
+                "key": "external",
+                "label": base["externalLabel"],
+                "tone": _g3_tone_for_external(base["externalStatus"]),
+            },
+            {
+                "key": "computability",
+                "label": base["computabilityLabel"],
+                "tone": base["computabilityTone"],
+            },
+        ]
+
+        decision_count = None
+        decision_label = "PROV 判定：运行时可无 PROV"
+        prov = getattr(runtime, "prov", None)
+        if prov is not None:
+            try:
+                history = prov.decision_history(metric_id, limit=20)
+                decision_count = int(history.get("count", 0))
+                decision_label = (
+                    f"PROV 判定 {decision_count} 条" if decision_count else "PROV 判定：无记录"
+                )
+                badges.append(
+                    {
+                        "key": "prov",
+                        "label": decision_label,
+                        "tone": "ok" if decision_count else "muted",
+                    }
+                )
+            except Exception as exc:  # PROV 不可用不应阻断口径卡
+                decision_label = f"PROV 判定不可用：{type(exc).__name__}"
+
+        sections = [
+            {"key": "definition", "title": "定义", "text": _g3_text(row.get("definition"))},
+            {"key": "formula", "title": "公式", "text": base["formula"]},
+            {
+                "key": "denominator",
+                "title": "分母",
+                "text": _g3_text(row.get("denominator_text") or row.get("denominator_agg")),
+            },
+            {"key": "window", "title": "观察期", "text": _g3_text(row.get("observation_period"))},
+            {"key": "grain", "title": "粒度", "text": _g3_text(row.get("granularity") or row.get("grain"))},
+            {
+                "key": "evidence",
+                "title": "证据",
+                "text": "｜".join(
+                    part for part in (
+                        evidence["basisLabel"],
+                        evidence["source"],
+                        _g3_text(row.get("evidence_status")),
+                        evidence.get("notice"),
+                    ) if part
+                ),
+            },
+            {"key": "pipeline", "title": "可算性", "text": base["computabilityLabel"]},
+            {"key": "gap", "title": "缺口", "text": base["gap"]},
+        ]
+
+        return {
+            "metricId": metric_id,
+            "cardExists": card_exists,
+            "cardState": card_state,
+            "cardStateLabel": card_state_label,
+            "cardSource": "platform.metric_definition",
+            "docPath": doc_path,
+            "card": {
+                "metricId": metric_id,
+                "nameZh": row.get("name_zh"),
+                "displayName": row.get("display_name"),
+                "domain": row.get("domain"),
+                "metricKind": row.get("metric_kind"),
+                "unit": row.get("unit"),
+                "definitionVersion": row.get("definition_version"),
+                "effectiveDate": row.get("effective_date"),
+                "variantOf": row.get("variant_of"),
+                "outputMode": row.get("output_mode"),
+                "note": row.get("note"),
+            },
+            "badges": badges,
+            "sections": sections,
+            "prov": {
+                "graph": "urn:platform:prov",
+                "decisionsUrl": f"/prov/decisions?metricId={metric_id}&limit=20",
+                "verifyUrl": "/prov/verify",
+                "decisionCount": decision_count,
+                "decisionLabel": decision_label,
+            },
+            "links": {
+                "detailApi": f"/browse/metrics/{metric_id}",
+                "output": f"/metrics/{metric_id}/output",
+                "manifest": "/metrics/report/manifest",
+                "families": "/metrics/report/families",
+            },
+            "source": "metric_definition + doc/_fsldm/01-指标卡",
+        }
+
     # --- end G3 ---
 
     return app
