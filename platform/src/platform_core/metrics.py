@@ -43,7 +43,11 @@ _DETAIL_COLUMNS = _COLUMNS + (
     "granularity, provenance_label, unit"
 )
 
-_AGGREGATES = {"sum", "max", "min", "avg"}
+_AGGREGATES = {"sum", "max", "min", "avg", "count", "count_distinct"}
+
+# metric_kind 只决定卡片分类；真正能否计算由 formula/window/aggregate 四元组决定。
+# band（分档标签）与 index/rule_set 仍由各自专用读取路径处理，不进数值直算。
+_DRIVABLE_KINDS = ("ratio", "duration", "sum", "count", "amount", "period_value")
 
 
 def _bad(metric_id: str, provider_code: str, message: str, missing: str | None = None) -> PortError:
@@ -62,6 +66,11 @@ def _bad(metric_id: str, provider_code: str, message: str, missing: str | None =
 def _agg(agg: str | None, column: str) -> str | None:
     if agg is None or agg.lower() not in _AGGREGATES:
         return None
+    # 观测行已经是“按实体/窗口”聚合后的分子、分母；这里是对观测做跨实体合成，
+    # 不能再套一遍原始聚合。count / count_distinct 在事实层已完成去重，跨实体
+    # 合成必须相加，否则会变成“对每实体计数的去重计数”。
+    if agg.lower() in ("sum", "count", "count_distinct"):
+        return f"SUM({column})"
     return f"{agg.upper()}({column})"
 
 
@@ -285,7 +294,7 @@ class MetricService:
             )
 
         kind = row["metric_kind"]
-        if kind not in ("ratio", "duration", "sum"):
+        if kind not in _DRIVABLE_KINDS:
             raise _bad(metric_id, DRIVABLE_CODE, "metric kind is not drivable", "metric_kind")
         if not row["formula_expr"] or not row["window_kind"] or not row["numerator_agg"]:
             raise _bad(
@@ -293,13 +302,18 @@ class MetricService:
                 "definition quartet is incomplete (formula/window/aggregate)",
                 "definition",
             )
+        needs_denominator = "denominator" in str(row["formula_expr"])
         numerator_sql = _agg(row["numerator_agg"], "numerator")
-        denominator_sql = _agg(row["denominator_agg"], "denominator") if kind == "ratio" else None
-        if numerator_sql is None or (kind == "ratio" and denominator_sql is None):
+        denominator_sql = (
+            _agg(row["denominator_agg"], "denominator")
+            if needs_denominator
+            else None
+        )
+        if numerator_sql is None or (needs_denominator and denominator_sql is None):
             raise _bad(
                 metric_id, EVIDENCE_CODE,
                 "definition quartet is incomplete (aggregate/denominator)",
-                "denominator" if kind == "ratio" else "numerator_agg",
+                "denominator" if needs_denominator else "numerator_agg",
             )
         if row["window_kind"] not in ("instant", "period"):
             raise _bad(metric_id, DRIVABLE_CODE, "unsupported window kind", "window_kind")
@@ -346,6 +360,7 @@ class MetricService:
         select = f"{numerator_sql} AS numerator_value, "
         select += f"{denominator_sql} AS denominator_value, " if denominator_sql else "NULL AS denominator_value, "
         select += "COUNT(*) AS sample_count, BOOL_OR(fixture) AS has_fixture, "
+        select += "MIN(data_source) AS data_source, "
         select += "MIN(window_start) AS window_start, MAX(window_end) AS window_end, "
         select += "MAX(computed_at) AS computed_at"
         rows = self._meta.query(
@@ -416,7 +431,7 @@ class MetricService:
             "source": "INDUSTRY" if row["evidence_basis"] == "industry" else "REGULATORY",
             "inference": row["inference"],
             "publishable": row["publishable"],
-            "dataSource": "fixture" if fixture else "business",
+            "dataSource": stats["data_source"] or ("fixture" if fixture else "business"),
             "fixture": fixture,
             "sampleCount": int(stats["sample_count"]),
             "computedAt": (stats["computed_at"].isoformat()
