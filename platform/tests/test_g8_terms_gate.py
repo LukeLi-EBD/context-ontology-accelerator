@@ -13,6 +13,7 @@ version/graph/evidence rows in tearDown.
 """
 
 import hashlib
+import inspect
 import os
 import tempfile
 import unittest
@@ -35,6 +36,7 @@ from platform_core.adapters.ontology_pg import (
     _import_version_id,
     build_import_document,
     persist_import,
+    publish_import,
 )
 from platform_core.adapters.reasoner_robot import ReasonerClient
 from platform_core.config import (
@@ -339,6 +341,56 @@ class GateSemanticsTests(unittest.TestCase):
         self.assertTrue(result["blocked"])
         self.assertEqual(result["coverage"]["actual"]["conceptsInMetricScheme"], 0)
 
+    def test_19_smoke_context_keys_match_publish_signatures(self):
+        """键名漂移守卫：这条路径没人调用时 421 个单测可以全绿，但 smoke 会 70。
+
+        上一轮就是 `smoke_env_context` 返回驼峰键、直接 `**` 传给下划线形参，
+        所有 smoke 探针 TypeError。这里同时钉住进程内与 HTTP 两套字典：
+        键集合必须与 `publish` / `publish_import` 的形参对得上，改名即红。
+        """
+        in_process = set(termgate.smoke_env_context("smoke"))
+        self.assertEqual(
+            in_process, {"purposeVerified", "purposeStatus", "remoteAddr"}
+        )
+        publish_params = set(
+            inspect.signature(OntologyRegistry.publish).parameters
+        )
+        import_params = set(inspect.signature(publish_import).parameters)
+        snake = {"purpose_verified", "purpose_status", "remote_addr"}
+        self.assertTrue(snake <= publish_params, publish_params)
+        self.assertTrue(snake <= import_params, import_params)
+
+        # HTTP 入口侧：`**smoke` 直接展开，键必须就是形参名。
+        request = SimpleNamespace(
+            headers={}, client=SimpleNamespace(host="127.0.0.1")
+        )
+        http_keys = set(api_module._smoke_guard(request, None, None))
+        self.assertEqual(http_keys, snake)
+        self.assertTrue(http_keys <= publish_params)
+        self.assertTrue(http_keys <= import_params)
+        # 驼峰键若再次出现，`**` 展开会 TypeError —— 这里提前拦住。
+        self.assertTrue(all("_" in key and key.islower() for key in http_keys), http_keys)
+
+        # smoke 分支同样只能返回 snake_case 键（这是真正 `**` 展开的那条路径）。
+        previous = os.environ.get("PLATFORM_SMOKE_TOKEN")
+        os.environ["PLATFORM_SMOKE_TOKEN"] = "guard-token"
+        try:
+            smoke_request = SimpleNamespace(
+                headers={termgate.SMOKE_TOKEN_HEADER: "guard-token"},
+                client=SimpleNamespace(host="127.0.0.1"),
+            )
+            smoke_keys = set(
+                api_module._smoke_guard(smoke_request, "smoke", None)
+            )
+            self.assertEqual(smoke_keys, snake)
+            self.assertTrue(smoke_keys <= publish_params)
+            self.assertTrue(smoke_keys <= import_params)
+        finally:
+            if previous is None:
+                os.environ.pop("PLATFORM_SMOKE_TOKEN", None)
+            else:
+                os.environ["PLATFORM_SMOKE_TOKEN"] = previous
+
 
 DSN = os.environ.get(
     "TEST_PG_DSN",
@@ -587,6 +639,16 @@ class PublishGateTests(unittest.TestCase):
             (version_id,),
         )
 
+    def _blocked_events(self, version_id: str, path: str) -> list[dict]:
+        """被拒的 publish 必须落进哈希链，即使没有版本行。"""
+        rows = self.meta.query(
+            "SELECT action, actor, payload FROM platform.ontology_event "
+            "WHERE version_id = %s AND action = 'publish_blocked' "
+            "ORDER BY event_id",
+            (version_id,),
+        )
+        return [row for row in rows if (row["payload"] or {}).get("path") == path]
+
     def _set_mark(self, concepts: int = 85, aliases: int = 18) -> None:
         """Install a non-zero high-water mark without publishing a real version."""
         with self.meta.tx() as tx:
@@ -816,6 +878,21 @@ class PublishGateTests(unittest.TestCase):
             (version_id,),
         )
         self.assertEqual(rows[0]["status"], "draft")
+        blocked = self._blocked_events(version_id, "POST /ontology/publish")
+        self.assertEqual(len(blocked), 1)
+        audit = blocked[0]["payload"]
+        self.assertTrue(audit["rejected"])
+        self.assertEqual(audit["verdict"], "blocked")
+        self.assertEqual(audit["tokenStatus"], "missing")
+        self.assertFalse(audit["purposeVerified"])
+        self.assertEqual(audit["purpose"], "smoke")
+        self.assertIsNotNone(audit["remoteAddr"])
+        self.assertEqual(audit["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(audit["baseline"]["aliases"], 18)
+        self.assertEqual(audit["current"]["conceptsInScheme"], 0)
+        self.assertIn("未携带", audit["exemptionRejected"])
+        self.assertNotIn(self.smoke_token, str(blocked))
+        self.assertTrue(self.registry.verify_events()["ok"])
         stored = self._evidence(version_id)[0]["payload"]
         self.assertEqual(stored["verdict"], "fail")
         self.assertEqual(stored["purposeVerified"], False)
@@ -853,6 +930,19 @@ class PublishGateTests(unittest.TestCase):
             ),
             [],
         )
+        # 被拒本身进哈希链：没有版本行也要能回答"谁试过绕过、从哪来"。
+        blocked = self._blocked_events(version_id, "POST /ontology/import")
+        self.assertEqual(len(blocked), 1)
+        audit = blocked[0]["payload"]
+        self.assertTrue(audit["rejected"])
+        self.assertEqual(audit["tokenStatus"], "invalid")
+        self.assertFalse(audit["purposeVerified"])
+        self.assertIsNotNone(audit["remoteAddr"])
+        self.assertEqual(audit["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(audit["current"]["conceptsInScheme"], 0)
+        self.assertIn("校验失败", audit["exemptionRejected"])
+        self.assertNotIn(wrong, str(blocked))
+        self.assertTrue(self.registry.verify_events()["ok"])
 
     def test_18_unconfigured_token_env_fails_closed(self):
         self.registry.set_terms_gate(TermsConfig(gate="warn"))
@@ -888,6 +978,13 @@ class PublishGateTests(unittest.TestCase):
             ),
             [],
         )
+        blocked = self._blocked_events(version_id, "POST /ontology/import")
+        self.assertEqual(len(blocked), 1)
+        audit = blocked[0]["payload"]
+        self.assertEqual(audit["tokenStatus"], "unconfigured")
+        self.assertFalse(audit["purposeVerified"])
+        self.assertIn("fail-closed", audit["exemptionRejected"])
+        self.assertTrue(self.registry.verify_events()["ok"])
 
     def test_8_warn_publishes_and_records_the_gate_in_evidence(self):
         record = self._import(DUPLICATE_TTL, "g8warn")
@@ -952,12 +1049,17 @@ class PublishGateTests(unittest.TestCase):
             ),
             before_proposals,
         )
+        # 被拒也要留痕：只新增一条 publish_blocked 审计事件，其余写入不变。
+        events = self.meta.query(
+            "SELECT event_id, action FROM platform.ontology_event "
+            "WHERE version_id = %s ORDER BY event_id",
+            (version_id,),
+        )
+        self.assertEqual(len(events), len(before_events) + 1)
+        self.assertEqual(events[-1]["action"], "publish_blocked")
         self.assertEqual(
-            self.meta.query(
-                "SELECT event_id FROM platform.ontology_event WHERE version_id = %s",
-                (version_id,),
-            ),
-            before_events,
+            {row["event_id"] for row in events[:-1]},
+            {row["event_id"] for row in before_events},
         )
         self.assertEqual(self._evidence(version_id), before_evidence)
         self.assertEqual(self.graph.count_graph(tbox_graph), before_tbox)

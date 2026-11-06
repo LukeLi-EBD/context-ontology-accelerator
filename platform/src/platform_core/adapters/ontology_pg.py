@@ -50,6 +50,9 @@ ONTOLOGY_ACTIONS = (
     "imported", "proposed", "approved", "breaking_acknowledged", "published",
     "superseded", "rolled_back", "publish_reverted", "import_conflict_accepted",
 )
+# 阻断也是事件：被拒的 publish 不产生版本，但"谁试过绕过、试了几次、从哪来"
+# 只能靠哈希链回答，所以单独记一个动作。
+PUBLISH_BLOCKED_ACTION = "publish_blocked"
 RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 PARSE_LINE_RE = re.compile(r"at line (\d+)")
 RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class"
@@ -1193,6 +1196,11 @@ def publish_import(
             None,
         )
         unconfigured = guard.get("tokenStatus") == "unconfigured"
+        # 被拒也要进哈希链：版本行不会产生，但绕过尝试本身必须可审计。
+        registry.record_publish_rejection(
+            version_id, None, actor, "term gate blocked publish", terms_gate,
+            mode="import", path="POST /ontology/import",
+        )
         raise PortError(
             code="Conflict",
             message=(
@@ -1633,6 +1641,61 @@ class OntologyRegistry:
             (digest, event_id),
         )
         return event_id
+
+    def record_publish_rejection(
+        self,
+        version_id: str,
+        proposal_id: str | None,
+        actor: str | None,
+        reason: str | None,
+        guard: dict[str, Any],
+        *,
+        mode: str,
+        path: str,
+    ) -> int | None:
+        """Append a *blocked* publish to the hash-chained ``ontology_event`` log.
+
+        A rejected publish leaves no version row, which used to mean the audit
+        chain stayed silent — the only trace was the non-chained evidence pack.
+        ``publish_blocked`` answers "did anyone try to bypass the guard, how
+        many times, from where" and carries the same decision fields as the
+        allow path (purpose / tokenStatus / purposeVerified / remoteAddr /
+        verdict / baseline / current / rejected reason). Never token material.
+        """
+        vocab = guard.get("vocabGuard") or {}
+        forged = next(
+            (item for item in (guard.get("findings") or [])
+             if item.get("code") == termgate.VOCAB_ZERO_FORGED_CODE),
+            None,
+        )
+        payload = {
+            "mode": mode,
+            "path": path,
+            "rejected": True,
+            "gate": guard.get("gate"),
+            "verdict": guard.get("verdict"),
+            "vocabGuard": vocab,
+            "findings": guard.get("findings") or [],
+            "exemptionRejected": forged.get("message") if forged else None,
+            "purpose": vocab.get("purpose"),
+            "purposeVerified": vocab.get("purposeVerified"),
+            "tokenStatus": vocab.get("tokenStatus"),
+            "remoteAddr": vocab.get("remoteAddr"),
+            "baseline": vocab.get("highWater"),
+            "current": vocab.get("effective"),
+            "terms": _term_audit_payload({"terms": guard}),
+        }
+        try:
+            with self._meta.tx() as tx:
+                return self._append_event(
+                    tx, version_id, proposal_id, PUBLISH_BLOCKED_ACTION,
+                    actor, reason, payload,
+                )
+        except Exception:  # 审计写入失败不能把原始阻断变成 500
+            log.exception(
+                "failed to append publish_blocked audit event for %s", version_id
+            )
+            return None
 
     def ensure_chain(self) -> dict[str, Any]:
         """Backfill prev_event/hash for events written before S11 (none expected)."""
@@ -3125,6 +3188,16 @@ class OntologyRegistry:
                     None,
                 )
                 unconfigured = vocab_guard.get("tokenStatus") == "unconfigured"
+                # 被拒也要进哈希链（含伪造尝试）；此时还没有 pid，隐式发布留空。
+                self.record_publish_rejection(
+                    version_id,
+                    proposal["proposal_id"] if proposal else None,
+                    actor, "term vocab guard blocked publish", guard,
+                    mode="activate_existing" if activate_existing else (
+                        "implicit" if implicit else "governed"
+                    ),
+                    path="POST /ontology/publish",
+                )
                 error = PortError(
                     code="Conflict",
                     message=(
