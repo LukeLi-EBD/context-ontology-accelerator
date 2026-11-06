@@ -44,6 +44,9 @@
 | 2026-11-07 05:21 | `acceptance-s0s13-platform-acceptance-20261107-052142-7e5f9c2.log` | **token 加固后全新库（S0–S13）**：44 passed / 0 failed / 0 skipped，exit 0（`7e5f9c2` + 关键字修复） |
 | 2026-11-07 05:26 | `acceptance-s14-platform-acceptance-20261107-052657-7e5f9c2.log` | **token 加固后全新库（S14 全量）**：421 discovered / 421 executed / 421 passed / 0 skipped，exit 0 |
 | 2026-11-07 05:28 | `smoke-token-proof-platform-acceptance-20261107-052844-7e5f9c2.log` | token 定向实证：无 token / 错误 token 均 409 + `TERM_VOCAB_ZERO_EXEMPTION_FORGED`；正确 token 200 + `TERM_VOCAB_ZERO_EXEMPTED` |
+| 2026-11-07 05:46 | `acceptance-s0s13-platform-acceptance-20261107-054610-5386a04.log` | **对外可用点（HEAD 5386a04）空库 S0–S13**：44/44，0 skipped，exit 0；无 TypeError/exit 70；指针严格恢复 |
+| 2026-11-07 05:50 | `acceptance-s14-platform-acceptance-20261107-055018-5386a04.log` | **对外可用点空库 S14 全量**：422 discovered / 422 executed / 422 passed / 0 skipped，exit 0 |
+| 2026-11-07 05:49 | `implicit-publish-proof-platform-acceptance-20261107-054931-5386a04.log` | 隐式发布分支定向实证：无 token / 错 token 均干净的 409 `E_TERM_GATE_BLOCKED`（mode=implicit，含完整响应体），无 500/KeyError |
 
 隔离栈 S14 的早期失败定性（**未跳过、未删除用例**）。其中"环境夹具缺失"一类已在
 2026-11-07 04:37 从根因修复（测试改为解析活指针、词表随 bootstrap 播种），见 69 第 9 节：
