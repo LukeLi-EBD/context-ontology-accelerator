@@ -433,10 +433,13 @@ class SyntheticFactory:
 
     # -- loan and related ----------------------------------------------------
     def _t_cust_master(self) -> Iterable[dict[str, Any]]:
-        for customer in self.customers:
+        for i, customer in enumerate(self.customers):
             yield {
                 **customer,
                 "as_of": AS_OF,
+                # Nullable demographics: 100 customers exercise the empty-value case.
+                "channel": None if i % 50 == 0 else customer["channel"],
+                "segment": None if i % 50 == 0 else customer["segment"],
             }
         # A second historical snapshot exercises multiple as_of keys.
         for i, customer in enumerate(self.customers):
@@ -727,7 +730,11 @@ class SyntheticFactory:
         months = list(_iter_months(2020, 1, 72))
         for inst_idx, institution in enumerate(INSTITUTIONS):
             for month_idx, as_of in enumerate(months):
-                zero_case = inst_idx == 0 and as_of == date(2025, 6, 30)
+                # Twelve zero-balance snapshots (4 institutions x 3 quarters)
+                # exercise the denominator-zero boundary beyond a single row.
+                zero_case = inst_idx < 4 and as_of in (
+                    date(2025, 3, 31), date(2025, 6, 30), date(2025, 9, 30),
+                )
                 npl = Decimal("0.00") if zero_case else _money(10000 + (inst_idx * 31 + month_idx * 7) % 200000)
                 loan = _money(npl * Decimal("4.0")) if not zero_case else Decimal("0.00")
                 provision = _money(npl * Decimal("0.90"))
@@ -1016,6 +1023,21 @@ class SyntheticFactory:
                         "channel": CHANNELS[i % len(CHANNELS)],
                     }
                 )
+        # Super-large transactions (boundary: >= 10M) for 30 customers.
+        for i in range(30):
+            txn_no += 1
+            customer = self.customers[i]
+            rows.append(
+                {
+                    "txn_id": f"TXN-SYN-{txn_no:06d}",
+                    "customer_no": customer["customer_no"],
+                    "txn_date": date(2025, 11, 30),
+                    "txn_type": "purchase",
+                    "amount": _money(10_000_000 + i * 1_000_000),
+                    "product_category": CUST_PRODUCTS[i % len(CUST_PRODUCTS)],
+                    "channel": CHANNELS[i % len(CHANNELS)],
+                }
+            )
         yield from rows
 
     def _t_cust_campaign_touch(self) -> Iterable[dict[str, Any]]:
@@ -1107,6 +1129,17 @@ class SyntheticFactory:
                     "product_type": product,
                     "as_of": AS_OF,
                     "aum": aum,
+                }
+        # Cross-period snapshots (outside the 2025 reporting window).
+        for i in range(10):
+            customer = self.customers[i]
+            for as_of in (date(2023, 12, 31), date(2026, 6, 30)):
+                yield {
+                    "customer_no": customer["customer_no"],
+                    "institution": customer["institution"],
+                    "product_type": "deposit",
+                    "as_of": as_of,
+                    "aum": _money(1000 + i * 137),
                 }
 
 

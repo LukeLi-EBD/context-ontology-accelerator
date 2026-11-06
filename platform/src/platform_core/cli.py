@@ -474,6 +474,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="skip the second seed-identical generation used for reproducibility proof",
     )
+    datagen.add_argument(
+        "--audit",
+        action="store_true",
+        help="read-only coverage audit: ontology, bindings, metrics and boundary cases",
+    )
 
     smoke = sub.add_parser("smoke", help="run the S0 acceptance smoke suite")
     smoke.add_argument("--config", default="/data/platform.yaml")
@@ -781,6 +786,22 @@ def main(argv: list[str] | None = None) -> int:
                         target_schema=args.schema,
                         allow_official=allow_official,
                     )
+                    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                    return EXIT_OK
+                if args.audit:
+                    from .datagen_audit import audit_all
+
+                    # The audit must reflect the governed T-Box, not whichever
+                    # test fixture currently owns the graph pointer.
+                    pointer = runtime.ontology.status().get("pointer") or {}
+                    preferred = "ont-3f57d8ce6636"
+                    versions = {v["id"] for v in runtime.ontology.status().get("versions", [])}
+                    version = preferred if preferred in versions else pointer.get("versionId")
+                    ttl = (
+                        runtime.ontology.export_version(version, "turtle")["content"]
+                        if version else None
+                    )
+                    result = audit_all(runtime.metadata, args.schema, ttl)
                     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
                     return EXIT_OK
                 if args.verify and args.schema != "platform":
