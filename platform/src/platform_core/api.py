@@ -3879,4 +3879,626 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         }
     # --- end G2 ---
 
+    # --- G3 metrics-report routes ---
+    # M-02: 对外出数清单与 publishable 治理。清单 100% 来自 platform.metric_definition，
+    # 不做手工维护；可算性直接采用库内 computability_tier，且“可算”不等于“已有观测值”。
+
+    _G3_METRIC_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit, effective_date,
+               variant_of, output_mode, provenance_label, computability_tier
+          FROM platform.metric_definition
+         ORDER BY metric_id
+    """
+
+    _G3_TIER_LABELS = {
+        "structurally_computable": "结构性可算（需事实与观测）",
+        "blocked_semantics": "语义阻断",
+        "blocked_external": "对外阻断",
+    }
+    _G3_TIER_TONES = {
+        "structurally_computable": "ok",
+        "blocked_semantics": "warn",
+        "blocked_external": "bad",
+    }
+    _G3_GAP_LABELS = {
+        "regulatory_source": "缺监管原文",
+        "source": "缺事实来源",
+        "entity": "缺实体绑定",
+    }
+
+    # M-05: E1 25 条行业公式（来源：doc/_fsldm/12-口径终裁-v9.md §1）。
+    # 该清单只用于“声明核对”，不参与清单取数；清单仍逐条读库。
+    _G3_E1_SOURCE = "doc/_fsldm/12-口径终裁-v9.md §1"
+    _G3_INDUSTRY_NOTICE = "内部基线、不外报"
+    _G3_E1_INDUSTRY_IDS = (
+        "FIN-BANK-002",
+        "FIN-BANK-005",
+        "FIN-BANK-017",
+        "FIN-BANK-018",
+        "FIN-BANK-019",
+        "FIN-BANK-033",
+        "FIN-BANK-034",
+        "FIN-BANK-006",
+        "FIN-BANK-020",
+        "FIN-BANK-021",
+        "FIN-BANK-031",
+        "FIN-BANK-032",
+        "FIN-BANK-035",
+        "FIN-BANK-036-v1",
+        "FIN-INS-003",
+        "FIN-INS-006",
+        "FIN-INS-007",
+        "FIN-INS-017",
+        "FIN-INS-022-v1",
+        "FIN-INS-023-v1",
+        "FIN-INS-024",
+        "FIN-INS-026",
+        "CUST-005",
+        "CUST-009",
+        "CUST-010",
+    )
+
+    def _g3_text(value: Any) -> str:
+        if value is None:
+            return "口径未给出"
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        text = str(value).strip()
+        return text or "口径未给出"
+
+    def _g3_evidence(row: dict[str, Any]) -> dict[str, Any]:
+        basis = (row.get("evidence_basis") or "none").strip() or "none"
+        provenance = (row.get("provenance_label") or "").strip()
+        if basis == "regulatory":
+            return {
+                "code": basis,
+                "basisLabel": "监管原文",
+                "source": provenance or "监管原文",
+                "hasRegulatoryText": True,
+            }
+        if basis == "industry":
+            return {
+                "code": basis,
+                "basisLabel": "行业通行（未获监管原文）",
+                "source": provenance or "行业通行",
+                "hasRegulatoryText": False,
+                "notice": _G3_INDUSTRY_NOTICE,
+            }
+        return {
+            "code": basis,
+            "basisLabel": "无证据",
+            "source": provenance or "未给出",
+            "hasRegulatoryText": False,
+        }
+
+    def _g3_metric_row(row: dict[str, Any]) -> dict[str, Any]:
+        metric_id = str(row.get("metric_id") or "")
+        tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
+        evidence = _g3_evidence(row)
+        publishable = bool(row.get("publishable"))
+        formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
+        external_eligible = bool(
+            publishable
+            and evidence["code"] == "regulatory"
+            and tier == "structurally_computable"
+        )
+        if external_eligible:
+            external_status = "external_candidate"
+            external_label = "对外可出数候选（需事实与观测）"
+            external_reason = "证据为监管原文、publishable=true、口径结构性可算"
+        elif evidence["code"] == "industry":
+            external_status = "internal_baseline"
+            external_label = _G3_INDUSTRY_NOTICE
+            external_reason = f"行业公式未获监管原文：{_G3_INDUSTRY_NOTICE}"
+        elif not publishable:
+            external_status = "unpublishable"
+            external_label = "不可发布"
+            external_reason = "publishable=false"
+        else:
+            external_status = "blocked"
+            external_label = "不可对外"
+            external_reason = f"口径未达结构性可算：{tier}"
+
+        missing = row.get("missing")
+        if row.get("output_mode") == "index":
+            gap = "族索引：需指定变体（E_METRIC_VARIANT_REQUIRED）"
+            gap_code = "variant_required"
+        elif missing:
+            gap = _G3_GAP_LABELS.get(str(missing), _g3_text(missing))
+            gap_code = str(missing)
+        elif not formula:
+            gap = "公式缺失"
+            gap_code = "formula_missing"
+        elif tier != "structurally_computable":
+            gap = _G3_TIER_LABELS.get(tier, tier)
+            gap_code = tier
+        elif row.get("inference"):
+            gap = "口径为推导，无成文原文"
+            gap_code = "inference_only"
+        else:
+            gap = "—"
+            gap_code = None
+
+        return {
+            "metricId": metric_id,
+            "nameZh": row.get("name_zh"),
+            "displayName": row.get("display_name"),
+            "domain": row.get("domain"),
+            "publishable": publishable,
+            "evidenceBasis": evidence["code"],
+            "evidenceBasisLabel": evidence["basisLabel"],
+            "evidenceSource": evidence["source"],
+            "hasRegulatoryText": evidence["hasRegulatoryText"],
+            "industryBaseline": evidence["code"] == "industry",
+            "internalNotice": evidence.get("notice"),
+            "e1Baseline": metric_id in _G3_E1_INDUSTRY_IDS,
+            "formula": formula or "口径未给出",
+            "formulaExpr": row.get("formula_expr"),
+            "computability": tier,
+            "computabilityLabel": _G3_TIER_LABELS.get(tier, tier),
+            "computabilityTone": _G3_TIER_TONES.get(tier, "muted"),
+            "gap": gap,
+            "gapCode": gap_code,
+            "missing": missing,
+            "externalEligible": external_eligible,
+            "externalStatus": external_status,
+            "externalLabel": external_label,
+            "externalReason": external_reason,
+            "variantOf": row.get("variant_of"),
+            "outputMode": row.get("output_mode"),
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "inference": bool(row.get("inference")),
+            "evidenceStatus": row.get("evidence_status"),
+            "definitionVersion": row.get("definition_version"),
+        }
+
+    def _g3_manifest(
+        scope: str,
+        domain: str | None,
+        evidence_basis: str | None,
+        publishable: bool | None,
+    ) -> dict[str, Any]:
+        raw = runtime.metadata.query(_G3_METRIC_SQL)
+        items = [_g3_metric_row(row) for row in raw]
+        all_items = list(items)
+        if domain:
+            items = [item for item in items if item["domain"] == domain]
+        if evidence_basis:
+            items = [item for item in items if item["evidenceBasis"] == evidence_basis]
+        if publishable is not None:
+            items = [item for item in items if item["publishable"] is bool(publishable)]
+        if scope == "external":
+            items = [item for item in items if item["externalEligible"]]
+
+        tiers: dict[str, int] = {}
+        for item in items:
+            tiers[item["computability"]] = tiers.get(item["computability"], 0) + 1
+        external_count = sum(1 for item in items if item["externalEligible"])
+
+        by_id = {item["metricId"]: item for item in all_items}
+        e1_present = [mid for mid in _G3_E1_INDUSTRY_IDS if mid in by_id]
+        e1_missing = [mid for mid in _G3_E1_INDUSTRY_IDS if mid not in by_id]
+        e1_wrong = [mid for mid in e1_present if by_id[mid]["evidenceBasis"] != "industry"]
+        e1_publishable = [mid for mid in e1_present if by_id[mid]["publishable"]]
+
+        meta = {
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "source": "platform.metric_definition",
+            "scope": scope,
+            "total": len(items),
+            "allTotal": len(all_items),
+            "counts": {
+                "publishableTrue": sum(1 for item in items if item["publishable"]),
+                "industry": sum(1 for item in items if item["evidenceBasis"] == "industry"),
+                "regulatory": sum(1 for item in items if item["evidenceBasis"] == "regulatory"),
+                "externalEligible": external_count,
+                "industryExcludedFromExternal": (
+                    sum(1 for item in all_items if item["evidenceBasis"] == "industry")
+                    if scope == "external"
+                    else 0
+                ),
+                "computability": tiers,
+            },
+            "industryNotice": _G3_INDUSTRY_NOTICE,
+            "e1Check": {
+                "source": _G3_E1_SOURCE,
+                "expected": len(_G3_E1_INDUSTRY_IDS),
+                "found": len(e1_present),
+                "allPresent": len(e1_missing) == 0,
+                "missingIds": e1_missing,
+                "allIndustry": len(e1_wrong) == 0 and len(e1_missing) == 0,
+                "violations": e1_wrong,
+                "publishableTrue": len(e1_publishable),
+                "note": "以库为准；发现缺失或不一致时原样列出，不做补数、不改口径。",
+            },
+            "externalScopeRule": (
+                "evidence_basis=regulatory 且 publishable=true 且 computability_tier=structurally_computable"
+            ),
+            "disclaimer": "可算性仅表示口径四元组与公式可编译，不代表已有观测值；本清单不承诺业务数值。",
+        }
+        return {
+            "items": items,
+            "count": len(items),
+            "meta": meta,
+            "filters": {
+                "scope": scope,
+                "domain": domain,
+                "evidenceBasis": evidence_basis,
+                "publishable": publishable,
+            },
+        }
+
+    @app.get("/metrics/report/manifest")
+    def metrics_report_manifest(
+        scope: str = Query(default="all", pattern="^(all|external)$"),
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> dict[str, Any]:
+        return _g3_manifest(scope, domain, evidenceBasis, publishable)
+
+    @app.get("/metrics/report/manifest.csv")
+    def metrics_report_manifest_csv(
+        scope: str = Query(default="all", pattern="^(all|external)$"),
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> Response:
+        import csv
+        import io
+
+        payload = _g3_manifest(scope, domain, evidenceBasis, publishable)
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "metric_id",
+                "名称",
+                "域",
+                "evidence_basis",
+                "证据来源",
+                "publishable",
+                "可算性",
+                "公式",
+                "对外状态",
+                "对外判定说明",
+                "内部标注",
+                "E1行业基线",
+                "缺口",
+                "variant_of",
+                "output_mode",
+                "definition_version",
+            ]
+        )
+        for item in payload["items"]:
+            writer.writerow(
+                [
+                    item["metricId"],
+                    item["nameZh"] or "",
+                    item["domain"] or "",
+                    item["evidenceBasis"],
+                    item["evidenceSource"],
+                    str(item["publishable"]).lower(),
+                    item["computabilityLabel"],
+                    item["formula"],
+                    item["externalLabel"],
+                    item["externalReason"],
+                    item["internalNotice"] or "",
+                    "true" if item["e1Baseline"] else "false",
+                    item["gap"],
+                    item["variantOf"] or "",
+                    item["outputMode"] or "",
+                    item["definitionVersion"] or "",
+                ]
+            )
+        body = "\ufeff" + buffer.getvalue()
+        filename = f"metrics-manifest-{date.today():%Y%m%d}.csv"
+        return Response(
+            content=body.encode("utf-8"),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # M-03: 多口径并列与族索引。族索引本身不出数，出数前必须选择变体并回填 metric_id。
+
+    _G3_FAMILY_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit,
+               variant_of, output_mode, provenance_label, computability_tier
+          FROM platform.metric_definition
+         WHERE output_mode = 'index' OR variant_of IS NOT NULL
+         ORDER BY metric_id
+    """
+    _G3_VARIANT_GUIDANCE = {
+        "code": "E_METRIC_VARIANT_REQUIRED",
+        "message": "该指标是口径族索引，不直接出数；请先选择变体并回填 metric_id。",
+        "howTo": [
+            "在族索引详情中选择一个变体（窗口/分母/粒度会并排展示）",
+            "前端将变体 metric_id 回填到详情与 URL",
+            "再用该 metric_id 调用 /metrics/{metric_id}/output",
+        ],
+    }
+
+    def _g3_variant(row: dict[str, Any]) -> dict[str, Any]:
+        tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
+        evidence = _g3_evidence(row)
+        publishable = bool(row.get("publishable"))
+        formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
+        return {
+            "metricId": str(row.get("metric_id") or ""),
+            "nameZh": row.get("name_zh"),
+            "displayName": row.get("display_name"),
+            "publishable": publishable,
+            "evidenceBasis": evidence["code"],
+            "externalEligible": bool(
+                publishable
+                and evidence["code"] == "regulatory"
+                and tier == "structurally_computable"
+            ),
+            "internalNotice": evidence.get("notice"),
+            "formula": formula or "口径未给出",
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "computability": tier,
+            "computabilityLabel": _G3_TIER_LABELS.get(tier, tier),
+            "window": {
+                "kind": row.get("window_kind"),
+                "minWindowDays": row.get("min_window_days"),
+                "text": _g3_text(row.get("observation_period")),
+            },
+            "denominator": _g3_text(row.get("denominator_text") or row.get("denominator_agg")),
+            "denominatorText": row.get("denominator_text"),
+            "grain": _g3_text(row.get("granularity") or row.get("grain")),
+            "grainCode": row.get("grain"),
+            "metricKind": row.get("metric_kind"),
+            "unit": row.get("unit"),
+        }
+
+    def _g3_family_payload(
+        family_id: str,
+        index_row: dict[str, Any] | None,
+        variant_rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        variants = [_g3_variant(row) for row in variant_rows]
+
+        def diff(field: str, label: str, getter) -> dict[str, Any]:
+            values = {item["metricId"]: getter(item) for item in variants}
+            return {
+                "field": field,
+                "label": label,
+                "values": values,
+                "different": len(set(values.values())) > 1,
+            }
+
+        return {
+            "familyId": family_id,
+            "indexMetricId": (
+                index_row.get("metric_id") if index_row is not None else family_id
+            ),
+            "nameZh": (
+                index_row.get("name_zh") if index_row is not None else family_id
+            ),
+            "selectionRequired": True,
+            "guidance": _G3_VARIANT_GUIDANCE,
+            "variantCount": len(variants),
+            "variants": variants,
+            "diffs": [
+                diff(
+                    "observationPeriod",
+                    "观察窗口",
+                    lambda item: "%s（%s 天）"
+                    % (item["window"]["text"], item["window"]["minWindowDays"] or 0),
+                ),
+                diff("denominator", "分母", lambda item: item["denominator"]),
+                diff("grain", "粒度", lambda item: item["grain"]),
+                diff("formula", "公式", lambda item: item["formula"]),
+            ],
+            "source": "platform.metric_definition",
+        }
+
+    def _g3_families() -> list[dict[str, Any]]:
+        rows = runtime.metadata.query(_G3_FAMILY_SQL)
+        indexes = {
+            str(row["metric_id"]): row
+            for row in rows
+            if row.get("output_mode") == "index"
+        }
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            parent = row.get("variant_of")
+            if not parent:
+                continue
+            grouped.setdefault(str(parent), []).append(row)
+        family_ids = sorted(set(indexes) | set(grouped))
+        return [
+            _g3_family_payload(family_id, indexes.get(family_id), grouped.get(family_id, []))
+            for family_id in family_ids
+        ]
+
+    @app.get("/metrics/report/families")
+    def metrics_report_families() -> dict[str, Any]:
+        families = _g3_families()
+        return {
+            "families": families,
+            "count": len(families),
+            "guidance": _G3_VARIANT_GUIDANCE,
+            "source": "platform.metric_definition",
+        }
+
+    @app.get("/metrics/report/families/{family_id}")
+    def metrics_report_family(family_id: str) -> dict[str, Any]:
+        for family in _g3_families():
+            if family["familyId"] == family_id:
+                return {"family": family, "source": "platform.metric_definition"}
+        raise PortError(
+            code="NotFound",
+            message=f"metric family not found: {family_id}",
+            provider="platform",
+            provider_code="E_METRIC_FAMILY_NOT_FOUND",
+            details={"familyId": family_id},
+        )
+
+    # M-04: 口径卡可视化 + PROV 判定徽标。
+    # 79 张主卡 = variant_of IS NULL 的行（与 doc/_fsldm/01-指标卡 的 79 个文件逐一对应）；
+    # 6 条族变体没有独立卡，明确显示“未建卡”，不伪造卡内容。
+
+    _G3_CARD_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit, effective_date,
+               variant_of, output_mode, provenance_label, computability_tier,
+               definition, denominator_text
+          FROM platform.metric_definition
+         WHERE metric_id = %s
+    """
+
+    def _g3_tone_for_external(status: str) -> str:
+        if status == "external_candidate":
+            return "ok"
+        if status == "internal_baseline":
+            return "warn"
+        return "bad"
+
+    @app.get("/browse/metrics/{metric_id}/card")
+    def browse_metric_card(metric_id: str) -> dict[str, Any]:
+        rows = runtime.metadata.query(_G3_CARD_SQL, (metric_id,))
+        if not rows:
+            raise PortError(
+                code="NotFound",
+                message=f"metric not found: {metric_id}",
+                provider="platform",
+                provider_code="E_METRIC_NOT_FOUND",
+                details={"metricId": metric_id},
+            )
+        row = rows[0]
+        base = _g3_metric_row(row)
+        evidence = _g3_evidence(row)
+        card_exists = row.get("variant_of") is None
+        if card_exists:
+            card_state = "built"
+            card_state_label = "已建卡"
+            doc_path = f"doc/_fsldm/01-指标卡/{metric_id}.md"
+        else:
+            card_state = "not_built"
+            card_state_label = "未建卡（族变体，无独立口径卡）"
+            doc_path = None
+
+        badges = [
+            {
+                "key": "evidence",
+                "label": evidence["basisLabel"]
+                + (f" · {_G3_INDUSTRY_NOTICE}" if evidence.get("notice") else ""),
+                "tone": (
+                    "ok" if evidence["code"] == "regulatory"
+                    else ("warn" if evidence["code"] == "industry" else "bad")
+                ),
+            },
+            {
+                "key": "publishable",
+                "label": "可发布（内部）" if base["publishable"] else "不可发布",
+                "tone": "ok" if base["publishable"] else "warn",
+            },
+            {
+                "key": "external",
+                "label": base["externalLabel"],
+                "tone": _g3_tone_for_external(base["externalStatus"]),
+            },
+            {
+                "key": "computability",
+                "label": base["computabilityLabel"],
+                "tone": base["computabilityTone"],
+            },
+        ]
+
+        decision_count = None
+        decision_label = "PROV 判定：运行时可无 PROV"
+        prov = getattr(runtime, "prov", None)
+        if prov is not None:
+            try:
+                history = prov.decision_history(metric_id, limit=20)
+                decision_count = int(history.get("count", 0))
+                decision_label = (
+                    f"PROV 判定 {decision_count} 条" if decision_count else "PROV 判定：无记录"
+                )
+                badges.append(
+                    {
+                        "key": "prov",
+                        "label": decision_label,
+                        "tone": "ok" if decision_count else "muted",
+                    }
+                )
+            except Exception as exc:  # PROV 不可用不应阻断口径卡
+                decision_label = f"PROV 判定不可用：{type(exc).__name__}"
+
+        sections = [
+            {"key": "definition", "title": "定义", "text": _g3_text(row.get("definition"))},
+            {"key": "formula", "title": "公式", "text": base["formula"]},
+            {
+                "key": "denominator",
+                "title": "分母",
+                "text": _g3_text(row.get("denominator_text") or row.get("denominator_agg")),
+            },
+            {"key": "window", "title": "观察期", "text": _g3_text(row.get("observation_period"))},
+            {"key": "grain", "title": "粒度", "text": _g3_text(row.get("granularity") or row.get("grain"))},
+            {
+                "key": "evidence",
+                "title": "证据",
+                "text": "｜".join(
+                    part for part in (
+                        evidence["basisLabel"],
+                        evidence["source"],
+                        _g3_text(row.get("evidence_status")),
+                        evidence.get("notice"),
+                    ) if part
+                ),
+            },
+            {"key": "pipeline", "title": "可算性", "text": base["computabilityLabel"]},
+            {"key": "gap", "title": "缺口", "text": base["gap"]},
+        ]
+
+        return {
+            "metricId": metric_id,
+            "cardExists": card_exists,
+            "cardState": card_state,
+            "cardStateLabel": card_state_label,
+            "cardSource": "platform.metric_definition",
+            "docPath": doc_path,
+            "card": {
+                "metricId": metric_id,
+                "nameZh": row.get("name_zh"),
+                "displayName": row.get("display_name"),
+                "domain": row.get("domain"),
+                "metricKind": row.get("metric_kind"),
+                "unit": row.get("unit"),
+                "definitionVersion": row.get("definition_version"),
+                "effectiveDate": row.get("effective_date"),
+                "variantOf": row.get("variant_of"),
+                "outputMode": row.get("output_mode"),
+                "note": row.get("note"),
+            },
+            "badges": badges,
+            "sections": sections,
+            "prov": {
+                "graph": "urn:platform:prov",
+                "decisionsUrl": f"/prov/decisions?metricId={metric_id}&limit=20",
+                "verifyUrl": "/prov/verify",
+                "decisionCount": decision_count,
+                "decisionLabel": decision_label,
+            },
+            "links": {
+                "detailApi": f"/browse/metrics/{metric_id}",
+                "output": f"/metrics/{metric_id}/output",
+                "manifest": "/metrics/report/manifest",
+                "families": "/metrics/report/families",
+            },
+            "source": "metric_definition + doc/_fsldm/01-指标卡",
+        }
+
+    # --- end G3 ---
+
     return app
