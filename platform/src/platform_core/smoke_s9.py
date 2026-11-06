@@ -10,6 +10,7 @@ from pathlib import Path
 
 import httpx
 
+from . import termgate
 from .assembly import Runtime
 from .errors import PortError
 from .facts import verify_records
@@ -100,7 +101,8 @@ def run_smoke_s9(runtime: Runtime, base_url: str) -> int:
                 on_conflict="new_version",
             )
             runtime.ontology.publish(
-                version["versionId"], acknowledge_breaking=True, purpose="smoke"
+                version["versionId"], acknowledge_breaking=True, purpose="smoke",
+                **termgate.smoke_env_context("smoke"),
             )
             inferred = f"urn:platform:inferred:{version['versionId']}"
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import httpx
 
+from . import termgate
 from .assembly import Runtime
 from .errors import PortError
 
@@ -137,6 +138,7 @@ def run_smoke_s11(runtime: Runtime, base_url: str) -> int:
         published = runtime.ontology.publish(
             test_versions["v1"], proposal_id=proposal["proposalId"],
             acknowledge_breaking=True, actor="operator", purpose="smoke",
+            **termgate.smoke_env_context("smoke"),
         )
         v1_events = runtime.ontology.events(test_versions["v1"])["items"]
         actions = {event["action"] for event in v1_events}
@@ -204,6 +206,7 @@ def run_smoke_s11(runtime: Runtime, base_url: str) -> int:
         acked = runtime.ontology.publish(
             test_versions["v4"], proposal_id=breaking_proposal["proposalId"],
             acknowledge_breaking=True, actor="operator", purpose="smoke",
+            **termgate.smoke_env_context("smoke"),
         )
         stored = runtime.ontology.get_proposal(breaking_proposal["proposalId"])
         suite.check(

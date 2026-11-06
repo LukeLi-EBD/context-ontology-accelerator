@@ -288,6 +288,8 @@ class GateSemanticsTests(unittest.TestCase):
             high_water={"conceptsInScheme": 85, "aliases": 18, "versionId": "ont-published"},
             context={
                 "purpose": "smoke",
+                "purposeVerified": True,
+                "purposeStatus": "verified",
                 "actor": "smoke-selftest",
                 "path": "POST /ontology/publish",
                 "versionId": "ont-probe",
@@ -302,6 +304,8 @@ class GateSemanticsTests(unittest.TestCase):
         self.assertEqual(exemption["baseline"]["conceptsInScheme"], 85)
         self.assertEqual(exemption["baseline"]["versionId"], "ont-published")
         self.assertEqual(exemption["current"]["conceptsInScheme"], 0)
+        self.assertEqual(exemption["tokenStatus"], "verified")
+        self.assertTrue(exemption["purposeVerified"])
         self.assertTrue(exemption["exemptedAt"])
         stored = [
             item for item in result["findings"]
@@ -405,6 +409,11 @@ class PublishGateTests(unittest.TestCase):
         )
         cls.client = TestClient(api_module.create_app(runtime, []))
         cls.client.__enter__()
+        # 方案 A：purpose=smoke 必须携带内部 token（header）。测试用随机值，
+        # 只存进程环境，不写进任何断言以外的落盘位置。
+        cls.smoke_token = "smoke-" + uuid.uuid4().hex
+        cls._previous_token = os.environ.get("PLATFORM_SMOKE_TOKEN")
+        os.environ["PLATFORM_SMOKE_TOKEN"] = cls.smoke_token
 
     @classmethod
     def _root_shapes_dir(cls) -> str:
@@ -425,6 +434,10 @@ class PublishGateTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if cls._previous_token is None:
+            os.environ.pop("PLATFORM_SMOKE_TOKEN", None)
+        else:
+            os.environ["PLATFORM_SMOKE_TOKEN"] = cls._previous_token
         cls.client.__exit__(None, None, None)
         cls.reasoner.close()
         cls.graph.close()
@@ -558,6 +571,9 @@ class PublishGateTests(unittest.TestCase):
         )
         return response
 
+    def _smoke_headers(self, token: str | None = None):
+        return {termgate.SMOKE_TOKEN_HEADER: token or self.smoke_token}
+
     def _version_rows(self, version_id: str) -> list[dict]:
         return self.meta.query(
             "SELECT version_id FROM platform.ontology_version WHERE version_id = %s",
@@ -652,7 +668,7 @@ class PublishGateTests(unittest.TestCase):
         self.assertEqual(stored["verdict"], "fail")
         self.assertTrue(stored["gates"]["terms"]["vocabGuard"]["zeroDrop"])
 
-    def test_13_implicit_publish_purpose_smoke_is_exempted_and_leaves_a_trace(self):
+    def test_13_implicit_publish_purpose_smoke_with_token_is_exempted_and_leaves_a_trace(self):
         self.registry.set_terms_gate(TermsConfig(gate="warn"))
         self._set_mark()
         version_id = self._insert_draft_version(NO_TERMS_NT)
@@ -662,6 +678,7 @@ class PublishGateTests(unittest.TestCase):
                 "versionId": version_id, "actor": "smoke-selftest",
                 "purpose": "smoke", "acknowledgeBreaking": True,
             },
+            headers=self._smoke_headers(),
         )
         self.assertEqual(response.status_code, 200, response.text)
         payload = response.json()
@@ -673,7 +690,9 @@ class PublishGateTests(unittest.TestCase):
         self.assertEqual(exemption["path"], "POST /ontology/publish")
         self.assertEqual(exemption["versionId"], version_id)
         self.assertEqual(exemption["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(exemption["baseline"]["versionId"], "ont-mark-baseline")
         self.assertEqual(exemption["current"]["conceptsInScheme"], 0)
+        self.assertEqual(exemption["tokenStatus"], "verified")
         self.assertEqual(payload["previousVersionId"], self.original_pointer)
 
         stored = self._evidence(version_id)[0]["payload"]
@@ -685,6 +704,30 @@ class PublishGateTests(unittest.TestCase):
             stored["gates"]["terms"]["vocabGuard"]["exemption"]["baseline"]["conceptsInScheme"],
             85,
         )
+        # 证据包补的两个字段，且 token 明文不落证据包。
+        self.assertEqual(stored["purposeVerified"], True)
+        self.assertIsNotNone(stored["remoteAddr"])
+        self.assertNotIn(self.smoke_token, str(stored))
+
+        # 豁免关键字段进哈希链：published 事件 payload 的 terms 摘要。
+        events = self.meta.query(
+            "SELECT payload FROM platform.ontology_event "
+            "WHERE version_id = %s AND action = 'published'",
+            (version_id,),
+        )
+        self.assertEqual(len(events), 1)
+        audit = events[0]["payload"]["terms"]
+        self.assertEqual(audit["purpose"], "smoke")
+        self.assertTrue(audit["exempted"])
+        self.assertEqual(audit["verdict"], "warned")
+        self.assertEqual(audit["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(audit["baseline"]["aliases"], 18)
+        self.assertEqual(audit["baseline"]["versionId"], "ont-mark-baseline")
+        self.assertEqual(audit["current"]["conceptsInScheme"], 0)
+        self.assertEqual(audit["tokenStatus"], "verified")
+        self.assertTrue(audit["purposeVerified"])
+        self.assertNotIn(self.smoke_token, str(audit))
+        self.assertTrue(self.registry.verify_events()["ok"])
 
     def test_14_import_publish_zero_terms_is_blocked_then_exempted_by_smoke(self):
         self.registry.set_terms_gate(TermsConfig(gate="warn"))
@@ -712,6 +755,7 @@ class PublishGateTests(unittest.TestCase):
                 "dryRun": False, "acknowledgeBreaking": True,
                 "actor": "smoke-selftest", "purpose": "smoke",
             },
+            headers=self._smoke_headers(),
         )
         self.assertEqual(allowed.status_code, 200, allowed.text)
         payload = allowed.json()
@@ -721,8 +765,12 @@ class PublishGateTests(unittest.TestCase):
         self.assertEqual(exemption["path"], "POST /ontology/import")
         self.assertEqual(exemption["baseline"]["conceptsInScheme"], 85)
         self.assertEqual(exemption["current"]["conceptsInScheme"], 0)
+        self.assertEqual(exemption["tokenStatus"], "verified")
         stored = self._evidence(payload["versionId"])[0]["payload"]
         self.assertTrue(stored["gates"]["terms"]["vocabGuard"]["exemption"])
+        self.assertEqual(stored["purposeVerified"], True)
+        self.assertIsNotNone(stored["remoteAddr"])
+        self.assertNotIn(self.smoke_token, str(stored))
 
     def test_15_off_cannot_switch_off_the_vocab_guard(self):
         self.registry.set_terms_gate(TermsConfig(gate="off"))
@@ -739,6 +787,107 @@ class PublishGateTests(unittest.TestCase):
         self.assertEqual(error["details"]["gate"], "off")
         self.assertTrue(error["details"]["vocabGuard"]["forcedBlocking"])
         self.assertEqual(error["details"]["vocabGuard"]["highWater"]["conceptsInScheme"], 85)
+
+    def test_16_smoke_without_token_is_blocked_and_recorded_as_forged(self):
+        self.registry.set_terms_gate(TermsConfig(gate="warn"))
+        self._set_mark()
+        version_id = self._insert_draft_version(NO_TERMS_NT)
+        response = self.client.post(
+            "/ontology/publish",
+            json={
+                "versionId": version_id, "actor": "smoke-selftest",
+                "purpose": "smoke", "acknowledgeBreaking": True,
+            },
+        )
+        self.assertEqual(response.status_code, 409, response.text)
+        error = response.json()["error"]
+        self.assertEqual(error["providerCode"], "E_TERM_GATE_BLOCKED")
+        guard = error["details"]["vocabGuard"]
+        self.assertTrue(guard["zeroDrop"])
+        self.assertIsNone(guard["exemption"])
+        self.assertEqual(guard["tokenStatus"], "missing")
+        self.assertFalse(guard["purposeVerified"])
+        codes = [item["code"] for item in error["details"]["findings"]]
+        self.assertIn(termgate.VOCAB_ZERO_CODE, codes)
+        self.assertIn(termgate.VOCAB_ZERO_FORGED_CODE, codes)
+        self.assertIn("未携带", error["details"]["exemptionRejected"])
+        rows = self.meta.query(
+            "SELECT status FROM platform.ontology_version WHERE version_id = %s",
+            (version_id,),
+        )
+        self.assertEqual(rows[0]["status"], "draft")
+        stored = self._evidence(version_id)[0]["payload"]
+        self.assertEqual(stored["verdict"], "fail")
+        self.assertEqual(stored["purposeVerified"], False)
+        self.assertNotIn(self.smoke_token, response.text)
+
+    def test_17_wrong_token_on_api_alias_is_blocked_and_recorded_as_forged(self):
+        self.registry.set_terms_gate(TermsConfig(gate="warn"))
+        self._set_mark()
+        record = self._import(NO_TERMS_TTL, "g8wrongtoken")
+        version_id = _import_version_id(record["importId"])
+        wrong = "wrong-" + uuid.uuid4().hex
+        response = self.client.post(
+            f"/api/ontology/imports/{record['importId']}/publish",
+            json={
+                "dryRun": False, "acknowledgeBreaking": True,
+                "actor": "smoke-selftest", "purpose": "smoke",
+            },
+            headers={termgate.SMOKE_TOKEN_HEADER: wrong},
+        )
+        self.assertEqual(response.status_code, 409, response.text)
+        error = response.json()["error"]
+        self.assertEqual(error["providerCode"], "E_TERM_GATE_BLOCKED")
+        guard = error["details"]["vocabGuard"]
+        self.assertEqual(guard["tokenStatus"], "invalid")
+        self.assertIsNone(guard["exemption"])
+        codes = [item["code"] for item in error["details"]["problems"]]
+        self.assertIn(termgate.VOCAB_ZERO_FORGED_CODE, codes)
+        self.assertIn("校验失败", error["details"]["exemptionRejected"])
+        self.assertNotIn(wrong, response.text)
+        self.assertNotIn(self.smoke_token, response.text)
+        self.assertEqual(
+            self.meta.query(
+                "SELECT version_id FROM platform.ontology_version WHERE version_id = %s",
+                (version_id,),
+            ),
+            [],
+        )
+
+    def test_18_unconfigured_token_env_fails_closed(self):
+        self.registry.set_terms_gate(TermsConfig(gate="warn"))
+        self._set_mark()
+        record = self._import(NO_TERMS_TTL, "g8unconfigured")
+        version_id = _import_version_id(record["importId"])
+        os.environ.pop("PLATFORM_SMOKE_TOKEN", None)
+        try:
+            response = self.client.post(
+                f"/ontology/imports/{record['importId']}/publish",
+                json={
+                    "dryRun": False, "acknowledgeBreaking": True,
+                    "actor": "smoke-selftest", "purpose": "smoke",
+                },
+                headers={termgate.SMOKE_TOKEN_HEADER: "any-" + uuid.uuid4().hex},
+            )
+        finally:
+            os.environ["PLATFORM_SMOKE_TOKEN"] = self.smoke_token
+        self.assertEqual(response.status_code, 409, response.text)
+        error = response.json()["error"]
+        self.assertEqual(error["providerCode"], "E_TERM_GATE_BLOCKED")
+        self.assertIn("fail-closed", error["message"])
+        guard = error["details"]["vocabGuard"]
+        self.assertEqual(guard["tokenStatus"], "unconfigured")
+        self.assertIsNone(guard["exemption"])
+        codes = [item["code"] for item in error["details"]["problems"]]
+        self.assertIn(termgate.VOCAB_ZERO_FORGED_CODE, codes)
+        self.assertIn("未配置", error["details"]["exemptionRejected"])
+        self.assertEqual(
+            self.meta.query(
+                "SELECT version_id FROM platform.ontology_version WHERE version_id = %s",
+                (version_id,),
+            ),
+            [],
+        )
 
     def test_8_warn_publishes_and_records_the_gate_in_evidence(self):
         record = self._import(DUPLICATE_TTL, "g8warn")

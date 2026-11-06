@@ -66,6 +66,7 @@ def build_pack(
     diff: dict[str, Any] | None = None,
     error: PortError | None = None,
     shapes: dict[str, Any] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if verdict not in ("pass", "fail"):
         raise ValueError(f"verdict must be pass/fail, got {verdict!r}")
@@ -106,6 +107,9 @@ def build_pack(
         "source": "publish 门禁（SHACL + 一致性 + breaking ack + 物化）+ 输入版本指纹",
         "readOnly": True,
     }
+    if extra:
+        # 调用方补充的字段（如 remoteAddr / purposeVerified）也进指纹，防止事后被改。
+        pack.update({key: value for key, value in extra.items() if key not in pack})
     pack["sha256"] = _sha256({key: value for key, value in pack.items() if key != "sha256"})
     return pack
 

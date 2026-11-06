@@ -13,6 +13,7 @@ from pathlib import Path
 
 import httpx
 
+from . import termgate
 from .assembly import Runtime
 from .errors import PortError
 from .fact_export import export_meta, verify_file, write_export
@@ -90,7 +91,7 @@ def run_smoke_s12(runtime: Runtime, base_url: str) -> int:
         # implicit publish is breaking and must carry an explicit acknowledgement.
         published = runtime.ontology.publish(
             v_base["versionId"], acknowledge_breaking=True, actor="operator",
-            purpose="smoke",
+            purpose="smoke", **termgate.smoke_env_context("smoke"),
         )
         v_base_events = runtime.ontology.events(v_base["versionId"])["items"]
         actions = {event["action"] for event in v_base_events}
@@ -128,7 +129,7 @@ def run_smoke_s12(runtime: Runtime, base_url: str) -> int:
         )
         acked = runtime.ontology.publish(
             v_break["versionId"], acknowledge_breaking=True, actor="operator",
-            purpose="smoke",
+            purpose="smoke", **termgate.smoke_env_context("smoke"),
         )
         suite.check(
             "legacy.breaking_acknowledged",

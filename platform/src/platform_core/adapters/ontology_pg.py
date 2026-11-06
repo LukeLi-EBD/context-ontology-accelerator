@@ -136,6 +136,37 @@ def _term_high_water(registry: Any, meta: Any) -> dict[str, Any] | None:
     }
 
 
+def _term_audit_payload(gates: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Hash-chain-visible summary of the term gate decision.
+
+    The evidence pack is a separate, non-chained table; putting purpose /
+    exempted / verdict / baseline / current into ``ontology_event.payload`` keeps
+    "why a zero-term version was allowed" inside the tamper-evident audit chain.
+    Never contains token material.
+    """
+    gate = (gates or {}).get("terms")
+    if not isinstance(gate, dict):
+        return None
+    guard = gate.get("vocabGuard") or {}
+    exemption = guard.get("exemption")
+    return {
+        "gate": gate.get("gate"),
+        "verdict": gate.get("verdict"),
+        "blocked": bool(gate.get("blocked")),
+        "exempted": bool(exemption),
+        "purpose": guard.get("purpose"),
+        "purposeVerified": guard.get("purposeVerified"),
+        "tokenStatus": guard.get("tokenStatus"),
+        "remoteAddr": guard.get("remoteAddr"),
+        "baseline": guard.get("highWater"),
+        "current": guard.get("effective"),
+        "findingCodes": sorted({
+            str(item.get("code")) for item in (gate.get("findings") or [])
+            if item.get("code")
+        }),
+    }
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -999,6 +1030,9 @@ def publish_import(
     publish_existing: bool = False,
     expected_version_id: str | None = None,
     purpose: str | None = None,
+    purpose_verified: bool | None = None,
+    purpose_status: str | None = None,
+    remote_addr: str | None = None,
 ) -> dict[str, Any]:
     """G-01 publish: dry-run diff/impact, then a governed version publish.
 
@@ -1082,10 +1116,21 @@ def publish_import(
     # guard fires; warn/block evaluate the staged T-Box before any row is
     # written. The guard compares the *effective* term set against the stored
     # high-water mark (not the current pointer), so consecutive collapses are
-    # caught as well, and purpose=smoke is the only exemption.
+    # caught as well, and purpose=smoke with a verified internal token is the only
+    # exemption (missing/invalid/unconfigured token is recorded as forged and the
+    # zero-term publish is still blocked).
     terms_gate: dict[str, Any] | None = None
     terms_cfg = getattr(registry, "_terms_gate", None)
     if terms_cfg is not None:
+        if purpose is not None and purpose_verified is None:
+            # 进程内自检探针（platform smoke-sN）无法带 HTTP 头：从同一环境变量
+            # 取 token，走同样的常量时间比较；未配置 => fail-closed。
+            env_ctx = termgate.smoke_env_context(
+                purpose, env_name=getattr(terms_cfg, "smoke_token_env", None),
+                remote_addr=remote_addr,
+            )
+            purpose_verified = env_ctx["purposeVerified"]
+            purpose_status = env_ctx["purposeStatus"]
         baseline: dict[str, Any] | None = None
         baseline_error: str | None = None
         high_water: dict[str, Any] | None = None
@@ -1113,6 +1158,9 @@ def publish_import(
                 "actor": actor,
                 "path": "POST /ontology/import",
                 "purpose": purpose,
+                "purposeVerified": purpose_verified,
+                "purposeStatus": purpose_status,
+                "remoteAddr": remote_addr,
                 "baselineError": baseline_error,
             },
         )
@@ -1145,10 +1193,23 @@ def publish_import(
 
     # --- G8 terms gate ---
     if terms_gate is not None and terms_gate.get("blocked"):
+        guard = terms_gate.get("vocabGuard") or {}
+        forged = next(
+            (item for item in (terms_gate.get("findings") or [])
+             if item.get("code") == termgate.VOCAB_ZERO_FORGED_CODE),
+            None,
+        )
+        unconfigured = guard.get("tokenStatus") == "unconfigured"
         raise PortError(
             code="Conflict",
             message=(
                 f"term gate blocked publish: {terms_gate['blocking']} blocking finding(s)"
+                + (
+                    "；smoke token 未配置，已按 fail-closed 处理（token 环境变量未配置时"
+                    "一律拒绝豁免）"
+                    if unconfigured
+                    else ""
+                )
             ),
             provider="platform",
             provider_code=termgate.E_TERM_GATE_BLOCKED,
@@ -1161,11 +1222,13 @@ def publish_import(
                 "warnings": terms_gate["warnings"],
                 "problems": terms_gate["findings"],
                 "vocabGuard": terms_gate.get("vocabGuard"),
+                "exemptionRejected": forged.get("message") if forged else None,
                 "allowed": [
                     "fix the blocking findings and re-import the T-Box",
                     "publish a T-Box version that still carries the MetricScheme terms",
-                    "a self-check probe must pass purpose=smoke explicitly; the "
-                    "exemption is recorded in the evidence pack",
+                    "a self-check probe must pass purpose=smoke with the X-Smoke-Token "
+                    "header issued by the operator; the exemption is recorded in the "
+                    "evidence pack and the ontology_event audit chain",
                 ],
             },
         )
@@ -1198,6 +1261,9 @@ def publish_import(
                 activate_existing=True,
                 expected_version_id=expected_version_id,
                 purpose=purpose,
+                purpose_verified=purpose_verified,
+                purpose_status=purpose_status,
+                remote_addr=remote_addr,
                 **gate_kwargs,
             )
             return {
@@ -1332,6 +1398,9 @@ def publish_import(
             reason=summary,
             expected_version_id=expected_version_id,
             purpose=purpose,
+            purpose_verified=purpose_verified,
+            purpose_status=purpose_status,
+            remote_addr=remote_addr,
             **gate_kwargs,
         )
         return {
@@ -2726,6 +2795,7 @@ class OntologyRegistry:
         mode: str, gates: dict[str, Any], verdict: str, actor: str,
         reason: str | None, diff: dict[str, Any] | None = None,
         error: PortError | None = None,
+        extra: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """O-04: observe publish gates and persist an evidence pack.
 
@@ -2755,6 +2825,14 @@ class OntologyRegistry:
                 version=row, against=against, proposal=proposal, mode=mode,
                 gates=gates, verdict=verdict, actor=actor, reason=reason,
                 diff=diff, error=error, shapes=shapes,
+                extra={
+                    # 调用者身份线索：来源地址与 smoke token 是否校验通过。
+                    "remoteAddr": ((gates.get("terms") or {}).get("vocabGuard") or {})
+                    .get("remoteAddr"),
+                    "purposeVerified": ((gates.get("terms") or {}).get("vocabGuard") or {})
+                    .get("purposeVerified"),
+                    **(extra or {}),
+                },
             )
             record(self._meta, pack)
             return {
@@ -2897,6 +2975,9 @@ class OntologyRegistry:
         expected_version_id: str | None = None,
         extra_gates: dict[str, Any] | None = None,
         purpose: str | None = None,
+        purpose_verified: bool | None = None,
+        purpose_status: str | None = None,
+        remote_addr: str | None = None,
     ) -> dict[str, Any]:
         row = self._require(version_id)
         # OQ-65 residual / B-5: an archived version is a read-only baseline. It
@@ -3093,7 +3174,8 @@ class OntologyRegistry:
 
         # --- G8/O-05 vocab-zero guard (both governed and implicit publishes) ---
         # predicate: high_water.conceptsInScheme > 0 and effective.conceptsInScheme == 0
-        #            => blocking, independent of terms.gate; only purpose=smoke exempts
+        #            => blocking, independent of terms.gate; only purpose=smoke with a
+        #            verified internal token (hmac, fail-closed) may exempt
         # 判据针对"生效术语集"，不针对"T-Box 图内容"：等术语解耦到独立命名图/指针后，
         # 版本图里没有术语是正常状态，本判据只比较发布后生效术语集与高水位。
         # It must run before the tx below: a rejected publish must not leave version
@@ -3102,6 +3184,16 @@ class OntologyRegistry:
         # so it is covered here too — a guard only wired into publish_import would
         # never see those.
         if self._terms_gate is not None and "terms" not in gates:
+            if purpose is not None and purpose_verified is None:
+                # 进程内自检探针（platform smoke-sN / CLI）无法带 HTTP 头：从同一
+                # 环境变量取 token，走同样的常量时间比较；未配置 => fail-closed。
+                env_ctx = termgate.smoke_env_context(
+                    purpose,
+                    env_name=getattr(self._terms_gate, "smoke_token_env", None),
+                    remote_addr=remote_addr,
+                )
+                purpose_verified = env_ctx["purposeVerified"]
+                purpose_status = env_ctx["purposeStatus"]
             high_water: dict[str, Any] | None = None
             baseline_error: str | None = None
             try:
@@ -3120,6 +3212,9 @@ class OntologyRegistry:
                     "actor": actor,
                     "path": "POST /ontology/publish",
                     "purpose": purpose,
+                    "purposeVerified": purpose_verified,
+                    "purposeStatus": purpose_status,
+                    "remoteAddr": remote_addr,
                     "activateExisting": bool(activate_existing),
                     "implicit": bool(implicit),
                     "baselineError": baseline_error,
@@ -3129,11 +3224,24 @@ class OntologyRegistry:
                 gates["terms"] = guard
                 termgate.remember(self, guard)
             if guard is not None and guard.get("blocked"):
+                vocab_guard = guard.get("vocabGuard") or {}
+                forged = next(
+                    (item for item in (guard.get("findings") or [])
+                     if item.get("code") == termgate.VOCAB_ZERO_FORGED_CODE),
+                    None,
+                )
+                unconfigured = vocab_guard.get("tokenStatus") == "unconfigured"
                 error = PortError(
                     code="Conflict",
                     message=(
                         "term vocab guard blocked publish: the effective term set dropped "
                         "to zero while the high-water mark is non-zero"
+                        + (
+                            "；smoke token 未配置，已按 fail-closed 处理（token 环境变量"
+                            "未配置时一律拒绝豁免）"
+                            if unconfigured
+                            else ""
+                        )
                     ),
                     provider="platform",
                     provider_code=termgate.E_TERM_GATE_BLOCKED,
@@ -3143,13 +3251,16 @@ class OntologyRegistry:
                         "verdict": guard["verdict"],
                         "vocabGuard": guard["vocabGuard"],
                         "findings": guard["findings"],
+                        "exemptionRejected": forged.get("message") if forged else None,
                         "mode": "activate_existing" if activate_existing else (
                             "implicit" if implicit else "governed"
                         ),
                         "allowed": [
                             "publish a T-Box version that still carries the MetricScheme terms",
-                            "a self-check probe must pass purpose=smoke explicitly; the "
-                            "exemption is recorded in the evidence pack",
+                            "a self-check probe must pass purpose=smoke with the "
+                            "X-Smoke-Token header issued by the operator; the exemption "
+                            "is recorded in the evidence pack and the ontology_event "
+                            "audit chain",
                         ],
                     },
                 )
@@ -3321,39 +3432,57 @@ class OntologyRegistry:
                     "SET status = 'published', published_at = now() WHERE proposal_id = %s",
                     (pid,),
                 )
+            # 豁免关键字段进哈希链：``published`` 事件的 payload 里显式带一份
+            # 术语门禁摘要（purpose / 是否豁免 / 判定结论 / 基线 / 当前值），
+            # 使其不只存在于非链式的证据包表。gate=off 且未触发零术语时摘要为
+            # None，不写键，保持 off 基线逐字一致。
+            terms_audit = _term_audit_payload(gates)
+            published_payload = {
+                "mode": (
+                    "activate_existing" if activate_existing
+                    else ("implicit_governed" if implicit else "governed")
+                ),
+                "previous": previous_id,
+                "previousVersionId": previous_id,
+                "publishedBy": actor,
+                "canonicalHash": row.get("content_hash"),
+                "breaking": bool(breaking),
+                "gates": gates,
+            }
+            if terms_audit is not None:
+                published_payload["terms"] = terms_audit
             self._append_event(
                 tx, version_id, pid, "published", actor, reason,
-                {
-                    "mode": (
-                        "activate_existing" if activate_existing
-                        else ("implicit_governed" if implicit else "governed")
-                    ),
-                    "previous": previous_id,
-                    "previousVersionId": previous_id,
-                    "publishedBy": actor,
-                    "canonicalHash": row.get("content_hash"),
-                    "breaking": bool(breaking),
-                    "gates": gates,
-                },
+                published_payload,
             )
             # O-02: close the chain with approved -> published on both the
             # proposal and the version entity.
             if pid is not None:
+                proposal_payload = {
+                    "previousVersionId": previous_id,
+                    "mode": "activate_existing" if activate_existing else "publish",
+                }
+                if terms_audit is not None:
+                    proposal_payload["terms"] = terms_audit
                 record_transition(
                     tx, entity_kind="proposal", entity_id=pid,
                     version_id=version_id, proposal_id=pid,
                     from_status="approved", to_status="published",
                     actor=actor, reason=reason,
-                    payload={"previousVersionId": previous_id,
-                             "mode": "activate_existing" if activate_existing else "publish"},
+                    payload=proposal_payload,
                 )
+            version_payload = {
+                "previousVersionId": previous_id,
+                "activateExisting": bool(activate_existing),
+            }
+            if terms_audit is not None:
+                version_payload["terms"] = terms_audit
             record_transition(
                 tx, entity_kind="version", entity_id=version_id,
                 version_id=version_id, proposal_id=pid,
                 from_status=row["status"], to_status="published",
                 actor=actor, reason=reason,
-                payload={"previousVersionId": previous_id,
-                         "activateExisting": bool(activate_existing)},
+                payload=version_payload,
             )
 
         if governed or implicit:
