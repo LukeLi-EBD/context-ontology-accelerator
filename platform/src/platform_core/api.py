@@ -4720,6 +4720,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         "fact-table-field",
         "fact-observation",
         "value-source",
+        "triple",
         "chunk",
     }
     # Frozen 24-query set from doc/_design/24 §5.2 and platform/tests/term_eval.py.

@@ -281,6 +281,27 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"]["providerCode"], "E_ANSWER_STRATEGY_INVALID")
 
+    def test_triple_citation_is_resolvable(self):
+        def with_triple(_runtime, query, **_kwargs):
+            return {
+                "refused": False,
+                "answerType": "definition",
+                "answerMode": "definition",
+                "reasonCode": "OK",
+                "citations": [
+                    {"kind": "triple", "ref": "<urn:s> <urn:p> <urn:o>", "id": None}
+                ],
+                "missing": [],
+                "degraded": False,
+            }
+
+        with patch.object(api_module, "_qa_answer", with_triple):
+            with _client() as client:
+                payload = client.get("/answer/quality").json()
+        self.assertGreater(payload["summary"]["citations"], 0)
+        self.assertEqual(payload["summary"]["brokenLinkRate"], 0.0)
+        self.assertEqual(payload["brokenLinks"], [])
+
 
 ENTITY_DETAIL = {
     "label": "测试实体",
