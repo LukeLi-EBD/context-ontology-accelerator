@@ -27,6 +27,21 @@
     return { ok: response.ok, status: response.status, body: body };
   }
 
+  async function postJson(url, payload) {
+    const response = await fetch(API_BASE + url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    let body = null;
+    try { body = await response.json(); } catch (err) { body = null; }
+    if (!response.ok) {
+      const message = body && body.error ? body.error.message : 'HTTP ' + response.status;
+      throw new Error(message);
+    }
+    return body;
+  }
+
   function showEmpty(node, message) {
     node.classList.add('empty');
     node.textContent = message;
@@ -38,8 +53,8 @@
   }
 
   // ---- tabs ---------------------------------------------------------------
-  const VIEWS = ['ontology', 'metrics', 'terms', 'triples', 'sparql'];
-  const loaded = { ontology: false, metrics: false, terms: false, triples: false, sparql: false };
+  const VIEWS = ['ontology', 'metrics', 'terms', 'triples', 'sparql', 'answer'];
+  const loaded = { ontology: false, metrics: false, terms: false, triples: false, sparql: false, answer: false };
   const tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -58,6 +73,7 @@
     if (view === 'terms') return loadTerms();
     if (view === 'triples') return loadTriples();
     if (view === 'sparql') return loadSparql();
+    if (view === 'answer') return null;
     return null;
   }
 
@@ -770,6 +786,262 @@
       empty.textContent = '加载失败：' + err.message;
     }
   }
+
+  // ---- answer / coverage --------------------------------------------------
+  const QA_LAYER_LABELS = {
+    ontology: '本体 T-Box',
+    terms: 'SKOS 术语',
+    metrics: '口径层',
+    facts: '事实层',
+  };
+
+  function qaStatusPill(status) {
+    const pill = document.createElement('span');
+    pill.className = 'status-pill status-' + (status || 'missing');
+    pill.textContent = status || 'missing';
+    return pill;
+  }
+
+  function qaMetaText(text) {
+    const node = document.createElement('div');
+    node.className = 'qa-bar-meta';
+    node.textContent = text;
+    return node;
+  }
+
+  function renderQaCoverage(data) {
+    const box = el('qa-coverage-bars');
+    box.innerHTML = '';
+    box.classList.remove('empty');
+    (data.layers || []).forEach(function (layer) {
+      const row = document.createElement('div');
+      row.className = 'qa-bar';
+
+      const head = document.createElement('div');
+      head.className = 'qa-bar-head';
+      const label = document.createElement('span');
+      label.className = 'qa-bar-label';
+      label.textContent = QA_LAYER_LABELS[layer.layer] || layer.layer;
+      head.appendChild(label);
+      head.appendChild(qaStatusPill(layer.status));
+      row.appendChild(head);
+
+      const track = document.createElement('div');
+      track.className = 'qa-bar-track';
+      const fill = document.createElement('div');
+      fill.className = 'qa-bar-fill status-' + (layer.status || 'missing');
+      const pct = Math.round(Number(layer.coverage || 0) * 100);
+      fill.style.width = pct + '%';
+      track.appendChild(fill);
+      row.appendChild(track);
+
+      // 覆盖度 meta：优先展示真实命中对象，其次展示缺失片段，最后落到状态解释。
+      let metaParts = [];
+      if (layer.matched && layer.matched.length) {
+        metaParts.push('命中：' + layer.matched.map(function (item) {
+          return item.label || item.id || item.metricId || '';
+        }).filter(Boolean).slice(0, 4).join(' / '));
+      }
+      if (layer.missing && layer.missing.length) {
+        metaParts.push('缺：' + layer.missing.slice(0, 4).join(' / '));
+      }
+      if (!metaParts.length) {
+        metaParts.push(layer.status === 'not_applicable' ? '本问题不需要该层' : '无命中');
+      }
+      metaParts.push('coverage=' + pct + '%');
+      row.appendChild(qaMetaText(metaParts.join(' · ')));
+      box.appendChild(row);
+    });
+    if (!(data.layers || []).length) {
+      showEmpty(box, '接口没有返回 layers。');
+    }
+  }
+
+  function summarizeQaStep(step) {
+    const out = step.output || {};
+    if (step.step === 'retrieve') {
+      return 'chunks=' + (out.chunks || 0) + ' · facts=' + (out.facts || 0) +
+        (out.error ? ' · error=' + out.error : '');
+    }
+    if (step.step === 'terms') {
+      return 'ontology=' + (out.ontologyMatched || 0) + ' · terms=' + (out.termsMatched || 0);
+    }
+    if (step.step === 'metric') {
+      const mid = out.metricId ? out.metricId + '@' + (out.definitionVersion || '?') : 'none';
+      return 'metric=' + mid;
+    }
+    if (step.step === 'facts') {
+      return 'observations=' + (out.observationRows || 0) +
+        ' · code=' + (out.code || '—') +
+        (out.factFunction ? ' · fn=' + out.factFunction : '');
+    }
+    if (step.step === 'compute') {
+      if (out.error) return 'error=' + out.error;
+      if (out.reason) return 'reason=' + out.reason;
+      if (out.mode === 'rule_set') return 'mode=rule_set · value=null';
+      return 'value=' + (out.value == null ? 'null' : out.value) +
+        (out.dataSource ? ' · dataSource=' + out.dataSource : '');
+    }
+    return '';
+  }
+
+  function renderQaSteps(steps) {
+    const box = el('qa-steps');
+    box.innerHTML = '';
+    box.classList.remove('empty');
+    el('qa-step-count').textContent = '· ' + steps.length + ' 步';
+    steps.forEach(function (step) {
+      const item = document.createElement('div');
+      item.className = 'qa-step';
+      const dot = document.createElement('span');
+      dot.className = 'qa-step-dot status-' + (step.status || 'skipped');
+      item.appendChild(dot);
+
+      const body = document.createElement('div');
+      body.className = 'qa-step-body';
+      const title = document.createElement('div');
+      title.className = 'qa-step-title';
+      const name = document.createElement('span');
+      name.className = 'qa-step-name';
+      name.textContent = step.step;
+      title.appendChild(name);
+      title.appendChild(qaStatusPill(step.status));
+      const duration = document.createElement('span');
+      duration.className = 'sub';
+      duration.textContent = (step.durationMs == null ? '—' : step.durationMs + ' ms');
+      title.appendChild(duration);
+      body.appendChild(title);
+
+      const meta = document.createElement('div');
+      meta.className = 'qa-step-meta';
+      meta.textContent = summarizeQaStep(step);
+      body.appendChild(meta);
+      item.appendChild(body);
+      box.appendChild(item);
+    });
+  }
+
+  function renderQaCitations(citations) {
+    const box = el('qa-citations');
+    box.innerHTML = '';
+    box.classList.remove('empty');
+    el('qa-citation-count').textContent = '· ' + citations.length + ' 条';
+    if (!citations.length) {
+      showEmpty(box, '本次回答没有引用（可能被拒答）。');
+      return;
+    }
+    citations.forEach(function (citation) {
+      const chip = document.createElement('span');
+      chip.className = 'qa-chip';
+      chip.title = (citation.id || '') + ' -> ' + (citation.ref || '');
+      const kind = document.createElement('span');
+      kind.className = 'qa-chip-kind';
+      kind.textContent = citation.kind || 'ref';
+      chip.appendChild(kind);
+      const ref = document.createElement('span');
+      ref.className = 'qa-chip-ref';
+      ref.textContent = citation.ref || citation.id || '';
+      chip.appendChild(ref);
+      box.appendChild(chip);
+    });
+  }
+
+  function renderQaMissing(missing) {
+    const box = el('qa-missing');
+    box.innerHTML = '';
+    box.classList.remove('empty');
+    if (!missing || !missing.length) {
+      showEmpty(box, '无缺口。');
+      return;
+    }
+    const list = document.createElement('ul');
+    missing.forEach(function (item) {
+      const li = document.createElement('li');
+      const layer = document.createElement('span');
+      layer.className = 'qa-missing-layer';
+      layer.textContent = item.layer || 'unknown';
+      li.appendChild(layer);
+      const what = document.createElement('span');
+      what.textContent = item.what || item.text || item.code || '';
+      li.appendChild(what);
+      if (item.howToFix) {
+        const fix = document.createElement('div');
+        fix.className = 'qa-missing-fix';
+        fix.textContent = '补法：' + item.howToFix;
+        li.appendChild(fix);
+      }
+      list.appendChild(li);
+    });
+    box.appendChild(list);
+  }
+
+  function renderQaAnswer(answer) {
+    const box = el('qa-answer');
+    box.classList.remove('empty');
+    box.classList.toggle('refused', !!answer.refused);
+    box.textContent = answer.answer || '（空回答）';
+    const badge = el('qa-refusal');
+    badge.className = 'qa-refusal-badge ' + (answer.refused ? 'refused' : (answer.valueRefused ? 'warn' : 'ok'));
+    const parts = [];
+    if (answer.refused) parts.push('refused');
+    else if (answer.valueRefused) parts.push('valueRefused');
+    else parts.push('answered');
+    if (answer.answerType) parts.push(answer.answerType);
+    if (answer.reasonCode) parts.push(answer.reasonCode);
+    badge.textContent = '· ' + parts.join(' · ');
+  }
+
+  async function askQuestion() {
+    const question = el('qa-question').value.trim();
+    const status = el('qa-status');
+    if (!question) {
+      status.textContent = '请输入问题。';
+      return;
+    }
+    status.textContent = '提问中…';
+    const payload = {
+      query: question,
+      strategy: el('qa-strategy').value,
+      topK: Number(el('qa-topk').value || 5),
+    };
+    try {
+      const results = await Promise.all([
+        postJson('/answerable', payload),
+        postJson('/answer', payload),
+      ]);
+      const coverage = results[0] || {};
+      const answer = results[1] || {};
+      renderQaCoverage(coverage);
+      renderQaSteps(answer.steps || []);
+      renderQaCitations(answer.citations || []);
+      renderQaMissing(answer.missing || []);
+      renderQaAnswer(answer);
+      status.textContent = '· answerable=' + String(coverage.answerable) +
+        ' · valueAnswerable=' + String(coverage.valueAnswerable) +
+        (coverage.degraded ? ' · degraded' : '');
+    } catch (err) {
+      status.textContent = '';
+      const box = el('qa-answer');
+      box.classList.add('empty', 'refused');
+      box.textContent = '提问失败：' + err.message;
+      showEmpty(el('qa-coverage-bars'), '覆盖度读取失败。');
+      showEmpty(el('qa-steps'), '步骤读取失败。');
+      showEmpty(el('qa-citations'), '引用读取失败。');
+      showEmpty(el('qa-missing'), '缺口读取失败。');
+    }
+  }
+
+  el('qa-ask').addEventListener('click', askQuestion);
+  el('qa-example').addEventListener('click', function () {
+    el('qa-question').value = '13个月继续率是多少';
+    el('qa-question').focus();
+  });
+  el('qa-question').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      askQuestion();
+    }
+  });
 
   // First paint only loads the read-only ontology view; metrics/terms load on
   // first tab activation so the initial page never runs a heavy job.

@@ -29,6 +29,7 @@
         <button class="tab" data-view="terms" role="tab">术语别名</button>
         <button class="tab" data-view="triples" role="tab">三元组</button>
         <button class="tab" data-view="sparql" role="tab">SPARQL</button>
+        <button class="tab" data-view="answer" role="tab">问答</button>
       </div>
 
       <div id="view-ontology" class="view">
@@ -167,6 +168,53 @@
         </div>
         <div id="sparql-error" class="error" hidden></div>
         <div id="sparql-result" class="empty">尚未运行查询</div>
+      </div>
+
+      <div id="view-answer" class="view" hidden>
+        <div class="filters qa-filters">
+          <label class="qa-question-label">问题
+            <input type="text" id="qa-question" maxlength="2000"
+              placeholder="例如：13个月继续率是多少 / 逾期分档（M0–M6）是什么">
+          </label>
+          <label>策略
+            <select id="qa-strategy">
+              <option value="lexical" selected>lexical</option>
+              <option value="hybrid">hybrid</option>
+              <option value="vector">vector</option>
+            </select>
+          </label>
+          <label>topK
+            <select id="qa-topk">
+              <option value="3">3</option>
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+            </select>
+          </label>
+          <button id="qa-ask" class="primary">提问</button>
+          <button id="qa-example">填入示例</button>
+          <span id="qa-status" class="sub"></span>
+        </div>
+        <div class="hint">只读：POST /answerable + POST /answer。覆盖度四层为真实命中；引用 chip 全部来自运行时对象。</div>
+
+        <section class="qa-coverage">
+          <h3>覆盖度 <span class="sub">/answerable · ontology / terms / metrics / facts</span></h3>
+          <div id="qa-coverage-bars" class="qa-bars empty">尚未校验</div>
+        </section>
+
+        <div class="split qa-result">
+          <div>
+            <h3>回答 <span id="qa-refusal" class="sub"></span></h3>
+            <div id="qa-answer" class="qa-answer empty">尚未提问</div>
+            <h3>引用 <span id="qa-citation-count" class="sub"></span></h3>
+            <div id="qa-citations" class="qa-chips empty">尚无引用</div>
+            <h3>缺口与补法</h3>
+            <div id="qa-missing" class="qa-missing empty">无</div>
+          </div>
+          <div>
+            <h3>步骤时间线 <span id="qa-step-count" class="sub"></span></h3>
+            <div id="qa-steps" class="qa-steps empty">尚未提问</div>
+          </div>
+        </div>
       </div>
     </section>
   </main>

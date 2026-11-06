@@ -9,7 +9,9 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import time
 from datetime import date, datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +29,8 @@ from .adapters.ontology_pg import (
     persist_import,
     publish_import,
 )
+from .answerable import PUNCT as _ANSWER_PUNCT
+from .answerable import STOPWORDS as _ANSWER_STOPWORDS
 from .assembly import Runtime
 from .bootstrap import CheckResult
 from .errors import PortError
@@ -55,6 +59,7 @@ _HTTP_STATUS = {
 _BROWSE_IRI = re.compile(r"^[^<>\"{}|^`\\\s]+$")
 _OWL = "http://www.w3.org/2002/07/owl#"
 _RDFS = "http://www.w3.org/2000/01/rdf-schema#"
+_RDFS_LABEL = _RDFS + "label"
 _SKOS = "http://www.w3.org/2004/02/skos/core#"
 _TERM = "https://w3id.org/fsldm/terms#"
 _READ_ONLY_QUERY = re.compile(
@@ -153,6 +158,1171 @@ def _metric_json(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
                 "ruleSet": row.get("rule_set_json"),
             }
         )
+    return payload
+
+
+# ---- layered coverage / citation QA helpers -----------------------------
+
+_QA_DRIVABLE_KINDS = ("ratio", "duration", "sum")
+_QA_NUMERIC_RE = re.compile(
+    r"(是多少|多少|几个|几[天月年次]|计算|算一下|占比|比例|百分比|百分|率是|率有多|"
+    r"数值|求值|统计|合计|总计|平均|最大|最小|趋势)"
+)
+_QA_DEFINITION_RE = re.compile(r"(口径|定义|公式|规则|怎么算|如何计算|是什么|含义|解释)")
+_QA_METRIC_HINT_RE = re.compile(
+    r"(指标|口径|率|占比|比例|余额|集中度|覆盖率|迁徙率|持续率|继续率|坏账|拨备|"
+    r"逾期|分档|AUM|RFM|留存|流失)"
+)
+_QA_FACT_TABLE_RE = re.compile(r"^platform\.[a-z0-9_]+$")
+_QA_OBS_SQL = (
+    "SELECT metric_id, definition_version, count(*) AS n, "
+    "bool_or(fixture) AS has_fixture, min(window_start) AS ws, max(window_end) AS we "
+    "FROM platform.metric_observation GROUP BY metric_id, definition_version"
+)
+_QA_BINDING_SQL = (
+    "SELECT metric_id, definition_version, role, fact_table, entity_column, "
+    "value_expr, agg, window_column, window_mode FROM platform.metric_field_binding"
+)
+_QA_MAX_CANDIDATES = 6
+
+
+def _qa_query(body: dict[str, Any], required: bool = True) -> str:
+    for key in ("query", "q", "question", "metric", "metricId"):
+        value = body.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    if required:
+        raise PortError(
+            code="InvalidArgument",
+            message="query must not be empty",
+            provider="platform",
+            provider_code="E_ANSWER_QUERY_EMPTY",
+        )
+    return ""
+
+
+def _qa_metric_id(body: dict[str, Any]) -> str | None:
+    value = body.get("metricId") or body.get("metric")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _qa_intent(query: str, metric_id: str | None, hint: str | None = None) -> str:
+    if hint in ("value", "definition"):
+        return hint
+    if metric_id and not _QA_DEFINITION_RE.search(query):
+        return "value"
+    if _QA_NUMERIC_RE.search(query):
+        return "value"
+    return "definition"
+
+
+def _qa_norm(text: Any) -> str:
+    return re.sub(r"\s+", "", str(text or "").lower())
+
+
+def _qa_graph_entries(runtime: Runtime, graph_iri: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    sparql = (
+        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
+        "PREFIX skos: <http://www.w3.org/2004/02/skos/core#> "
+        f"SELECT ?s ?p ?l FROM <{graph_iri}> WHERE {{ ?s ?p ?l . "
+        "FILTER(?p IN (skos:prefLabel, skos:altLabel, rdfs:label)) }"
+    )
+    payload = runtime.graph.query(sparql)
+    ontology: list[dict[str, Any]] = []
+    terms: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for binding in payload.get("bindings", []):
+        values = binding.get("values", {})
+        subject = values.get("s")
+        predicate = values.get("p")
+        label = values.get("l")
+        if not (subject and predicate and label):
+            continue
+        if subject.get("kind") != "iri" or label.get("kind") != "literal":
+            continue
+        iri = str(subject.get("iri") or "")
+        pred = str(predicate.get("iri") or "")
+        text = str(label.get("value") or "").strip()
+        if not iri or not text:
+            continue
+        key = (pred, iri, text.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        entry = {"id": iri, "label": text, "predicate": pred}
+        if pred == _RDFS_LABEL:
+            ontology.append({**entry, "source": "rdfs:label"})
+        elif pred in (_SKOS + "prefLabel", _SKOS + "altLabel"):
+            terms.append({**entry, "source": "skos"})
+    return ontology, terms
+
+
+def _qa_metric_rows(runtime: Runtime) -> list[dict[str, Any]]:
+    try:
+        return list(runtime.metadata.query("SELECT * FROM platform.metric_definition ORDER BY metric_id"))
+    except Exception:
+        return []
+
+
+def _qa_metric_candidates(
+    query: str, rows: list[dict[str, Any]], metric_id: str | None = None
+) -> list[dict[str, Any]]:
+    wanted = _qa_norm(query)
+    scored: list[dict[str, Any]] = []
+    for row in rows:
+        mid = str(row.get("metric_id") or "")
+        if not mid:
+            continue
+        name = str(row.get("name_zh") or "")
+        base_name = re.sub(r"[（(][^）)]*[）)]", "", name).strip()
+        display = str(row.get("display_name") or "")
+        score = 0.0
+        reason: str | None = None
+        if metric_id and mid == metric_id:
+            score, reason = 1.0, "metric_id"
+        elif wanted and wanted == _qa_norm(mid):
+            score, reason = 1.0, "metric_id"
+        elif wanted and _qa_norm(name) and _qa_norm(name) in wanted:
+            score, reason = 0.98, "exact_name"
+        elif wanted and len(_qa_norm(base_name)) >= 2 and _qa_norm(base_name) in wanted:
+            score, reason = 0.95, "name_substring"
+        elif wanted and _qa_norm(display) and _qa_norm(display) in wanted:
+            score, reason = 0.9, "display_name"
+        elif wanted and len(wanted) >= 2 and wanted in _qa_norm(name):
+            score, reason = 0.85, "query_in_name"
+        else:
+            ratio = SequenceMatcher(None, wanted, _qa_norm(base_name or name)).ratio()
+            if ratio >= 0.62:
+                score, reason = round(ratio * 0.7, 4), "fuzzy_name"
+        if reason is None:
+            continue
+        scored.append(
+            {
+                "layer": "metrics",
+                "id": mid,
+                "label": name or mid,
+                "reason": reason,
+                "score": score,
+            }
+        )
+    scored.sort(key=lambda item: (-float(item["score"]), item["id"]))
+    return scored[:_QA_MAX_CANDIDATES]
+
+
+def _qa_rule_list(row: dict[str, Any]) -> list[Any]:
+    value = row.get("rule_set_json")
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, ValueError):
+            return []
+    return value if isinstance(value, list) else []
+
+
+def _qa_content_mask(normalized: str) -> tuple[list[bool], int]:
+    mask = [char not in _ANSWER_PUNCT for char in normalized]
+    for stopword in sorted(_ANSWER_STOPWORDS, key=len, reverse=True):
+        start = normalized.find(stopword)
+        while start != -1:
+            for index in range(start, start + len(stopword)):
+                mask[index] = False
+            start = normalized.find(stopword, start + 1)
+    return mask, sum(1 for flag in mask if flag)
+
+
+def _qa_match_entries(
+    normalized: str, mask: list[bool], entries: list[dict[str, Any]]
+) -> dict[str, Any]:
+    taken = [False] * len(normalized)
+    matched: list[dict[str, Any]] = []
+    seen: set[tuple[str, int]] = set()
+    labeled = sorted(
+        ((entry, _qa_norm(entry.get("label"))) for entry in entries),
+        key=lambda item: len(item[1]),
+        reverse=True,
+    )
+    for entry, key in labeled:
+        if len(key) < 2:
+            continue
+        start = normalized.find(key)
+        while start != -1:
+            end = start + len(key)
+            if not any(taken[start:end]):
+                for index in range(start, end):
+                    taken[index] = True
+                identity = (str(entry.get("id")), start)
+                if identity not in seen:
+                    seen.add(identity)
+                    matched.append(
+                        {
+                            "id": entry.get("id"),
+                            "label": entry.get("label"),
+                            "span": [start, end],
+                            "source": entry.get("source"),
+                        }
+                    )
+            start = normalized.find(key, start + 1)
+    total = sum(1 for flag in mask if flag)
+    covered = sum(1 for index, flag in enumerate(mask) if flag and taken[index])
+    fragments: list[str] = []
+    start_index: int | None = None
+    for index in range(len(normalized)):
+        uncovered = mask[index] and not taken[index]
+        if uncovered and start_index is None:
+            start_index = index
+        elif not uncovered and start_index is not None:
+            fragments.append(normalized[start_index:index])
+            start_index = None
+    if start_index is not None:
+        fragments.append(normalized[start_index:])
+    return {
+        "matched": matched,
+        "covered": covered,
+        "total": total,
+        "coverage": round(covered / total, 4) if total else 0.0,
+        "missing": [item for item in fragments if item],
+    }
+
+
+def _qa_table_count(runtime: Runtime, table: str, cache: dict[str, int | None]) -> int | None:
+    if not _QA_FACT_TABLE_RE.match(table or ""):
+        return None
+    if table in cache:
+        return cache[table]
+    try:
+        rows = runtime.metadata.query(f"SELECT count(*) AS n FROM {table}")
+        cache[table] = int((rows[0] or {}).get("n") or 0) if rows else 0
+    except Exception:
+        cache[table] = None
+    return cache[table]
+
+
+def _qa_fact_eval(
+    row: dict[str, Any],
+    obs_row: dict[str, Any] | None,
+    bindings: list[dict[str, Any]],
+    table_counts: dict[str, int | None],
+) -> dict[str, Any]:
+    mid = str(row.get("metric_id") or "")
+    version = str(row.get("definition_version") or "")
+    output_mode = str(row.get("output_mode") or "")
+    kind = str(row.get("metric_kind") or "")
+    formula = str(row.get("formula_expr") or "")
+    window_kind = str(row.get("window_kind") or "")
+    numerator_agg = str(row.get("numerator_agg") or "")
+    denominator_agg = str(row.get("denominator_agg") or "")
+    fact_function = str(row.get("fact_function") or "")
+    obs_count = int((obs_row or {}).get("n") or 0)
+    has_fixture = bool((obs_row or {}).get("has_fixture"))
+    rule_count = len(_qa_rule_list(row))
+    fact_tables = sorted({str(item.get("fact_table")) for item in bindings if item.get("fact_table")})
+    fields = [
+        {
+            "role": item.get("role"),
+            "table": item.get("fact_table"),
+            "column": item.get("entity_column"),
+            "expr": item.get("value_expr"),
+            "agg": item.get("agg"),
+            "windowColumn": item.get("window_column"),
+        }
+        for item in bindings
+    ]
+    structural = (
+        kind in _QA_DRIVABLE_KINDS
+        and bool(formula)
+        and bool(window_kind)
+        and bool(numerator_agg)
+        and (kind != "ratio" or bool(denominator_agg))
+    )
+    payload: dict[str, Any] = {
+        "id": f"{mid}@{version}",
+        "metricId": mid,
+        "name": row.get("name_zh"),
+        "definitionVersion": version,
+        "outputMode": output_mode or None,
+        "metricKind": kind or None,
+        "publishable": bool(row.get("publishable")),
+        "structural": structural,
+        "drivable": False,
+        "observationRows": obs_count,
+        "fixture": has_fixture,
+        "dataSource": ("fixture" if has_fixture else "business") if obs_count else None,
+        "factTables": [
+            {"table": table, "rows": table_counts.get(table)} for table in fact_tables
+        ],
+        "fields": fields,
+        "factFunction": fact_function or None,
+        "ruleCount": rule_count,
+        "window": {
+            "start": _qa_iso((obs_row or {}).get("ws")),
+            "end": _qa_iso((obs_row or {}).get("we")),
+        },
+        "status": "missing",
+        "code": None,
+        "what": None,
+        "howToFix": None,
+    }
+    if output_mode == "rule_set":
+        payload.update(
+            status="degraded",
+            code="E_FACTS_RULE_INPUTS",
+            what=f"规则型口径（{rule_count} 条规则）缺事实输入",
+            howToFix=f"提交 as_of 时点的客户/账户事实后调用 POST /metrics/{mid}/rules",
+        )
+        return payload
+    if bool(row.get("formula_disabled")):
+        payload.update(
+            status="missing",
+            code="E_FACTS_FORMULA_DISABLED",
+            what=f"{mid} 的公式被禁用",
+            howToFix="在口径治理中启用公式或改用变体指标",
+        )
+        return payload
+    if kind not in _QA_DRIVABLE_KINDS:
+        payload.update(
+            status="missing",
+            code="E_FACTS_NOT_SCALAR",
+            what=f"{mid} 的 metricKind={kind or 'unknown'} 不是标量可计算类型",
+            howToFix="按口径卡/规则集读取，或选择可标量计算的变体",
+        )
+        return payload
+    if not structural:
+        payload.update(
+            status="missing",
+            code="E_FACTS_DEFINITION_QUARTET",
+            what=f"{mid} 的四元组不完整（formula/window/aggregate/denominator）",
+            howToFix="补齐 formula_expr、window_kind、numerator_agg（ratio 还需 denominator_agg）",
+        )
+        return payload
+    payload["drivable"] = not bool(row.get("formula_disabled"))
+    if obs_count > 0:
+        payload.update(status="covered", code="E_FACTS_OBSERVED")
+        return payload
+    if bindings:
+        required = {"numerator", "denominator"} if kind == "ratio" else {"numerator"}
+        roles = {str(item.get("role")) for item in bindings}
+        if not required.issubset(roles):
+            payload.update(
+                status="missing",
+                code="E_FACTS_FIELD_BINDING",
+                what=f"{mid} 缺字段绑定：需要 {sorted(required)}，已有 {sorted(roles)}",
+                howToFix="在 metric_field_binding 登记缺失角色后重新投影",
+            )
+            return payload
+        empty_tables = [
+            table for table in fact_tables if table_counts.get(table) == 0
+        ]
+        if empty_tables:
+            payload.update(
+                status="degraded",
+                code="E_FACTS_TABLE_EMPTY",
+                what=f"{', '.join(empty_tables)} 存在但 0 行",
+                howToFix="装载事实 CSV 后运行 facts-project，再重试",
+            )
+            return payload
+        payload.update(
+            status="degraded",
+            code="E_FACTS_NO_OBSERVATION",
+            what=f"{mid} 有字段绑定，但 metric_observation 无观察值",
+            howToFix="运行 facts-project 写入观察值后重试",
+        )
+        return payload
+    if fact_function:
+        payload.update(
+            status="degraded",
+            code="E_FACTS_NO_OBSERVATION",
+            what=f"{fact_function} 已登记，但 metric_observation 无观察值",
+            howToFix="装载事实表后运行 facts-project（投影函数）",
+        )
+        return payload
+    payload.update(
+        status="missing",
+        code="E_FACTS_FIELD_BINDING",
+        what=f"{mid} 缺字段绑定/事实投影函数（metric_field_binding 无记录）",
+        howToFix="登记 metric_field_binding 或 metric_definition.fact_function",
+    )
+    return payload
+
+
+def _qa_iso(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _qa_facts_for_metrics(
+    runtime: Runtime, rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    if not rows:
+        return []
+    try:
+        obs_rows = runtime.metadata.query(_QA_OBS_SQL)
+    except Exception:
+        obs_rows = []
+    try:
+        binding_rows = runtime.metadata.query(_QA_BINDING_SQL)
+    except Exception:
+        binding_rows = []
+    obs_by: dict[str, dict[str, Any]] = {}
+    for item in obs_rows:
+        mid = str(item.get("metric_id") or "")
+        if mid and mid not in obs_by:
+            obs_by[mid] = item
+    bindings_by: dict[str, list[dict[str, Any]]] = {}
+    for item in binding_rows:
+        mid = str(item.get("metric_id") or "")
+        if not mid or not item.get("role") or not item.get("fact_table"):
+            continue
+        bindings_by.setdefault(mid, []).append(item)
+    table_counts: dict[str, int | None] = {}
+    result: list[dict[str, Any]] = []
+    for row in rows:
+        mid = str(row.get("metric_id") or "")
+        bindings = bindings_by.get(mid, [])
+        for item in bindings:
+            table = str(item.get("fact_table") or "")
+            if table:
+                _qa_table_count(runtime, table, table_counts)
+        result.append(_qa_fact_eval(row, obs_by.get(mid), bindings, table_counts))
+    return result
+
+
+def _qa_answerable(
+    runtime: Runtime,
+    query: str,
+    ontology_version: str | None = None,
+    min_coverage: float | None = None,
+    metric_id: str | None = None,
+    intent_hint: str | None = None,
+    include_layers: bool = True,
+) -> dict[str, Any]:
+    base = runtime.answerable.check(
+        query, ontology_version=ontology_version, min_coverage=min_coverage
+    )
+    if not include_layers:
+        return base
+    intent = _qa_intent(query, metric_id, intent_hint)
+    threshold = float(base.get("threshold") or 0.0)
+    timings: dict[str, int] = {}
+
+    started = time.monotonic()
+    graph_iri = base.get("ontologyGraph")
+    graph_ok = bool(graph_iri)
+    ontology_entries: list[dict[str, Any]] = []
+    term_entries: list[dict[str, Any]] = []
+    if graph_ok:
+        try:
+            ontology_entries, term_entries = _qa_graph_entries(runtime, str(graph_iri))
+        except Exception:
+            graph_ok = False
+    timings["termsMs"] = int((time.monotonic() - started) * 1000)
+
+    started = time.monotonic()
+    metric_rows = _qa_metric_rows(runtime)
+    metric_candidates = _qa_metric_candidates(query, metric_rows, metric_id)
+    selected_candidates = [
+        item for item in metric_candidates if float(item.get("score") or 0) >= 0.85
+    ][:1]
+    row_by_id = {str(row.get("metric_id")): row for row in metric_rows}
+    selected_rows = [
+        row_by_id[item["id"]] for item in selected_candidates if item["id"] in row_by_id
+    ]
+    timings["metricMs"] = int((time.monotonic() - started) * 1000)
+
+    normalized = re.sub(r"\s+", "", query.lower())
+    mask, _ = _qa_content_mask(normalized)
+    ontology_match = _qa_match_entries(normalized, mask, ontology_entries)
+    terms_match = _qa_match_entries(normalized, mask, term_entries)
+
+    if not graph_ok:
+        ontology_status = "unavailable"
+    elif ontology_match["matched"] and ontology_match["coverage"] >= threshold:
+        ontology_status = "covered"
+    elif ontology_match["matched"]:
+        ontology_status = "partial"
+    else:
+        ontology_status = "missing"
+
+    if not graph_ok:
+        terms_status = "unavailable"
+    elif terms_match["matched"]:
+        terms_status = "covered"
+    elif ontology_status == "covered" or selected_rows:
+        terms_status = "not_applicable"
+    else:
+        terms_status = "missing"
+
+    metric_hint = bool(_QA_METRIC_HINT_RE.search(query))
+    if selected_rows:
+        metrics_status = "covered"
+    elif intent == "value" or metric_hint:
+        metrics_status = "missing"
+    else:
+        metrics_status = "not_applicable"
+
+    started = time.monotonic()
+    fact_evals = _qa_facts_for_metrics(runtime, selected_rows)
+    timings["factsMs"] = int((time.monotonic() - started) * 1000)
+
+    if not fact_evals:
+        facts_status = "not_applicable"
+    elif any(item.get("status") == "unavailable" for item in fact_evals):
+        facts_status = "unavailable"
+    elif any(item.get("status") == "missing" for item in fact_evals):
+        facts_status = "missing"
+    elif any(item.get("status") == "degraded" for item in fact_evals):
+        facts_status = "degraded"
+    elif all(item.get("status") == "covered" for item in fact_evals):
+        facts_status = "covered"
+    else:
+        facts_status = "degraded"
+
+    value_answerable = (
+        intent == "value"
+        and facts_status == "covered"
+        and bool(fact_evals)
+        and all(item.get("drivable") and item.get("publishable") for item in fact_evals)
+    )
+    blocking_facts = facts_status in ("missing", "unavailable")
+    if intent == "value":
+        answerable = bool(selected_rows) and not blocking_facts
+    else:
+        answerable = bool(base.get("answerable")) or bool(selected_rows)
+
+    if answerable:
+        reason_code = None
+    elif intent == "value" and not selected_rows:
+        reason_code = "E_ANSWER_METRIC_NOT_FOUND"
+    elif blocking_facts:
+        reason_code = "E_ANSWER_FACTS_MISSING"
+    else:
+        reason_code = base.get("reasonCode") or "E_ANSWER_NOT_COVERED"
+
+    missing: list[dict[str, Any]] = []
+    seen_missing: set[tuple[str, str, str]] = set()
+
+    def add_missing(item: dict[str, Any]) -> None:
+        key = (
+            str(item.get("layer") or ""),
+            str(item.get("code") or ""),
+            str(item.get("metricId") or item.get("text") or ""),
+        )
+        if key in seen_missing:
+            return
+        seen_missing.add(key)
+        missing.append(item)
+
+    for item in base.get("missing") or []:
+        text = str(item.get("text") or "")
+        add_missing(
+            {
+                **item,
+                "layer": "ontology",
+                "code": "E_LAYER_ONTOLOGY_GAP",
+                "what": f"本体未声明「{text}」",
+                "howToFix": "补充 rdfs:label / skos:prefLabel，或收窄问题范围",
+            }
+        )
+    if ontology_status == "unavailable":
+        add_missing(
+            {
+                "layer": "ontology",
+                "code": "E_LAYER_ONTOLOGY_UNAVAILABLE",
+                "text": "",
+                "what": "T-Box 命名图不可读",
+                "howToFix": "检查 graph/ontology 指针与 Oxigraph 可用性",
+            }
+        )
+    if terms_status == "missing" and intent == "value":
+        add_missing(
+            {
+                "layer": "terms",
+                "code": "E_LAYER_TERMS_GAP",
+                "text": "",
+                "what": "问题中的概念没有 SKOS 术语/别名命中",
+                "howToFix": "在术语层补充 skos:altLabel 或 term:TermEntry",
+            }
+        )
+    if metrics_status == "missing":
+        add_missing(
+            {
+                "layer": "metrics",
+                "code": "E_LAYER_METRICS_GAP",
+                "text": "",
+                "what": "未匹配到可求值口径指标",
+                "howToFix": "指定 metricId，或补充指标名称/别名",
+                "candidates": [
+                    {"id": item["id"], "label": item["label"], "score": item["score"]}
+                    for item in metric_candidates[:3]
+                ],
+            }
+        )
+    for item in fact_evals:
+        if item.get("status") in ("missing", "degraded"):
+            add_missing(
+                {
+                    "layer": "facts",
+                    "code": item.get("code"),
+                    "metricId": item.get("metricId"),
+                    "text": item.get("what"),
+                    "what": item.get("what"),
+                    "howToFix": item.get("howToFix"),
+                }
+            )
+
+    selected_metrics: list[dict[str, Any]] = []
+    facts_by_metric = {str(item.get("metricId")): item for item in fact_evals}
+    for item in selected_candidates:
+        row = row_by_id.get(item["id"])
+        if not row:
+            continue
+        fact = facts_by_metric.get(item["id"]) or {}
+        selected_metrics.append(
+            {
+                "metricId": item["id"],
+                "name": item["label"],
+                "definitionVersion": row.get("definition_version"),
+                "outputMode": row.get("output_mode") or None,
+                "metricKind": row.get("metric_kind"),
+                "formula": row.get("formula_expr"),
+                "formulaText": row.get("formula_text"),
+                "definition": row.get("definition"),
+                "windowKind": row.get("window_kind"),
+                "minWindowDays": row.get("min_window_days"),
+                "evidenceBasis": row.get("evidence_basis"),
+                "publishable": bool(row.get("publishable")),
+                "unit": row.get("unit"),
+                "grain": row.get("grain"),
+                "factFunction": row.get("fact_function"),
+                "ruleCount": len(_qa_rule_list(row)),
+                "score": item["score"],
+                "factsStatus": fact.get("status"),
+                "factsCode": fact.get("code"),
+                "observationRows": fact.get("observationRows", 0),
+                "dataSource": fact.get("dataSource"),
+            }
+        )
+
+    candidates: list[dict[str, Any]] = []
+    for entry in ontology_match["matched"]:
+        candidates.append(
+            {
+                "layer": "ontology",
+                "id": entry.get("id"),
+                "label": entry.get("label"),
+                "reason": "rdfs_label_match",
+                "score": 1.0,
+            }
+        )
+    for entry in terms_match["matched"]:
+        candidates.append(
+            {
+                "layer": "terms",
+                "id": entry.get("id"),
+                "label": entry.get("label"),
+                "reason": "skos_alias_match",
+                "score": 1.0,
+            }
+        )
+    candidates.extend(metric_candidates)
+    candidates = candidates[:_QA_MAX_CANDIDATES]
+
+    layers = [
+        {
+            "layer": "ontology",
+            "status": ontology_status,
+            "coverage": ontology_match["coverage"],
+            "matched": ontology_match["matched"],
+            "missing": ontology_match["missing"],
+        },
+        {
+            "layer": "terms",
+            "status": terms_status,
+            "coverage": terms_match["coverage"],
+            "matched": terms_match["matched"],
+            "missing": terms_match["missing"],
+        },
+        {
+            "layer": "metrics",
+            "status": metrics_status,
+            "coverage": 1.0 if selected_rows else 0.0,
+            "matched": [
+                {"id": item["id"], "label": item["label"], "score": item["score"]}
+                for item in selected_candidates
+            ],
+            "missing": [] if selected_rows else metric_candidates[:3],
+        },
+        {
+            "layer": "facts",
+            "status": facts_status,
+            "coverage": (
+                round(
+                    sum(1 for item in fact_evals if item.get("status") == "covered")
+                    / len(fact_evals),
+                    4,
+                )
+                if fact_evals
+                else 0.0
+            ),
+            "matched": fact_evals,
+            "missing": [
+                item.get("what")
+                for item in fact_evals
+                if item.get("status") in ("missing", "degraded")
+            ],
+        },
+    ]
+
+    payload = dict(base)
+    payload.update(
+        {
+            "inputType": "metric" if metric_id else "question",
+            "intent": intent,
+            "answerable": answerable,
+            "valueAnswerable": value_answerable,
+            "answerMode": "value" if value_answerable else ("definition" if answerable else "none"),
+            "degraded": bool(base.get("degraded")) or facts_status == "degraded" or not graph_ok,
+            "missing": missing,
+            "layers": layers,
+            "candidates": candidates,
+            "selectedMetrics": selected_metrics,
+            "reasonCode": reason_code,
+            "hint": base.get("hint") if not answerable else None,
+            "timings": timings,
+        }
+    )
+    return payload
+
+
+def _qa_retrieve(
+    runtime: Runtime, query: str, top_k: int, strategy: str
+) -> dict[str, Any]:
+    started = time.monotonic()
+    result: dict[str, Any] = {
+        "status": "degraded",
+        "chunks": 0,
+        "facts": 0,
+        "citations": [],
+        "strategy": strategy,
+        "error": None,
+    }
+    try:
+        context = getattr(runtime, "context", None)
+        if context is not None:
+            pack = context.resolve(
+                {
+                    "query": query,
+                    "topK": top_k,
+                    "tokenBudget": 512,
+                    "taskType": "answer",
+                    "strategy": strategy,
+                }
+            )
+            result.update(
+                status="degraded" if pack.get("degraded") else "ok",
+                chunks=len(pack.get("chunks") or []),
+                facts=len(pack.get("facts") or []),
+                citations=list(pack.get("citations") or []),
+                packId=pack.get("id"),
+                warnings=list(pack.get("warnings") or []),
+            )
+        else:
+            search = getattr(runtime, "search", None)
+            if search is None:
+                result.update(status="skipped", error="retrieval_unavailable")
+            else:
+                hits = search.hybrid_search(query, limit=top_k, mode=strategy)
+                results = list(hits.get("results") or [])
+                result.update(
+                    status="degraded" if hits.get("degraded") else "ok",
+                    chunks=len(results),
+                    citations=[
+                        {
+                            "id": f"doc:{item.get('documentId')}#{item.get('chunkId')}",
+                            "kind": "chunk",
+                            "ref": item.get("chunkId"),
+                            "documentId": item.get("documentId"),
+                        }
+                        for item in results
+                    ],
+                    warnings=list(hits.get("reasons") or []),
+                )
+    except PortError as exc:
+        result.update(status="degraded", error=exc.provider_code or exc.code)
+    except Exception as exc:  # retrieval must never turn the answer into a 500
+        result.update(status="degraded", error=str(exc))
+    result["durationMs"] = int((time.monotonic() - started) * 1000)
+    return result
+
+
+def _qa_answer(
+    runtime: Runtime,
+    query: str,
+    ontology_version: str | None = None,
+    metric_id: str | None = None,
+    top_k: int = 5,
+    strategy: str = "lexical",
+) -> dict[str, Any]:
+    coverage = _qa_answerable(
+        runtime,
+        query,
+        ontology_version=ontology_version,
+        metric_id=metric_id,
+        include_layers=True,
+    )
+    retrieve = _qa_retrieve(runtime, query, top_k, strategy)
+    selected = list(coverage.get("selectedMetrics") or [])
+    selected_metric = selected[0] if selected else None
+    layers = {item.get("layer"): item for item in coverage.get("layers") or []}
+    facts_layer = layers.get("facts") or {}
+    facts_status = str(facts_layer.get("status") or "not_applicable")
+    facts_evals = list(facts_layer.get("matched") or [])
+    fact_eval = facts_evals[0] if facts_evals else {}
+    intent = str(coverage.get("intent") or "definition")
+    timings = coverage.get("timings") or {}
+    timings_terms = int(timings.get("termsMs") or 0)
+    timings_metric = int(timings.get("metricMs") or 0)
+    timings_facts = int(timings.get("factsMs") or 0)
+
+    citations: list[dict[str, Any]] = []
+
+    def add_citation(item: dict[str, Any]) -> None:
+        if not item.get("id"):
+            return
+        if any(existing.get("id") == item.get("id") and existing.get("kind") == item.get("kind") for existing in citations):
+            return
+        citations.append(item)
+
+    version_id = coverage.get("ontologyVersion")
+    graph_iri = coverage.get("ontologyGraph")
+    if version_id:
+        add_citation(
+            {
+                "id": str(version_id),
+                "kind": "ontology-version",
+                "ref": graph_iri,
+                "versionId": version_id,
+            }
+        )
+    for layer_name in ("ontology", "terms"):
+        layer = layers.get(layer_name) or {}
+        for entry in layer.get("matched") or []:
+            add_citation(
+                {
+                    "id": entry.get("id"),
+                    "kind": "rdfs-term" if layer_name == "ontology" else "skos-term",
+                    "ref": entry.get("label"),
+                    "label": entry.get("label"),
+                    "layer": layer_name,
+                    "span": entry.get("span"),
+                }
+            )
+    if selected_metric:
+        metric_ref = f"{selected_metric['metricId']}@{selected_metric['definitionVersion']}"
+        add_citation(
+            {
+                "id": f"metric:{metric_ref}",
+                "kind": "metric-definition",
+                "ref": metric_ref,
+                "metricId": selected_metric["metricId"],
+                "definitionVersion": selected_metric["definitionVersion"],
+                "name": selected_metric.get("name"),
+                "fields": {
+                    "formula": selected_metric.get("formula"),
+                    "windowKind": selected_metric.get("windowKind"),
+                    "minWindowDays": selected_metric.get("minWindowDays"),
+                    "evidenceBasis": selected_metric.get("evidenceBasis"),
+                    "publishable": selected_metric.get("publishable"),
+                    "unit": selected_metric.get("unit"),
+                },
+            }
+        )
+        formula = selected_metric.get("formula")
+        if formula:
+            add_citation(
+                {
+                    "id": f"formula:{metric_ref}",
+                    "kind": "formula",
+                    "ref": formula,
+                    "metricId": selected_metric["metricId"],
+                    "definitionVersion": selected_metric["definitionVersion"],
+                }
+            )
+        if selected_metric.get("outputMode") == "rule_set":
+            add_citation(
+                {
+                    "id": f"rules:{metric_ref}",
+                    "kind": "rule-set",
+                    "ref": metric_ref,
+                    "metricId": selected_metric["metricId"],
+                    "definitionVersion": selected_metric["definitionVersion"],
+                    "ruleCount": selected_metric.get("ruleCount"),
+                }
+            )
+        if fact_eval:
+            if fact_eval.get("factFunction"):
+                add_citation(
+                    {
+                        "id": f"factfn:{fact_eval['factFunction']}",
+                        "kind": "fact-projection",
+                        "ref": fact_eval["factFunction"],
+                        "metricId": fact_eval.get("metricId"),
+                        "observationRows": fact_eval.get("observationRows"),
+                    }
+                )
+            for table in fact_eval.get("factTables") or []:
+                add_citation(
+                    {
+                        "id": f"table:{table.get('table')}",
+                        "kind": "fact-table",
+                        "ref": table.get("table"),
+                        "rows": table.get("rows"),
+                        "metricId": fact_eval.get("metricId"),
+                    }
+                )
+            for field in fact_eval.get("fields") or []:
+                field_ref = f"{field.get('table')}.{field.get('expr') or field.get('column') or ''}"
+                add_citation(
+                    {
+                        "id": f"field:{field_ref}",
+                        "kind": "fact-table-field",
+                        "ref": field_ref,
+                        "role": field.get("role"),
+                        "agg": field.get("agg"),
+                        "metricId": fact_eval.get("metricId"),
+                    }
+                )
+            if int(fact_eval.get("observationRows") or 0) > 0:
+                add_citation(
+                    {
+                        "id": f"obs:{fact_eval.get('metricId')}@{fact_eval.get('definitionVersion')}",
+                        "kind": "fact-observation",
+                        "ref": "platform.metric_observation",
+                        "metricId": fact_eval.get("metricId"),
+                        "definitionVersion": fact_eval.get("definitionVersion"),
+                        "rows": fact_eval.get("observationRows"),
+                        "dataSource": fact_eval.get("dataSource"),
+                    }
+                )
+    for item in (retrieve.get("citations") or [])[:5]:
+        add_citation(item)
+
+    compute = {
+        "step": "compute",
+        "status": "skipped",
+        "input": {"metricId": selected_metric.get("metricId") if selected_metric else None},
+        "output": {"reason": "no_metric", "value": None},
+        "durationMs": 0,
+    }
+    answer_type = "none"
+    value: dict[str, Any] | None = None
+    refused = not bool(coverage.get("answerable"))
+    value_refused = not bool(coverage.get("valueAnswerable")) and intent == "value"
+    reason_code = coverage.get("reasonCode")
+
+    if selected_metric:
+        metric_id_value = selected_metric["metricId"]
+        if selected_metric.get("outputMode") == "rule_set":
+            answer_type = "rule_set"
+            started = time.monotonic()
+            rules = getattr(runtime, "rules", None)
+            route_output: dict[str, Any] = {
+                "mode": "rule_set",
+                "value": None,
+                "ruleCount": selected_metric.get("ruleCount"),
+            }
+            if rules is None:
+                route_output["error"] = "rule_executor_unavailable"
+            else:
+                try:
+                    executed = rules.execute(metric_id_value, [])
+                    route_output["result"] = executed
+                except PortError as exc:
+                    route_output["error"] = exc.provider_code or exc.code
+                except Exception as exc:
+                    route_output["error"] = str(exc)
+            compute.update(
+                status="routed",
+                output=route_output,
+                durationMs=int((time.monotonic() - started) * 1000),
+            )
+            if intent == "value":
+                refused = True
+                value_refused = True
+                reason_code = "E_ANSWER_RULE_SET_NEEDS_FACTS"
+        elif value_refused and facts_status in ("missing", "unavailable"):
+            refused = True
+            reason_code = "E_ANSWER_FACTS_MISSING"
+        elif coverage.get("valueAnswerable") and selected_metric.get("publishable"):
+            answer_type = "value"
+            started = time.monotonic()
+            metrics_port = getattr(runtime, "metrics", None)
+            compute_output: dict[str, Any] = {"value": None}
+            if metrics_port is None:
+                compute_output["error"] = "metric_service_unavailable"
+            else:
+                try:
+                    computed = metrics_port.compute(
+                        metric_id_value,
+                        internal=False,
+                    )
+                    value = computed
+                    answer_type = "value"
+                    compute_output = {
+                        "value": computed.get("value"),
+                        "unit": computed.get("unit"),
+                        "dataSource": computed.get("dataSource"),
+                        "definitionVersion": computed.get("definitionVersion"),
+                        "window": computed.get("window"),
+                    }
+                except PortError as exc:
+                    compute_output["error"] = exc.provider_code or exc.code
+                    answer_type = "definition"
+                    value_refused = True
+                    if not refused:
+                        reason_code = "E_ANSWER_VALUE_DEGRADED"
+                except Exception as exc:
+                    compute_output["error"] = str(exc)
+                    answer_type = "definition"
+                    value_refused = True
+            compute.update(
+                status="ok" if value is not None else "failed",
+                output=compute_output,
+                durationMs=int((time.monotonic() - started) * 1000),
+            )
+        else:
+            answer_type = "definition"
+            compute["output"] = {
+                "reason": f"facts.{facts_status}",
+                "value": None,
+                "dataSource": None,
+            }
+            if intent == "value" and not refused:
+                value_refused = True
+                reason_code = "E_ANSWER_VALUE_DEGRADED"
+    elif coverage.get("answerable"):
+        answer_type = "ontology"
+    if refused and reason_code is None:
+        reason_code = "E_ANSWER_NOT_COVERED"
+    if value_refused and not refused and reason_code is None:
+        reason_code = "E_ANSWER_VALUE_DEGRADED"
+
+    missing = list(coverage.get("missing") or [])
+    if refused:
+        answer_text = "证据不足，拒绝作答。缺口：" + "；".join(
+            str(item.get("what") or item.get("text") or item.get("code"))
+            for item in missing[:4]
+        )
+    elif value and selected_metric:
+        answer_text = (
+            f"{selected_metric.get('name')} = {value.get('value')} "
+            f"{value.get('unit') or selected_metric.get('unit') or ''}"
+            f"（{selected_metric['metricId']}@{selected_metric['definitionVersion']}，"
+            f"dataSource={value.get('dataSource')}）"
+        )
+    elif answer_type == "rule_set" and selected_metric:
+        answer_text = (
+            f"「{selected_metric.get('name')}」是规则型口径"
+            f"（outputMode=rule_set，{selected_metric.get('ruleCount')} 条规则）；"
+            "当前事实输入不足，不给出标量结果。"
+        )
+    elif selected_metric:
+        detail = (
+            selected_metric.get("formulaText")
+            or selected_metric.get("definition")
+            or selected_metric.get("formula")
+            or "无公式文本"
+        )
+        answer_text = (
+            f"「{selected_metric.get('name')}」"
+            f"（{selected_metric['metricId']}@{selected_metric['definitionVersion']}）口径：{detail}；"
+            f"观察期 {selected_metric.get('windowKind')}；证据 {selected_metric.get('evidenceBasis')}。"
+            f"事实层 {facts_status}，不给出数值。"
+        )
+    else:
+        names = "、".join(
+            str(item.get("label"))
+            for item in (layers.get("ontology") or {}).get("matched") or []
+        ) or "（无）"
+        answer_text = f"本体命中：{names}；未匹配到可求值口径，按定义/关系回答。"
+
+    steps = [
+        {
+            "step": "retrieve",
+            "status": retrieve.get("status"),
+            "input": {"query": query, "strategy": strategy, "topK": top_k},
+            "output": {
+                "chunks": retrieve.get("chunks"),
+                "facts": retrieve.get("facts"),
+                "packId": retrieve.get("packId"),
+                "error": retrieve.get("error"),
+            },
+            "durationMs": retrieve.get("durationMs"),
+        },
+        {
+            "step": "terms",
+            "status": "ok" if graph_iri else "degraded",
+            "input": {"ontologyVersion": version_id},
+            "output": {
+                "ontologyMatched": len((layers.get("ontology") or {}).get("matched") or []),
+                "termsMatched": len((layers.get("terms") or {}).get("matched") or []),
+                "ontologyStatus": (layers.get("ontology") or {}).get("status"),
+                "termsStatus": (layers.get("terms") or {}).get("status"),
+            },
+            "durationMs": timings_terms,
+        },
+        {
+            "step": "metric",
+            "status": (layers.get("metrics") or {}).get("status"),
+            "input": {"query": query, "metricId": metric_id},
+            "output": {
+                "metricId": selected_metric.get("metricId") if selected_metric else None,
+                "name": selected_metric.get("name") if selected_metric else None,
+                "definitionVersion": (
+                    selected_metric.get("definitionVersion") if selected_metric else None
+                ),
+                "candidates": [
+                    {"id": item["id"], "label": item["label"], "score": item["score"]}
+                    for item in (coverage.get("candidates") or [])
+                    if item.get("layer") == "metrics"
+                ][:3],
+            },
+            "durationMs": timings_metric,
+        },
+        {
+            "step": "facts",
+            "status": facts_status,
+            "input": {"metricId": selected_metric.get("metricId") if selected_metric else None},
+            "output": {
+                "observationRows": fact_eval.get("observationRows", 0),
+                "factFunction": fact_eval.get("factFunction"),
+                "factTables": fact_eval.get("factTables") or [],
+                "code": fact_eval.get("code"),
+                "dataSource": fact_eval.get("dataSource"),
+            },
+            "durationMs": timings_facts,
+        },
+        compute,
+    ]
+
+    payload = dict(coverage)
+    payload.update(
+        {
+            "refused": refused,
+            "valueRefused": value_refused,
+            "reasonCode": reason_code,
+            "answerMode": "value" if value else ("definition" if coverage.get("answerable") else "none"),
+            "answerType": answer_type,
+            "answer": answer_text,
+            "value": value.get("value") if value else None,
+            "dataSource": value.get("dataSource") if value else None,
+            "steps": steps,
+            "citations": citations,
+            "missing": missing,
+        }
+    )
     return payload
 
 
@@ -567,17 +1737,80 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         q: str = Query(min_length=1, max_length=2000),
         ontologyVersion: str | None = Query(default=None),
         minCoverage: float | None = Query(default=None, ge=0.0, le=1.0),
+        metricId: str | None = Query(default=None),
+        intent: str | None = Query(default=None),
+        layers: bool = Query(default=True),
     ) -> dict[str, Any]:
-        return runtime.answerable.check(
-            q, ontology_version=ontologyVersion, min_coverage=minCoverage
+        return _qa_answerable(
+            runtime,
+            q,
+            ontology_version=ontologyVersion,
+            min_coverage=minCoverage,
+            metric_id=metricId,
+            intent_hint=intent,
+            include_layers=layers,
         )
 
     @app.post("/answerable")
     def answerable_post(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
-        return runtime.answerable.check(
-            str(body.get("query") or ""),
+        query = _qa_query(body)
+        return _qa_answerable(
+            runtime,
+            query,
             ontology_version=body.get("ontologyVersion"),
             min_coverage=body.get("minCoverage"),
+            metric_id=_qa_metric_id(body),
+            intent_hint=body.get("intent"),
+            include_layers=bool(body.get("layers", True)),
+        )
+
+    @app.get("/answer")
+    def answer_get(
+        q: str = Query(min_length=1, max_length=2000),
+        ontologyVersion: str | None = Query(default=None),
+        metricId: str | None = Query(default=None),
+        topK: int = Query(default=5, ge=1, le=20),
+        strategy: str = Query(default="lexical"),
+    ) -> dict[str, Any]:
+        if strategy not in ("lexical", "vector", "hybrid"):
+            raise PortError(
+                code="InvalidArgument",
+                message="strategy must be lexical/vector/hybrid",
+                provider="platform",
+                provider_code="E_ANSWER_STRATEGY_INVALID",
+            )
+        return _qa_answer(
+            runtime,
+            q,
+            ontology_version=ontologyVersion,
+            metric_id=metricId,
+            top_k=topK,
+            strategy=strategy,
+        )
+
+    @app.post("/answer")
+    def answer_post(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        query = _qa_query(body)
+        strategy = str(body.get("strategy") or "lexical")
+        if strategy not in ("lexical", "vector", "hybrid"):
+            raise PortError(
+                code="InvalidArgument",
+                message="strategy must be lexical/vector/hybrid",
+                provider="platform",
+                provider_code="E_ANSWER_STRATEGY_INVALID",
+            )
+        top_k = body.get("topK", 5)
+        try:
+            top_k = max(1, min(20, int(top_k)))
+        except (TypeError, ValueError):
+            top_k = 5
+        return _qa_answer(
+            runtime,
+            query,
+            ontology_version=body.get("ontologyVersion"),
+            metric_id=_qa_metric_id(body),
+            top_k=top_k,
+            strategy=strategy,
         )
 
     # ---- v3 metric registry / publishability guard -----------------------
