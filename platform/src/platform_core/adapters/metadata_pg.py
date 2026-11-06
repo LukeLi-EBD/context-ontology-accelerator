@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 31
+SUPPORTED_SCHEMA_VERSION = 34
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -50,6 +50,9 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (29, "V29__metric_gap_v6.sql", "v6 gap-fill seed: 26 metric definitions (25 table-2 + INS-012)"),
     (30, "V30__metric_decisions_v9.sql", "v9 final ruling: 27 metric definitions (25 table-2 + INS-012 + BANK-036 index)"),
     (31, "V31__data_dictionary.sql", "B-06 data dictionary: fact-table column introspection + property binding"),
+    (32, "V32__ontology_lifecycle.sql", "O-02 lifecycle transitions + O-04 publish evidence registry"),
+    (33, "V33__term_governance.sql", "O-05 term check/import registry"),
+    (34, "V34__metrics_core_m01_m06.sql", "G2 metrics-core: M-01 binding fixes + M-06 readiness ledger"),
 ]
 
 
@@ -219,6 +222,15 @@ class MetadataPg:
                         (version, description),
                     )
                     applied.append(f"V{version}")
+                # Seed scripts (V25 ON CONFLICT DO UPDATE) can rewind later binding fixes.
+                # Replay the published registry on every migrate(), including no-op runs.
+                reg = conn.execute(
+                    "SELECT to_regclass('platform.metric_field_binding') AS reg"
+                ).fetchone()
+                if reg and reg["reg"]:
+                    from ..metric_binding_overrides import replay_binding_overrides
+
+                    replay_binding_overrides(conn)
         log.info("migration applied", extra={"event": {"event": "migrate", "to": applied}})
         return {"to": str(SUPPORTED_SCHEMA_VERSION), "applied": applied}
 

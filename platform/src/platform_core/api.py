@@ -3564,4 +3564,2143 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ],
         }
 
+    # --- G1 ontology routes ---
+    # Ownership: ontology governance line (O-02..O-06). Append-only block: no
+    # existing handler or module-level helper above is modified. Everything here
+    # is additive and read/write-scoped to governance; publish semantics are
+    # untouched except that publish now also writes lifecycle transitions.
+
+    @app.post("/governance/proposals/{proposal_id}/review")
+    def governance_proposal_review(
+        proposal_id: str,
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        """O-02: proposed -> review. Actor and reason are mandatory."""
+        actor = _governance_actor(body)
+        reason = _governance_reason(body)
+        return runtime.ontology.review(proposal_id, actor=actor, reason=reason)
+
+    @app.get("/governance/proposals/{proposal_id}/transitions")
+    def governance_proposal_transitions(
+        proposal_id: str,
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        return runtime.ontology.transitions(proposal_id=proposal_id, limit=limit)
+
+    @app.get("/governance/versions/{version_id}/transitions")
+    def governance_version_transitions(
+        version_id: str,
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        return runtime.ontology.transitions(version_id=version_id, limit=limit)
+
+    @app.get("/health/ontology-diff/flow")
+    def health_ontology_diff_flow(
+        versionId: str | None = Query(None),
+        proposalId: str | None = Query(None),
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        """O-02: explicit lifecycle view. /health/ontology-diff also embeds
+        the same block under `lifecycle`."""
+        if proposalId:
+            payload = runtime.ontology.transitions(proposal_id=proposalId, limit=limit)
+            payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
+            return payload
+        if not versionId:
+            pointer = healthboard._pointer(runtime)
+            versionId = (pointer or {}).get("versionId")
+        if not versionId:
+            return {
+                "items": [],
+                "count": 0,
+                "empty": True,
+                "emptyReason": "未指定 versionId，且 tbox/current 指针不存在",
+                "readOnly": True,
+            }
+        from .ontology_lifecycle import flow
+
+        payload = flow(runtime.metadata, versionId)
+        payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
+        return payload
+
+    # ---- O-03 change impact analysis (read-only) -------------------------
+
+    @app.get("/ontology/impact")
+    def ontology_impact(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+        sample: int = Query(5, ge=0, le=10),
+    ) -> dict[str, Any]:
+        from . import impact as impact_module
+
+        return impact_module.analyze(runtime, from_, to, sample)
+
+    @app.get("/ontology/impact/export")
+    def ontology_impact_export(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+        sample: int = Query(5, ge=0, le=10),
+        format: str = Query("markdown"),
+    ) -> Response:
+        from . import impact as impact_module
+
+        report = impact_module.analyze(runtime, from_, to, sample)
+        filename, media_type, body = impact_module.export(report, format)
+        return Response(
+            content=body,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # ---- O-04 publish gate evidence packs (read + download) -------------
+
+    @app.get("/ontology/evidence")
+    def ontology_evidence_list(
+        versionId: str | None = Query(None),
+        verdict: str | None = Query(None),
+        limit: int = Query(50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        from . import evidence as evidence_module
+
+        return evidence_module.list_packs(
+            runtime.metadata, version_id=versionId, verdict=verdict, limit=limit
+        )
+
+    @app.get("/ontology/evidence/{evidence_id}/download")
+    def ontology_evidence_download(evidence_id: str) -> Response:
+        from . import evidence as evidence_module
+        import json as _json
+
+        pack = evidence_module.fetch(runtime.metadata, evidence_id)
+        evidence_module.check_download(pack)
+        path = evidence_module.materialize(runtime.config.storage.root, pack)
+        runtime.metadata.execute(
+            "UPDATE platform.ontology_evidence SET path = %s WHERE evidence_id = %s",
+            (str(path), evidence_id),
+        )
+        body = _json.dumps(pack, ensure_ascii=False, indent=2, sort_keys=True)
+        return Response(
+            content=body,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{evidence_id}.json"',
+                "X-Evidence-SHA256": str(pack.get("sha256") or ""),
+                "X-Evidence-Path": str(path),
+            },
+        )
+
+    # ---- O-05 term-layer governance (coverage / diff / import check) -----
+
+    @app.get("/ontology/terms/coverage")
+    def ontology_terms_coverage(
+        expectConcepts: int | None = Query(None, ge=0),
+        expectAliases: int | None = Query(None, ge=0),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        return termgov.graph_coverage(
+            runtime, expect_concepts=expectConcepts, expect_aliases=expectAliases
+        )
+
+    @app.post("/ontology/terms/diff")
+    def ontology_terms_diff(
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        content = str(body.get("content") or "")
+        if not content.strip():
+            raise PortError(
+                code="InvalidArgument", message="body.content is required (SKOS text)",
+                provider="platform", provider_code="E_TERM_CONTENT_REQUIRED",
+            )
+        report = termgov.diff_against_graph(
+            runtime, content, str(body.get("format") or "turtle"),
+            source_name=body.get("sourceName"),
+        )
+        termgov.record_check(runtime.metadata, report, source_kind="import",
+                             version_id=(body.get("versionId")), actor="operator")
+        return report
+
+    @app.post("/ontology/terms/import")
+    def ontology_terms_import(
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        content = str(body.get("content") or "")
+        if not content.strip():
+            raise PortError(
+                code="InvalidArgument", message="body.content is required (SKOS text)",
+                provider="platform", provider_code="E_TERM_CONTENT_REQUIRED",
+            )
+        report = termgov.diff_against_graph(
+            runtime, content, str(body.get("format") or "turtle"),
+            source_name=body.get("sourceName"),
+        )
+        termgov.record_check(runtime.metadata, report, source_kind="import",
+                             version_id=body.get("versionId"), actor="operator")
+        if bool(body.get("dryRun", True)):
+            return {"dryRun": True, "diff": report}
+        return termgov.record_import(runtime.metadata, report,
+                                    source_name=body.get("sourceName"))
+
+    @app.get("/ontology/terms/checks")
+    def ontology_terms_checks(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+        from . import termgov
+
+        return termgov.list_checks(runtime.metadata, limit=limit)
+
+    # ---- O-06 health snapshot comparison --------------------------------
+
+    @app.get("/health/ontology-snapshot")
+    def health_ontology_snapshot(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+    ) -> dict[str, Any]:
+        return healthboard.snapshot_compare(runtime, from_, to)
+    # --- end G1 ---
+
+    # --- G2 metrics-core routes ---
+    @app.get("/metrics/{metric_id}/compute")
+    def metric_compute(
+        metric_id: str,
+        internal: bool = False,
+        as_of: date | None = Query(None, alias="asOf"),
+        period_start: date | None = Query(None, alias="periodStart"),
+        period_end: date | None = Query(None, alias="periodEnd"),
+        data_source: str = Query("fixture", alias="dataSource"),
+    ) -> dict[str, Any]:
+        """Scheme-A compute: direct fact-table aggregation, no observation cache.
+
+        Non-executable metrics return a stable provider code plus the missing
+        reason (E_METRIC_NOT_STRUCTURALLY_COMPUTABLE / E_METRIC_BINDING_MISSING /
+        E_METRIC_RULE_SET_ONLY / E_METRIC_WINDOW_INSUFFICIENT ...), never 0.
+        """
+        from .metric_compiler import MetricCompiler
+
+        start, end = period_start, period_end
+        if as_of is not None and start is None and end is None:
+            start = end = as_of
+        compiler = MetricCompiler(runtime.metadata)
+        result = compiler.execute(
+            metric_id, start=start, end=end, internal=internal, data_source=data_source
+        )
+        return {
+            **result,
+            "rowCount": len(result["rows"]),
+            "computedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.get("/metrics-readiness")
+    def metrics_readiness(
+        status: str | None = None,
+        kind: str | None = None,
+        format: str = "json",
+    ) -> Any:
+        """M-06 ledger export. registered_only is never reported as executable."""
+        if status is not None and status not in (
+            "executed", "registered_only", "not_executable"
+        ):
+            raise _browse_error(
+                "E_METRIC_READINESS_STATUS_INVALID",
+                "status must be executed|registered_only|not_executable",
+                {"status": status},
+            )
+        if kind is not None and kind not in ("partial", "rule"):
+            raise _browse_error(
+                "E_METRIC_READINESS_KIND_INVALID",
+                "kind must be partial|rule",
+                {"kind": kind},
+            )
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status is not None:
+            clauses.append("status = %s")
+            params.append(status)
+        if kind is not None:
+            clauses.append("item_kind = %s")
+            params.append(kind)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = runtime.metadata.query(
+            "SELECT item_kind, metric_id, status, reason, detail, evidence_ref,"
+            f" checked_at FROM platform.metric_readiness{where}"
+            " ORDER BY item_kind, metric_id",
+            tuple(params),
+        )
+        items = [
+            {
+                "itemKind": row["item_kind"],
+                "metricId": row["metric_id"],
+                "status": row["status"],
+                "reason": row["reason"],
+                "detail": row["detail"],
+                "evidenceRef": row["evidence_ref"],
+                "checkedAt": str(row["checked_at"]),
+            }
+            for row in rows
+        ]
+        counts_rows = runtime.metadata.query(
+            "SELECT status, COUNT(*) AS n FROM platform.metric_readiness GROUP BY status"
+        )
+        counts = {row["status"]: int(row["n"]) for row in counts_rows}
+        for key in ("executed", "registered_only", "not_executable"):
+            counts.setdefault(key, 0)
+        if format == "csv":
+            import csv
+            import io
+
+            buffer = io.StringIO()
+            writer = csv.writer(buffer)
+            writer.writerow(
+                ["item_kind", "metric_id", "status", "reason", "evidence_ref", "checked_at"]
+            )
+            for item in items:
+                writer.writerow(
+                    [
+                        item["itemKind"], item["metricId"], item["status"],
+                        item["reason"], item["evidenceRef"], item["checkedAt"],
+                    ]
+                )
+            suffix = status or kind or "all"
+            return Response(
+                content=buffer.getvalue(),
+                media_type="text/csv; charset=utf-8",
+                headers={
+                    "Content-Disposition":
+                        f'attachment; filename="metric-readiness-{suffix}.csv"'
+                },
+            )
+        return {
+            "items": items,
+            "count": len(items),
+            "counts": counts,
+            "filter": {"status": status, "kind": kind},
+        }
+    # --- end G2 ---
+
+    # --- G3 metrics-report routes ---
+    # M-02: 对外出数清单与 publishable 治理。清单 100% 来自 platform.metric_definition，
+    # 不做手工维护；可算性直接采用库内 computability_tier，且“可算”不等于“已有观测值”。
+
+    _G3_METRIC_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit, effective_date,
+               variant_of, output_mode, provenance_label, computability_tier
+          FROM platform.metric_definition
+         ORDER BY metric_id
+    """
+
+    _G3_TIER_LABELS = {
+        "structurally_computable": "结构性可算（需事实与观测）",
+        "blocked_semantics": "语义阻断",
+        "blocked_external": "对外阻断",
+    }
+    _G3_TIER_TONES = {
+        "structurally_computable": "ok",
+        "blocked_semantics": "warn",
+        "blocked_external": "bad",
+    }
+    _G3_GAP_LABELS = {
+        "regulatory_source": "缺监管原文",
+        "source": "缺事实来源",
+        "entity": "缺实体绑定",
+    }
+
+    # M-05: E1 25 条行业公式（来源：doc/_fsldm/12-口径终裁-v9.md §1）。
+    # 该清单只用于“声明核对”，不参与清单取数；清单仍逐条读库。
+    _G3_E1_SOURCE = "doc/_fsldm/12-口径终裁-v9.md §1"
+    _G3_INDUSTRY_NOTICE = "内部基线、不外报"
+    _G3_E1_INDUSTRY_IDS = (
+        "FIN-BANK-002",
+        "FIN-BANK-005",
+        "FIN-BANK-017",
+        "FIN-BANK-018",
+        "FIN-BANK-019",
+        "FIN-BANK-033",
+        "FIN-BANK-034",
+        "FIN-BANK-006",
+        "FIN-BANK-020",
+        "FIN-BANK-021",
+        "FIN-BANK-031",
+        "FIN-BANK-032",
+        "FIN-BANK-035",
+        "FIN-BANK-036-v1",
+        "FIN-INS-003",
+        "FIN-INS-006",
+        "FIN-INS-007",
+        "FIN-INS-017",
+        "FIN-INS-022-v1",
+        "FIN-INS-023-v1",
+        "FIN-INS-024",
+        "FIN-INS-026",
+        "CUST-005",
+        "CUST-009",
+        "CUST-010",
+    )
+
+    def _g3_text(value: Any) -> str:
+        if value is None:
+            return "口径未给出"
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        text = str(value).strip()
+        return text or "口径未给出"
+
+    def _g3_evidence(row: dict[str, Any]) -> dict[str, Any]:
+        basis = (row.get("evidence_basis") or "none").strip() or "none"
+        provenance = (row.get("provenance_label") or "").strip()
+        if basis == "regulatory":
+            return {
+                "code": basis,
+                "basisLabel": "监管原文",
+                "source": provenance or "监管原文",
+                "hasRegulatoryText": True,
+            }
+        if basis == "industry":
+            return {
+                "code": basis,
+                "basisLabel": "行业通行（未获监管原文）",
+                "source": provenance or "行业通行",
+                "hasRegulatoryText": False,
+                "notice": _G3_INDUSTRY_NOTICE,
+            }
+        return {
+            "code": basis,
+            "basisLabel": "无证据",
+            "source": provenance or "未给出",
+            "hasRegulatoryText": False,
+        }
+
+    def _g3_metric_row(row: dict[str, Any]) -> dict[str, Any]:
+        metric_id = str(row.get("metric_id") or "")
+        tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
+        evidence = _g3_evidence(row)
+        publishable = bool(row.get("publishable"))
+        formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
+        external_eligible = bool(
+            publishable
+            and evidence["code"] == "regulatory"
+            and tier == "structurally_computable"
+        )
+        if external_eligible:
+            external_status = "external_candidate"
+            external_label = "对外可出数候选（需事实与观测）"
+            external_reason = "证据为监管原文、publishable=true、口径结构性可算"
+        elif evidence["code"] == "industry":
+            external_status = "internal_baseline"
+            external_label = _G3_INDUSTRY_NOTICE
+            external_reason = f"行业公式未获监管原文：{_G3_INDUSTRY_NOTICE}"
+        elif not publishable:
+            external_status = "unpublishable"
+            external_label = "不可发布"
+            external_reason = "publishable=false"
+        else:
+            external_status = "blocked"
+            external_label = "不可对外"
+            external_reason = f"口径未达结构性可算：{tier}"
+
+        missing = row.get("missing")
+        if row.get("output_mode") == "index":
+            gap = "族索引：需指定变体（E_METRIC_VARIANT_REQUIRED）"
+            gap_code = "variant_required"
+        elif missing:
+            gap = _G3_GAP_LABELS.get(str(missing), _g3_text(missing))
+            gap_code = str(missing)
+        elif not formula:
+            gap = "公式缺失"
+            gap_code = "formula_missing"
+        elif tier != "structurally_computable":
+            gap = _G3_TIER_LABELS.get(tier, tier)
+            gap_code = tier
+        elif row.get("inference"):
+            gap = "口径为推导，无成文原文"
+            gap_code = "inference_only"
+        else:
+            gap = "—"
+            gap_code = None
+
+        return {
+            "metricId": metric_id,
+            "nameZh": row.get("name_zh"),
+            "displayName": row.get("display_name"),
+            "domain": row.get("domain"),
+            "publishable": publishable,
+            "evidenceBasis": evidence["code"],
+            "evidenceBasisLabel": evidence["basisLabel"],
+            "evidenceSource": evidence["source"],
+            "hasRegulatoryText": evidence["hasRegulatoryText"],
+            "industryBaseline": evidence["code"] == "industry",
+            "internalNotice": evidence.get("notice"),
+            "e1Baseline": metric_id in _G3_E1_INDUSTRY_IDS,
+            "formula": formula or "口径未给出",
+            "formulaExpr": row.get("formula_expr"),
+            "computability": tier,
+            "computabilityLabel": _G3_TIER_LABELS.get(tier, tier),
+            "computabilityTone": _G3_TIER_TONES.get(tier, "muted"),
+            "gap": gap,
+            "gapCode": gap_code,
+            "missing": missing,
+            "externalEligible": external_eligible,
+            "externalStatus": external_status,
+            "externalLabel": external_label,
+            "externalReason": external_reason,
+            "variantOf": row.get("variant_of"),
+            "outputMode": row.get("output_mode"),
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "inference": bool(row.get("inference")),
+            "evidenceStatus": row.get("evidence_status"),
+            "definitionVersion": row.get("definition_version"),
+        }
+
+    def _g3_manifest(
+        scope: str,
+        domain: str | None,
+        evidence_basis: str | None,
+        publishable: bool | None,
+    ) -> dict[str, Any]:
+        raw = runtime.metadata.query(_G3_METRIC_SQL)
+        items = [_g3_metric_row(row) for row in raw]
+        all_items = list(items)
+        if domain:
+            items = [item for item in items if item["domain"] == domain]
+        if evidence_basis:
+            items = [item for item in items if item["evidenceBasis"] == evidence_basis]
+        if publishable is not None:
+            items = [item for item in items if item["publishable"] is bool(publishable)]
+        if scope == "external":
+            items = [item for item in items if item["externalEligible"]]
+
+        tiers: dict[str, int] = {}
+        for item in items:
+            tiers[item["computability"]] = tiers.get(item["computability"], 0) + 1
+        external_count = sum(1 for item in items if item["externalEligible"])
+
+        by_id = {item["metricId"]: item for item in all_items}
+        e1_present = [mid for mid in _G3_E1_INDUSTRY_IDS if mid in by_id]
+        e1_missing = [mid for mid in _G3_E1_INDUSTRY_IDS if mid not in by_id]
+        e1_wrong = [mid for mid in e1_present if by_id[mid]["evidenceBasis"] != "industry"]
+        e1_publishable = [mid for mid in e1_present if by_id[mid]["publishable"]]
+
+        meta = {
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "source": "platform.metric_definition",
+            "scope": scope,
+            "total": len(items),
+            "allTotal": len(all_items),
+            "counts": {
+                "publishableTrue": sum(1 for item in items if item["publishable"]),
+                "industry": sum(1 for item in items if item["evidenceBasis"] == "industry"),
+                "regulatory": sum(1 for item in items if item["evidenceBasis"] == "regulatory"),
+                "externalEligible": external_count,
+                "industryExcludedFromExternal": (
+                    sum(1 for item in all_items if item["evidenceBasis"] == "industry")
+                    if scope == "external"
+                    else 0
+                ),
+                "computability": tiers,
+            },
+            "industryNotice": _G3_INDUSTRY_NOTICE,
+            "e1Check": {
+                "source": _G3_E1_SOURCE,
+                "expected": len(_G3_E1_INDUSTRY_IDS),
+                "found": len(e1_present),
+                "allPresent": len(e1_missing) == 0,
+                "missingIds": e1_missing,
+                "allIndustry": len(e1_wrong) == 0 and len(e1_missing) == 0,
+                "violations": e1_wrong,
+                "publishableTrue": len(e1_publishable),
+                "note": "以库为准；发现缺失或不一致时原样列出，不做补数、不改口径。",
+            },
+            "externalScopeRule": (
+                "evidence_basis=regulatory 且 publishable=true 且 computability_tier=structurally_computable"
+            ),
+            "disclaimer": "可算性仅表示口径四元组与公式可编译，不代表已有观测值；本清单不承诺业务数值。",
+        }
+        return {
+            "items": items,
+            "count": len(items),
+            "meta": meta,
+            "filters": {
+                "scope": scope,
+                "domain": domain,
+                "evidenceBasis": evidence_basis,
+                "publishable": publishable,
+            },
+        }
+
+    @app.get("/metrics/report/manifest")
+    def metrics_report_manifest(
+        scope: str = Query(default="all", pattern="^(all|external)$"),
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> dict[str, Any]:
+        return _g3_manifest(scope, domain, evidenceBasis, publishable)
+
+    @app.get("/metrics/report/manifest.csv")
+    def metrics_report_manifest_csv(
+        scope: str = Query(default="all", pattern="^(all|external)$"),
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> Response:
+        import csv
+        import io
+
+        payload = _g3_manifest(scope, domain, evidenceBasis, publishable)
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "metric_id",
+                "名称",
+                "域",
+                "evidence_basis",
+                "证据来源",
+                "publishable",
+                "可算性",
+                "公式",
+                "对外状态",
+                "对外判定说明",
+                "内部标注",
+                "E1行业基线",
+                "缺口",
+                "variant_of",
+                "output_mode",
+                "definition_version",
+            ]
+        )
+        for item in payload["items"]:
+            writer.writerow(
+                [
+                    item["metricId"],
+                    item["nameZh"] or "",
+                    item["domain"] or "",
+                    item["evidenceBasis"],
+                    item["evidenceSource"],
+                    str(item["publishable"]).lower(),
+                    item["computabilityLabel"],
+                    item["formula"],
+                    item["externalLabel"],
+                    item["externalReason"],
+                    item["internalNotice"] or "",
+                    "true" if item["e1Baseline"] else "false",
+                    item["gap"],
+                    item["variantOf"] or "",
+                    item["outputMode"] or "",
+                    item["definitionVersion"] or "",
+                ]
+            )
+        body = "\ufeff" + buffer.getvalue()
+        filename = f"metrics-manifest-{date.today():%Y%m%d}.csv"
+        return Response(
+            content=body.encode("utf-8"),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # M-03: 多口径并列与族索引。族索引本身不出数，出数前必须选择变体并回填 metric_id。
+
+    _G3_FAMILY_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit,
+               variant_of, output_mode, provenance_label, computability_tier
+          FROM platform.metric_definition
+         WHERE output_mode = 'index' OR variant_of IS NOT NULL
+         ORDER BY metric_id
+    """
+    _G3_VARIANT_GUIDANCE = {
+        "code": "E_METRIC_VARIANT_REQUIRED",
+        "message": "该指标是口径族索引，不直接出数；请先选择变体并回填 metric_id。",
+        "howTo": [
+            "在族索引详情中选择一个变体（窗口/分母/粒度会并排展示）",
+            "前端将变体 metric_id 回填到详情与 URL",
+            "再用该 metric_id 调用 /metrics/{metric_id}/output",
+        ],
+    }
+
+    def _g3_variant(row: dict[str, Any]) -> dict[str, Any]:
+        tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
+        evidence = _g3_evidence(row)
+        publishable = bool(row.get("publishable"))
+        formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
+        return {
+            "metricId": str(row.get("metric_id") or ""),
+            "nameZh": row.get("name_zh"),
+            "displayName": row.get("display_name"),
+            "publishable": publishable,
+            "evidenceBasis": evidence["code"],
+            "externalEligible": bool(
+                publishable
+                and evidence["code"] == "regulatory"
+                and tier == "structurally_computable"
+            ),
+            "internalNotice": evidence.get("notice"),
+            "formula": formula or "口径未给出",
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "computability": tier,
+            "computabilityLabel": _G3_TIER_LABELS.get(tier, tier),
+            "window": {
+                "kind": row.get("window_kind"),
+                "minWindowDays": row.get("min_window_days"),
+                "text": _g3_text(row.get("observation_period")),
+            },
+            "denominator": _g3_text(row.get("denominator_text") or row.get("denominator_agg")),
+            "denominatorText": row.get("denominator_text"),
+            "grain": _g3_text(row.get("granularity") or row.get("grain")),
+            "grainCode": row.get("grain"),
+            "metricKind": row.get("metric_kind"),
+            "unit": row.get("unit"),
+        }
+
+    def _g3_family_payload(
+        family_id: str,
+        index_row: dict[str, Any] | None,
+        variant_rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        variants = [_g3_variant(row) for row in variant_rows]
+
+        def diff(field: str, label: str, getter) -> dict[str, Any]:
+            values = {item["metricId"]: getter(item) for item in variants}
+            return {
+                "field": field,
+                "label": label,
+                "values": values,
+                "different": len(set(values.values())) > 1,
+            }
+
+        return {
+            "familyId": family_id,
+            "indexMetricId": (
+                index_row.get("metric_id") if index_row is not None else family_id
+            ),
+            "nameZh": (
+                index_row.get("name_zh") if index_row is not None else family_id
+            ),
+            "selectionRequired": True,
+            "guidance": _G3_VARIANT_GUIDANCE,
+            "variantCount": len(variants),
+            "variants": variants,
+            "diffs": [
+                diff(
+                    "observationPeriod",
+                    "观察窗口",
+                    lambda item: "%s（%s 天）"
+                    % (item["window"]["text"], item["window"]["minWindowDays"] or 0),
+                ),
+                diff("denominator", "分母", lambda item: item["denominator"]),
+                diff("grain", "粒度", lambda item: item["grain"]),
+                diff("formula", "公式", lambda item: item["formula"]),
+            ],
+            "source": "platform.metric_definition",
+        }
+
+    def _g3_families() -> list[dict[str, Any]]:
+        rows = runtime.metadata.query(_G3_FAMILY_SQL)
+        indexes = {
+            str(row["metric_id"]): row
+            for row in rows
+            if row.get("output_mode") == "index"
+        }
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            parent = row.get("variant_of")
+            if not parent:
+                continue
+            grouped.setdefault(str(parent), []).append(row)
+        family_ids = sorted(set(indexes) | set(grouped))
+        return [
+            _g3_family_payload(family_id, indexes.get(family_id), grouped.get(family_id, []))
+            for family_id in family_ids
+        ]
+
+    @app.get("/metrics/report/families")
+    def metrics_report_families() -> dict[str, Any]:
+        families = _g3_families()
+        return {
+            "families": families,
+            "count": len(families),
+            "guidance": _G3_VARIANT_GUIDANCE,
+            "source": "platform.metric_definition",
+        }
+
+    @app.get("/metrics/report/families/{family_id}")
+    def metrics_report_family(family_id: str) -> dict[str, Any]:
+        for family in _g3_families():
+            if family["familyId"] == family_id:
+                return {"family": family, "source": "platform.metric_definition"}
+        raise PortError(
+            code="NotFound",
+            message=f"metric family not found: {family_id}",
+            provider="platform",
+            provider_code="E_METRIC_FAMILY_NOT_FOUND",
+            details={"familyId": family_id},
+        )
+
+    # M-04: 口径卡可视化 + PROV 判定徽标。
+    # 79 张主卡 = variant_of IS NULL 的行（与 doc/_fsldm/01-指标卡 的 79 个文件逐一对应）；
+    # 6 条族变体没有独立卡，明确显示“未建卡”，不伪造卡内容。
+
+    _G3_CARD_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit, effective_date,
+               variant_of, output_mode, provenance_label, computability_tier,
+               definition, denominator_text
+          FROM platform.metric_definition
+         WHERE metric_id = %s
+    """
+
+    def _g3_tone_for_external(status: str) -> str:
+        if status == "external_candidate":
+            return "ok"
+        if status == "internal_baseline":
+            return "warn"
+        return "bad"
+
+    @app.get("/browse/metrics/{metric_id}/card")
+    def browse_metric_card(metric_id: str) -> dict[str, Any]:
+        rows = runtime.metadata.query(_G3_CARD_SQL, (metric_id,))
+        if not rows:
+            raise PortError(
+                code="NotFound",
+                message=f"metric not found: {metric_id}",
+                provider="platform",
+                provider_code="E_METRIC_NOT_FOUND",
+                details={"metricId": metric_id},
+            )
+        row = rows[0]
+        base = _g3_metric_row(row)
+        evidence = _g3_evidence(row)
+        card_exists = row.get("variant_of") is None
+        if card_exists:
+            card_state = "built"
+            card_state_label = "已建卡"
+            doc_path = f"doc/_fsldm/01-指标卡/{metric_id}.md"
+        else:
+            card_state = "not_built"
+            card_state_label = "未建卡（族变体，无独立口径卡）"
+            doc_path = None
+
+        badges = [
+            {
+                "key": "evidence",
+                "label": evidence["basisLabel"]
+                + (f" · {_G3_INDUSTRY_NOTICE}" if evidence.get("notice") else ""),
+                "tone": (
+                    "ok" if evidence["code"] == "regulatory"
+                    else ("warn" if evidence["code"] == "industry" else "bad")
+                ),
+            },
+            {
+                "key": "publishable",
+                "label": "可发布（内部）" if base["publishable"] else "不可发布",
+                "tone": "ok" if base["publishable"] else "warn",
+            },
+            {
+                "key": "external",
+                "label": base["externalLabel"],
+                "tone": _g3_tone_for_external(base["externalStatus"]),
+            },
+            {
+                "key": "computability",
+                "label": base["computabilityLabel"],
+                "tone": base["computabilityTone"],
+            },
+        ]
+
+        decision_count = None
+        decision_label = "PROV 判定：运行时可无 PROV"
+        prov = getattr(runtime, "prov", None)
+        if prov is not None:
+            try:
+                history = prov.decision_history(metric_id, limit=20)
+                decision_count = int(history.get("count", 0))
+                decision_label = (
+                    f"PROV 判定 {decision_count} 条" if decision_count else "PROV 判定：无记录"
+                )
+                badges.append(
+                    {
+                        "key": "prov",
+                        "label": decision_label,
+                        "tone": "ok" if decision_count else "muted",
+                    }
+                )
+            except Exception as exc:  # PROV 不可用不应阻断口径卡
+                decision_label = f"PROV 判定不可用：{type(exc).__name__}"
+
+        sections = [
+            {"key": "definition", "title": "定义", "text": _g3_text(row.get("definition"))},
+            {"key": "formula", "title": "公式", "text": base["formula"]},
+            {
+                "key": "denominator",
+                "title": "分母",
+                "text": _g3_text(row.get("denominator_text") or row.get("denominator_agg")),
+            },
+            {"key": "window", "title": "观察期", "text": _g3_text(row.get("observation_period"))},
+            {"key": "grain", "title": "粒度", "text": _g3_text(row.get("granularity") or row.get("grain"))},
+            {
+                "key": "evidence",
+                "title": "证据",
+                "text": "｜".join(
+                    part for part in (
+                        evidence["basisLabel"],
+                        evidence["source"],
+                        _g3_text(row.get("evidence_status")),
+                        evidence.get("notice"),
+                    ) if part
+                ),
+            },
+            {"key": "pipeline", "title": "可算性", "text": base["computabilityLabel"]},
+            {"key": "gap", "title": "缺口", "text": base["gap"]},
+        ]
+
+        return {
+            "metricId": metric_id,
+            "cardExists": card_exists,
+            "cardState": card_state,
+            "cardStateLabel": card_state_label,
+            "cardSource": "platform.metric_definition",
+            "docPath": doc_path,
+            "card": {
+                "metricId": metric_id,
+                "nameZh": row.get("name_zh"),
+                "displayName": row.get("display_name"),
+                "domain": row.get("domain"),
+                "metricKind": row.get("metric_kind"),
+                "unit": row.get("unit"),
+                "definitionVersion": row.get("definition_version"),
+                "effectiveDate": row.get("effective_date"),
+                "variantOf": row.get("variant_of"),
+                "outputMode": row.get("output_mode"),
+                "note": row.get("note"),
+            },
+            "badges": badges,
+            "sections": sections,
+            "prov": {
+                "graph": "urn:platform:prov",
+                "decisionsUrl": f"/prov/decisions?metricId={metric_id}&limit=20",
+                "verifyUrl": "/prov/verify",
+                "decisionCount": decision_count,
+                "decisionLabel": decision_label,
+            },
+            "links": {
+                "detailApi": f"/browse/metrics/{metric_id}",
+                "output": f"/metrics/{metric_id}/output",
+                "manifest": "/metrics/report/manifest",
+                "families": "/metrics/report/families",
+            },
+            "source": "metric_definition + doc/_fsldm/01-指标卡",
+        }
+
+    # --- end G3 ---
+
+    # --- G4 retrieval routes ---
+    # The block is intentionally self-contained: helpers are nested so no
+    # existing route/helper in this module is touched. Everything here is
+    # read-only except the opt-in golden-set evaluation, which only reads.
+
+    _G4_LAYERS = ("ontology", "terms", "metrics", "facts")
+    _G4_LAYER_STATUSES = (
+        "covered",
+        "partial",
+        "missing",
+        "unavailable",
+        "not_applicable",
+    )
+    _G4_CITATION_KINDS = {
+        "ontology-version",
+        "rdfs-term",
+        "skos-term",
+        "metric-definition",
+        "formula",
+        "rule-set",
+        "fact-projection",
+        "fact-table",
+        "fact-table-field",
+        "fact-observation",
+        "value-source",
+        "chunk",
+    }
+    # Frozen 24-query set from doc/_design/24 §5.2 and platform/tests/term_eval.py.
+    # It is deliberately duplicated here so the panel does not import a test
+    # module; the strings and expected classes must stay byte-identical.
+    _G4_QUERY_SET = (
+        {"id": "A1", "group": "A", "query": "她名下的存款帐户是怎么自动还房贷的？", "expectedClasses": ("https://w3id.org/fsldm/agreement#Account",)},
+        {"id": "A2", "group": "A", "query": "授信合同里对个人贷款和企业贷款分别怎么约定？", "expectedClasses": ("https://w3id.org/fsldm/agreement#CreditAgreement",)},
+        {"id": "A3", "group": "A", "query": "个贷系统自然人基本信息表包含哪些字段？", "expectedClasses": ("https://w3id.org/fsldm/party#Individual",)},
+        {"id": "A4", "group": "A", "query": "当事人关系历史记录保留多久？", "expectedClasses": ("https://w3id.org/fsldm/party#PartyRelationship",)},
+        {"id": "A5", "group": "A", "query": "抵押物价值发生巨大变化时银行如何处理？", "expectedClasses": ("https://w3id.org/fsldm/asset#CollateralItem",)},
+        {"id": "A6", "group": "A", "query": "抵押合同的合同号数据质量是怎么控制的？", "expectedClasses": ("https://w3id.org/fsldm/banking#CollateralAgreement",)},
+        {"id": "A7", "group": "A", "query": "客户的基本信息从哪些系统采集？", "expectedClasses": ("https://w3id.org/fsldm/core#Party",)},
+        {"id": "A8", "group": "A", "query": "不良率是多少？", "expectedClasses": ("https://w3id.org/fsldm/core#Metric",)},
+        {"id": "A9", "group": "A", "query": "集团客户的授信集中度如何计算？", "expectedClasses": ("https://w3id.org/fsldm/party#PartyGroup", "https://w3id.org/fsldm/agreement#CreditAgreement")},
+        {"id": "A10", "group": "A", "query": "关联客户之间的风险传染怎么识别？", "expectedClasses": ("https://w3id.org/fsldm/party#PartyRelationship", "https://w3id.org/fsldm/party#PartyGroup")},
+        {"id": "A11", "group": "A", "query": "这个险种对应哪些保险产品？", "expectedClasses": ("https://w3id.org/fsldm/insurance#InsuranceProduct",)},
+        {"id": "A12", "group": "A", "query": "报案之后多久立案？", "expectedClasses": ("https://w3id.org/fsldm/event#ClaimEvent",)},
+        {"id": "B1", "group": "B", "query": "这家客户在你们这有几个账户？", "expectedClasses": ("https://w3id.org/fsldm/core#Party", "https://w3id.org/fsldm/agreement#Account")},
+        {"id": "B2", "group": "B", "query": "单一集团客户授信集中度是多少？", "expectedClasses": ("https://w3id.org/fsldm/party#PartyGroup", "https://w3id.org/fsldm/agreement#CreditAgreement")},
+        {"id": "B3", "group": "B", "query": "今年报案立案率、案均已决金额多少？", "expectedClasses": ("https://w3id.org/fsldm/event#ClaimEvent", "https://w3id.org/fsldm/agreement#Claim")},
+        {"id": "B4", "group": "B", "query": "不良率 / NPL ratio 是多少？", "expectedClasses": ("https://w3id.org/fsldm/core#Metric",)},
+        {"id": "B5", "group": "B", "query": "查一下这张保单的保障项", "expectedClasses": ("https://w3id.org/fsldm/agreement#Policy", "https://w3id.org/fsldm/insurance#Coverage")},
+        {"id": "C1", "group": "C", "query": "逾期贷款余额占比是多少？", "expectedClasses": ("https://w3id.org/fsldm/agreement#CreditAgreement", "https://w3id.org/fsldm/core#Metric")},
+        {"id": "C2", "group": "C", "query": "单一客户贷款集中度是多少？", "expectedClasses": ("https://w3id.org/fsldm/core#Party", "https://w3id.org/fsldm/core#Metric")},
+        {"id": "C3", "group": "C", "query": "今年报案立案率是多少？", "expectedClasses": ("https://w3id.org/fsldm/event#ClaimEvent", "https://w3id.org/fsldm/agreement#Claim")},
+        {"id": "C4", "group": "C", "query": "今年案均赔款是多少？", "expectedClasses": ("https://w3id.org/fsldm/agreement#Claim", "https://w3id.org/fsldm/core#Metric")},
+        {"id": "C5", "group": "C", "query": "今年保单继续率是多少？", "expectedClasses": ("https://w3id.org/fsldm/agreement#Policy", "https://w3id.org/fsldm/core#Metric")},
+        {"id": "C6", "group": "C", "query": "今年退保率是多少？", "expectedClasses": ("https://w3id.org/fsldm/agreement#Policy", "https://w3id.org/fsldm/core#Metric")},
+        {"id": "C7", "group": "C", "query": "本年客户AUM是多少？", "expectedClasses": ("https://w3id.org/fsldm/core#Party", "https://w3id.org/fsldm/core#Metric")},
+    )
+    # Ten golden cases: six already regression-tested in tests/test_answer_layers.py,
+    # four refusal cases built from concepts absent in the published T-Box.
+    _G4_GOLDEN_SET = (
+        {
+            "id": "G01",
+            "query": "产品包的产品特性有哪些",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("ontology-version",),
+        },
+        {
+            "id": "G02",
+            "query": "13个月继续率（有效保单件数）的口径是什么",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("metric-definition", "formula"),
+        },
+        {
+            "id": "G03",
+            "query": "逾期分档（M0–M6）是什么",
+            "type": "rule_set",
+            "expectRefused": False,
+            "requiredCitationKinds": ("rule-set",),
+        },
+        {
+            "id": "G04",
+            "query": "13个月继续率是多少",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("metric-definition",),
+            "allowDegraded": True,
+        },
+        {
+            "id": "G05",
+            "query": "当事人关系历史记录保留多久",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("ontology-version",),
+        },
+        {
+            "id": "G06",
+            "query": "抵押物价值发生巨大变化时银行如何处理",
+            "type": "definition",
+            "expectRefused": False,
+            "requiredCitationKinds": ("ontology-version",),
+        },
+        {
+            "id": "G07",
+            "query": "量子计算机的制冷功率是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+        {
+            "id": "G08",
+            "query": "火星探测器电池功率是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+        {
+            "id": "G09",
+            "query": "量子退火机的能耗是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+        {
+            "id": "G10",
+            "query": "超导磁悬浮列车的时速是多少",
+            "type": "value",
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology", "metrics"),
+        },
+    )
+    _g4_term_cache: dict[str, Any] = {}
+
+    def _g4_query_catalog() -> list[dict[str, Any]]:
+        return [
+            {
+                "id": item["id"],
+                "group": item["group"],
+                "query": item["query"],
+                "expectedClasses": list(item["expectedClasses"]),
+            }
+            for item in _G4_QUERY_SET
+        ]
+
+    def _g4_last_and_message(
+        result: dict[str, Any],
+    ) -> tuple[dict[str, str], list[dict[str, Any]]]:
+        statuses = {
+            str(layer.get("layer")): str(layer.get("status") or "missing")
+            for layer in result.get("layers") or []
+        }
+        missing = list(result.get("missing") or [])
+        return statuses, missing
+
+    def _g4_verdict(result: dict[str, Any]) -> str:
+        statuses, missing = _g4_last_and_message(result)
+        blocking = any(
+            statuses.get(name) in ("missing", "unavailable")
+            for name in _G4_LAYERS
+        )
+        missing_layers = {str(item.get("layer") or "") for item in missing}
+        if result.get("answerable") and (blocking or missing_layers):
+            return "overclaim"
+        if (
+            not result.get("answerable")
+            and not missing_layers
+            and statuses.get("ontology") == "covered"
+        ):
+            return "underclaim"
+        return "ok"
+
+    def _g4_eval_answerable(query: str, item: dict[str, Any]) -> dict[str, Any]:
+        started = time.monotonic()
+        try:
+            payload = _qa_answerable(runtime, query, include_layers=True)
+            payload = dict(payload)
+            payload["_g4"] = {
+                "id": item["id"],
+                "group": item["group"],
+                "query": query,
+                "expectedClasses": item["expectedClasses"],
+                "elapsedMs": int((time.monotonic() - started) * 1000),
+                "error": None,
+            }
+            return payload
+        except PortError as exc:
+            return {
+                "_g4": {
+                    "id": item["id"],
+                    "group": item["group"],
+                    "query": query,
+                    "expectedClasses": item["expectedClasses"],
+                    "elapsedMs": int((time.monotonic() - started) * 1000),
+                    "error": exc.provider_code or exc.code,
+                    "message": exc.message,
+                },
+                "query": query,
+                "answerable": False,
+                "intent": "unknown",
+                "layers": [],
+                "missing": [],
+                "candidates": [],
+                "selectedMetrics": [],
+            }
+        except Exception as exc:  # a panel must never turn a bad row into 500
+            return {
+                "_g4": {
+                    "id": item["id"],
+                    "group": item["group"],
+                    "query": query,
+                    "expectedClasses": item["expectedClasses"],
+                    "elapsedMs": int((time.monotonic() - started) * 1000),
+                    "error": "E_G4_QUERY_FAILED",
+                    "message": str(exc)[:200],
+                },
+                "query": query,
+                "answerable": False,
+                "intent": "unknown",
+                "layers": [],
+                "missing": [],
+                "candidates": [],
+                "selectedMetrics": [],
+            }
+
+    def _g4_term_misjudgment(catalog: list[dict[str, Any]]) -> dict[str, Any]:
+        """Reproduce term_eval's expansion false-positive rate (currently 1/11)."""
+        try:
+            pointer = runtime.ontology.current()
+            graph_iri = str(pointer.get("graph")) if pointer else ""
+            if not graph_iri:
+                return {
+                    "status": "unavailable",
+                    "reason": "no_ontology_pointer",
+                    "evaluated": 0,
+                    "misjudged": 0,
+                    "rate": 0.0,
+                    "items": [],
+                    "source": "termlex.match",
+                }
+            lexicon = _g4_term_cache.get(graph_iri)
+            if lexicon is None:
+                from .termlex import TermLexicon  # local import: no top-level change
+
+                lexicon = TermLexicon.build(runtime.graph, graph_iri)
+                _g4_term_cache[graph_iri] = lexicon
+            max_hits = int(
+                getattr(
+                    getattr(getattr(runtime, "config", None), "context", None),
+                    "term_expand_max_hits",
+                    5,
+                )
+            )
+            expanded_total = 0
+            wrong_total = 0
+            items: list[dict[str, Any]] = []
+            for entry in catalog:
+                hits = lexicon.match(entry["query"], max_hits=max_hits)
+                if not hits:
+                    continue
+                expanded = [str(getattr(hit, "canonical", "")) for hit in hits]
+                wrong = [
+                    iri for iri in expanded if iri not in set(entry["expectedClasses"])
+                ]
+                expanded_total += len(expanded)
+                wrong_total += len(wrong)
+                if wrong:
+                    items.append(
+                        {
+                            "id": entry["id"],
+                            "group": entry["group"],
+                            "query": entry["query"],
+                            "expanded": expanded,
+                            "expected": entry["expectedClasses"],
+                            "wrong": wrong,
+                        }
+                    )
+            return {
+                "status": "ok",
+                "reason": None,
+                "evaluated": expanded_total,
+                "misjudged": wrong_total,
+                "rate": round(wrong_total / expanded_total, 4) if expanded_total else 0.0,
+                "items": items,
+                "source": "termlex.match",
+                "note": "24 条查询集的术语扩展误判率；当前基线 9.09% (1/11)",
+            }
+        except Exception as exc:
+            return {
+                "status": "unavailable",
+                "reason": str(exc)[:200],
+                "evaluated": 0,
+                "misjudged": 0,
+                "rate": 0.0,
+                "items": [],
+                "source": "termlex.match",
+            }
+
+    def _g4_layer_counts(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        counts = {
+            layer: {status: 0 for status in _G4_LAYER_STATUSES}
+            for layer in _G4_LAYERS
+        }
+        present = {layer: 0 for layer in _G4_LAYERS}
+        for result in results:
+            for layer in result.get("layers") or []:
+                name = str(layer.get("layer") or "")
+                if name not in counts:
+                    continue
+                status = str(layer.get("status") or "missing")
+                if status not in counts[name]:
+                    status = "missing"
+                counts[name][status] += 1
+                present[name] += 1
+        payload = []
+        for name in _G4_LAYERS:
+            row = counts[name]
+            denom = present[name] or 0
+            payload.append(
+                {
+                    "layer": name,
+                    "evaluated": denom,
+                    **row,
+                    "coverageRate": round(row["covered"] / denom, 4) if denom else 0.0,
+                }
+            )
+        return payload
+
+    def _g4_missing_distribution(results: list[dict[str, Any]]) -> dict[str, Any]:
+        by_layer: dict[str, int] = {}
+        by_code: dict[tuple[str, str], int] = {}
+        items: list[dict[str, Any]] = []
+        for result in results:
+            info = result.get("_g4") or {}
+            for item in result.get("missing") or []:
+                layer = str(item.get("layer") or "unknown")
+                code = str(item.get("code") or "UNSPECIFIED")
+                by_layer[layer] = by_layer.get(layer, 0) + 1
+                by_code[(layer, code)] = by_code.get((layer, code), 0) + 1
+                if len(items) < 200:
+                    items.append(
+                        {
+                            "queryId": info.get("id"),
+                            "group": info.get("group"),
+                            "query": info.get("query"),
+                            "layer": layer,
+                            "code": code,
+                            "what": item.get("what") or item.get("text") or code,
+                        }
+                    )
+        return {
+            "total": sum(by_layer.values()),
+            "byLayer": [
+                {"layer": layer, "count": count}
+                for layer, count in sorted(by_layer.items(), key=lambda pair: (-pair[1], pair[0]))
+            ],
+            "byCode": [
+                {"layer": layer, "code": code, "count": count}
+                for (layer, code), count in sorted(
+                    by_code.items(), key=lambda pair: (-pair[1], pair[0])
+                )
+            ],
+            "items": items,
+        }
+
+    def _g4_candidates(results: list[dict[str, Any]]) -> dict[str, Any]:
+        grouped: dict[tuple[str, str], dict[str, Any]] = {}
+        for result in results:
+            info = result.get("_g4") or {}
+            for candidate in result.get("candidates") or []:
+                layer = str(candidate.get("layer") or "unknown")
+                candidate_id = str(candidate.get("id") or "")
+                if not candidate_id:
+                    continue
+                key = (layer, candidate_id)
+                entry = grouped.setdefault(
+                    key,
+                    {
+                        "layer": layer,
+                        "id": candidate_id,
+                        "label": candidate.get("label"),
+                        "reason": candidate.get("reason"),
+                        "score": candidate.get("score"),
+                        "count": 0,
+                        "queries": [],
+                    },
+                )
+                entry["count"] += 1
+                if len(entry["queries"]) < 3 and info.get("query"):
+                    entry["queries"].append(info["query"])
+        items = sorted(
+            grouped.values(),
+            key=lambda entry: (-float(entry.get("count") or 0), entry["layer"], entry["id"]),
+        )
+        return {"total": len(items), "items": items[:100]}
+
+    def _g4_trend(results: list[dict[str, Any]]) -> dict[str, Any]:
+        groups: dict[str, dict[str, Any]] = {}
+        intents: dict[str, dict[str, Any]] = {}
+        for result in results:
+            info = result.get("_g4") or {}
+            group = str(info.get("group") or "?")
+            intent = str(result.get("intent") or "unknown")
+            statuses = {
+                str(layer.get("layer")): str(layer.get("status") or "missing")
+                for layer in result.get("layers") or []
+            }
+            for bucket, key in ((groups, group), (intents, intent)):
+                entry = bucket.setdefault(
+                    key,
+                    {
+                        "bucket": key,
+                        "evaluated": 0,
+                        "answerable": 0,
+                        "layers": {name: {"covered": 0, "denominator": 0} for name in _G4_LAYERS},
+                    },
+                )
+                entry["evaluated"] += 1
+                entry["answerable"] += 1 if result.get("answerable") else 0
+                for name in _G4_LAYERS:
+                    status = statuses.get(name)
+                    if status in (None, "not_applicable"):
+                        continue
+                    cell = entry["layers"][name]
+                    cell["denominator"] += 1
+                    cell["covered"] += 1 if status == "covered" else 0
+        def _finish(bucket: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+            rows = []
+            for key in sorted(bucket):
+                entry = bucket[key]
+                layers = {
+                    name: {
+                        "covered": cell["covered"],
+                        "denominator": cell["denominator"],
+                        "rate": round(cell["covered"] / cell["denominator"], 4)
+                        if cell["denominator"]
+                        else 0.0,
+                    }
+                    for name, cell in entry["layers"].items()
+                }
+                rows.append(
+                    {
+                        "bucket": key,
+                        "evaluated": entry["evaluated"],
+                        "answerable": entry["answerable"],
+                        "layers": layers,
+                    }
+                )
+            return rows
+        return {"basis": "query-set groups / intent", "byGroup": _finish(groups), "byIntent": _finish(intents)}
+
+    def _g4_misjudgments(results: list[dict[str, Any]]) -> dict[str, Any]:
+        items = []
+        for result in results:
+            info = result.get("_g4") or {}
+            verdict = _g4_verdict(result)
+            if verdict == "ok":
+                continue
+            statuses = {
+                str(layer.get("layer")): str(layer.get("status") or "missing")
+                for layer in result.get("layers") or []
+            }
+            items.append(
+                {
+                    "id": info.get("id"),
+                    "group": info.get("group"),
+                    "query": info.get("query"),
+                    "verdict": verdict,
+                    "answerable": bool(result.get("answerable")),
+                    "reasonCode": result.get("reasonCode"),
+                    "layerStatuses": statuses,
+                    "missingCodes": [
+                        str(item.get("code") or "") for item in result.get("missing") or []
+                    ],
+                    "drillDownUrl": "/answerable/panel?queryId=" + str(info.get("id") or ""),
+                }
+            )
+        evaluated = len(results)
+        return {
+            "evaluated": evaluated,
+            "count": len(items),
+            "rate": round(len(items) / evaluated, 4) if evaluated else 0.0,
+            "items": items,
+        }
+
+    def _g4_citation_view(citation: dict[str, Any]) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        kind = str(citation.get("kind") or "")
+        ref = citation.get("ref")
+        source = citation.get("sourceRef") or {}
+        url = source.get("resolveUrl") if isinstance(source, dict) else None
+        if not url:
+            if kind == "ontology-version":
+                url = "/ui/ontology.html"
+            elif kind in ("rdfs-term", "skos-term"):
+                url = "/ui/entity.html?iri=" + quote(str(citation.get("id") or ""), safe="")
+            elif kind in ("metric-definition", "formula", "rule-set"):
+                metric_id = citation.get("metricId")
+                url = (
+                    "/ui/browse.html?tab=metrics&metricId=" + quote(str(metric_id), safe="")
+                    if metric_id
+                    else "/ui/browse.html?tab=metrics"
+                )
+            elif kind == "fact-table":
+                url = "/browse/facts?table=" + quote(str(ref or ""), safe="")
+            elif kind in ("fact-table-field", "fact-projection"):
+                url = "/ui/browse.html?tab=metrics"
+            elif kind == "chunk":
+                url = "/ui/search.html"
+        resolvable = bool(url) or bool(kind in _G4_CITATION_KINDS and ref)
+        return {
+            **citation,
+            "resolveUrl": url,
+            "resolvable": resolvable,
+        }
+
+    def _g4_answer_quality_data(
+        strategy: str, limit: int, case_id: str | None = None
+    ) -> dict[str, Any]:
+        golden = list(_G4_GOLDEN_SET)
+        if case_id:
+            golden = [item for item in golden if item["id"] == case_id]
+        cases = []
+        for case in golden[:limit]:
+            try:
+                result = _qa_answer(
+                    runtime,
+                    case["query"],
+                    top_k=5,
+                    strategy=strategy,
+                    request_id="g4-golden-" + case["id"],
+                )
+            except PortError as exc:
+                result = {
+                    "refused": True,
+                    "answerType": "error",
+                    "answerMode": "none",
+                    "reasonCode": exc.provider_code or exc.code,
+                    "citations": [],
+                    "missing": [],
+                    "degraded": True,
+                    "error": exc.message,
+                }
+            except Exception as exc:
+                result = {
+                    "refused": True,
+                    "answerType": "error",
+                    "answerMode": "none",
+                    "reasonCode": "E_G4_ANSWER_FAILED",
+                    "citations": [],
+                    "missing": [],
+                    "degraded": True,
+                    "error": str(exc)[:200],
+                }
+            citations = [_g4_citation_view(item) for item in result.get("citations") or []]
+            missing = list(result.get("missing") or [])
+            missing_layers = sorted(
+                {str(item.get("layer") or "unknown") for item in missing}
+            )
+            kinds = {str(item.get("kind") or "") for item in citations}
+            failures = []
+            if bool(result.get("refused")) != bool(case["expectRefused"]):
+                failures.append(
+                    "expected refused="
+                    + str(bool(case["expectRefused"])).lower()
+                    + ", got "
+                    + str(bool(result.get("refused"))).lower()
+                )
+            if result.get("refused"):
+                if not missing:
+                    failures.append("refusal has no missing layer")
+                for name in case.get("expectedMissingLayers") or ():
+                    if name not in missing_layers:
+                        failures.append("missing layer not reported: " + name)
+            else:
+                required = list(case.get("requiredCitationKinds") or ())
+                absent = [kind for kind in required if kind not in kinds]
+                if absent:
+                    failures.append("missing citation kinds: " + ",".join(absent))
+                if not citations:
+                    failures.append("answer has no citation")
+            if not case.get("allowDegraded") and result.get("degraded"):
+                failures.append("unexpected degraded=true")
+            unresolvable = [item for item in citations if not item.get("resolvable")]
+            if unresolvable:
+                failures.append("unresolvable citations: " + str(len(unresolvable)))
+            cases.append(
+                {
+                    "id": case["id"],
+                    "query": case["query"],
+                    "type": case["type"],
+                    "expectRefused": bool(case["expectRefused"]),
+                    "actual": {
+                        "refused": bool(result.get("refused")),
+                        "answerType": result.get("answerType"),
+                        "answerMode": result.get("answerMode"),
+                        "reasonCode": result.get("reasonCode"),
+                        "degraded": bool(result.get("degraded")),
+                        "citations": citations,
+                        "citationKinds": sorted(kinds),
+                        "missingLayers": missing_layers,
+                    },
+                    "pass": not failures,
+                    "failures": failures,
+                    "drillDownUrl": (
+                        "/answer/quality?caseId="
+                        + case["id"]
+                        + "&strategy="
+                        + strategy
+                    ),
+                }
+            )
+
+        by_type: dict[str, dict[str, Any]] = {}
+        by_reason: dict[tuple[str, str], int] = {}
+        refusals_without_layers = []
+        for item in cases:
+            actual = item["actual"]
+            entry = by_type.setdefault(
+                item["type"],
+                {
+                    "type": item["type"],
+                    "cases": 0,
+                    "refused": 0,
+                    "withCitations": 0,
+                    "citations": 0,
+                    "resolvable": 0,
+                },
+            )
+            entry["cases"] += 1
+            entry["refused"] += 1 if actual["refused"] else 0
+            entry["citations"] += len(actual["citations"])
+            entry["resolvable"] += sum(1 for c in actual["citations"] if c.get("resolvable"))
+            entry["withCitations"] += 1 if actual["citations"] else 0
+            if actual["refused"]:
+                reason = str(actual.get("reasonCode") or "UNSPECIFIED")
+                by_reason[(item["type"], reason)] = by_reason.get((item["type"], reason), 0) + 1
+                if not actual["missingLayers"]:
+                    refusals_without_layers.append(
+                        {"id": item["id"], "query": item["query"], "type": item["type"]}
+                    )
+
+        cases_total = len(cases)
+        citations_total = sum(len(item["actual"]["citations"]) for item in cases)
+        citations_resolvable = sum(
+            1 for item in cases for c in item["actual"]["citations"] if c.get("resolvable")
+        )
+        broken = [
+            {"id": item["id"], "query": item["query"], "citation": c}
+            for item in cases
+            for c in item["actual"]["citations"]
+            if not c.get("resolvable")
+        ]
+        by_type_rows = []
+        for key in sorted(by_type):
+            entry = by_type[key]
+            by_type_rows.append(
+                {
+                    **entry,
+                    "citationCoverageRate": round(entry["withCitations"] / entry["cases"], 4)
+                    if entry["cases"]
+                    else 0.0,
+                    "resolvableRate": round(entry["resolvable"] / entry["citations"], 4)
+                    if entry["citations"]
+                    else 0.0,
+                }
+            )
+        return {
+            "strategy": strategy,
+            "goldenSet": {
+                "id": "r02-golden-10",
+                "count": len(_G4_GOLDEN_SET),
+                "evaluated": cases_total,
+                "caseId": case_id,
+            },
+            "summary": {
+                "cases": cases_total,
+                "passed": sum(1 for item in cases if item["pass"]),
+                "failed": sum(1 for item in cases if not item["pass"]),
+                "passRate": round(
+                    sum(1 for item in cases if item["pass"]) / cases_total, 4
+                )
+                if cases_total
+                else 0.0,
+                "casesWithCitations": sum(1 for item in cases if item["actual"]["citations"]),
+                "citationCoverageRate": round(
+                    sum(1 for item in cases if item["actual"]["citations"]) / cases_total, 4
+                )
+                if cases_total
+                else 0.0,
+                "citations": citations_total,
+                "resolvableCitations": citations_resolvable,
+                "citationResolvableRate": round(citations_resolvable / citations_total, 4)
+                if citations_total
+                else 0.0,
+                "brokenLinkRate": round(len(broken) / citations_total, 4)
+                if citations_total
+                else 0.0,
+                "baselineBrokenLinkRate": 0.0,
+                "regression": bool(broken),
+            },
+            "citationCoverageByType": by_type_rows,
+            "refusalsByReason": [
+                {"type": type_name, "reasonCode": reason, "count": count}
+                for (type_name, reason), count in sorted(by_reason.items())
+            ],
+            "refusalsByType": [
+                {
+                    "type": entry["type"],
+                    "cases": entry["cases"],
+                    "refused": entry["refused"],
+                    "refusalRate": round(entry["refused"] / entry["cases"], 4)
+                    if entry["cases"]
+                    else 0.0,
+                }
+                for entry in by_type_rows
+            ],
+            "refusalsWithoutLayers": refusals_without_layers,
+            "brokenLinks": broken,
+            "cases": cases,
+            "empty": cases_total == 0,
+            "emptyReason": (
+                "case_not_found"
+                if cases_total == 0 and case_id
+                else ("no_golden_cases" if cases_total == 0 else None)
+            ),
+            "readOnly": True,
+        }
+
+    def _g4_provenance_fields(detail: dict[str, Any], iri: str) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        sources = list(detail.get("sources") or [])
+        edges = list((detail.get("neighbors") or {}).get("edges") or [])
+        related = list((detail.get("relatedMetrics") or {}).get("items") or [])
+        bindings: dict[str, dict[str, Any]] = {}
+        for metric in related:
+            for binding in metric.get("bindings") or []:
+                column = str(binding.get("entityColumn") or "").strip().lower()
+                if column:
+                    bindings[column] = {
+                        "metricId": metric.get("metricId"),
+                        "factTable": binding.get("factTable"),
+                        "entityColumn": binding.get("entityColumn"),
+                        "role": binding.get("role"),
+                    }
+
+        def _ref_url(ref: str) -> str:
+            return "/source/resolve?ref=" + quote(str(ref), safe="")
+
+        fields = []
+        for prop in detail.get("properties") or []:
+            property_iri = str(prop.get("property") or "")
+            local = str(_local_name(property_iri) or property_iri).lower()
+            values = list(prop.get("values") or [])
+            asserted = any(
+                edge.get("s") == iri
+                and edge.get("p") == property_iri
+                and not edge.get("inferred")
+                for edge in edges
+            )
+            inferred_only = (
+                any(
+                    edge.get("s") == iri
+                    and edge.get("p") == property_iri
+                    and edge.get("inferred")
+                    for edge in edges
+                )
+                and not asserted
+            )
+            links: list[dict[str, Any]] = []
+            state = "none"
+            basis = "无 sourceRef / PROV 溯源"
+            has_source_ref = False
+            has_prov = False
+            value_text = ""
+            for value in values:
+                if isinstance(value, dict) and value.get("kind") == "literal":
+                    value_text = str(value.get("value") or "")
+                    break
+            for source in sources:
+                text = str(source.get("text") or "")
+                if value_text and len(value_text) >= 2 and value_text in text:
+                    links.append(
+                        {
+                            "kind": "source_ref",
+                            "ref": source.get("ref"),
+                            "url": source.get("resolveUrl") or _ref_url(str(source.get("ref"))),
+                        }
+                    )
+                    state = "evidenced"
+                    basis = "字段值命中 PROV/sourceRef 证据文本"
+                    has_source_ref = True
+                    has_prov = source.get("kind") in ("unparsed", "doc", "fact", "obs", "obs-set")
+                    break
+            if state == "none" and local in bindings:
+                binding = bindings[local]
+                table = binding.get("factTable")
+                links.append(
+                    {
+                        "kind": "fact_binding",
+                        "ref": table,
+                        "url": "/browse/facts?table=" + quote(str(table or ""), safe=""),
+                    }
+                )
+                links.append({"kind": "prov", "url": "/prov/verify"})
+                state = "evidenced"
+                basis = "指标事实字段绑定（可回溯到事实表/PROV 校验）"
+                has_source_ref = True
+                has_prov = True
+            if state == "none" and property_iri in (
+                "http://www.w3.org/2000/01/rdf-schema#seeAlso",
+                "http://www.w3.org/ns/prov#wasDerivedFrom",
+                "http://www.w3.org/ns/prov#wasGeneratedBy",
+            ):
+                state = "evidenced"
+                basis = "该字段本身承载 sourceRef / PROV 关系"
+                links.append({"kind": "prov", "url": "/prov/verify"})
+                has_source_ref = True
+                has_prov = True
+            if state == "none" and inferred_only:
+                state = "inferred"
+                basis = "仅推理图出现，无断言 sourceRef / PROV"
+                links.append({"kind": "prov", "url": "/prov/verify"})
+                has_prov = True
+            fields.append(
+                {
+                    "property": property_iri,
+                    "label": prop.get("label") or _local_name(property_iri) or property_iri,
+                    "values": values,
+                    "valueText": value_text or None,
+                    "asserted": asserted,
+                    "inferredOnly": inferred_only,
+                    "badge": {
+                        "state": state,
+                        "label": "有溯源" if state == "evidenced" else ("仅推理" if state == "inferred" else "无"),
+                        "basis": basis,
+                    },
+                    "hasSourceRef": has_source_ref,
+                    "hasProv": has_prov,
+                    "links": links,
+                }
+            )
+        summary = {
+            "total": len(fields),
+            "evidenced": sum(1 for item in fields if item["badge"]["state"] == "evidenced"),
+            "inferred": sum(1 for item in fields if item["badge"]["state"] == "inferred"),
+            "none": sum(1 for item in fields if item["badge"]["state"] == "none"),
+            "withSourceRef": sum(1 for item in fields if item["hasSourceRef"]),
+            "withProv": sum(1 for item in fields if item["hasProv"]),
+            "coverageRate": round(
+                sum(1 for item in fields if item["badge"]["state"] != "none") / len(fields), 4
+            )
+            if fields
+            else 0.0,
+        }
+        return {
+            "iri": iri,
+            "label": detail.get("label"),
+            "fields": fields,
+            "summary": summary,
+            "entitySources": sources,
+            "evidenceBadge": detail.get("evidenceBadge"),
+            "empty": len(fields) == 0,
+            "emptyReason": "no_fields" if not fields else None,
+            "note": "每个字段都有徽标；无溯源显式显示「无」",
+            "readOnly": True,
+            "source": "GET /entity/provenance",
+        }
+
+    def _g4_browse_links(
+        iri: str | None = None,
+        metric_id: str | None = None,
+        class_iri: str | None = None,
+        entity_iri: str | None = None,
+        tab: str | None = None,
+    ) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        def _q(value: str | None) -> str:
+            return quote(str(value or ""), safe="")
+
+        templates = {
+            "triples-to-entity": "/ui/entity.html?iri={iri}",
+            "metrics-to-definition": "/ui/browse.html?tab=metrics&metricId={metricId}",
+            "tree-to-entity": "/ui/entity.html?iri={iri}",
+            "entity-to-tab": "/ui/browse.html?tab={tab}&entity={iri}",
+        }
+        paths = [
+            {
+                "id": "triples-to-entity",
+                "label": "三元组 → 实体页",
+                "from": "/browse/triples",
+                "to": "entity.html",
+                "template": templates["triples-to-entity"],
+                "method": "GET",
+                "href": "/ui/entity.html?iri=" + _q(iri) if iri else None,
+            },
+            {
+                "id": "metrics-to-definition",
+                "label": "口径卡 → 口径定义",
+                "from": "/browse/metrics",
+                "to": "/browse/metrics/{metricId} + browse metrics tab",
+                "template": templates["metrics-to-definition"],
+                "method": "GET",
+                "href": (
+                    "/ui/browse.html?tab=metrics&metricId=" + _q(metric_id)
+                    if metric_id
+                    else None
+                ),
+            },
+            {
+                "id": "tree-to-entity",
+                "label": "类树 → 实体页",
+                "from": "/browse/ontology/tree",
+                "to": "entity.html",
+                "template": templates["tree-to-entity"],
+                "method": "GET",
+                "href": "/ui/entity.html?iri=" + _q(class_iri) if class_iri else None,
+            },
+            {
+                "id": "entity-to-tab",
+                "label": "实体页 → 浏览 tab",
+                "from": "/ui/entity.html",
+                "to": "browse.html",
+                "template": templates["entity-to-tab"],
+                "method": "GET",
+                "href": (
+                    "/ui/browse.html?tab="
+                    + _q(tab or "ontology")
+                    + "&entity="
+                    + _q(entity_iri)
+                    if entity_iri
+                    else None
+                ),
+            },
+        ]
+        return {
+            "paths": paths,
+            "templates": templates,
+            "artifacts": {
+                "triples": "/browse/triples?limit=20",
+                "metrics": "/browse/metrics",
+                "tree": "/browse/ontology/tree",
+                "entity": "/ui/api/entity?iri={iri}",
+            },
+            "stable": True,
+            "readOnly": True,
+            "writeOperations": 0,
+        }
+
+    @app.get("/answerable/panel")
+    def g4_answerable_panel(
+        intent: str = Query(default="all"),
+        group: str = Query(default="all"),
+        layer: str = Query(default="all"),
+        limit: int = Query(default=24, ge=1, le=24),
+        queryId: str | None = Query(default=None, max_length=20),
+    ) -> dict[str, Any]:
+        catalog = _g4_query_catalog()
+        if queryId:
+            catalog = [item for item in catalog if item["id"] == queryId]
+        catalog = catalog[:limit]
+        results = [_g4_eval_answerable(item["query"], item) for item in catalog]
+        if intent in ("value", "definition"):
+            results = [item for item in results if str(item.get("intent")) == intent]
+        if group in ("A", "B", "C"):
+            results = [
+                item for item in results if str((item.get("_g4") or {}).get("group")) == group
+            ]
+        if layer in _G4_LAYERS:
+            for item in results:
+                item["missing"] = [
+                    entry for entry in item.get("missing") or [] if str(entry.get("layer")) == layer
+                ]
+        errors = [
+            item for item in results if (item.get("_g4") or {}).get("error") is not None
+        ]
+        usable = [item for item in results if (item.get("_g4") or {}).get("error") is None]
+        empty = len(results) == 0 or len(usable) == 0
+        payload = {
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "readOnly": True,
+            "querySet": {
+                "id": "r01-24",
+                "count": len(_G4_QUERY_SET),
+                "evaluated": len(results),
+                "groups": sorted({item["group"] for item in _G4_QUERY_SET}),
+                "source": "doc/_design/24 §5.2 + platform/tests/term_eval.py",
+            },
+            "filters": {
+                "intent": intent,
+                "group": group,
+                "layer": layer,
+                "limit": limit,
+                "queryId": queryId,
+            },
+            "layers": _g4_layer_counts(results),
+            "missing": _g4_missing_distribution(results),
+            "candidates": _g4_candidates(results),
+            "trend": _g4_trend(results),
+            "misjudgments": _g4_misjudgments(results),
+            "termExpansion": _g4_term_misjudgment(
+                [item for item in catalog if item["id"] in {r["_g4"]["id"] for r in results}]
+            ),
+            "errors": [
+                {
+                    "queryId": (item.get("_g4") or {}).get("id"),
+                    "query": (item.get("_g4") or {}).get("query"),
+                    "error": (item.get("_g4") or {}).get("error"),
+                    "message": (item.get("_g4") or {}).get("message"),
+                }
+                for item in errors
+            ],
+            "empty": empty,
+            "emptyReason": (
+                "runtime_unavailable"
+                if empty and len(results) > 0 and len(usable) == 0
+                else (
+                    "query_not_found"
+                    if queryId and len(catalog) == 0
+                    else (
+                        "no_queries_matched_filters"
+                        if len(results) == 0 and len(catalog) > 0
+                        else ("no_query_set" if len(catalog) == 0 else None)
+                    )
+                )
+            ),
+            "notes": [
+                "四层计数与 missing 分布来自 /answerable 的分层结果（只读）",
+                "24 条查询集误判可下钻到单条 query 的 layerStatuses / missingCodes",
+                "termExpansion 复现 term_eval 的术语扩展误判率（当前基线 9.09%）",
+            ],
+        }
+        if payload["empty"] and errors and len(errors) == len(results):
+            payload["emptyReason"] = "runtime_unavailable"
+            payload["degraded"] = True
+        return payload
+
+    @app.get("/answer/quality")
+    def g4_answer_quality(
+        strategy: str = Query(default="lexical"),
+        limit: int = Query(default=10, ge=1, le=10),
+        caseId: str | None = Query(default=None, max_length=10),
+    ) -> dict[str, Any]:
+        if strategy not in ("lexical", "vector", "hybrid"):
+            raise PortError(
+                code="InvalidArgument",
+                message="strategy must be lexical/vector/hybrid",
+                provider="platform",
+                provider_code="E_ANSWER_STRATEGY_INVALID",
+            )
+        return _g4_answer_quality_data(strategy, limit, caseId)
+
+    @app.get("/entity/provenance")
+    def g4_entity_provenance(
+        iri: str = Query(min_length=1, max_length=2048),
+        limit: int = Query(default=50, ge=1, le=200),
+    ) -> dict[str, Any]:
+        detail = entity_view.entity_detail(runtime, iri, limit=limit)
+        return _g4_provenance_fields(detail, iri)
+
+    @app.get("/browse/links")
+    def g4_browse_links(
+        iri: str | None = Query(default=None, max_length=2048),
+        metricId: str | None = Query(default=None, max_length=200),
+        classIri: str | None = Query(default=None, max_length=2048),
+        entity: str | None = Query(default=None, max_length=2048),
+        tab: str | None = Query(default=None, max_length=40),
+    ) -> dict[str, Any]:
+        return _g4_browse_links(
+            iri=iri,
+            metric_id=metricId,
+            class_iri=classIri,
+            entity_iri=entity,
+            tab=tab,
+        )
+
+    # --- end G4 ---
+
+    # --- G6 dict routes ---
+    @app.get("/catalog/dictionaries/views/{view}")
+    def catalog_dictionary_view(
+        view: str,
+        catalog: str | None = None,
+        schema: str | None = None,
+        table: str | None = None,
+        column: str | None = None,
+        sourceKind: str | None = None,
+        q: str | None = None,
+        limit: int = Query(default=20, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        if view not in catalog_module.DICT_VIEWS:
+            raise _browse_error(
+                catalog_module.VIEW_INVALID,
+                f"unknown dictionary view: {view}",
+                {"view": view, "allowed": list(catalog_module.DICT_VIEWS)},
+            )
+        if sourceKind and sourceKind not in catalog_module.SOURCE_KINDS:
+            raise _browse_error(
+                "E_DICT_FILTER_INVALID",
+                f"unsupported filter value: {sourceKind}",
+                {"value": sourceKind, "allowed": list(catalog_module.SOURCE_KINDS)},
+            )
+        filters = {
+            "catalog": catalog,
+            "schema": schema,
+            "table": table,
+            "column": column,
+            "sourceKind": sourceKind,
+            "q": q,
+        }
+        if view == "missing_comment":
+            filters["missingComment"] = True
+        elif view == "unbound":
+            filters["unbound"] = True
+        elif view == "mappable_unbound":
+            filters["mappableUnbound"] = True
+        result = _catalog_service().list(filters, limit=limit, offset=offset)
+        result["view"] = view
+        return result
+
+    @app.post("/catalog/dictionaries/bind")
+    def catalog_dictionary_bind(
+        body: dict[str, Any] | None = Body(default=None),
+    ) -> dict[str, Any]:
+        payload = body or {}
+        return _catalog_service().record_manual_binding(
+            table=payload.get("table") or "",
+            column=payload.get("column") or "",
+            property_iri=payload.get("propertyIri") or "",
+            operator=payload.get("operator") or "",
+            basis=payload.get("basis") or "",
+            note=payload.get("note"),
+            catalog=payload.get("catalog") or "platform",
+            schema=payload.get("schema") or "platform",
+        )
+
+    # --- end G6 ---
+
+    # --- G5 canvas routes ---
+
+    def _canvas_iri(value: str, field: str) -> str:
+        if not _BROWSE_IRI.match(value) or not value.startswith(("http://", "https://", "urn:")):
+            raise _browse_error(
+                "E_CANVAS_BAD_IRI",
+                f"{field} is not a safe absolute IRI",
+                {"field": field, "value": value},
+            )
+        return value
+
+    @app.get("/browse/path")
+    def browse_path(
+        source: str = Query(alias="from", min_length=1, max_length=2000),
+        target: str | None = Query(default=None, alias="to", max_length=2000),
+        max_hops: int = Query(default=3, alias="maxHops", ge=1),
+        max_nodes: int | None = Query(default=None, alias="maxNodes", ge=1, le=1000),
+        max_edges: int | None = Query(default=None, alias="maxEdges", ge=1, le=2000),
+        max_paths: int | None = Query(default=None, alias="maxPaths", ge=1, le=50),
+        include_types: bool = Query(default=True, alias="includeTypes"),
+        include_source: bool = Query(default=True, alias="includeSource"),
+        graph: str | None = Query(default=None, max_length=2000),
+    ) -> dict[str, Any]:
+        """Read-only multi-hop canvas (design 53/55).
+
+        ``to`` switches path mode; without it the result is the bounded
+        neighbourhood of ``from``. The route only talks to ``runtime.canvas``,
+        so switching simple/full/off never changes this signature.
+        """
+        _canvas_iri(source, "from")
+        requested = None
+        if graph:
+            _canvas_iri(graph, "graph")
+            requested = [graph]
+        canvas_cfg = runtime.config.canvas
+        nodes_cap = max_nodes or int(canvas_cfg.max_nodes)
+        edges_cap = max_edges or int(canvas_cfg.max_edges)
+        if target:
+            _canvas_iri(target, "to")
+            return runtime.canvas.path(
+                source,
+                target,
+                max_hops=max_hops,
+                max_paths=max_paths or int(canvas_cfg.max_paths),
+                max_nodes=nodes_cap,
+                include_types=include_types,
+                include_source=include_source,
+                graphs=requested,
+            )
+        return runtime.canvas.subgraph(
+            source,
+            hops=max_hops,
+            max_nodes=nodes_cap,
+            max_edges=edges_cap,
+            include_types=include_types,
+            include_source=include_source,
+            graphs=requested,
+        )
+
+    # --- end G5 ---
+
     return app

@@ -52,6 +52,20 @@ class GraphConfig(_Strict):
     max_construct_triples: int = Field(default=200000, ge=1)
 
 
+class CanvasConfig(_Strict):
+    """D1 canvas multi-hop (design 53/55). provider is decided at assembly time."""
+
+    # Q8-a split codes: known-but-unassembled -> E_PROVIDER_NOT_IMPLEMENTED,
+    # unknown -> E_PROVIDER_INVALID (see _apply_semantics).
+    provider: str = "off"
+    simple_max_hops: int = Field(default=3, ge=1, le=4)
+    full_max_hops: int = Field(default=4, ge=1, le=6)
+    max_nodes: int = Field(default=200, ge=1, le=1000)
+    max_edges: int = Field(default=400, ge=1, le=2000)
+    max_paths: int = Field(default=20, ge=1, le=50)
+    timeout_ms: int = Field(default=500, ge=100, le=5000)
+
+
 class StorageConfig(_Strict):
     small_object_provider: Literal["pg", "fs"] = "pg"
     large_object_provider: Literal["fs", "pg", "silo"] = "fs"
@@ -282,6 +296,7 @@ class PlatformConfig(_Strict):
     http: HttpConfig = Field(default_factory=HttpConfig)
     database: DatabaseConfig
     graph: GraphConfig = Field(default_factory=GraphConfig)
+    canvas: CanvasConfig = Field(default_factory=CanvasConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
     log: LogConfig = Field(default_factory=LogConfig)
@@ -538,6 +553,35 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
         model.graph.provider = "oxigraph-http"
     if not model.graph.endpoint:
         raise _config_error("E_CONFIG_REQUIRED", "graph.endpoint is required", key="graph.endpoint")
+
+    # Q8-a (design 53 §5.2): canvas opens every known provider name and rejects
+    # only the unknown ones; `full` is known but has no assembled adapter yet.
+    canvas_known = ("off", "simple", "full")
+    canvas_implemented = ("off", "simple")
+    if model.canvas.provider not in canvas_known:
+        raise _config_error(
+            "E_PROVIDER_INVALID",
+            (
+                f"canvas.provider={model.canvas.provider!r} is not a known provider; "
+                f"known values: {', '.join(canvas_known)}"
+            ),
+            key="canvas.provider",
+            hint="fix the name; unknown names are configuration errors, not missing adapters",
+        )
+    if model.canvas.provider not in canvas_implemented:
+        raise _config_error(
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            (
+                f"canvas.provider={model.canvas.provider} is a known provider but no adapter "
+                "is assembled (D1-2 full stays behind this switch)"
+            ),
+            key="canvas.provider",
+            hint="use canvas.provider=simple, or canvas.provider=off to disable the endpoint",
+        )
+    if model.canvas.provider == "simple" and model.canvas.simple_max_hops > 3:
+        warnings.append(
+            "canvas.simple_max_hops>3: simple is hard-capped at 3 hops, the extra value is ignored"
+        )
 
     if model.storage.pg_blob_max_file_mb > 1024:
         warnings.append(
