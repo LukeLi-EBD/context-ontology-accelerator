@@ -311,18 +311,19 @@ class G2MetricsCoreTest(unittest.TestCase):
     def _assert_bindings_match_registry(self) -> None:
         from platform_core.metric_binding_overrides import BINDING_OVERRIDES
 
+        metric_ids = sorted({item["metric_id"] for item in BINDING_OVERRIDES})
         rows = self.meta.query(
             "SELECT metric_id, definition_version, role, value_expr, filter_sql,"
-            " window_column FROM platform.metric_field_binding"
-            " WHERE metric_id IN ('FIN-BANK-013','FIN-BANK-014','FIN-BANK-015',"
-            "'FIN-BANK-016','FIN-INS-018')"
+            " window_column, window_mode FROM platform.metric_field_binding"
+            " WHERE metric_id = ANY(%s)",
+            (metric_ids,),
         )
         by_key = {(r["metric_id"], r["definition_version"], r["role"]): r for r in rows}
         for item in BINDING_OVERRIDES:
             key = (item["metric_id"], item["definition_version"], item["role"])
             self.assertIn(key, by_key)
             row = by_key[key]
-            for field in ("value_expr", "filter_sql", "window_column"):
+            for field in ("value_expr", "filter_sql", "window_column", "window_mode"):
                 if item.get(field) is not None:
                     self.assertEqual(row[field], item[field], f"{key} {field}")
 
@@ -339,6 +340,11 @@ class G2MetricsCoreTest(unittest.TestCase):
                 "UPDATE platform.metric_field_binding"
                 " SET window_column = 'filing_date', filter_sql = 'claim_status <> ''withdrawn'''"
                 " WHERE metric_id = 'FIN-INS-018' AND role = 'numerator'",
+                None,
+            )
+            tx.execute(
+                "UPDATE platform.metric_field_binding SET window_mode = 'instant'"
+                " WHERE metric_id = 'CUST-006' AND role = 'numerator'",
                 None,
             )
         rewound = self.meta.query(
@@ -367,6 +373,92 @@ class G2MetricsCoreTest(unittest.TestCase):
             for statement in binding_inserts:
                 tx.execute(statement, None)
         self._assert_bindings_match_registry()
+
+    # ------------------------------------------------- period window + source
+    def test_22_period_window_takes_effect(self) -> None:
+        # 013 is defined as period. With a period request the compiler must use
+        # [periodStart, periodEnd], not collapse the window onto periodStart.
+        period = self._compute("FIN-BANK-013", **Q4)
+        self.assertEqual(period.status_code, 200, period.text)
+        body = period.json()
+        self.assertEqual(body["window"], {"start": Q4["periodStart"],
+                                          "end": Q4["periodEnd"]})
+        self.assertEqual(body["rowCount"], 1, body)
+        row = body["rows"][0]
+        self.assertAlmostEqual(row["numerator"], 80.0, places=6)
+        self.assertAlmostEqual(row["denominator"], 280.0, places=6)
+        self.assertAlmostEqual(row["value"], 28.571429, places=5)
+
+        as_of = self._compute("FIN-BANK-013", asOf=AS_OF).json()
+        self.assertEqual(as_of["window"], {"start": AS_OF, "end": AS_OF})
+        self.assertAlmostEqual(as_of["rows"][0]["value"], 28.571429, places=5)
+
+        # A period that excludes the 2025-12-31 snapshot really returns nothing;
+        # the window is applied instead of silently using the period start.
+        empty = self._compute("FIN-BANK-013", periodStart="2025-01-01",
+                              periodEnd="2025-06-30").json()
+        self.assertTrue(empty["noData"])
+        self.assertEqual(empty["rowCount"], 0)
+        self.assertEqual(empty["window"],
+                         {"start": "2025-01-01", "end": "2025-06-30"})
+        self.assertNotIn("reason", empty)
+
+    def test_23_definition_binding_agg_consistency(self) -> None:
+        # metric_definition.numerator_agg/denominator_agg and the binding agg
+        # are two sources; the compiler only reads the binding. Freeze the
+        # current difference set so a new divergence fails loudly.
+        baseline = {
+            ("CUST-006", "numerator"), ("CUST-006", "denominator"),
+            ("CUST-007", "numerator"), ("CUST-007", "denominator"),
+            ("CUST-008", "numerator"), ("CUST-008", "denominator"),
+            ("CUST-013", "denominator"),
+            ("FIN-BANK-025", "numerator"),
+            ("FIN-BANK-026", "numerator"), ("FIN-BANK-026", "denominator"),
+            ("FIN-BANK-027", "numerator"), ("FIN-BANK-027", "denominator"),
+            ("FIN-BANK-028", "numerator"), ("FIN-BANK-028", "denominator"),
+            ("FIN-BANK-029", "numerator"), ("FIN-BANK-029", "denominator"),
+            ("FIN-BANK-030", "numerator"),
+            ("FIN-INS-017", "denominator"),
+            ("FIN-INS-024", "numerator"), ("FIN-INS-024", "denominator"),
+        }
+        rows = self.meta.query(
+            "SELECT d.metric_id, b.role, d.numerator_agg, d.denominator_agg,"
+            " b.agg FROM platform.metric_definition d"
+            " JOIN platform.metric_field_binding b"
+            "   ON b.metric_id = d.metric_id"
+            "  AND b.definition_version = d.definition_version"
+            " WHERE b.role IN ('numerator','denominator')"
+            "   AND ((b.role = 'numerator'"
+            "         AND COALESCE(d.numerator_agg,'') <> COALESCE(b.agg,''))"
+            "        OR (b.role = 'denominator'"
+            "         AND COALESCE(d.denominator_agg,'') <> COALESCE(b.agg,'')))"
+        )
+        observed = {(r["metric_id"], r["role"]) for r in rows}
+        self.assertEqual(observed, baseline,
+                         f"mismatch count changed: {len(observed)}")
+        self.assertEqual(len(observed), 20)
+        self.assertEqual(len({m for m, _ in observed}), 12)
+
+    def test_24_datasource_mismatch_is_explicit(self) -> None:
+        # A source that does not exist in the fact table is reported, not
+        # silently returned as an empty result.
+        response = self._compute("FIN-BANK-013", asOf=AS_OF, dataSource="business")
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertTrue(body["noData"])
+        self.assertEqual(body["reason"], "E_METRIC_DATASOURCE_MISMATCH")
+        self.assertEqual(body["requestedDataSource"], "business")
+        self.assertIn("fixture", body["availableDataSources"])
+        self.assertNotIn("business", body["availableDataSources"])
+
+        # Default is still fixture; when fixture rows exist it computes normally.
+        default = self.client.get("/metrics/FIN-BANK-013/compute",
+                                  params={"asOf": AS_OF})
+        self.assertEqual(default.status_code, 200, default.text)
+        default_body = default.json()
+        self.assertEqual(default_body["dataSource"], "fixture")
+        self.assertFalse(default_body["noData"])
+        self.assertNotIn("reason", default_body)
 
 
 if __name__ == "__main__":

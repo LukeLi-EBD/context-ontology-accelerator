@@ -1649,16 +1649,17 @@ def verify_metrics(meta: MetadataPg) -> dict[str, Any]:
     for metric_id in VERIFY_METRICS:
         d = _metric_definition(meta, metric_id)
         probe = dict(PROBES.get(metric_id) or {})
-        if d["window_kind"] == "instant" or ("as_of" in probe and "start" not in probe):
+        if d["window_kind"] == "instant":
             # v9 releases instant metrics that v8 refused before probing; they need
             # an explicit as-of date, so fall back to the shared default snapshot.
             as_of = probe.get("as_of") or DEFAULT_PROBE["as_of"]
             probe.update(start=as_of, end=None, as_of=as_of)
-        elif probe:
-            probe.setdefault("start", "2025-01-01")
-            probe.setdefault("end", "2025-12-31")
         else:
-            probe = dict(DEFAULT_PROBE)
+            # Period metrics always need start and end, even when the probe only
+            # pins a snapshot date; otherwise the compiler refuses the probe.
+            probe.setdefault("start", DEFAULT_PROBE["start"])
+            probe.setdefault("end", DEFAULT_PROBE["end"])
+            probe.setdefault("as_of", probe["end"])
         item: dict[str, Any] = {
             "metricId": metric_id,
             "kind": d["metric_kind"],

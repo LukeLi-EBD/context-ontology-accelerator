@@ -267,6 +267,7 @@ class MetricCompiler:
             "sql": sql,
             "params": params,
             "bindings": sorted(bindings),
+            "_factTables": sorted({bindings[role]["fact_table"] for role in bindings}),
         }
 
     def _known_tables(self) -> set[str]:
@@ -303,13 +304,43 @@ class MetricCompiler:
                 "denominator": denominator,
                 "value": _num(r["metric_value"]),
             })
-        return {
+        result: dict[str, Any] = {
             "metricId": metric_id,
             "window": plan["window"],
             "dataSource": plan["dataSource"],
             "rows": out,
             "noData": len(out) == 0,
         }
+        if not out:
+            # An empty result from a data source that does not exist in the fact
+            # table is not "no data" — it is a wrong-source request. Say so
+            # explicitly instead of returning a silent empty payload.
+            available = self._data_sources(plan["_factTables"])
+            if data_source not in available:
+                result.update({
+                    "reason": "E_METRIC_DATASOURCE_MISMATCH",
+                    "reasonText": (
+                        f"dataSource={data_source} has no rows in "
+                        f"{', '.join(plan['_factTables'])}; "
+                        f"available dataSource: {', '.join(available) or 'none'}"
+                        f" (requested {data_source}, found "
+                        f"{', '.join(available) or 'none'})"
+                    ),
+                    "requestedDataSource": data_source,
+                    "availableDataSources": available,
+                })
+        return result
+
+    def _data_sources(self, fact_tables: list[str]) -> list[str]:
+        sources: set[str] = set()
+        for table in fact_tables:
+            if not _TABLE_RE.match(table):
+                continue
+            rows = self.metadata.query(
+                f"SELECT DISTINCT data_source FROM {table}"
+            )
+            sources.update(str(r["data_source"]) for r in rows)
+        return sorted(sources)
 
 
 def _num(value: Any) -> float | None:
