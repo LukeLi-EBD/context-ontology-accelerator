@@ -3688,6 +3688,68 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "X-Evidence-Path": str(path),
             },
         )
+
+    # ---- O-05 term-layer governance (coverage / diff / import check) -----
+
+    @app.get("/ontology/terms/coverage")
+    def ontology_terms_coverage(
+        expectConcepts: int | None = Query(None, ge=0),
+        expectAliases: int | None = Query(None, ge=0),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        return termgov.graph_coverage(
+            runtime, expect_concepts=expectConcepts, expect_aliases=expectAliases
+        )
+
+    @app.post("/ontology/terms/diff")
+    def ontology_terms_diff(
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        content = str(body.get("content") or "")
+        if not content.strip():
+            raise PortError(
+                code="InvalidArgument", message="body.content is required (SKOS text)",
+                provider="platform", provider_code="E_TERM_CONTENT_REQUIRED",
+            )
+        report = termgov.diff_against_graph(
+            runtime, content, str(body.get("format") or "turtle"),
+            source_name=body.get("sourceName"),
+        )
+        termgov.record_check(runtime.metadata, report, source_kind="import",
+                             version_id=(body.get("versionId")), actor="operator")
+        return report
+
+    @app.post("/ontology/terms/import")
+    def ontology_terms_import(
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        content = str(body.get("content") or "")
+        if not content.strip():
+            raise PortError(
+                code="InvalidArgument", message="body.content is required (SKOS text)",
+                provider="platform", provider_code="E_TERM_CONTENT_REQUIRED",
+            )
+        report = termgov.diff_against_graph(
+            runtime, content, str(body.get("format") or "turtle"),
+            source_name=body.get("sourceName"),
+        )
+        termgov.record_check(runtime.metadata, report, source_kind="import",
+                             version_id=body.get("versionId"), actor="operator")
+        if bool(body.get("dryRun", True)):
+            return {"dryRun": True, "diff": report}
+        return termgov.record_import(runtime.metadata, report,
+                                    source_name=body.get("sourceName"))
+
+    @app.get("/ontology/terms/checks")
+    def ontology_terms_checks(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+        from . import termgov
+
+        return termgov.list_checks(runtime.metadata, limit=limit)
     # --- end G1 ---
 
     return app
