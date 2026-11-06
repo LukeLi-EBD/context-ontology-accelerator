@@ -38,6 +38,11 @@ _COMPUTE_COLUMNS = _COLUMNS + (
     "denominator_agg, window_kind, min_window_days, grain, unit"
 )
 
+_DETAIL_COLUMNS = _COLUMNS + (
+    ", definition, formula_text, denominator_text, observation_period, "
+    "granularity, provenance_label, unit"
+)
+
 _AGGREGATES = {"sum", "max", "min", "avg"}
 
 
@@ -106,9 +111,9 @@ def _rule_set(value: Any, output_mode: Any) -> Any:
     return value
 
 
-def _card(row: dict[str, Any]) -> dict[str, Any]:
+def _card(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
     effective = row.get("effective_date")
-    return {
+    card = {
         "metricId": row["metric_id"],
         "name": row["name_zh"],
         "domain": row["domain"],
@@ -124,6 +129,19 @@ def _card(row: dict[str, Any]) -> dict[str, Any]:
         "outputMode": row.get("output_mode"),
         "ruleSet": _rule_set(row.get("rule_set_json"), row.get("output_mode")),
     }
+    if detail:
+        card.update(
+            {
+                "definition": row.get("definition"),
+                "formulaText": row.get("formula_text"),
+                "denominatorText": row.get("denominator_text"),
+                "observationPeriodText": row.get("observation_period"),
+                "granularityText": row.get("granularity"),
+                "provenanceLabel": row.get("provenance_label"),
+                "unit": row.get("unit"),
+            }
+        )
+    return card
 
 
 def _reject(metric_id: str, missing: str | None, message: str) -> PortError:
@@ -157,7 +175,7 @@ class MetricService:
 
     def get(self, metric_id: str) -> dict[str, Any]:
         rows = self._meta.query(
-            f"SELECT {_COLUMNS} FROM platform.metric_definition WHERE metric_id = %s",
+            f"SELECT {_DETAIL_COLUMNS} FROM platform.metric_definition WHERE metric_id = %s",
             (metric_id,),
         )
         if not rows:
@@ -168,7 +186,7 @@ class MetricService:
                 provider_code=NOT_FOUND_CODE,
                 details={"metricId": metric_id},
             )
-        return _card(rows[0])
+        return _card(rows[0], detail=True)
 
     def variants(self, metric_id: str) -> list[str]:
         rows = self._meta.query(

@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 28
+SUPPORTED_SCHEMA_VERSION = 29
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -47,6 +47,7 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (26, "V26__datagen.sql", "datagen: synthetic provenance label on fact tables + run ledger"),
     (27, "V27__source_ref.sql", "B-01 value-level provenance: fact natural keys + ref registry"),
     (28, "V28__prov.sql", "B-02 PROV-O judgement provenance: append-only prov_event ledger"),
+    (29, "V29__metric_gap_v6.sql", "v6 gap-fill seed: 26 metric definitions (25 table-2 + INS-012)"),
 ]
 
 
