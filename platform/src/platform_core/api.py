@@ -1019,6 +1019,7 @@ def _qa_answer(
     top_k: int = 5,
     strategy: str = "lexical",
     request_id: str | None = None,
+    persist: bool = True,
 ) -> dict[str, Any]:
     coverage = _qa_answerable(
         runtime,
@@ -1432,12 +1433,12 @@ def _qa_answer(
             "missing": missing,
         }
     )
-    # B-02: every answer that refuses, or that applies a metric's口径判定,
-    # appends one PROV activity. The chain is append-only; nothing is rewritten.
+    # B-02: every persisted answer that refuses, or that applies a metric's口径判定,
+    # appends one PROV activity. persist=False (used by /answer/quality) writes nothing.
     payload["requestId"] = request_id or f"req-{uuid.uuid4().hex[:12]}"
     payload["prov"] = None
     recorder = getattr(runtime, "prov", None)
-    if recorder is not None:
+    if recorder is not None and persist:
         try:
             if refused:
                 record = recorder.record_refusal(
@@ -5227,6 +5228,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                     top_k=5,
                     strategy=strategy,
                     request_id="g4-golden-" + case["id"],
+                    persist=False,
                 )
             except PortError as exc:
                 result = {

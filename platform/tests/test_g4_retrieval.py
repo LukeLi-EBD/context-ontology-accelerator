@@ -302,6 +302,27 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertEqual(payload["summary"]["brokenLinkRate"], 0.0)
         self.assertEqual(payload["brokenLinks"], [])
 
+    def test_quality_never_persists_prov(self):
+        seen = []
+
+        def capture(_runtime, query, **kwargs):
+            seen.append(kwargs)
+            return {
+                "refused": True,
+                "answerType": "refusal",
+                "answerMode": "none",
+                "reasonCode": "NO_LAYER_COVERAGE",
+                "citations": [],
+                "missing": [{"layer": "ontology"}],
+                "degraded": False,
+            }
+
+        with patch.object(api_module, "_qa_answer", capture):
+            with _client() as client:
+                client.get("/answer/quality").json()
+        self.assertTrue(seen)
+        self.assertTrue(all(item.get("persist") is False for item in seen))
+
 
 ENTITY_DETAIL = {
     "label": "测试实体",
