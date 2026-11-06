@@ -220,6 +220,15 @@ class MetadataPg:
                         (version, description),
                     )
                     applied.append(f"V{version}")
+                # Seed scripts (V25 ON CONFLICT DO UPDATE) can rewind later binding fixes.
+                # Replay the published registry on every migrate(), including no-op runs.
+                reg = conn.execute(
+                    "SELECT to_regclass('platform.metric_field_binding') AS reg"
+                ).fetchone()
+                if reg and reg["reg"]:
+                    from ..metric_binding_overrides import replay_binding_overrides
+
+                    replay_binding_overrides(conn)
         log.info("migration applied", extra={"event": {"event": "migrate", "to": applied}})
         return {"to": str(SUPPORTED_SCHEMA_VERSION), "applied": applied}
 

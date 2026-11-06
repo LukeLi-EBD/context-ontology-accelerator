@@ -307,6 +307,67 @@ class G2MetricsCoreTest(unittest.TestCase):
                     tx.execute(statement, None)
         self.assertEqual(snapshot(), before)
 
+    # --------------------------------------------------- anti-rewind guard
+    def _assert_bindings_match_registry(self) -> None:
+        from platform_core.metric_binding_overrides import BINDING_OVERRIDES
+
+        rows = self.meta.query(
+            "SELECT metric_id, definition_version, role, value_expr, filter_sql,"
+            " window_column FROM platform.metric_field_binding"
+            " WHERE metric_id IN ('FIN-BANK-013','FIN-BANK-014','FIN-BANK-015',"
+            "'FIN-BANK-016','FIN-INS-018')"
+        )
+        by_key = {(r["metric_id"], r["definition_version"], r["role"]): r for r in rows}
+        for item in BINDING_OVERRIDES:
+            key = (item["metric_id"], item["definition_version"], item["role"])
+            self.assertIn(key, by_key)
+            row = by_key[key]
+            for field in ("value_expr", "filter_sql", "window_column"):
+                if item.get(field) is not None:
+                    self.assertEqual(row[field], item[field], f"{key} {field}")
+
+    def test_20_migrate_repairs_rewound_binding(self) -> None:
+        # Simulate a legacy seed replay (V25 ON CONFLICT DO UPDATE) writing the
+        # pre-V34 values; migrate() must restore the published registry.
+        with self.meta.tx() as tx:
+            tx.execute(
+                "UPDATE platform.metric_field_binding SET value_expr = 'balance_start'"
+                " WHERE metric_id = 'FIN-BANK-013' AND role = 'numerator'",
+                None,
+            )
+            tx.execute(
+                "UPDATE platform.metric_field_binding"
+                " SET window_column = 'filing_date', filter_sql = 'claim_status <> ''withdrawn'''"
+                " WHERE metric_id = 'FIN-INS-018' AND role = 'numerator'",
+                None,
+            )
+        rewound = self.meta.query(
+            "SELECT value_expr FROM platform.metric_field_binding"
+            " WHERE metric_id = 'FIN-BANK-013' AND role = 'numerator'"
+        )[0]["value_expr"]
+        self.assertEqual(rewound, "balance_start")
+
+        self.meta.migrate()  # no new version -> registry replay still runs
+        self._assert_bindings_match_registry()
+
+    def test_21_seed_source_matches_registry(self) -> None:
+        # The seed statement itself must already carry the correction, so a raw
+        # V25 binding replay (without migrate) cannot rewind anything. Only the
+        # binding INSERT is replayed: the rest of V25 belongs to older rulings.
+        sql = files("platform_core").joinpath(
+            "sql/V25__fact_model_v7.sql"
+        ).read_text(encoding="utf-8")
+        binding_inserts = [
+            statement
+            for statement in split_sql_statements(sql)
+            if "INSERT INTO platform.metric_field_binding" in statement
+        ]
+        self.assertTrue(binding_inserts)
+        with self.meta.tx() as tx:
+            for statement in binding_inserts:
+                tx.execute(statement, None)
+        self._assert_bindings_match_registry()
+
 
 if __name__ == "__main__":
     unittest.main()
