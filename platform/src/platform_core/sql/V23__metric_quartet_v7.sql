@@ -163,7 +163,7 @@ UPDATE platform.metric_definition SET
   window_kind = COALESCE('instant', window_kind),
   numerator_agg = COALESCE(NULL, numerator_agg),
   denominator_agg = COALESCE(NULL, denominator_agg),
-  quartet_derivation = '{"status": "partial", "source": "09-definitions-v4.seed.sql / V21", "fields": {"metric_kind": {"value": "score", "basis": "formula_text 为分位打分（NTILE）"}, "window_kind": {"value": "instant", "basis": "observation_period 前缀 point-in-time"}}, "missing": [{"field": "formula_expr", "question": "公式为中文伪代码/派生引用，无法翻译为 numerator/denominator 可执行表达式", "owner": "客户经营分析负责人"}, {"field": "formula_expr", "question": "NTILE(5) 分位打分需先确定 RFM 三项输入口径与分位边界", "owner": "客户经营分析负责人"}]}'::jsonb,
+  quartet_derivation = '{"status": "partial", "source": "09-definitions-v4.seed.sql / V21", "fields": {"metric_kind": {"value": "score", "basis": "formula_text 为分位打分（NTILE）"}, "window_kind": {"value": "instant", "basis": "observation_period 前缀 point-in-time"}}, "missing": [{"field": "formula_expr", "question": "NTILE(5) 分位打分需先确定 RFM 三项输入口径与分位边界", "owner": "客户经营分析负责人"}]}'::jsonb,
   computability_tier = 'blocked_semantics'
  WHERE metric_id = 'CUST-004';
 UPDATE platform.metric_definition SET
@@ -694,7 +694,7 @@ UPDATE platform.metric_definition SET
   window_kind = COALESCE('period', window_kind),
   numerator_agg = COALESCE(NULL, numerator_agg),
   denominator_agg = COALESCE(NULL, denominator_agg),
-  quartet_derivation = '{"status": "partial", "source": "09-definitions-v4.seed.sql / V21", "fields": {"metric_kind": {"value": "derived_rate", "basis": "formula_text 为另两条指标的加减派生"}, "window_kind": {"value": "period", "basis": "observation_period 前缀 period"}}, "missing": [{"field": "formula_expr", "question": "公式为中文伪代码/派生引用，无法翻译为 numerator/denominator 可执行表达式", "owner": "精算/保险口径负责人"}, {"field": "formula_expr", "question": "两年综合成本率 = 费用率 + 赔付率，引用其他指标结果；需派生指标 DSL 裁定", "owner": "精算/保险口径负责人"}]}'::jsonb,
+  quartet_derivation = '{"status": "partial", "source": "09-definitions-v4.seed.sql / V21", "fields": {"metric_kind": {"value": "derived_rate", "basis": "formula_text 为另两条指标的加减派生"}, "window_kind": {"value": "period", "basis": "observation_period 前缀 period"}}, "missing": [{"field": "formula_expr", "question": "两年综合成本率 = 费用率 + 赔付率，引用其他指标结果；需派生指标 DSL 裁定", "owner": "精算/保险口径负责人"}]}'::jsonb,
   computability_tier = 'blocked_semantics'
  WHERE metric_id = 'FIN-INS-012';
 UPDATE platform.metric_definition SET
