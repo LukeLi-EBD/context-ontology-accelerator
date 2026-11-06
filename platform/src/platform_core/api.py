@@ -3594,6 +3594,38 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         "entity": "缺实体绑定",
     }
 
+    # M-05: E1 25 条行业公式（来源：doc/_fsldm/12-口径终裁-v9.md §1）。
+    # 该清单只用于“声明核对”，不参与清单取数；清单仍逐条读库。
+    _G3_E1_SOURCE = "doc/_fsldm/12-口径终裁-v9.md §1"
+    _G3_INDUSTRY_NOTICE = "内部基线、不外报"
+    _G3_E1_INDUSTRY_IDS = (
+        "FIN-BANK-002",
+        "FIN-BANK-005",
+        "FIN-BANK-017",
+        "FIN-BANK-018",
+        "FIN-BANK-019",
+        "FIN-BANK-033",
+        "FIN-BANK-034",
+        "FIN-BANK-006",
+        "FIN-BANK-020",
+        "FIN-BANK-021",
+        "FIN-BANK-031",
+        "FIN-BANK-032",
+        "FIN-BANK-035",
+        "FIN-BANK-036-v1",
+        "FIN-INS-003",
+        "FIN-INS-006",
+        "FIN-INS-007",
+        "FIN-INS-017",
+        "FIN-INS-022-v1",
+        "FIN-INS-023-v1",
+        "FIN-INS-024",
+        "FIN-INS-026",
+        "CUST-005",
+        "CUST-009",
+        "CUST-010",
+    )
+
     def _g3_text(value: Any) -> str:
         if value is None:
             return "口径未给出"
@@ -3618,6 +3650,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "basisLabel": "行业通行（未获监管原文）",
                 "source": provenance or "行业通行",
                 "hasRegulatoryText": False,
+                "notice": _G3_INDUSTRY_NOTICE,
             }
         return {
             "code": basis,
@@ -3643,8 +3676,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             external_reason = "证据为监管原文、publishable=true、口径结构性可算"
         elif evidence["code"] == "industry":
             external_status = "internal_baseline"
-            external_label = "行业基线（不外报）"
-            external_reason = "行业公式未获监管原文，仅作内部基线"
+            external_label = _G3_INDUSTRY_NOTICE
+            external_reason = f"行业公式未获监管原文：{_G3_INDUSTRY_NOTICE}"
         elif not publishable:
             external_status = "unpublishable"
             external_label = "不可发布"
@@ -3684,6 +3717,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "evidenceBasisLabel": evidence["basisLabel"],
             "evidenceSource": evidence["source"],
             "hasRegulatoryText": evidence["hasRegulatoryText"],
+            "industryBaseline": evidence["code"] == "industry",
+            "internalNotice": evidence.get("notice"),
+            "e1Baseline": metric_id in _G3_E1_INDUSTRY_IDS,
             "formula": formula or "口径未给出",
             "formulaExpr": row.get("formula_expr"),
             "computability": tier,
@@ -3726,6 +3762,13 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         for item in items:
             tiers[item["computability"]] = tiers.get(item["computability"], 0) + 1
         external_count = sum(1 for item in items if item["externalEligible"])
+
+        by_id = {item["metricId"]: item for item in all_items}
+        e1_present = [mid for mid in _G3_E1_INDUSTRY_IDS if mid in by_id]
+        e1_missing = [mid for mid in _G3_E1_INDUSTRY_IDS if mid not in by_id]
+        e1_wrong = [mid for mid in e1_present if by_id[mid]["evidenceBasis"] != "industry"]
+        e1_publishable = [mid for mid in e1_present if by_id[mid]["publishable"]]
+
         meta = {
             "generatedAt": datetime.now(timezone.utc).isoformat(),
             "source": "platform.metric_definition",
@@ -3737,7 +3780,24 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "industry": sum(1 for item in items if item["evidenceBasis"] == "industry"),
                 "regulatory": sum(1 for item in items if item["evidenceBasis"] == "regulatory"),
                 "externalEligible": external_count,
+                "industryExcludedFromExternal": (
+                    sum(1 for item in all_items if item["evidenceBasis"] == "industry")
+                    if scope == "external"
+                    else 0
+                ),
                 "computability": tiers,
+            },
+            "industryNotice": _G3_INDUSTRY_NOTICE,
+            "e1Check": {
+                "source": _G3_E1_SOURCE,
+                "expected": len(_G3_E1_INDUSTRY_IDS),
+                "found": len(e1_present),
+                "allPresent": len(e1_missing) == 0,
+                "missingIds": e1_missing,
+                "allIndustry": len(e1_wrong) == 0 and len(e1_missing) == 0,
+                "violations": e1_wrong,
+                "publishableTrue": len(e1_publishable),
+                "note": "以库为准；发现缺失或不一致时原样列出，不做补数、不改口径。",
             },
             "externalScopeRule": (
                 "evidence_basis=regulatory 且 publishable=true 且 computability_tier=structurally_computable"
@@ -3790,6 +3850,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "公式",
                 "对外状态",
                 "对外判定说明",
+                "内部标注",
+                "E1行业基线",
                 "缺口",
                 "variant_of",
                 "output_mode",
@@ -3809,6 +3871,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                     item["formula"],
                     item["externalLabel"],
                     item["externalReason"],
+                    item["internalNotice"] or "",
+                    "true" if item["e1Baseline"] else "false",
                     item["gap"],
                     item["variantOf"] or "",
                     item["outputMode"] or "",

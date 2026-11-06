@@ -194,5 +194,99 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
 
 
+E1_IDS = (
+    "FIN-BANK-002",
+    "FIN-BANK-005",
+    "FIN-BANK-017",
+    "FIN-BANK-018",
+    "FIN-BANK-019",
+    "FIN-BANK-033",
+    "FIN-BANK-034",
+    "FIN-BANK-006",
+    "FIN-BANK-020",
+    "FIN-BANK-021",
+    "FIN-BANK-031",
+    "FIN-BANK-032",
+    "FIN-BANK-035",
+    "FIN-BANK-036-v1",
+    "FIN-INS-003",
+    "FIN-INS-006",
+    "FIN-INS-007",
+    "FIN-INS-017",
+    "FIN-INS-022-v1",
+    "FIN-INS-023-v1",
+    "FIN-INS-024",
+    "FIN-INS-026",
+    "CUST-005",
+    "CUST-009",
+    "CUST-010",
+)
+
+
+def _e1_rows():
+    rows = []
+    for metric_id in E1_IDS:
+        rows.append(
+            _row(
+                metric_id,
+                basis="industry",
+                publishable=metric_id != "FIN-BANK-034",
+                tier=(
+                    "blocked_semantics"
+                    if metric_id in {"FIN-BANK-019", "FIN-BANK-020", "FIN-BANK-021"}
+                    else "structurally_computable"
+                ),
+                provenance="行业通行",
+            )
+        )
+    rows.append(_row("FIN-BANK-001", provenance="原文"))
+    rows.append(_row("CUST-001", basis="industry", publishable=False, provenance="推测"))
+    return rows
+
+
+class IndustryBaselineTests(unittest.TestCase):
+    def test_1_all_25_e1_rows_are_marked_industry(self):
+        with _client(_e1_rows()) as client:
+            payload = client.get("/metrics/report/manifest").json()
+        check = payload["meta"]["e1Check"]
+        self.assertEqual(check["expected"], 25)
+        self.assertEqual(check["found"], 25)
+        self.assertTrue(check["allPresent"])
+        self.assertTrue(check["allIndustry"])
+        self.assertEqual(check["missingIds"], [])
+        self.assertEqual(check["violations"], [])
+        self.assertEqual(check["publishableTrue"], 24)
+        for item in payload["items"]:
+            if item["metricId"] in E1_IDS:
+                self.assertTrue(item["e1Baseline"])
+                self.assertTrue(item["industryBaseline"])
+                self.assertEqual(item["internalNotice"], "内部基线、不外报")
+                self.assertEqual(item["externalLabel"], "内部基线、不外报")
+
+    def test_2_external_scope_excludes_every_industry_row(self):
+        with _client(_e1_rows()) as client:
+            external = client.get(
+                "/metrics/report/manifest", params={"scope": "external"}
+            ).json()
+        self.assertEqual([item["metricId"] for item in external["items"]], ["FIN-BANK-001"])
+        self.assertEqual(external["meta"]["counts"]["industryExcludedFromExternal"], 26)
+        self.assertNotIn(
+            "industry", {item["evidenceBasis"] for item in external["items"]}
+        )
+        self.assertEqual(external["meta"]["industryNotice"], "内部基线、不外报")
+
+    def test_3_inconsistent_or_missing_e1_row_is_reported_not_hidden(self):
+        rows = _e1_rows()
+        rows[0] = _row("FIN-BANK-002", basis="regulatory", provenance="原文")
+        rows = [row for row in rows if row["metric_id"] != "FIN-INS-026"]
+        with _client(rows) as client:
+            payload = client.get("/metrics/report/manifest").json()
+        check = payload["meta"]["e1Check"]
+        self.assertFalse(check["allIndustry"])
+        self.assertFalse(check["allPresent"])
+        self.assertEqual(check["violations"], ["FIN-BANK-002"])
+        self.assertEqual(check["missingIds"], ["FIN-INS-026"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
