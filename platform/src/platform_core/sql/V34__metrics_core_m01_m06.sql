@@ -4,8 +4,10 @@
 
 -- ---------------------------------------------------------------------------
 -- M-01：五级迁徙率绑定修正（FIN-BANK-013/014/015/016）
--- 语义：分子=期初该类别中迁徙到更低类别的余额（扣除期内减少额）；
---       分母=期初该类别余额。原绑定分子未扣减少、分母扣减少，导致可 >100%。
+-- 权威定义见 metric_definition.denominator_agg：期初该类别余额 − 期间减少。
+-- 语义：分子=期初该类别中迁徙到更低类别的剩余余额（期初余额扣期内减少）；
+--       分母=期初该类别余额扣期间减少（正常收回/不良处置/核销）。
+-- 分子分母同扣减少，既避免 >100%，也不把期间已收回的金额算进分母。
 -- ---------------------------------------------------------------------------
 UPDATE platform.metric_field_binding
 SET value_expr = 'GREATEST(balance_start - period_decrease_amount, 0)'
@@ -13,7 +15,7 @@ WHERE metric_id IN ('FIN-BANK-013', 'FIN-BANK-014', 'FIN-BANK-015', 'FIN-BANK-01
   AND role = 'numerator';
 
 UPDATE platform.metric_field_binding
-SET value_expr = 'balance_start'
+SET value_expr = 'GREATEST(balance_start - period_decrease_amount, 0)'
 WHERE metric_id IN ('FIN-BANK-013', 'FIN-BANK-014', 'FIN-BANK-015', 'FIN-BANK-016')
   AND role = 'denominator';
 

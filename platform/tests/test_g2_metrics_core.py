@@ -138,11 +138,11 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertAlmostEqual(rows[INST]["value"], 62.068966, places=5)
 
     def test_02_normal_migration(self) -> None:
-        # numerator 80 (100 start - 20 decrease) / denominator 300 = 26.666667
+        # numerator 80 (100 start - 20 decrease); denominator 280 ((100-20)+(200-0))
         rows = self._rows(self._compute("FIN-BANK-013", asOf=AS_OF))
         self.assertAlmostEqual(rows[INST]["numerator"], 80.0, places=6)
-        self.assertAlmostEqual(rows[INST]["denominator"], 300.0, places=6)
-        self.assertAlmostEqual(rows[INST]["value"], 26.666667, places=5)
+        self.assertAlmostEqual(rows[INST]["denominator"], 280.0, places=6)
+        self.assertAlmostEqual(rows[INST]["value"], 28.571429, places=5)
 
     def test_03_special_migration(self) -> None:
         rows = self._rows(self._compute("FIN-BANK-014", asOf=AS_OF))
@@ -181,9 +181,9 @@ class G2MetricsCoreTest(unittest.TestCase):
             self._loan(tx, extra)
         try:
             second = self._rows(self._compute("FIN-BANK-013", asOf=AS_OF))[INST]
-            # numerator 80+100=180; denominator 300+100=400 -> 45%
+            # numerator 80+100=180; denominator 280+100=380 -> 47.368421%
             self.assertAlmostEqual(second["numerator"], 180.0, places=6)
-            self.assertAlmostEqual(second["value"], 45.0, places=6)
+            self.assertAlmostEqual(second["value"], 47.368421, places=6)
             self.assertNotAlmostEqual(first, second["value"], places=3)
         finally:
             self.meta.execute(
