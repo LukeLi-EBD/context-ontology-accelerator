@@ -182,7 +182,8 @@ class MetricCompiler:
             if start is None or end is None:
                 raise _err(metric_id, BINDING_INVALID, "period metric requires start and end")
             win_start, win_end = str(start), str(end)
-            span = (date.fromisoformat(win_end) - date.fromisoformat(win_start)).days
+            # Inclusive days, matching the legacy calculator (end - start + 1).
+            span = (date.fromisoformat(win_end) - date.fromisoformat(win_start)).days + 1
             if span < int(d["min_window_days"] or 0):
                 raise _err(metric_id, WINDOW, f"window {span}d below min {d['min_window_days']}d")
 

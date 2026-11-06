@@ -225,12 +225,14 @@ class MetricCompilerV7Test(unittest.TestCase):
             self.compiler.compile("FIN-BANK-033", internal=True, start=AS_OF, end=AS_OF)
         self.assertEqual(ctx.exception.provider_code, BINDING_MISSING)
 
-    def test_13_v23_reentrant(self) -> None:
-        # replay V23 twice: row count, quartet snapshot and binding count must be identical
+    def test_13_migrations_reentrant(self) -> None:
+        # replay V23+V24 twice: row count, definitions and binding count must be identical
         def snapshot() -> tuple:
             rows = self.meta.query(
                 "SELECT metric_id, metric_kind, formula_expr, window_kind, numerator_agg,"
-                " denominator_agg, computability_tier, quartet_derivation::text AS qd"
+                " denominator_agg, computability_tier, output_mode, decision_owner,"
+                " quartet_derivation::text AS qd, decision_recommendation::text AS dr,"
+                " rule_set_json::text AS rs"
                 " FROM platform.metric_definition ORDER BY metric_id"
             )
             bindings = self.meta.query(
@@ -238,8 +240,9 @@ class MetricCompilerV7Test(unittest.TestCase):
             )
             return tuple(tuple(sorted(r.items())) for r in rows), bindings[0]["n"]
 
-        sql = files("platform_core").joinpath("sql/V23__metric_quartet_v7.sql").read_text(
-            encoding="utf-8"
+        sql = "".join(
+            files("platform_core").joinpath(f"sql/{name}").read_text(encoding="utf-8")
+            for name in ("V23__metric_quartet_v7.sql", "V24__metric_decisions_v8.sql")
         )
         statements = split_sql_statements(sql)
         before = snapshot()

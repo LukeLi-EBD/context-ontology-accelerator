@@ -161,8 +161,11 @@ def _evaluate(
         value = fact.get(spec["field"])
         if value is None:
             return False, {}, True
+        if isinstance(spec["value"], bool):
+            observed = value if isinstance(value, bool) else bool(value)
+            return observed is spec["value"], {spec["field"]: value}, False
         return str(value) == str(spec["value"]), {spec["field"]: value}, False
-    if op == "ratio_gte" or op == "ratio_lte":
+    if op in ("ratio_gte", "ratio_lte", "ratio_lt"):
         numerator = _num(fact.get(spec["numerator"]))
         denominator = _num(fact.get(spec["denominator"]))
         if numerator is None or denominator is None:
@@ -170,7 +173,12 @@ def _evaluate(
         ratio = None if denominator == 0 else numerator / denominator
         if ratio is None:
             return False, {"numerator": numerator, "denominator": denominator}, False
-        ok = ratio >= float(spec["value"]) if op == "ratio_gte" else ratio <= float(spec["value"])
+        if op == "ratio_gte":
+            ok = ratio >= float(spec["value"])
+        elif op == "ratio_lte":
+            ok = ratio <= float(spec["value"])
+        else:
+            ok = ratio < float(spec["value"])
         return ok, {
             spec["numerator"]: numerator,
             spec["denominator"]: denominator,
@@ -230,6 +238,19 @@ def _evaluate(
                 missing = False
             observed.update(detail)
             hit = hit or ok
+        if missing:
+            return False, {}, True
+        return hit, observed, False
+    if op == "all_of":
+        observed: dict[str, Any] = {}
+        missing = False
+        hit = True
+        for clause in spec["clauses"]:
+            ok, detail, was_missing = _evaluate(clause, fact)
+            if was_missing:
+                missing = True
+            observed.update(detail)
+            hit = hit and ok
         if missing:
             return False, {}, True
         return hit, observed, False
