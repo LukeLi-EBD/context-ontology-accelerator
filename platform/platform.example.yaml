@@ -20,6 +20,15 @@ graph:
   timeout_ms: 30000
   max_rows: 10000
 
+canvas:
+  provider: off               # off=禁用 /browse/path；simple=D1-1 多跳；full=D1-2 未装配
+  simple_max_hops: 3          # simple 硬上限 3
+  full_max_hops: 4            # full 硬上限 6（D1-2 才生效）
+  max_nodes: 200
+  max_edges: 400
+  max_paths: 20
+  timeout_ms: 500             # simple 单请求预算 500ms
+
 storage:
   small_object_provider: pg   # ≤10MB 小工件与元数据进 PostgreSQL
   large_object_provider: fs   # 大件进文件系统 CAS（/data/blobs）

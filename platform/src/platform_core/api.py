@@ -5642,4 +5642,65 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     # --- end G6 ---
 
+    # --- G5 canvas routes ---
+
+    def _canvas_iri(value: str, field: str) -> str:
+        if not _BROWSE_IRI.match(value) or not value.startswith(("http://", "https://", "urn:")):
+            raise _browse_error(
+                "E_CANVAS_BAD_IRI",
+                f"{field} is not a safe absolute IRI",
+                {"field": field, "value": value},
+            )
+        return value
+
+    @app.get("/browse/path")
+    def browse_path(
+        source: str = Query(alias="from", min_length=1, max_length=2000),
+        target: str | None = Query(default=None, alias="to", max_length=2000),
+        max_hops: int = Query(default=3, alias="maxHops", ge=1),
+        max_nodes: int | None = Query(default=None, alias="maxNodes", ge=1, le=1000),
+        max_edges: int | None = Query(default=None, alias="maxEdges", ge=1, le=2000),
+        max_paths: int | None = Query(default=None, alias="maxPaths", ge=1, le=50),
+        include_types: bool = Query(default=True, alias="includeTypes"),
+        include_source: bool = Query(default=True, alias="includeSource"),
+        graph: str | None = Query(default=None, max_length=2000),
+    ) -> dict[str, Any]:
+        """Read-only multi-hop canvas (design 53/55).
+
+        ``to`` switches path mode; without it the result is the bounded
+        neighbourhood of ``from``. The route only talks to ``runtime.canvas``,
+        so switching simple/full/off never changes this signature.
+        """
+        _canvas_iri(source, "from")
+        requested = None
+        if graph:
+            _canvas_iri(graph, "graph")
+            requested = [graph]
+        canvas_cfg = runtime.config.canvas
+        nodes_cap = max_nodes or int(canvas_cfg.max_nodes)
+        edges_cap = max_edges or int(canvas_cfg.max_edges)
+        if target:
+            _canvas_iri(target, "to")
+            return runtime.canvas.path(
+                source,
+                target,
+                max_hops=max_hops,
+                max_paths=max_paths or int(canvas_cfg.max_paths),
+                max_nodes=nodes_cap,
+                include_types=include_types,
+                include_source=include_source,
+                graphs=requested,
+            )
+        return runtime.canvas.subgraph(
+            source,
+            hops=max_hops,
+            max_nodes=nodes_cap,
+            max_edges=edges_cap,
+            include_types=include_types,
+            include_source=include_source,
+            graphs=requested,
+        )
+
+    # --- end G5 ---
+
     return app
