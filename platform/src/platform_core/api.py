@@ -5703,4 +5703,18 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     # --- end G5 ---
 
+    # --- G8 terms gate routes ---
+    @app.get("/ontology/terms/gate")
+    def ontology_terms_gate() -> dict[str, Any]:
+        """Configured ``terms.gate`` tier plus the latest publish-gate result.
+
+        ``last`` is null before the first publish attempt; ``emptyReason``
+        explains why instead of fabricating zero counts.
+        """
+        from .termgate import status
+
+        return status(runtime)
+
+    # --- end G8 ---
+
     return app

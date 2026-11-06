@@ -748,6 +748,21 @@ def dashboard(runtime: Any) -> dict[str, Any]:
 
     readiness = _readyz(runtime)
 
+    # --- G8 terms gate ---
+    try:
+        from .termgate import status as _terms_gate_status
+
+        terms_gate = _terms_gate_status(runtime)
+    except Exception as exc:  # never let observability break the dashboard
+        terms_gate = {
+            "configuredGate": None,
+            "last": None,
+            "empty": True,
+            "emptyReason": f"术语门禁状态不可读：{exc}",
+            "readOnly": True,
+        }
+    # --- end G8 terms gate ---
+
     return {
         "sampledAt": sampled_at,
         "coverage": coverage,
@@ -768,6 +783,9 @@ def dashboard(runtime: Any) -> dict[str, Any]:
             "source": "GET /ontology/versions（tbox/current 指针）",
         },
         "ontologyDiff": "GET /health/ontology-diff",
+        # --- G8 terms gate ---
+        "termsGate": terms_gate,
+        # --- end G8 terms gate ---
         "dataSource": {
             "endpoints": [
                 "GET /health/dashboard",
@@ -776,6 +794,7 @@ def dashboard(runtime: Any) -> dict[str, Any]:
                 "GET /reasoning/status",
                 "GET /readyz",
                 "GET /ontology/versions",
+                "GET /ontology/terms/gate",
             ],
             "sampledAt": sampled_at,
             "note": "全部为只读聚合；每个区块的 source 字段标注具体出处，查询失败返回 null 与 error，不给猜测值",

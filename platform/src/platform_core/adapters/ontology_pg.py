@@ -21,6 +21,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import json
@@ -29,12 +30,13 @@ import httpx
 from psycopg.types.json import Jsonb
 from rdflib import BNode, Graph, Namespace, OWL, RDF, RDFS, URIRef
 
-from ..config import OntologyConfig
+from ..config import OntologyConfig, TermsConfig
 from ..errors import EXIT_CONFIG, PortError, PlatformError
 from ..facts import event_hash
 from ..ontology_lifecycle import list_transitions, record_transition, validate_transition
 from ..ports import Manifest
 from ..termlex import assert_guards_compilable
+from .. import termgate, termgov
 from .graph_oxigraph import OxigraphHttpStore, parse_rdf
 from .metadata_pg import MetadataPg
 from .object_layered import LayeredObjectStore
@@ -1002,6 +1004,36 @@ def publish_import(
         "reason": record["reason"],
         "canonicalEqualTo": canonical_version["version_id"] if canonical_version else None,
     }
+    # --- G8 terms gate ---
+    # off returns None and leaves the payload untouched. warn/block evaluate
+    # the staged T-Box before any version/graph/proposal row is written.
+    terms_gate: dict[str, Any] | None = None
+    terms_cfg = getattr(registry, "_terms_gate", None)
+    if terms_cfg is not None and terms_cfg.gate != "off":
+        baseline: dict[str, Any] | None = None
+        baseline_error: str | None = None
+        try:
+            baseline = termgov.graph_coverage(
+                SimpleNamespace(ontology=registry, graph=graph_store)
+            )
+        except Exception as exc:  # observability must not break publishing
+            baseline_error = f"{type(exc).__name__}: {exc}"
+        terms_gate = termgate.evaluate_content(
+            staging_nt.decode("utf-8"),
+            "nt",
+            terms_cfg,
+            baseline=baseline,
+            context={
+                "importId": import_id,
+                "versionId": version_id,
+                "source": "tbox-publish",
+                "dryRun": dry_run,
+                "baselineError": baseline_error,
+            },
+        )
+        termgate.remember(registry, terms_gate)
+        base["termsGate"] = terms_gate
+    # --- end G8 terms gate ---
     if dry_run:
         return {
             **base,
@@ -1018,6 +1050,32 @@ def publish_import(
             provider_code="E_IMPORT_NOT_USABLE",
             details={"importId": import_id, "reason": record["reason"], "usable": False},
         )
+
+    # --- G8 terms gate ---
+    if terms_gate is not None and terms_gate.get("blocked"):
+        raise PortError(
+            code="Conflict",
+            message=(
+                f"term gate blocked publish: {terms_gate['blocking']} blocking finding(s)"
+            ),
+            provider="platform",
+            provider_code=termgate.E_TERM_GATE_BLOCKED,
+            details={
+                "importId": import_id,
+                "versionId": version_id,
+                "gate": terms_gate["gate"],
+                "verdict": terms_gate["verdict"],
+                "blocking": terms_gate["blocking"],
+                "warnings": terms_gate["warnings"],
+                "problems": terms_gate["findings"],
+                "allowed": [
+                    "fix the blocking findings and re-import the T-Box",
+                    "operator switches terms.gate=warn to publish with warnings",
+                ],
+            },
+        )
+    # --- end G8 terms gate ---
+    gate_kwargs = {"extra_gates": {"terms": terms_gate}} if terms_gate is not None else {}
 
     with meta.advisory_lock(f"g01:import-publish:{import_id}") as acquired:
         if not acquired:
@@ -1043,6 +1101,7 @@ def publish_import(
                 actor=actor,
                 reason=summary,
                 activate_existing=True,
+                **gate_kwargs,
             )
             return {
                 **base,
@@ -1155,6 +1214,7 @@ def publish_import(
             acknowledge_breaking=acknowledge_breaking,
             actor=actor,
             reason=summary,
+            **gate_kwargs,
         )
         return {
             **base,
@@ -1210,6 +1270,17 @@ class OntologyRegistry:
         self._materializer: Any = None
         self._abox_graphs: list[str] = []
         self._reason_profile = "EL"
+        # --- G8 terms gate ---
+        # None = no gate (direct/legacy registries); assembly installs the
+        # configured TermsConfig so publish honours terms.gate.
+        self._terms_gate: TermsConfig | None = None
+        self._last_terms_gate: dict[str, Any] | None = None
+        # --- end G8 terms gate ---
+
+    # --- G8 terms gate ---
+    def set_terms_gate(self, config: TermsConfig | None) -> None:
+        self._terms_gate = config
+    # --- end G8 terms gate ---
 
     def set_governance(
         self,
@@ -2609,6 +2680,7 @@ class OntologyRegistry:
         actor: str = "operator",
         reason: str | None = None,
         activate_existing: bool = False,
+        extra_gates: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         row = self._require(version_id)
         # OQ-65 residual / B-5: an archived version is a read-only baseline. It
@@ -2676,7 +2748,10 @@ class OntologyRegistry:
         implicit = False
         diff: dict[str, Any] = {}
         breaking = False
-        gates: dict[str, Any] = {}
+        # G8/O-05: extra gates are recorded alongside SHACL/consistency/breaking
+        # without changing their decisions. Empty by default, so the legacy
+        # payload stays byte-identical when terms.gate=off.
+        gates: dict[str, Any] = dict(extra_gates or {})
         if not governed:
             # S12/OQ-47: there is no direct publish path any more. A call without
             # a proposal is turned into an implicit proposal that must pass the
@@ -2695,7 +2770,7 @@ class OntologyRegistry:
                     "mode": "activate_existing" if activate_existing else "publish",
                     "previousVersionId": self._last_publish_previous(version_id),
                     "publishedBy": actor,
-                    "gates": {},
+                    "gates": gates,
                     "publishedAt": _now(),
                 }
             if row["status"] not in ("draft", "approved", "superseded"):

@@ -289,6 +289,40 @@ class DatagenConfig(_Strict):
     allow_official_schema: bool = False
 
 
+# --- G8 terms gate config ---
+# 严重级别映射：默认 blocking 的问题码。覆盖缺失（definition/notation）与
+# 覆盖率下降只产生 warning，不拦截发布。
+DEFAULT_TERMS_BLOCKING_CODES: tuple[str, ...] = (
+    "SURFACE_SHARED_BY_MULTIPLE_CONCEPTS",
+    "PREF_CONFLICTS_WITH_ALT_OF_OTHER_CONCEPT",
+    "CONCEPT_MISSING_PREF_LABEL",
+    "SUPPRESSED_SURFACE_STILL_ALIAS",
+    "ALIAS_INCOMPLETE",
+    "ALIAS_TARGET_MISSING",
+    "GUARD_REGEX_INVALID",
+)
+
+TERMS_GATE_KNOWN = ("off", "warn", "block")
+TERMS_GATE_IMPLEMENTED = ("off", "warn", "block")
+
+
+class TermsConfig(_Strict):
+    """T-Box 发布前的术语门禁（O-05）。
+
+    ``gate`` 三档：off 完全不跑核对；warn 记录问题但不拦截；block 在
+    blocking 级问题存在时拒绝发布。``blocking_codes`` 是严重级别阈值，
+    可按问题码把默认 warning 提升/降级。``coverage_decrease_tolerance``
+    是覆盖率相对上一发布版本允许的下降幅度（0 表示任何下降都记 warning）。
+    """
+
+    gate: str = "warn"
+    blocking_codes: list[str] = Field(default_factory=lambda: list(DEFAULT_TERMS_BLOCKING_CODES))
+    coverage_decrease_tolerance: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+# --- end G8 terms gate config ---
+
+
 class PlatformConfig(_Strict):
     mode: Literal["dev", "single", "test"] = "single"
     config_version: int = 1
@@ -311,6 +345,9 @@ class PlatformConfig(_Strict):
     context: ContextConfig = Field(default_factory=ContextConfig)
     extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
     datagen: DatagenConfig = Field(default_factory=DatagenConfig)
+    # --- G8 terms gate config ---
+    terms: TermsConfig = Field(default_factory=TermsConfig)
+    # --- end G8 terms gate config ---
     jobs: dict[str, Any] = Field(default_factory=dict)
     server: dict[str, Any] = Field(default_factory=dict)
     requirements: dict[str, list[str]] = Field(
@@ -803,5 +840,29 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
         warnings.append("reasoner:offline_only")
     if model.runtime.mode == "lean" and model.reasoning.mode != "off":
         warnings.append("reasoner:profile_required(lean)")
+
+    # --- G8 terms gate config ---
+    if model.terms.gate not in TERMS_GATE_KNOWN:
+        raise _config_error(
+            "E_PROVIDER_INVALID",
+            (
+                f"terms.gate={model.terms.gate!r} is not a known gate; "
+                f"known values: {', '.join(TERMS_GATE_KNOWN)}"
+            ),
+            key="terms.gate",
+            hint="fix the name; unknown names are configuration errors, not missing adapters",
+        )
+    if model.terms.gate not in TERMS_GATE_IMPLEMENTED:
+        raise _config_error(
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            (
+                f"terms.gate={model.terms.gate} is a known gate but no adapter is assembled"
+            ),
+            key="terms.gate",
+            hint="use terms.gate=off, warn or block",
+        )
+    if model.terms.gate == "off":
+        warnings.append("terms.gate=off: terminology check is skipped at publish")
+    # --- end G8 terms gate config ---
 
     return warnings
