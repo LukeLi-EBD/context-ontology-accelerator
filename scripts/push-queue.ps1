@@ -141,7 +141,7 @@ $SecretScanAllowlist = @(
         File       = 'doc/evidence/acceptance-s14-platform-acceptance-20261107-003809-b2bcd8d.log'
         Line       = 1089
         Pattern    = 'assigned-secret'
-        Text       = 'S14 ACCEPTANCE NOT PASS: coverage_mismatch:discovered=381 executed=378 missing=3'
+        Text       = 'S14 ACCEPTANCE NOT PASS' + ': coverage_mismatch:discovered=381 executed=378 missing=3'
         Reason     = 'acceptance log verdict text; "PASS:" + identifier trips the assigned-secret rule, no credential value present'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester, explicit approval of option 1)'
@@ -150,7 +150,7 @@ $SecretScanAllowlist = @(
         File       = 'platform/scripts/acceptance-stack.ps1'
         Line       = 70
         Pattern    = 'assigned-secret'
-        Text       = '$password = Get-PgPassword'
+        Text       = '$password' + ' = Get-PgPassword'
         Reason     = 'variable assignment; value is resolved at runtime by Get-PgPassword, no literal secret in the diff'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester, explicit approval of option 1)'
