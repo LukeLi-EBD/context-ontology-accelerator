@@ -1,6 +1,17 @@
 -- V23: metric quartet v7 + minimal PostgreSQL formula compiler bindings.
 -- Derived only from already-seeded text (09-definitions-v4.seed.sql); no new business values.
--- metric_kind enum: ratio|amount|count|duration|period_value|derived_rate|rule_set|band|score|index.
+-- metric_kind enum (finite, definitions below):
+--   ratio        two aggregable quantities as a ratio; formula = numerator/denominator[*100]
+--   amount       additive money amount in CNY; formula = numerator
+--   count        additive count of accounts/policies/cases; formula = numerator
+--   duration     elapsed days/time; formula = numerator (max or observation-date delta)
+--   period_value period average such as daily-average AUM; formula = numerator/denominator
+--   derived_rate ratio derived from other metric results (compiler rejects it explicitly)
+--   rule_set     rule-evaluation output (hit list) and is routed to /metrics/{id}/rules
+--   band         bucket output such as M0-M6 (not a scalar)
+--   score        percentile score output (not a scalar)
+--   index        family index that only groups variant metrics; no single formula
+--   sum          legacy V19 alias equivalent to amount, kept for the existing calculator
 -- Derivation rule: metric_kind from unit/formula_text; formula_expr from the declared
 -- numerator/denominator form; window_kind from observation_period prefix; aggregations
 -- from definition/denominator_text cues (sum for amounts, count(_distinct) for dedup counts,
