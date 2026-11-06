@@ -20,9 +20,12 @@ from platform_core.errors import PortError
 
 DSN = os.environ.get(
     "TEST_PG_DSN",
-    "postgres://platform:***MASKED***@host.docker.internal:5432/platform",
+    os.environ.get(
+        "PLATFORM__DATABASE__URL",
+        "postgresql://platform:platform_dev@postgres:5432/platform",
+    ),
 )
-OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://host.docker.internal:7878")
+OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 NAMESPACE = "https://w3id.org/fsldm/"
 TTL = """\
 @prefix owl: <http://www.w3.org/2002/07/owl#> .

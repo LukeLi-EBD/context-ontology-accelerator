@@ -37,11 +37,11 @@ DSN = os.environ.get(
     "TEST_PG_DSN",
     os.environ.get(
         "PLATFORM__DATABASE__URL",
-        "postgres://platform:***MASKED***@host.docker.internal:5432/platform",
+        "postgres://platform:***MASKED***@postgres:5432/platform",
     ),
 )
-OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://host.docker.internal:7878")
-REASONER_URL = os.environ.get("TEST_REASONER_URL", "http://host.docker.internal:7879")
+OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
+REASONER_URL = os.environ.get("TEST_REASONER_URL", "http://reasoner:7879")
 POINTER_NAME = "tbox/current"
 NAMESPACE = "urn:s14pub:"
 

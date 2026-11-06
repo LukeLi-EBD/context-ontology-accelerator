@@ -6,6 +6,7 @@ Reasoner is already running; tests never start containers:
     agent-platform:0.1-s5 /hosttests/test_g01_import_consistency.py
 """
 
+import os
 import sys
 import tempfile
 import time
@@ -40,7 +41,12 @@ ex:both a owl:NamedIndividual, ex:Alpha, ex:Beta .
 """
 
 
-def real_checker(endpoint: str = "http://host.docker.internal:7879", timeout_ms: int = 120000):
+def real_checker(
+    endpoint: str | None = None, timeout_ms: int = 120000
+):
+    endpoint = endpoint or os.environ.get(
+        "TEST_REASONER_URL", "http://reasoner:7879"
+    )
     config = ReasoningConfig(endpoint=endpoint, timeout_ms=timeout_ms, profile="EL")
     client = ReasonerClient(config)
 
@@ -94,7 +100,7 @@ class ConsistencyTests(unittest.TestCase):
         self.assertEqual(result["reason"], "E_CONSISTENCY_FAILED")
 
     def test_reasoner_unreachable_reports_unavailable(self):
-        check, client = real_checker(endpoint="http://host.docker.internal:9", timeout_ms=1000)
+        check, client = real_checker(endpoint="http://127.0.0.1:9", timeout_ms=1000)
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 shapes_dir = deploy_shapes(Path(tmp))

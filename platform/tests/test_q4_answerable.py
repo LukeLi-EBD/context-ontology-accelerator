@@ -32,10 +32,10 @@ DSN = os.environ.get(
     "TEST_PG_DSN",
     os.environ.get(
         "PLATFORM__DATABASE__URL",
-        "postgres://platform:platform_dev@host.docker.internal:5432/platform",
+        "postgres://platform:platform_dev@postgres:5432/platform",
     ),
 )
-OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://host.docker.internal:7878")
+OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 PINNED_VERSION = os.environ.get("Q4_ONTOLOGY_VERSION", "ont-11f92ebb3326")
 
 
