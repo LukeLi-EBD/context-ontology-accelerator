@@ -601,3 +601,4 @@
 - 27.6 万外推：real-11 1.673s/块→128h；real-12 1.546s→119h；按库内 63.2% 长块加权→133–188h；全长块→276h；333h 仅全窗口 0.23 成立（已证伪为稳态）。
 - OQ-65（_impl/OPEN-QUESTIONS.md）：`rollback-to` 当发布用的设计债；方案 publish 增 `resumeFromVersion`/已有 versionId + `publishedAt/publishedBy/previousVersionId` + diff `canonicalEqual`；工作量 1.5d；本段仅留痕。
 - 2026-11-06 B-05 指标词表入 SKOS：85 概念（79 主+6 变体）入 term: 命名空间，重名冲突 0；4 条 Warning 形状部署 fsldm 0.2.0；发布 ont-11f92ebb3326 / semver 1.2.1（3625 三元组，推断 1171）；检索 24 通用 1/24→18/24、10 指标 0/10→10/10；单测 9 条；acceptance 43/0、s14 168/0；口径文本改动 dry-run 不触发 T-Box 门禁。
+- 2026-11-06 B-06 数据字典接入：V31 建 platform.data_dictionary，28 张事实表 375 列（pg=375，92 列有注释）；绑定 explicit=26 / name_match=10 / none=339 / manual=0，未绑定逐行写明原因（dpd 类不臆造本体属性）；GET /catalog/dictionaries（分页过滤）、/catalog/dictionaries/{table}、POST refresh（首跑 insert 375，重放 0/0/375）；/browse 新增数据字典 tab；MySQL/Glue 无源实测 503 E_DICT_SOURCE_UNREACHABLE；单测 13 条；acceptance 43/0、s14 168/0；readyz=200、tbox/current=ont-11f92ebb3326、metric_observation=0。
