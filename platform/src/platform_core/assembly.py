@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .adapters.canvas_disabled import DisabledCanvas
+from .adapters.canvas_full import FullCanvas
+from .adapters.canvas_simple import SimpleCanvas
 from .adapters.embedding import EmbeddingClient
 from .adapters.graph_fuseki import FusekiHttpStore
 from .adapters.graph_oxigraph import OxigraphHttpStore
@@ -62,6 +65,7 @@ class Runtime:
     reasoning: ReasoningService
     context: ContextResolver
     answerable: AnswerabilityService
+    canvas: Any = None
     placeholders: dict[str, UnsupportedPort] = field(default_factory=dict)
     degraded: list[str] = field(default_factory=list)
 
@@ -155,6 +159,15 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     # Q4: pre-retrieval coverage gate over T-Box terms (SKOS when present).
     answerable = AnswerabilityService(cfg.context, ontology, graph)
 
+    # D1 (design 53 §5.3): one port, three switch values. Config already split
+    # unknown (E_PROVIDER_INVALID) from known-but-missing (E_PROVIDER_NOT_IMPLEMENTED).
+    if cfg.canvas.provider == "simple":
+        canvas: Any = SimpleCanvas(cfg, graph, ontology, reasoning)
+    elif cfg.canvas.provider == "full":
+        canvas = FullCanvas()
+    else:
+        canvas = DisabledCanvas("canvas.provider=off")
+
     placeholders = {
         "Cache": UnsupportedPort("Cache", "S3"),
     }
@@ -199,6 +212,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         reasoning=reasoning,
         context=context,
         answerable=answerable,
+        canvas=canvas,
         placeholders=placeholders,
         degraded=degraded,
     )

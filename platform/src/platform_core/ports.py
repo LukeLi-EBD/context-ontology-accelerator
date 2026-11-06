@@ -48,6 +48,53 @@ class ObjectStorePort(Protocol):
     def list(self, bucket: str, prefix: str = "", limit: int = 100) -> list[dict[str, Any]]: ...
 
 
+class CanvasPort(Protocol):
+    """D1 read-only canvas port (design 53/55): same signature for simple/full.
+
+    Implementations must not write to the graph and must return the same key
+    set; values may differ (simple returns fewer nodes/paths and layout=none).
+    """
+
+    def manifest(self) -> Manifest: ...
+
+    def subgraph(
+        self,
+        start: str,
+        *,
+        hops: int = 1,
+        max_nodes: int = 200,
+        max_edges: int = 400,
+        include_types: bool = True,
+        include_source: bool = True,
+        graphs: list[str] | None = None,
+    ) -> dict[str, Any]: ...
+
+    def path(
+        self,
+        source: str,
+        target: str,
+        *,
+        max_hops: int = 3,
+        max_paths: int = 20,
+        max_nodes: int = 200,
+        include_types: bool = True,
+        include_source: bool = True,
+        graphs: list[str] | None = None,
+    ) -> dict[str, Any]: ...
+
+    def expand(
+        self,
+        node: str,
+        *,
+        hops: int = 1,
+        max_nodes: int = 100,
+        max_edges: int = 200,
+        include_types: bool = True,
+        include_source: bool = True,
+        graphs: list[str] | None = None,
+    ) -> dict[str, Any]: ...
+
+
 class MetadataStorePort(Protocol):
     def migrate(self) -> dict[str, Any]: ...
     def query(self, sql: str, params: tuple | list = ()) -> list[dict[str, Any]]: ...
