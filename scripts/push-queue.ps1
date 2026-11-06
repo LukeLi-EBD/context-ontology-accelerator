@@ -133,6 +133,40 @@ $SecretFilePatterns = @(
 
 $PlaceholderHints = @('your_', 'your-', 'xxxx', 'example', 'sample', 'placeholder', 'changeme', 'redacted', 'dummy', 'fake_', '<', '${', '$(')
 
+# --- Audited allowlist: exact hits only, one entry per (file, line, pattern, text). ---
+# Do NOT add directory/pattern-wide exemptions here; any new hit must still block.
+# Each entry records what matched, why it is not a credential, when, and who approved.
+$SecretScanAllowlist = @(
+    [pscustomobject]@{
+        File       = 'doc/evidence/acceptance-s14-platform-acceptance-20261107-003809-b2bcd8d.log'
+        Line       = 1089
+        Pattern    = 'assigned-secret'
+        Text       = 'S14 ACCEPTANCE NOT PASS: coverage_mismatch:discovered=381 executed=378 missing=3'
+        Reason     = 'acceptance log verdict text; "PASS:" + identifier trips the assigned-secret rule, no credential value present'
+        ApprovedOn = '2026-11-07'
+        ApprovedBy = 'user (push requester, explicit approval of option 1)'
+    },
+    [pscustomobject]@{
+        File       = 'platform/scripts/acceptance-stack.ps1'
+        Line       = 70
+        Pattern    = 'assigned-secret'
+        Text       = '$password = Get-PgPassword'
+        Reason     = 'variable assignment; value is resolved at runtime by Get-PgPassword, no literal secret in the diff'
+        ApprovedOn = '2026-11-07'
+        ApprovedBy = 'user (push requester, explicit approval of option 1)'
+    }
+)
+
+function Test-Allowlisted {
+    param([string] $File, [int] $Line, [string] $Pattern, [string] $Text)
+    foreach ($a in $SecretScanAllowlist) {
+        if ($a.File -eq $File -and $a.Line -eq $Line -and $a.Pattern -eq $Pattern -and $a.Text.Trim() -eq $Text.Trim()) {
+            return $a
+        }
+    }
+    return $null
+}
+
 function Test-Placeholder {
     param([string] $Text)
     $lower = $Text.ToLowerInvariant()
@@ -160,10 +194,11 @@ function Invoke-SecretScan {
     param([string] $Branch)
 
     $findings = New-Object System.Collections.ArrayList
+    $allowed = New-Object System.Collections.ArrayList
 
     $base = Get-ScanBase -Branch $Branch
     if (-not $base) {
-        return [pscustomobject]@{ Ok = $false; Findings = @('cannot determine scan base (no remote tracking ref)') }
+        return [pscustomobject]@{ Ok = $false; Findings = @('cannot determine scan base (no remote tracking ref)'); Allowed = @() }
     }
 
     $filesText = (Invoke-GitText @('diff', '--name-only', '--diff-filter=ACMR', "$base..refs/heads/$Branch")).Text
@@ -195,6 +230,17 @@ function Invoke-SecretScan {
             foreach ($sp in $SecretPatterns) {
                 if ($body -match $sp.Rx) {
                     if (Test-Placeholder -Text $body) { continue }
+                    $allow = Test-Allowlisted -File $currentFile -Line $newLine -Pattern $sp.Name -Text $body
+                    if ($allow) {
+                        [void]$allowed.Add([pscustomobject]@{
+                            Hit    = ('{0}:{1}:{2}' -f $sp.Name, $currentFile, $newLine)
+                            Text   = $allow.Text.Trim()
+                            Reason = $allow.Reason
+                            When   = $allow.ApprovedOn
+                            By     = $allow.ApprovedBy
+                        })
+                        continue
+                    }
                     [void]$findings.Add(('secret:{0}:{1}:{2}' -f $sp.Name, $currentFile, $newLine))
                 }
             }
@@ -202,7 +248,7 @@ function Invoke-SecretScan {
         }
     }
 
-    return [pscustomobject]@{ Ok = ($findings.Count -eq 0); Findings = @($findings) }
+    return [pscustomobject]@{ Ok = ($findings.Count -eq 0); Findings = @($findings); Allowed = @($allowed) }
 }
 
 # ---------------------------------------------------------------- push
@@ -325,6 +371,9 @@ foreach ($branch in $Branches) {
         $row.LocalSha = Get-Abbreviated $localSha
 
         $scan = Invoke-SecretScan -Branch $branch
+        foreach ($a in @($scan.Allowed)) {
+            Write-Log ("[{0}] scan allowlisted: {1} | text='{2}' | reason='{3}' | approved {4} by {5}" -f $branch, $a.Hit, $a.Text, $a.Reason, $a.When, $a.By) 'Cyan'
+        }
         if (-not $scan.Ok) {
             $row.Result = 'BLOCKED_SECRET'
             $row.Note = ($scan.Findings -join '; ')
