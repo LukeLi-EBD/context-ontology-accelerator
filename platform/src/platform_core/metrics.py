@@ -15,6 +15,7 @@ from typing import Any
 
 from .adapters.metadata_pg import MetadataPg
 from .errors import PortError
+from . import source_ref
 
 PUBLISH_CODE = "E_METRIC_NOT_PUBLISHABLE"
 DISABLED_CODE = "E_METRIC_FORMULA_DISABLED"
@@ -361,6 +362,26 @@ class MetricService:
             )
 
         fixture = bool(stats["has_fixture"])
+        try:
+            provenance = source_ref.metric_source_payload(
+                self._meta,
+                metric_id=metric_id,
+                definition_version=row["definition_version"],
+                as_of=as_of.isoformat() if row["window_kind"] == "instant" else None,
+                period_start=(
+                    period_start.isoformat() if row["window_kind"] == "period" else None
+                ),
+                period_end=(
+                    period_end.isoformat() if row["window_kind"] == "period" else None
+                ),
+                entity_key=entity_key,
+                institution=institution,
+                fixture=fixture,
+                row_count=int(stats["sample_count"]),
+            )
+        except Exception as exc:  # noqa: BLE001 - provenance never blocks a value
+            source_ref.log.warning("metric source_ref unavailable: %s", exc)
+            provenance = {"sourceRef": None, "sourceRefs": []}
         return {
             "metricId": metric_id,
             "value": value,
@@ -383,4 +404,6 @@ class MetricService:
             "computedAt": (stats["computed_at"].isoformat()
                            if stats["computed_at"] else datetime.now(timezone.utc).isoformat()),
             "outputType": "observation",
+            "sourceRef": provenance["sourceRef"],
+            "sourceRefs": provenance["sourceRefs"],
         }

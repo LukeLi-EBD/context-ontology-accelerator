@@ -317,6 +317,28 @@
   max-width: 330px;
 }
 
+.qa-chip .qa-chip-prov {
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.qa-chip .qa-chip-prov:hover { color: var(--fg); }
+
+.qa-source-ref {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.qa-source-ref a { color: var(--muted); text-decoration: none; }
+.qa-source-ref a:hover { color: var(--fg); text-decoration: underline; }
+
 .qa-steps { display: grid; gap: 8px; }
 
 .qa-step {

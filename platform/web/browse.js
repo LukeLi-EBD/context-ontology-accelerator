@@ -942,6 +942,17 @@
       ref.className = 'qa-chip-ref';
       ref.textContent = citation.ref || citation.id || '';
       chip.appendChild(ref);
+      if (citation.sourceRef && citation.sourceRef.resolveUrl) {
+        const prov = document.createElement('a');
+        prov.className = 'qa-chip-prov';
+        prov.href = citation.sourceRef.resolveUrl;
+        prov.target = '_blank';
+        prov.rel = 'noopener';
+        prov.title = (citation.sourceRef.type || 'source') + ' · ' +
+          (citation.sourceRef.targetTable || '');
+        prov.textContent = '溯源';
+        chip.appendChild(prov);
+      }
       box.appendChild(chip);
     });
   }
@@ -989,6 +1000,21 @@
     if (answer.answerType) parts.push(answer.answerType);
     if (answer.reasonCode) parts.push(answer.reasonCode);
     badge.textContent = '· ' + parts.join(' · ');
+    if (answer.sourceRef && answer.sourceRef.resolveUrl) {
+      const prov = document.createElement('div');
+      prov.className = 'qa-source-ref';
+      const kind = document.createElement('span');
+      kind.className = 'qa-chip-kind';
+      kind.textContent = answer.sourceRef.type || 'source';
+      prov.appendChild(kind);
+      const link = document.createElement('a');
+      link.href = answer.sourceRef.resolveUrl;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = '溯源 · ' + (answer.sourceRef.targetTable || '');
+      prov.appendChild(link);
+      box.appendChild(prov);
+    }
   }
 
   async function askQuestion() {

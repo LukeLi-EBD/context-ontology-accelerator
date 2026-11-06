@@ -35,6 +35,7 @@ from .assembly import Runtime
 from .bootstrap import CheckResult
 from .errors import PortError
 from . import webui
+from . import source_ref
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
 
@@ -973,6 +974,16 @@ def _qa_answer(
         include_layers=True,
     )
     retrieve = _qa_retrieve(runtime, query, top_k, strategy)
+    for item in retrieve.get("citations") or []:
+        if item.get("kind") != "chunk" or not item.get("documentId"):
+            continue
+        chunk_no = source_ref.chunk_no_from_id(item.get("ref"))
+        if chunk_no is None:
+            continue
+        item["sourceRef"] = source_ref.chunk_descriptor(
+            str(item["documentId"]), chunk_no, item.get("ref")
+        )
+        source_ref.register_ref(runtime.metadata, item["sourceRef"])
     selected = list(coverage.get("selectedMetrics") or [])
     selected_metric = selected[0] if selected else None
     layers = {item.get("layer"): item for item in coverage.get("layers") or []}
@@ -1095,17 +1106,27 @@ def _qa_answer(
                     }
                 )
             if int(fact_eval.get("observationRows") or 0) > 0:
-                add_citation(
-                    {
-                        "id": f"obs:{fact_eval.get('metricId')}@{fact_eval.get('definitionVersion')}",
-                        "kind": "fact-observation",
-                        "ref": "platform.metric_observation",
-                        "metricId": fact_eval.get("metricId"),
-                        "definitionVersion": fact_eval.get("definitionVersion"),
-                        "rows": fact_eval.get("observationRows"),
-                        "dataSource": fact_eval.get("dataSource"),
-                    }
-                )
+                window = fact_eval.get("window") or {}
+                citation: dict[str, Any] = {
+                    "id": f"obs:{fact_eval.get('metricId')}@{fact_eval.get('definitionVersion')}",
+                    "kind": "fact-observation",
+                    "ref": "platform.metric_observation",
+                    "metricId": fact_eval.get("metricId"),
+                    "definitionVersion": fact_eval.get("definitionVersion"),
+                    "rows": fact_eval.get("observationRows"),
+                    "dataSource": fact_eval.get("dataSource"),
+                }
+                if window.get("start") and window.get("end"):
+                    citation["sourceRef"] = source_ref.observation_set_descriptor(
+                        str(fact_eval.get("metricId")),
+                        str(fact_eval.get("definitionVersion")),
+                        period_start=str(window["start"]),
+                        period_end=str(window["end"]),
+                        fixture=bool(fact_eval.get("fixture")),
+                        row_count=int(fact_eval.get("observationRows") or 0),
+                    )
+                    source_ref.register_ref(runtime.metadata, citation["sourceRef"])
+                add_citation(citation)
     for item in (retrieve.get("citations") or [])[:5]:
         add_citation(item)
 
@@ -1176,7 +1197,20 @@ def _qa_answer(
                         "dataSource": computed.get("dataSource"),
                         "definitionVersion": computed.get("definitionVersion"),
                         "window": computed.get("window"),
+                        "sourceRef": computed.get("sourceRef"),
+                        "sourceRefs": computed.get("sourceRefs") or [],
                     }
+                    if computed.get("sourceRef"):
+                        add_citation(
+                            {
+                                "id": computed["sourceRef"]["ref"],
+                                "kind": "value-source",
+                                "ref": computed["sourceRef"]["ref"],
+                                "targetTable": computed["sourceRef"]["targetTable"],
+                                "sourceRef": computed["sourceRef"],
+                                "metricId": metric_id_value,
+                            }
+                        )
                 except PortError as exc:
                     compute_output["error"] = exc.provider_code or exc.code
                     answer_type = "definition"
@@ -1318,6 +1352,8 @@ def _qa_answer(
             "answer": answer_text,
             "value": value.get("value") if value else None,
             "dataSource": value.get("dataSource") if value else None,
+            "sourceRef": value.get("sourceRef") if value else None,
+            "sourceRefs": (value.get("sourceRefs") or []) if value else [],
             "steps": steps,
             "citations": citations,
             "missing": missing,
@@ -1812,6 +1848,43 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             top_k=top_k,
             strategy=strategy,
         )
+
+    @app.get("/browse/facts")
+    def browse_facts(
+        table: str = Query(min_length=1, max_length=80),
+        limit: int = Query(default=5, ge=1, le=20),
+    ) -> dict[str, Any]:
+        """Sample fact rows plus a resolvable source_ref for each row."""
+        key_columns = source_ref._fact_key_columns(runtime.metadata, table)
+        if key_columns is None:
+            raise PortError(
+                code="PermissionDenied",
+                message="table is not a registered fact source",
+                provider="platform",
+                provider_code=source_ref.FORBIDDEN,
+                details={"table": table},
+            )
+        rows = runtime.metadata.query(f"SELECT * FROM {table} LIMIT {int(limit)}")
+        items = []
+        for row in rows:
+            key = {name: row[name] for name in key_columns}
+            items.append(
+                {
+                    "row": source_ref.jsonable(row),
+                    "sourceRef": source_ref.fact_row_descriptor(table, key),
+                }
+            )
+        return {
+            "table": table,
+            "keyColumns": key_columns,
+            "items": items,
+            "count": len(items),
+            "readOnly": True,
+        }
+
+    @app.get("/source/resolve")
+    def source_resolve(ref: str = Query(min_length=1, max_length=2000)) -> dict[str, Any]:
+        return source_ref.resolve(runtime.metadata, ref)
 
     # ---- v3 metric registry / publishability guard -----------------------
 
