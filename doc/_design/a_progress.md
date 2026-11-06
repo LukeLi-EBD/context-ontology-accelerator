@@ -269,3 +269,20 @@
 - **main ⇄ luke 整合补记（10:32–10:40，覆盖上一条“未执行 push”）**：2 条红测根因为环境数据而非产品缺陷——`tbox/current` 被 smoke 残留版本占位（`ont-db879bd4d0a0`，8 triples），`test_q4_answerable` 要求 `产品包/产品特性/事件金额/事件编号` 自然失败；未改断言、未 skip。持重型锁执行 `platform ontology rollback-to --to ont-3f57d8ce6636`（actor=`codex-merge-verify`），恢复为 `ont-3f57d8ce6636`（1.1.0、2961 triples、status=published，previous=`ont-db879bd4d0a0`）；核验 `/ontology/versions` pointer 一致、`/reasoning/status` `inferred=997`、`/readyz=200`。恢复后全量单测 **123/123 OK（42.8s）**；跑后复核指针仍 `ont-3f57d8ce6636`（2961）、`inferred=997`、`readyz=200`，测试未再改走指针。普通推送 `git push luke luke` -> `7d609a8..a647dfe`（无 force）；`git ls-remote luke luke`=`a647dfe01365a5d7b0c87477ff1c5140bebedd76`，与本地 HEAD 一致；重型锁已 release，终态 `free`。shallow 仍为 `true`（未执行 `--unshallow`）。
 - **NVIDIA 覆盖度校验调研 13:06（已完成）**：产出 `_design/33-NVIDIA覆盖度校验-调研与接线.md`；未 clone（`git clone` SSL timeout 1 次、`raw.githubusercontent.com` 连接重置 1 次），实际通道 `api.github.com`（tree+contents raw）+ `cdn.jsdelivr.net` 复核 1 文件（8338 B）；事实：`check_answerable` = `POST /api/question-entity-coverage`，LLM 抽 1–5 实体 → pgvector 检索 → L2≤0.75 过滤 → 1/n 实体覆盖，返回 `coverage+candidates(+可选 uncovered_entities)`；MCP 只读工具 9 个；UI = Next.js 16 完整 Web UI（chat/analysis/analytics/data/discovery/exploration/terms/settings 等），但覆盖度**无专属面板**（仅代理路由 `frontend/app/api/question-entity-coverage/route.ts`，chat 相关 5 文件 `coverage|answerable` 命中 0）；覆盖边界=关系目录列属性（SQL 属性/自定义分析仅候选），不含指标定义与文档；对比可比项 8、我们缺口 6（G1 指标、G2 事实、G3 实体级、G4 候选、G5 别名、G6 UI）；接线 P0×4/P1×2/P2×1；本轮未改平台代码。
 - **Helix Foundry 交互调研（2026-11-06 12:30–13:02，只读文档，未改平台代码）**：**已验证**。通道实测 `api.github.com` / `raw.githubusercontent.com` / `cdn.jsdelivr.net` 均 200，`github.com` HTML 抓取为空/重置；**未 clone**，取样 `main` 树 `c7de40515f56a491d1b46af0bb1efa890f106700`。产出 `_design/34-Helix交互范式-调研与映射.md`：优势 12 条（H1–H12）、Explorer 交互 10 条（E1–E10）、Analyst 交互 10 条（A1–A10）、映射 16 条（P0=4 / P1=7 / P2=5）、明确不做 6 条（N1–N6）、我方缺口 6 条（G1–G6）。关键新证据：Explorer 搜索为 ID/全文/contains 仅词法（`ExplorerSearch.tsx`）、邻域展开 `neighborLimit=50`（`lib/queries.ts`）、Analyst 事件链 `tool_call→tool_result(evidence_id)→finished` 与逐句 citation（`contract/ontology_agent/ask_event.json`/`ask_result.json`）；修正 22 号文档三项“无法确认”（文档导入已证实、Explorer/Analyst 已逐条核名、无向量检索接线证据）。我方代码核对：`browse.html` 实为 3 tab，`/browse/triples`、`/browse/sparql` 后端已有但前端无入口；`context.resolve` 已返回 `steps[]`/`citations[]` 但前端只打印 JSON、未调 `/answerable`。
+
+---
+
+## 七、计划与在途（2026-11-06）
+
+> 编号口径：A 档 **A-01~A-09 已落地**（A-09 = 原 B-01 值级溯源升档）；B 档 **B-02~B-06 待排 5 条**（B-01 编号保留、不再复用）。B-02 已实现但验收未闭环，按“不提前改状态”仍计入待排。
+
+| 编号 | 任务 | 状态 | 产出文档 | 依赖 |
+|---|---|---|---|---|
+| B-02 | PROV-O 判定溯源（口径判定 / 规则触发 / 拒答） | 进行中 | `43-PROV-O判定溯源.md`（`6a2185f` 已有实现；验收未闭环） | `42-值级溯源.md`、审计哈希链、`37` 判定书 |
+| PLAN-01 | 产品架构 + 使用说明（含 mermaid 与真实截图） | 进行中 | `45-产品架构.md`、`46-使用说明.md` | A-01~A-09、`41` 台账 |
+| PLAN-02 | 合成数据覆盖度审计 | 进行中 | `47-合成数据覆盖度审计.md` | `11` 口径补齐、V26 生成器 |
+| PLAN-03 | 8 条不可算 + 25 条缺原文补齐 | 进行中 | `11`（判定书/补齐清单） | `37` 判定书、`44` 冲突裁定 |
+| PLAN-04 | 文档冲突裁定（12 项逐个判新旧） | 已完成 | `44-文档对齐冲突裁定.md`（commit `8bbb03b`） | `39`、`41` |
+| PLAN-05 | 每小时文档定时提交 | 已启用 | `doc/` 路径 + 定时任务 | git `luke`、文档对齐规则 |
+
+**说明**：以上为当前计划与在途事项，不改变 `39`/`41` 的既成事实计数；PLAN-01~PLAN-05 为支撑性工作，不占 A/B 编号。
