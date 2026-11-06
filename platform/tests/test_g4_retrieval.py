@@ -281,6 +281,123 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"]["providerCode"], "E_ANSWER_STRATEGY_INVALID")
 
+    def test_triple_citation_is_resolvable(self):
+        def with_triple(_runtime, query, **_kwargs):
+            return {
+                "refused": False,
+                "answerType": "definition",
+                "answerMode": "definition",
+                "reasonCode": "OK",
+                "citations": [
+                    {"kind": "triple", "ref": "<urn:s> <urn:p> <urn:o>", "id": None}
+                ],
+                "missing": [],
+                "degraded": False,
+            }
+
+        with patch.object(api_module, "_qa_answer", with_triple):
+            with _client() as client:
+                payload = client.get("/answer/quality").json()
+        self.assertGreater(payload["summary"]["citations"], 0)
+        self.assertEqual(payload["summary"]["brokenLinkRate"], 0.0)
+        self.assertEqual(payload["brokenLinks"], [])
+
+    def test_quality_never_persists_prov(self):
+        seen = []
+
+        def capture(_runtime, query, **kwargs):
+            seen.append(kwargs)
+            return {
+                "refused": True,
+                "answerType": "refusal",
+                "answerMode": "none",
+                "reasonCode": "NO_LAYER_COVERAGE",
+                "citations": [],
+                "missing": [{"layer": "ontology"}],
+                "degraded": False,
+            }
+
+        with patch.object(api_module, "_qa_answer", capture):
+            with _client() as client:
+                client.get("/answer/quality").json()
+        self.assertTrue(seen)
+        self.assertTrue(all(item.get("persist") is False for item in seen))
+
+    def test_facts_data_source_comes_from_observation_row(self):
+        row = {
+            "metric_id": "FIN-BANK-001",
+            "definition_version": "v3.0",
+            "metric_kind": "duration",
+            "formula_expr": "numerator",
+            "window_kind": "instant",
+            "numerator_agg": "max",
+            "denominator_agg": None,
+            "publishable": True,
+            "output_mode": None,
+            "name_zh": "逾期天数",
+        }
+        obs = {"n": 5, "has_fixture": False, "ds": "synthetic",
+               "ws": "2025-12-31", "we": "2025-12-31"}
+        facts = api_module._qa_fact_eval(row, obs, [], {})
+        self.assertEqual(facts["dataSource"], "synthetic")
+        self.assertFalse(facts["fixture"])
+
+    def test_output_compute_requires_data_source_and_passes_it_down(self):
+        calls = []
+
+        class FakeMetrics:
+            def output(self, metric_id, **_kwargs):
+                return {"metricId": metric_id}
+
+            def compute(self, metric_id, **kwargs):
+                calls.append((metric_id, kwargs))
+                return {
+                    "metricId": metric_id,
+                    "value": None,
+                    "dataSource": kwargs.get("data_source"),
+                }
+
+        runtime = SimpleNamespace(
+            metadata=FakeMetadata(),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+            metrics=FakeMetrics(),
+        )
+        with TestClient(api_module.create_app(runtime, [])) as client:
+            missing = client.get(
+                "/metrics/FIN-BANK-001/output",
+                params={"compute": "true", "asOf": "2025-12-31"},
+            )
+            self.assertEqual(missing.status_code, 400, missing.text)
+            error = missing.json()["error"]
+            self.assertEqual(error["providerCode"], "E_METRIC_DATA_SOURCE_REQUIRED")
+            self.assertEqual(
+                error["details"]["allowedDataSources"],
+                ["fixture", "business", "synthetic"],
+            )
+
+            ok = client.get(
+                "/metrics/FIN-BANK-001/output",
+                params={
+                    "compute": "true",
+                    "asOf": "2025-12-31",
+                    "dataSource": "synthetic",
+                },
+            )
+            self.assertEqual(ok.status_code, 200, ok.text)
+            self.assertEqual(ok.json()["dataSource"], "synthetic")
+            self.assertEqual(calls[-1][1]["data_source"], "synthetic")
+
+            card = client.get("/metrics/FIN-BANK-001/output")
+            self.assertEqual(card.status_code, 200)
+            self.assertEqual(card.json(), {"metricId": "FIN-BANK-001"})
+            card_ignores_source = client.get(
+                "/metrics/FIN-BANK-001/output", params={"dataSource": "fixture"}
+            )
+            self.assertEqual(card_ignores_source.status_code, 200)
+            self.assertEqual(card_ignores_source.json(), {"metricId": "FIN-BANK-001"})
+            self.assertEqual(len(calls), 1)
+
 
 ENTITY_DETAIL = {
     "label": "测试实体",

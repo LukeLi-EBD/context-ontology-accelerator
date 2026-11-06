@@ -272,6 +272,7 @@ class MetricService:
         period_end: date | None = None,
         entity_key: str | None = None,
         institution: str | None = None,
+        data_source: str | None = None,
     ) -> dict[str, Any]:
         """Compute a metric from registered fields + observations, never per-ID code."""
         row = self._compute_row(metric_id)
@@ -360,6 +361,9 @@ class MetricService:
         if institution:
             window_sql += " AND institution = %s"
             params.append(institution)
+        if data_source:
+            window_sql += " AND data_source = %s"
+            params.append(data_source)
 
         select = f"{numerator_sql} AS numerator_value, "
         select += f"{denominator_sql} AS denominator_value, " if denominator_sql else "NULL AS denominator_value, "
@@ -435,7 +439,7 @@ class MetricService:
             "source": "INDUSTRY" if row["evidence_basis"] == "industry" else "REGULATORY",
             "inference": row["inference"],
             "publishable": row["publishable"],
-            "dataSource": stats["data_source"] or ("fixture" if fixture else "business"),
+            "dataSource": stats["data_source"] or None,
             "fixture": fixture,
             "sampleCount": int(stats["sample_count"]),
             "computedAt": (stats["computed_at"].isoformat()

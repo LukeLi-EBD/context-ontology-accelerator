@@ -227,7 +227,8 @@ _QA_METRIC_HINT_RE = re.compile(
 _QA_FACT_TABLE_RE = re.compile(r"^platform\.[a-z0-9_]+$")
 _QA_OBS_SQL = (
     "SELECT metric_id, definition_version, count(*) AS n, "
-    "bool_or(fixture) AS has_fixture, min(window_start) AS ws, max(window_end) AS we "
+    "bool_or(fixture) AS has_fixture, string_agg(DISTINCT data_source, ',') AS ds, "
+    "min(window_start) AS ws, max(window_end) AS we "
     "FROM platform.metric_observation GROUP BY metric_id, definition_version"
 )
 _QA_BINDING_SQL = (
@@ -497,7 +498,7 @@ def _qa_fact_eval(
         "drivable": False,
         "observationRows": obs_count,
         "fixture": has_fixture,
-        "dataSource": ("fixture" if has_fixture else "business") if obs_count else None,
+        "dataSource": (obs_row or {}).get("ds") if obs_count else None,
         "factTables": [
             {"table": table, "rows": table_counts.get(table)} for table in fact_tables
         ],
@@ -1019,6 +1020,7 @@ def _qa_answer(
     top_k: int = 5,
     strategy: str = "lexical",
     request_id: str | None = None,
+    persist: bool = True,
 ) -> dict[str, Any]:
     coverage = _qa_answerable(
         runtime,
@@ -1239,9 +1241,28 @@ def _qa_answer(
                 compute_output["error"] = "metric_service_unavailable"
             else:
                 try:
+                    # The facts layer already resolved the observed window and
+                    # data source; hand them to compute instead of dropping them.
+                    window = fact_eval.get("window") or {}
+                    compute_kwargs: dict[str, Any] = {}
+                    if selected_metric.get("windowKind") == "instant":
+                        raw_as_of = window.get("end") or window.get("start")
+                        if raw_as_of:
+                            compute_kwargs["as_of"] = date.fromisoformat(str(raw_as_of)[:10])
+                    elif window.get("start") and window.get("end"):
+                        compute_kwargs["period_start"] = date.fromisoformat(
+                            str(window["start"])[:10]
+                        )
+                        compute_kwargs["period_end"] = date.fromisoformat(
+                            str(window["end"])[:10]
+                        )
+                    data_source = fact_eval.get("dataSource")
+                    if data_source and "," not in str(data_source):
+                        compute_kwargs["data_source"] = str(data_source)
                     computed = metrics_port.compute(
                         metric_id_value,
                         internal=False,
+                        **compute_kwargs,
                     )
                     value = computed
                     answer_type = "value"
@@ -1413,12 +1434,12 @@ def _qa_answer(
             "missing": missing,
         }
     )
-    # B-02: every answer that refuses, or that applies a metric's口径判定,
-    # appends one PROV activity. The chain is append-only; nothing is rewritten.
+    # B-02: every persisted answer that refuses, or that applies a metric's口径判定,
+    # appends one PROV activity. persist=False (used by /answer/quality) writes nothing.
     payload["requestId"] = request_id or f"req-{uuid.uuid4().hex[:12]}"
     payload["prov"] = None
     recorder = getattr(runtime, "prov", None)
-    if recorder is not None:
+    if recorder is not None and persist:
         try:
             if refused:
                 record = recorder.record_refusal(
@@ -2067,9 +2088,29 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         period_end: date | None = Query(None, alias="periodEnd"),
         entity_key: str | None = Query(None, alias="entityKey"),
         institution: str | None = None,
+        data_source: str | None = Query(
+            None,
+            alias="dataSource",
+            description=(
+                "Fact source to aggregate over: fixture | business | synthetic. "
+                "Required when compute=true; ignored when compute=false."
+            ),
+        ),
     ) -> dict[str, Any]:
         if not compute:
             return runtime.metrics.output(metric_id, internal=internal)
+        if not data_source:
+            raise PortError(
+                code="InvalidArgument",
+                message="dataSource is required; allowed: " + ", ".join(METRIC_DATA_SOURCES),
+                provider="platform",
+                provider_code="E_METRIC_DATA_SOURCE_REQUIRED",
+                details={
+                    "metricId": metric_id,
+                    "field": "dataSource",
+                    "allowedDataSources": list(METRIC_DATA_SOURCES),
+                },
+            )
         result = runtime.metrics.compute(
             metric_id,
             internal=internal,
@@ -2078,6 +2119,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             period_end=period_end,
             entity_key=entity_key,
             institution=institution,
+            data_source=data_source,
         )
         if result.get("value") is not None:
             result["computationRef"] = _record_computation(
@@ -2087,7 +2129,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 metric_id=metric_id,
                 definition_version=result.get("definitionVersion"),
                 window=result.get("window") or {},
-                data_source=str(result.get("dataSource") or ""),
+                data_source=data_source,
                 computed_at=str(result.get("computedAt") or datetime.now(timezone.utc).isoformat()),
                 value=result.get("value"),
                 unit=result.get("unit"),
@@ -4708,6 +4750,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         "fact-table-field",
         "fact-observation",
         "value-source",
+        "triple",
         "chunk",
     }
     # Frozen 24-query set from doc/_design/24 §5.2 and platform/tests/term_eval.py.
@@ -5214,6 +5257,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                     top_k=5,
                     strategy=strategy,
                     request_id="g4-golden-" + case["id"],
+                    persist=False,
                 )
             except PortError as exc:
                 result = {
