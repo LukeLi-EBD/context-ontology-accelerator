@@ -3031,7 +3031,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             expected_version_id=body.get("expectedVersionId"),
             # `purpose=smoke` 只有在携带内部 token 时才豁免（fail-closed）；
             # 豁免/伪造都会写进证据包与 ontology_event 审计链。
-            # 未配置 token 时一律拒绝豁免，验收栈的 smoke 会表现为 403。
+            # 未配置 token 时一律拒绝豁免，验收栈的 smoke 会表现为 409
+            # E_TERM_GATE_BLOCKED（CLI 自检同样被自身门禁拦下）。
             purpose=body.get("purpose"),
             **smoke,
         )
