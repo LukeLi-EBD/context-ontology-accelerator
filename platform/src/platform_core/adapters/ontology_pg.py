@@ -3192,8 +3192,8 @@ class OntologyRegistry:
                     env_name=getattr(self._terms_gate, "smoke_token_env", None),
                     remote_addr=remote_addr,
                 )
-                purpose_verified = env_ctx["purposeVerified"]
-                purpose_status = env_ctx["purposeStatus"]
+                purpose_verified = env_ctx["purpose_verified"]
+                purpose_status = env_ctx["purpose_status"]
             high_water: dict[str, Any] | None = None
             baseline_error: str | None = None
             try:
