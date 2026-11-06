@@ -1780,11 +1780,12 @@ def hand_checks(meta: MetadataPg, results: list[dict[str, Any]]) -> list[dict[st
             }
         )
 
-    # FIN-BANK-013: sum of balance_start / (balance_start - period_decrease_amount).
+    # FIN-BANK-013: migrated balance net of in-period decrease / beginning balance.
+    # Must match the published binding (V34 + metric_binding_overrides registry).
     exp_num, exp_den = _hand_scalar(
         meta,
-        "SELECT SUM(CASE WHEN risk_class_start = 'normal' AND risk_class_end IN ('special','substandard','doubtful','loss') THEN balance_start ELSE 0 END) AS num, "
-        "SUM(CASE WHEN risk_class_start = 'normal' THEN balance_start - period_decrease_amount ELSE 0 END) AS den "
+        "SELECT SUM(CASE WHEN risk_class_start = 'normal' AND risk_class_end IN ('special','substandard','doubtful','loss') THEN GREATEST(balance_start - period_decrease_amount, 0) ELSE 0 END) AS num, "
+        "SUM(CASE WHEN risk_class_start = 'normal' THEN balance_start ELSE 0 END) AS den "
         "FROM platform.bank_loan_account WHERE data_source = %s AND as_of = '2025-12-31'",
     )
     add("FIN-BANK-013", exp_num, float(by_id["FIN-BANK-013"].get("aggregateNumerator") or 0), exp_den, by_id["FIN-BANK-013"].get("aggregateDenominator"))
