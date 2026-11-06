@@ -159,7 +159,7 @@ class MetricCompiler:
         start: date | str | None = None,
         end: date | str | None = None,
         internal: bool = False,
-        data_source: str = "fixture",
+        data_source: str,
     ) -> dict[str, Any]:
         d = self._definition(metric_id)
         self._gate(metric_id, d, internal)
@@ -187,8 +187,16 @@ class MetricCompiler:
             if start is None or end is None:
                 raise _err(metric_id, BINDING_INVALID, "period metric requires start and end")
             win_start, win_end = str(start), str(end)
+            # A period value is a range, never a point. Reject the degenerate
+            # window explicitly: min_window_days is 0 for these metrics, so the
+            # threshold alone would let a one-day "period" through and the two
+            # value endpoints would disagree on the same request.
+            if win_start == win_end:
+                raise _err(metric_id, WINDOW, "period metric requires a full window")
             # Inclusive days, matching the legacy calculator (end - start + 1).
             span = (date.fromisoformat(win_end) - date.fromisoformat(win_start)).days + 1
+            if span < 1:
+                raise _err(metric_id, WINDOW, "window end precedes start")
             if span < int(d["min_window_days"] or 0):
                 raise _err(metric_id, WINDOW, f"window {span}d below min {d['min_window_days']}d")
 
@@ -286,7 +294,7 @@ class MetricCompiler:
         start: date | str | None = None,
         end: date | str | None = None,
         internal: bool = False,
-        data_source: str = "fixture",
+        data_source: str,
     ) -> dict[str, Any]:
         plan = self.compile(
             metric_id, start=start, end=end, internal=internal, data_source=data_source
@@ -306,8 +314,11 @@ class MetricCompiler:
             })
         result: dict[str, Any] = {
             "metricId": metric_id,
+            "definitionVersion": plan["definitionVersion"],
+            "windowKind": plan["windowKind"],
             "window": plan["window"],
             "dataSource": plan["dataSource"],
+            "factTables": list(plan["_factTables"]),
             "rows": out,
             "noData": len(out) == 0,
         }

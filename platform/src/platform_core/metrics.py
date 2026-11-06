@@ -335,7 +335,11 @@ class MetricService:
             window = {"kind": "instant", "asOf": as_of.isoformat(),
                       "start": as_of.isoformat(), "end": as_of.isoformat()}
         else:
-            if period_start is None or period_end is None:
+            if (
+                period_start is None
+                or period_end is None
+                or period_start == period_end
+            ):
                 raise _bad(metric_id, WINDOW_CODE, "period metric requires a full window", "window")
             days = (period_end - period_start).days + 1
             if days < int(row["min_window_days"] or 0):
