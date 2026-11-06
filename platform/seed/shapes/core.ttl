@@ -1,0 +1,26 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix platform: <urn:platform:rel:> .
+
+# locatedIn is a strong, entity-level relation: its object must be an IRI.
+# Unresolved place mentions are weakly annotated with hasLocationLabel (string)
+# and go through the human approval queue instead (OQ-35).
+<urn:platform:shape:LocatedInObject>
+    a sh:NodeShape ;
+    sh:targetSubjectsOf platform:locatedIn ;
+    sh:property [
+        sh:path platform:locatedIn ;
+        sh:nodeKind sh:IRI ;
+        sh:message "locatedIn must point to an entity IRI, not a literal" ;
+    ] .
+
+# hasLocationLabel is optional; when present it must be a single string.
+<urn:platform:shape:LocationLabel>
+    a sh:NodeShape ;
+    sh:targetSubjectsOf platform:hasLocationLabel ;
+    sh:property [
+        sh:path platform:hasLocationLabel ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1 ;
+        sh:message "hasLocationLabel takes at most one xsd:string literal" ;
+    ] .

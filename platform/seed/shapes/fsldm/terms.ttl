@@ -1,0 +1,282 @@
+# FS-LDM term layer (L1) shapes. All shapes are Warning-only: they inform,
+# they never block an import (pyshacl runs with allow_warnings=True).
+# Deployed as data/shapes/fsldm/terms.ttl and discovered by
+# ShaclValidator.shapes("fsldm") -- no registry change needed.
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix term: <https://w3id.org/fsldm/terms#> .
+
+# 1) Every anchor class (term:termBatch) carries exactly two prefLabels
+#    (zh + en) and prefLabel@zh equals rdfs:label@zh.
+term:PrefLabelShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf term:termBatch ;
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:minCount 2 ;
+        sh:maxCount 2 ;
+        sh:message "每个 batch-1 锚点类必须有且仅有 zh、en 两个 skos:prefLabel"@zh ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "skos:prefLabel@zh 必须与 rdfs:label@zh 完全相等"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2000/01/rdf-schema#label> ?l .
+              $this <http://www.w3.org/2004/02/skos/core#prefLabel> ?p .
+              FILTER(lang(?l) = "zh" && lang(?p) = "zh" && STR(?l) != STR(?p))
+              BIND(STR(?l) AS ?value)
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "每个锚点类必须有一个 skos:prefLabel@en"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <https://w3id.org/fsldm/terms#termBatch> ?b .
+              BIND("en" AS ?value)
+              FILTER NOT EXISTS {
+                $this <http://www.w3.org/2004/02/skos/core#prefLabel> ?p .
+                FILTER(lang(?p) = "en")
+              }
+            }
+        """ ;
+    ] .
+
+# 2) A tagged altLabel must be globally unique per language and must never
+#    collide with any class prefLabel.
+term:AltLabelUniqueShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf term:termBatch ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "skos:altLabel 在同语言下必须全局唯一，且不得等于任何类的 prefLabel"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2004/02/skos/core#altLabel> ?a .
+              FILTER(lang(?a) = "zh")
+              BIND(STR(?a) AS ?value)
+              {
+                ?other <http://www.w3.org/2004/02/skos/core#altLabel> ?b .
+                FILTER(?other != $this && lang(?b) = lang(?a) && STR(?b) = STR(?a))
+              }
+              UNION
+              {
+                ?other <http://www.w3.org/2004/02/skos/core#prefLabel> ?b .
+                FILTER(lang(?b) = lang(?a) && STR(?b) = STR(?a))
+              }
+            }
+        """ ;
+    ] .
+
+# 3) altLabel and TermEntry are two faces of the same fact: every tagged
+#    altLabel needs exactly one matching (forClass, label) entry, and no
+#    (forClass, label) pair may be recorded twice.
+term:AltLabelProvenanceShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf term:termBatch ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "每个带语言标签的 skos:altLabel 必须有同 (forClass, label) 的 TermEntry"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2004/02/skos/core#altLabel> ?a .
+              FILTER(lang(?a) = "zh")
+              BIND(STR(?a) AS ?value)
+              FILTER NOT EXISTS {
+                ?e a <https://w3id.org/fsldm/terms#TermEntry> ;
+                   <https://w3id.org/fsldm/terms#forClass> $this ;
+                   <https://w3id.org/fsldm/terms#label> ?a .
+              }
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "同 (forClass, label) 不得有两条 TermEntry"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <http://www.w3.org/2004/02/skos/core#altLabel> ?a .
+              FILTER(lang(?a) = "zh")
+              BIND(STR(?a) AS ?value)
+              FILTER EXISTS {
+                ?e1 a <https://w3id.org/fsldm/terms#TermEntry> ;
+                    <https://w3id.org/fsldm/terms#forClass> $this ;
+                    <https://w3id.org/fsldm/terms#label> ?a .
+                ?e2 a <https://w3id.org/fsldm/terms#TermEntry> ;
+                    <https://w3id.org/fsldm/terms#forClass> $this ;
+                    <https://w3id.org/fsldm/terms#label> ?a .
+                FILTER(?e1 != ?e2)
+              }
+            }
+        """ ;
+    ] .
+
+# 4) TermEntry status contract: evidenced -> term:source, no confidence;
+#    inferred -> exactly one confidence in {high, medium}.
+term:TermEntryStatusShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetClass term:TermEntry ;
+    sh:property [
+        sh:path term:status ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "TermEntry 必须有且仅有 1 个 term:status"@zh ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "evidenced 词条必须有 term:source 且不得带 term:confidence"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              {
+                $this <https://w3id.org/fsldm/terms#status>
+                      <https://w3id.org/fsldm/terms#evidenced> .
+                BIND("evidenced" AS ?value)
+                FILTER NOT EXISTS {
+                  $this <https://w3id.org/fsldm/terms#source> ?s .
+                }
+              }
+              UNION
+              {
+                $this <https://w3id.org/fsldm/terms#status>
+                      <https://w3id.org/fsldm/terms#evidenced> .
+                $this <https://w3id.org/fsldm/terms#confidence> ?c .
+                BIND("evidenced-with-confidence" AS ?value)
+              }
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "inferred 词条必须有且仅有 1 个 term:confidence ∈ {high, medium}"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              {
+                $this <https://w3id.org/fsldm/terms#status>
+                      <https://w3id.org/fsldm/terms#inferred> .
+                BIND("inferred-confidence" AS ?value)
+                OPTIONAL { $this <https://w3id.org/fsldm/terms#confidence> ?c }
+                FILTER(
+                  !BOUND(?c)
+                  || ?c != <https://w3id.org/fsldm/terms#high>
+                     && ?c != <https://w3id.org/fsldm/terms#medium>
+                )
+              }
+              UNION
+              {
+                $this <https://w3id.org/fsldm/terms#confidence> ?c1 .
+                $this <https://w3id.org/fsldm/terms#confidence> ?c2 .
+                FILTER(?c1 != ?c2)
+                BIND("inferred-confidence-duplicate" AS ?value)
+              }
+            }
+        """ ;
+    ] .
+
+# 5) guardRegex only on medium entries (loading compiles it separately:
+#    a broken regex is a hard E_TERM_GUARD_INVALID, not a warning).
+term:GuardOnlyOnMediumShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf term:guardRegex ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "term:guardRegex 只允许写在 term:medium 词条上"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <https://w3id.org/fsldm/terms#guardRegex> ?r .
+              BIND("guard-not-medium" AS ?value)
+              FILTER NOT EXISTS {
+                $this <https://w3id.org/fsldm/terms#confidence>
+                      <https://w3id.org/fsldm/terms#medium> .
+              }
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "medium 词条必须写 1 条 term:guardRegex"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <https://w3id.org/fsldm/terms#confidence>
+                    <https://w3id.org/fsldm/terms#medium> .
+              BIND("medium-without-guard" AS ?value)
+              FILTER NOT EXISTS {
+                $this <https://w3id.org/fsldm/terms#guardRegex> ?r .
+              }
+            }
+        """ ;
+    ] .
+
+# 6) Canonical defer: the deferring class keeps its own synonyms but gives one
+#    surface away; that surface must appear in its own prefLabel and must not be
+#    used as an altLabel anywhere.
+term:CanonicalDeferShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf term:canonicalFor ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "term:canonicalFor 目标必须是本批锚点类，且自身不得再 defer"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              {
+                $this <https://w3id.org/fsldm/terms#canonicalFor> ?c .
+                BIND(STR(?c) AS ?value)
+                FILTER NOT EXISTS {
+                  ?c <https://w3id.org/fsldm/terms#termBatch> ?b .
+                }
+              }
+              UNION
+              {
+                $this <https://w3id.org/fsldm/terms#canonicalFor> ?c .
+                ?c <https://w3id.org/fsldm/terms#canonicalFor> ?c2 .
+                BIND(STR(?c) AS ?value)
+              }
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "term:suppressedSurface 必须出现在本类 prefLabel 中，且不得被任何类用作 altLabel"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              {
+                $this <https://w3id.org/fsldm/terms#suppressedSurface> ?s .
+                BIND(STR(?s) AS ?value)
+                FILTER NOT EXISTS {
+                  $this <http://www.w3.org/2004/02/skos/core#prefLabel> ?p .
+                  FILTER(lang(?p) = lang(?s) && CONTAINS(STR(?p), STR(?s)))
+                }
+              }
+              UNION
+              {
+                $this <https://w3id.org/fsldm/terms#suppressedSurface> ?s .
+                ?other <http://www.w3.org/2004/02/skos/core#altLabel> ?a .
+                FILTER(lang(?a) = lang(?s) && STR(?a) = STR(?s))
+                BIND(STR(?s) AS ?value)
+              }
+            }
+        """ ;
+    ] .
+
+# 7) T1/T2 stage: definition is required only for anchor classes, warning now,
+#    promoted to Violation in T3 when all 15 definitions exist.
+term:DefinitionShape a sh:NodeShape ;
+    sh:severity sh:Warning ;
+    sh:targetSubjectsOf term:termBatch ;
+    sh:sparql [
+        sh:severity sh:Warning ;
+        sh:message "锚点类必须补 skos:definition@zh（20–220 字；T3 升 Violation）"@zh ;
+        sh:select """
+            SELECT $this ?value WHERE {
+              $this <https://w3id.org/fsldm/terms#termBatch> ?b .
+              BIND("missing-definition" AS ?value)
+              FILTER NOT EXISTS {
+                $this <http://www.w3.org/2004/02/skos/core#definition> ?d .
+                FILTER(lang(?d) = "zh")
+              }
+            }
+        """ ;
+    ] .

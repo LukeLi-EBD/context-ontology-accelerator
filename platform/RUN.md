@@ -3,35 +3,51 @@
 面向"另一台机器 clone 后能跑起来"。`platform/` 是独立项目：所有命令都在
 **`coa/platform`** 目录下执行，无需 `-f` 指定 compose 文件。
 
-三行起（已装 Docker Desktop，且 `D:\agentABC\data` 已就位）：
+三行起（已装 Docker Desktop；全新机器**不需要**预置数据目录）：
 
 ```powershell
 git clone <repo> coa && cd coa\platform
-Copy-Item .env.example .env        # 填 POSTGRES_PASSWORD、ARK_API_KEY
-docker compose up -d --wait        # 首次构建 reasoner 需联网下载 robot.jar（见 §2）
+Copy-Item .env.example .env        # 填 POSTGRES_PASSWORD；不要保留 CHANGE_ME
+powershell -ExecutionPolicy Bypass -File scripts\stack.ps1 up -Name agent-platform -DataRoot D:/agentABC/data
 ```
+
+> 必须用 `stack.ps1 up`，不要只跑 `docker compose up -d --wait`：`stack.ps1` 会自动建目录、
+> 生成 `data/platform.yaml`，并从仓库内 `platform/seed/` 拷贝 `ontology/bootstrap.ttl` 与
+> `shapes/`。全新机器上直接 `compose up` 会因缺少 T-Box 种子以 `E_ONTOLOGY_TBOX_MISSING`（69）
+> 退出（2026-11-06 迁移演练实测）。
 
 ## 1. 前置条件
 
 - Docker Desktop（WSL2 后端）。实测 VM 上限：**12 CPU / 11.68 GiB**；16 CPU 会被 Docker Desktop 直接拒绝。
 - 宿主建议 16 GB 内存、D 盘可用 ≥ 20 GB（`/readyz` 会因 `min_free_pct=10` 失败）。
 - 端口占用（全部绑 `127.0.0.1`）：
-  - `8080` 平台 API/UI，`8081` embedding（TEI），`5432` PostgreSQL，`7879` reasoner
-  - `7878` Oxigraph **不映射宿主**（无鉴权，暴露即可绕过 GSP 治理）
+  - `8080` 平台 API/UI，`8081` embedding（TEI），`5432` PostgreSQL，`7879` reasoner，`3030` fuseki
+  - `7878` Oxigraph **不映射宿主**（无鉴权，暴露即可绕过 GSP 治理）；二套栈如需访问用
+    `docker-compose.oxigraph-host.yml` + `-OxigraphPort`
+  - 二套栈必须避开上面所有默认端口（尤其 8081/7879/3030）；`stack.ps1` 的预检覆盖
+    api/postgres/reasoner/embedding/oxigraph/fuseki，**不是只查 api**
 - 模型与镜像：`agent-platform:0.1-s5`、`agent-reasoner:0.1-s5`、`agent-rdfs:0.1-s5`、pgvector、oxigraph、TEI 均由本地构建或拉取。
 
 ## 2. 目录准备（数据不在 git 里）
 
-运行时数据统一放在 **`D:\agentABC\data`**（compose 以绝对路径 bind 到容器 `/data`），
-仓库里只有占位 `platform/data/README.md`。首次在新机器部署：
+运行时数据统一放在 **`D:\agentABC\data`**（compose 以绝对路径 bind 到容器 `/data`）。
+`stack.ps1 up` 会自动完成下面全部步骤；手工部署时可照做：
 
 ```powershell
 Copy-Item .env.example .env                            # 放 coa/platform/.env（gitignored）
 New-Item -ItemType Directory -Force D:\agentABC\data
 Copy-Item platform.example.yaml D:\agentABC\data\platform.yaml   # 填 database.url 口令（与 .env 一致）
-New-Item -ItemType Directory -Force D:\agentABC\data\blobs,D:\agentABC\data\tmp,D:\agentABC\data\shapes | Out-Null
+Copy-Item seed\ontology\bootstrap.ttl D:\agentABC\data\ontology\
+Copy-Item seed\shapes\* D:\agentABC\data\shapes\ -Recurse
 ```
 
+- **T-Box 种子随仓库提供**：`platform/seed/ontology/bootstrap.ttl`（660 B）与
+  `platform/seed/shapes/`（core + fsldm）。非默认数据根优先从默认数据根拷贝，找不到时回退到
+  `platform/seed/`；两者都没有时启动会以 `E_ONTOLOGY_TBOX_MISSING` 失败。
+- `platform.yaml` 里 `database.url` 的口令必须与 `.env` 的 `POSTGRES_PASSWORD` 一致。`serve`
+  会读 compose 注入的 `PLATFORM__DATABASE__URL`，但 `smoke-s3` 这类会用文件里 URL 起第二个池的
+  子命令不走覆盖，口令不一致会 `password authentication failed`。`stack.ps1` 检测到
+  `CHANGE_ME` 会打印 WARNING。
 - `D:\agentABC\data\models\bge-m3\`：BGE-M3 模型约 **2.14 GB**（含 `pytorch_model.bin` 2.17 GB），目录固定，只读挂载给 TEI。
   离线拷贝：`robocopy <源>\models D:\agentABC\data\models /E`。不放入时 embedding 容器无法启动，检索退化为仅词法（响应标注 `lexicalOnly`）。
 - `reasoner/robot.jar`（93 MB）**不需要手工放置**：`reasoner` 镜像构建时自动下载并校验，见下节。
@@ -111,15 +127,16 @@ docker compose up -d
 docker compose ps
 ```
 
-迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V19__metric_observation.sql`，
-**当前最新为 V19**（历史任务描述里的 V16/V17 已过时）。
+迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V20__metric_entities.sql`，
+**当前最新为 V20**（以 `sql/` 目录里编号最大的文件与实际 `SUPPORTED_SCHEMA_VERSION` 为准）。
 
 期望返回：
 
 ```powershell
 curl.exe -s http://127.0.0.1:8080/readyz
 # {"ok":true,"checks":{"database":{"status":"ok"},"graph":{"status":"ok"},
-#  "storage":{"status":"ok","disk_free_pct":...},"embedding":{...},"reasoner":{...}}}
+#  "storage":{"status":"ok","disk_free_pct":...}}}
+# 只检查 database/graph/storage；embedding/reasoner 不可用不会让 /readyz 非 200
 # 任一 status=fail 时 HTTP 非 200，detail 指明原因
 
 curl.exe -s http://127.0.0.1:8080/status
@@ -191,66 +208,100 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
 
 ## 8. 迁移与固化（bundle）
 
-bundle 是跨环境迁移用的只读包（清单 + 数据文件 + 校验和）。**本体不入库**（`_freeze/v1-20261105` 约 79 MB，
-含 `vectors/embeddings.npz`）；仓库只保留清单副本 `platform/freeze-manifests/v1-20261105.json`。
+bundle 是跨环境迁移用的只读包（清单 + 数据文件 + 校验和）。**本体在 Oxigraph，不写入关系库**：
+`graph/tbox.ttl` 是已发布的 Turtle 源，导入时走 `import_document -> publish` 治理链。2026-11-06 演练
+实测导出为 **110 MB / 13 个文件**（不含附件原文），源栈与恢复栈的比对见 `_design/28-迁移恢复演练.md`。
 
 ### 8.1 导出（只读，不写生产库）
 
 ```powershell
 docker compose exec -T platform `
   python -m platform_core.cli export-bundle --config /data/platform.yaml `
-  --out /data/freeze --tag v1-20261105
-# 默认只导元数据；连 CAS 原文一起打包加 --include-blobs（体积显著增大）
+  --out /data/freeze --tag <tag>
+# 默认不含附件原文；--include-blobs 会把 data/blobs/ 的 CAS 文件一起打包，
+# 但当前 import-bundle 不消费 blobs/（见 8.5），不要把它当作完整恢复
 ```
 
-产物落在宿主 `D:\agentABC\data\freeze/v1-20261105/`（`data/` 已在 `.gitignore` 中）。
+产物落在宿主 `D:\agentABC\data\freeze/<tag>/`（`data/` 已在 `.gitignore` 中）。
 
 ### 8.2 目录结构
 
 ```
-v1-20261105/
-  MANIFEST.json                # bundleVersion=1 / schemaVersion=17 / tag / totals / files[]
-  graph/tbox.ttl               # T-Box（owl:imports 已内联展开）
-  graph/abox.ttl               # A-Box（本 bundle 为空）
-  graph/shapes.ttl             # 已部署的 SHACL shapes
-  ledger/fact_events.jsonl     # 事实事件账本
-  ledger/verify.json           # 哈希链校验结果
-  meta/documents.jsonl         # 1122 条
-  meta/chunks.jsonl            # 13274 条
-  meta/ontology_import.jsonl   # 15 条
-  vectors/embeddings.npz       # 11905 × 1024（BGE-M3）
+<tag>/
+  MANIFEST.json                  # bundleVersion=1 / schemaVersion=当前 20 / tag / totals / files[]
+  graph/tbox.ttl                 # T-Box（owl:imports 已内联展开，含条款/术语个体）
+  graph/abox.ttl                 # A-Box（当前为空）
+  graph/shapes.ttl               # 已部署的 SHACL shapes
+  ledger/fact_events.jsonl       # 事实事件账本（含 createdAt）
+  ledger/verify.json             # 哈希链校验结果
+  meta/documents.jsonl           # 文档元数据
+  meta/chunks.jsonl              # 分块
+  meta/document_pages.jsonl      # 逐页正文（2026-11-06 新增）
+  meta/ontology_import.jsonl     # 本体导入历史
+  meta/metric_definitions.jsonl  # 指标口径注册表（2026-11-06 新增）
+  meta/metric_observations.jsonl # 指标观测（时间序列，2026-11-06 新增）
+  meta/metric_entity_facts.jsonl # ins_payment_record + loan_installment_plan（2026-11-06 新增）
+  vectors/embeddings.npz         # chunk 向量（BGE-M3）
   vectors/README
-  blobs/<aa>/<sha256>          # 仅 --include-blobs 时存在
+  blobs/<aa>/<sha256>            # 仅 --include-blobs 时存在（import 不消费）
 ```
 
-### 8.3 导入（恢复到一次性测试库，绝不写 `platform`）
+**包含关系**：本体 ✔ / 事实 ✔ / 术语 ✔（T-Box 内 `terms#TermEntry` 个体，`source.tbox.termEntries`
+记数）/ 指标定义 ✔ / 观测与实体事实 ✔ / 文档元数据、分块、逐页正文、向量 ✔ / **附件原文字节 ✘**
+（PG 内的 `platform.blob/blob_bytea` 未导出；fs 侧 CAS 仅在 `--include-blobs` 时打包）。
+
+### 8.3 导入
+
+默认恢复到一次性测试库，**绝不写 `platform`**：
 
 ```powershell
 docker compose exec -T platform `
   python -m platform_core.cli import-bundle --config /data/platform.yaml `
-  --bundle /data/freeze/v1-20261105 --database platform_restore_test --replace
+  --bundle /data/freeze/<tag> --database platform_restore_test --replace
 ```
 
-- 目标库名等于生产库名会被拒（`E_BUNDLE_PROD_TARGET`）；库已存在需 `--replace`
-- 导入前先 `verify_bundle`：清单、每个文件的 sha256/大小/行数、NPZ 维度、账本哈希链
-- 失败保留现场加 `--keep-db-on-failure`；CLI 打印 `checks[]`，任一项 `ok=false` 退出码非 0
+迁移/容灾到一套**全新启动的栈**时，显式允许就地恢复：
 
-### 8.4 五项核对表
+```powershell
+docker compose exec -T platform `
+  python -m platform_core.cli import-bundle --config /data/platform.yaml `
+  --bundle /data/freeze/<tag> --database platform --into-empty-platform
+```
 
-| 项 | 期望（本 bundle） |
-| --- | --- |
-| documents | 与 `totals.documents` 相等（1122） |
-| chunks | 与 `totals.chunks` 相等（13274） |
-| vectors | 行数 = `totals.embeddings`（11905），chunk_id 集合一致；抽 20 条余弦 ≥ 0.999 |
-| triples | T-Box + restore A-Box 合计 = `totals.triples`（2676） |
-| facts | `fact_event` = `totals.factEvents`（3280），`fact_assertion` = 0 |
+- 目标库名等于生产库名且未加 `--into-empty-platform` → `E_BUNDLE_PROD_TARGET`
+- 加了 `--into-empty-platform` 但目标已有 `document`/`fact_event`/`metric_observation` 任一非空
+  → `E_BUNDLE_TARGET_NOT_EMPTY`（防止误写生产）；刚启动、只有 bootstrap T-Box 的栈算空
+- 库已存在需 `--replace`（仅限非生产库）；失败保留现场加 `--keep-db-on-failure`
+- 导入前先 `verify_bundle`：清单、每个文件的 sha256/大小/行数、NPZ 维度、账本哈希链、
+  指标注册表内容哈希与术语计数
+- CLI 打印 `checks[]`，任一项 `ok=false` 退出码非 0
 
-### 8.5 两条硬约束
+### 8.4 核对表（2026-11-06 生产栈 → drill 栈实测）
 
-- **`schemaVersion` 必须与代码完全匹配**（`manifest.schemaVersion == SUPPORTED_SCHEMA_VERSION`，当前 19）；
-  不一致直接 `E_BUNDLE_SCHEMA_MISMATCH`，不做隐式升级/降级 —— 先把库迁到对应版本再导。
-- **blobs 不在 bundle 内**（`totals.blobs.included=false`）。要完整还原原文下载/预览，需单独同步
-  `data/blobs/`（CAS 目录）；只缺 blobs 时元数据仍可恢复，但 `/documents/{id}/source` 会 404。
+| 项 | 源 | 目标 | 结果 |
+| --- | --- | --- | --- |
+| T-Box triples | 2961 | 2961 | 等 |
+| 术语 `terms#TermEntry` | 18 | 18 | 等 |
+| `metric_definition` | 79（hash 一致） | 79 | 等 |
+| `metric_observation` | 0 | 0 | 等 |
+| `ins_payment_record` / `loan_installment_plan` | 0 / 0 | 0 / 0 | 等 |
+| `document` | 2038 | 2038 | 等 |
+| `document_chunk` | 14190 | 14190 | 等 |
+| `chunk_embedding` | 14163 | 14163 | 等 |
+| `document_page` | 6191 | 6191 | 等 |
+| `fact_event` | 6481 | 6481 | 等 |
+| 账本导出字节 | sha256 一致 | 一致 | 等（`created_at` 已保真） |
+
+### 8.5 硬约束
+
+- **`schemaVersion` 必须与代码完全匹配**（`manifest.schemaVersion == SUPPORTED_SCHEMA_VERSION`，
+  当前 20）；不一致直接 `E_BUNDLE_SCHEMA_MISMATCH`，不做隐式升级/降级。
+- **附件原文字节不进 bundle**（`totals.blobs.included=false`）。生产栈 3111 个 blob 元数据、
+  3092 个字节体（约 710 MB）在 PG 的 `platform.blob/blob_bytea`；fs 侧 19 个文件（592 MB）只有
+  `--include-blobs` 才进包，且 `import-bundle` 目前**不读取** `blobs/`。因此恢复栈上
+  `/documents/{id}/source` 会 404 —— 迁移阻断项，完整恢复需另做附件同步（见 §9.5）。
+- **恢复后写序列自动校正**：replay 会把 `fact_event` 的 bigserial 设到 `MAX(event_id)` 之后，
+  否则新事实写入会撞 `fact_event_pkey`（演练中 `smoke-s8/s12` 曾因此失败）。
 
 ## 9. 并行双栈（compose 参数化）
 
@@ -278,42 +329,85 @@ docker compose exec -T platform `
 `/data` 是 bind mount，必须用 `PLATFORM_DATA_ROOT` 指到不同目录，两套栈才不共用库/文件。
 同一栈内重型锁仍互斥；**跨栈不互斥是刻意的**，靠下面的资源预算约束。
 
-### 9.2 起一套短时验证栈
+### 9.2 起一套短时验证栈（drill）
+
+默认栈在跑时，二套栈必须把 **api / pg / oxigraph / reasoner** 全部换成非默认端口；
+`reasoner` 不能省（见下方说明）。
 
 ```powershell
-# 第二套：api 8081 / pg 5433 / oxigraph 7879，独立卷与独立数据根
-powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 up -Name platform-b `
-  -ApiPort 8081 -PgPort 5433 -OxigraphPort 7879 `
-  -DataRoot D:/agentABC/data-b `
-  -Services postgres,oxigraph,platform
+# 第二套：api 8083 / pg 5434 / reasoner 7884 / oxigraph 7882，独立卷与独立数据根
+powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 up -Name platform-drill `
+  -ApiPort 8083 -PgPort 5434 -ReasonerPort 7884 -OxigraphPort 7882 `
+  -DataRoot D:/agentABC/data-drill `
+  -Services postgres,oxigraph,platform,reasoner
 
-powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 status -Name platform-b -ApiPort 8081
-curl.exe -s http://127.0.0.1:8081/readyz
+powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 status -Name platform-drill -ApiPort 8083
+curl.exe -s http://127.0.0.1:8083/readyz
 ```
 
-注意：默认栈的 embedding 占 8081、reasoner 占 7879。若 B 必须用这两个端口，先临时
-`docker compose stop embedding reasoner`（它们都是 learn-only，不影响 `/readyz`），
-或者把 B 改成 `-ApiPort 8082 -OxigraphPort 7880`。
+为什么必须带 `reasoner`：启动时 `ontology.init_source` 走 `materialize`，平台要连 reasoner 完成
+首次 T-Box 物化；只起三容器时 `serve` 以 `E_ONTOLOGY_INIT_FAILED` 退出 78，容器反复重启，
+`/readyz` 永远不会 200（2026-11-06 实测，等待 180s 后失败）。RUN.md 旧版本"只起三个核心容器"的说法
+是错的。
 
-`stack.ps1 up` 会先做端口预检：端口被别人占用时直接
-`E_STACK_PORT_IN_USE: ... used by pid=... (not project 'platform-b')`，不会盲起容器；
-`/readyz` 探测带 `-WaitSeconds`（默认 180s）/`-ProbeSeconds`（默认 5s）超时。
+- 只起 `-Services postgres,oxigraph,platform,reasoner` 可让端口预检跳过 embedding/fuseki；
+  若要一起起 embedding，还要 `-EmbeddingPort 8084` 并接受约 6g 常驻内存。
+- `-OxigraphPort` 不给时 Oxigraph 不映射宿主（默认行为）；给 0 以外的值会自动追加
+  `docker-compose.oxigraph-host.yml`。
+- 首次 `up` 会 `docker compose up -d`：本地没有镜像时会现场构建 `platform` / `reasoner` /
+  `rdfs`。全新机器请先单独 `docker compose build platform reasoner`（reasoner 需联网下载 jar）。
+- `stack.ps1 up` 会先做端口预检：端口被别人占用时直接
+  `E_STACK_PORT_IN_USE: ... used by pid=... (not project 'platform-drill')`，不会盲起容器；
+  `/readyz` 探测带 `-WaitSeconds`（默认 180s）/`-ProbeSeconds`（默认 5s）超时。
+- 新数据根的 `platform.yaml` 口令仍是 `CHANGE_ME` 时，按 §2 改成与 `.env` 的
+  `POSTGRES_PASSWORD` 一致，否则 `smoke-s3` 会认证失败。
 
 ### 9.3 资源预算（硬约束）
 
 - Docker VM 实测上限 **12 CPU / 11.68 GiB**，16 CPU 会被 Docker Desktop 拒绝。
-- B 栈只用于**短时验证**，不常驻；验证栈建议只起 `postgres,oxigraph,platform` 三个核心容器。
+- B 栈只用于**短时验证**，不常驻；最小可启动集合是 `postgres,oxigraph,platform,reasoner`，
+  不是三容器。
 - **不得两套同时跑重型作业**（批量导入、全量索引、acceptance、reasoner 物化）；同一时间只允许
   一套做重活，另一套保持只读/空闲。
-- B 栈不要挂 `learn` profile（embedding 常驻约 6g、reasoner 4g），否则内存直接超预算。
+- B 栈不要起 embedding（闲置也占约 6g 限额），否则内存容易超预算；reasoner 空闲实测仅约 30 MB，
+  但与默认栈 reasoner 并行做物化时会翻倍。
 
 ### 9.4 拆除与残渣核对
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 down -Name platform-b `
-  -ApiPort 8081 -PgPort 5433 -OxigraphPort 7879 `
-  -DataRoot D:/agentABC/data-b -RemoveDataRoot
+powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 down -Name platform-drill `
+  -ApiPort 8083 -PgPort 5434 -ReasonerPort 7884 -OxigraphPort 7882 `
+  -DataRoot D:/agentABC/data-drill -RemoveDataRoot
 ```
 
-`down -v` 删除 B 的命名卷，`-RemoveDataRoot` 删除 `D:/agentABC/data-b`；脚本末尾打印
-`residual containers/volumes for 'platform-b'`，两者都应为 `none`。
+`down -v` 删除 B 的命名卷，`-RemoveDataRoot` 删除 `D:/agentABC/data-drill`；脚本末尾打印
+`residual containers/volumes for 'platform-drill'`，两者都应为 `none`。
+
+### 9.5 代码更新与一键迁移演练
+
+`stack.ps1 up` 发现 api 端口已被本栈发布时会直接跳过 compose up，**`git pull` 后代码不会自动更新**。
+升级二套栈：
+
+```powershell
+git pull
+docker compose build platform
+$env:COMPOSE_PROJECT_NAME='platform-drill'; $env:PLATFORM_PORT='8083'
+$env:POSTGRES_PORT='5434'; $env:REASONER_PORT='7884'; $env:OXIGRAPH_PORT='7882'
+$env:PLATFORM_DATA_ROOT='D:/agentABC/data-drill'
+docker compose -p platform-drill -f docker-compose.yml -f docker-compose.oxigraph-host.yml `
+  up -d --force-recreate --no-deps platform
+```
+
+（必须带全部端口/数据根 env；少了就会回落到 8080 与默认栈冲突。）
+
+一键演练（导出 → 起新栈 → 导入 → 数字比对，默认只碰 drill 栈）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -DryRun   # 先看会执行什么
+powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1            # 实跑
+powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget  # 目标已有数据时先重建
+```
+
+脚本默认参数：source=`agent-platform`（8080，只读导出）、target=`platform-drill`
+（8083/5434/7884/7882，数据根 `D:/agentABC/data-drill`）。任何一项计数不等都会打印 `MISMATCH` 并以
+非 0 退出；它不会 `down` 默认栈，也不会写默认库。

@@ -5,11 +5,15 @@
 #   fuseki=3030, oxigraph not published, data root=D:/agentABC/data.
 #
 # Parallel stack example (short-lived verification only):
-#   powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 up -Name platform-b `
-#     -ApiPort 8081 -PgPort 5433 -OxigraphPort 7879 -DataRoot D:/agentABC/data-b `
-#     -Services postgres,oxigraph,platform
+#   powershell -ExecutionPolicy Bypass -File scripts/stack.ps1 up -Name platform-drill `
+#     -ApiPort 8083 -PgPort 5434 -ReasonerPort 7884 -OxigraphPort 7882 `
+#     -DataRoot D:/agentABC/data-drill `
+#     -Services postgres,oxigraph,platform,reasoner
 #
 # Notes:
+#   * reasoner is required even for a verification stack: the first T-Box
+#     materialization at startup fails (E_ONTOLOGY_INIT_FAILED, exit 78)
+#     without it.
 #   * Two stacks never share named volumes (compose scopes them by project) and
 #     never share the bind data root (PLATFORM_DATA_ROOT).
 #   * The heavy lock is per-stack: same stack still mutex, cross-stack is
@@ -97,7 +101,6 @@ function Get-DataRootDefault {
 }
 
 function Initialize-DataRoot {
-    if ($dataRootNormalized -eq (Get-DataRootDefault)) { return }
     $path = $dataRootNormalized -replace '/', [IO.Path]::DirectorySeparatorChar
     foreach ($sub in @('', 'blobs', 'tmp', 'shapes', 'ontology')) {
         $dir = if ($sub) { Join-Path $path $sub } else { $path }
@@ -106,22 +109,36 @@ function Initialize-DataRoot {
     $config = Join-Path $path 'platform.yaml'
     if (-not (Test-Path -LiteralPath $config)) {
         Copy-Item -LiteralPath (Join-Path $root 'platform.example.yaml') -Destination $config
-        Write-Host "[stack] seeded $config from platform.example.yaml (database.url is overridden by compose env)"
+        Write-Host "[stack] seeded $config from platform.example.yaml"
+    }
+    if ((Get-Content -LiteralPath $config -Raw) -match 'CHANGE_ME') {
+        Write-Host "[stack] WARNING: $config still contains CHANGE_ME. Set database.url's password to the same value as POSTGRES_PASSWORD, otherwise CLI subcommands that bypass the compose env (for example smoke-s3) fail authentication."
     }
     $bootstrap = Join-Path $path 'ontology/bootstrap.ttl'
     if (-not (Test-Path -LiteralPath $bootstrap)) {
         $source = Join-Path ((Get-DataRootDefault) -replace '/', [IO.Path]::DirectorySeparatorChar) 'ontology/bootstrap.ttl'
+        if (-not (Test-Path -LiteralPath $source)) {
+            $source = Join-Path $root 'seed/ontology/bootstrap.ttl'
+            Write-Host "[stack] seeding bootstrap from the repo seed (no default data root found)"
+        }
         if (Test-Path -LiteralPath $source) {
             Copy-Item -LiteralPath $source -Destination $bootstrap
-            Write-Host "[stack] seeded $bootstrap from the default data root"
+            Write-Host "[stack] seeded $bootstrap from $source"
+        } else {
+            Write-Host "[stack] WARNING: no bootstrap.ttl source found; serve will exit with E_ONTOLOGY_TBOX_MISSING"
         }
     }
     $targetShapes = Join-Path $path 'shapes'
     $sourceShapes = Join-Path ((Get-DataRootDefault) -replace '/', [IO.Path]::DirectorySeparatorChar) 'shapes'
     $existingShapes = @(Get-ChildItem -LiteralPath $targetShapes -Recurse -File -ErrorAction SilentlyContinue)
-    if ((Test-Path -LiteralPath $sourceShapes) -and $existingShapes.Count -eq 0) {
-        Copy-Item -Path (Join-Path $sourceShapes '*') -Destination $targetShapes -Recurse -Force
-        Write-Host "[stack] seeded $targetShapes from the default data root"
+    if ($existingShapes.Count -eq 0) {
+        if (-not (Test-Path -LiteralPath $sourceShapes)) {
+            $sourceShapes = Join-Path $root 'seed/shapes'
+        }
+        if (Test-Path -LiteralPath $sourceShapes) {
+            Copy-Item -Path (Join-Path $sourceShapes '*') -Destination $targetShapes -Recurse -Force
+            Write-Host "[stack] seeded $targetShapes from $sourceShapes"
+        }
     }
 }
 
