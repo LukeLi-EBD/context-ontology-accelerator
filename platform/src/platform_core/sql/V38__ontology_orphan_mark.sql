@@ -1,11 +1,11 @@
--- V42: 生命周期/证据“孤儿行”的旁路标记表（append-only）。
+-- V38: 生命周期/证据“孤儿行”的旁路标记表（append-only）。
 --
 -- 背景：测试清理（test_g01 / smoke_s1）删除 ontology_version 行，但
 -- ontology_lifecycle_transition 与 ontology_evidence 保留下来，形成悬空行。
 -- 约束：历史行不可删除、不可改写，只能在旁路表追加“孤儿标记”。
 --
 -- 集成方须知：
---   1) 本文件只定义结构，不对共享库执行；由集成方按既定顺序（V41 之后）应用，
+--   1) 本文件只定义结构，不对共享库执行；由集成方按既定顺序（V37 之后）应用，
 --      并登记到 metadata_pg.MIGRATIONS（当前代码支持到 V34，V35+ 由集成方管理）。
 --   2) 标记行只增不改；重复扫描使用 ON CONFLICT (entity_kind, entity_ref) DO NOTHING。
 --   3) 审计链（/ontology/verify）校验必须忽略本表，不能据此过滤事件链。

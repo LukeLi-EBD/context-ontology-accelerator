@@ -3003,6 +3003,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             actor=body.get("actor", "operator"),
             reason=body.get("reason"),
             expected_version_id=body.get("expectedVersionId"),
+            # Explicit self-check exemption only: `purpose=smoke` lets a probe
+            # publish a T-Box without terms; the exemption is recorded in the
+            # evidence pack (actor / path / high-water baseline).
+            purpose=body.get("purpose"),
         )
 
     @app.post("/ontology/rollback")
@@ -3425,6 +3429,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             abox_graphs=runtime.config.reasoning.abox_graphs,
             publish_existing=bool(payload.get("publishExisting", False)),
             expected_version_id=payload.get("expectedVersionId"),
+            # Only `purpose=smoke` exempts the vocab-zero guard; it is recorded
+            # in the evidence pack rather than silently disabling the gate.
+            purpose=payload.get("purpose"),
         )
 
     @app.put("/ontology/shapes")
@@ -5928,5 +5935,19 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         )
 
     # --- end G5 ---
+
+    # --- G8 terms gate routes ---
+    @app.get("/ontology/terms/gate")
+    def ontology_terms_gate() -> dict[str, Any]:
+        """Configured ``terms.gate`` tier plus the latest publish-gate result.
+
+        ``last`` is null before the first publish attempt; ``emptyReason``
+        explains why instead of fabricating zero counts.
+        """
+        from .termgate import status
+
+        return status(runtime)
+
+    # --- end G8 ---
 
     return app

@@ -155,6 +155,9 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         abox_graphs=cfg.reasoning.abox_graphs,
         reason_profile=cfg.reasoning.profile,
     )
+    # --- G8 terms gate ---
+    ontology.set_terms_gate(cfg.terms)
+    # --- end G8 terms gate ---
     context = ContextResolver(cfg.context, ontology, reasoning, search, graph, facts)
     # Q4: pre-retrieval coverage gate over T-Box terms (SKOS when present).
     answerable = AnswerabilityService(cfg.context, ontology, graph)

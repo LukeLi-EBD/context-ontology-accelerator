@@ -21,6 +21,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import json
@@ -29,12 +30,13 @@ import httpx
 from psycopg.types.json import Jsonb
 from rdflib import BNode, Graph, Namespace, OWL, RDF, RDFS, URIRef
 
-from ..config import OntologyConfig
+from ..config import OntologyConfig, TermsConfig
 from ..errors import EXIT_CONFIG, PortError, PlatformError
 from ..facts import event_hash
 from ..ontology_lifecycle import list_transitions, record_transition, validate_transition
 from ..ports import Manifest
 from ..termlex import assert_guards_compilable
+from .. import termgate, termgov
 from .graph_oxigraph import OxigraphHttpStore, parse_rdf
 from .metadata_pg import MetadataPg
 from .object_layered import LayeredObjectStore
@@ -61,6 +63,77 @@ OWL_RESTRICTION = "http://www.w3.org/2002/07/owl#Restriction"
 OWL_ON_PROPERTY = "http://www.w3.org/2002/07/owl#onProperty"
 OWL_MIN_CARD = "http://www.w3.org/2002/07/owl#minCardinality"
 OWL_MIN_QCARD = "http://www.w3.org/2002/07/owl#minQualifiedCardinality"
+
+
+TERM_HIGH_WATER_SCOPE = "metric"
+
+
+def read_term_high_water(meta: Any) -> dict[str, Any] | None:
+    """Last non-zero effective term-set measurement (None until first publish)."""
+    try:
+        rows = meta.query(
+            "SELECT concepts_in_scheme, aliases, version_id, graph_iri, updated_at "
+            "FROM platform.term_high_water WHERE scope = %s",
+            (TERM_HIGH_WATER_SCOPE,),
+        )
+    except Exception:  # table missing before V44 is applied
+        return None
+    if not rows:
+        return None
+    row = rows[0]
+    return {
+        "conceptsInScheme": int(row["concepts_in_scheme"]),
+        "aliases": int(row["aliases"]),
+        "versionId": row.get("version_id"),
+        "graph": row.get("graph_iri"),
+        "updatedAt": row["updated_at"].isoformat() if row.get("updated_at") else None,
+    }
+
+
+def raise_term_high_water(
+    meta: Any, counts: dict[str, Any], version_id: str, graph_iri: str
+) -> None:
+    """Raise the mark only; never lower it (history is the safety baseline)."""
+    concepts = int(counts.get("conceptsInScheme") or 0)
+    aliases = int(counts.get("aliases") or 0)
+    existing = read_term_high_water(meta)
+    if existing and existing["conceptsInScheme"] >= concepts:
+        return
+    meta.execute(
+        """
+        INSERT INTO platform.term_high_water
+            (scope, concepts_in_scheme, aliases, version_id, graph_iri, updated_at)
+        VALUES (%s, %s, %s, %s, %s, now())
+        ON CONFLICT (scope) DO UPDATE SET
+            concepts_in_scheme = EXCLUDED.concepts_in_scheme,
+            aliases = EXCLUDED.aliases,
+            version_id = EXCLUDED.version_id,
+            graph_iri = EXCLUDED.graph_iri,
+            updated_at = now()
+        """,
+        (TERM_HIGH_WATER_SCOPE, concepts, aliases, version_id, graph_iri),
+    )
+
+
+def _term_high_water(registry: Any, meta: Any) -> dict[str, Any] | None:
+    """Stored mark, falling back to the current pointer's graph for the first run."""
+    mark = read_term_high_water(meta)
+    if mark is not None:
+        return mark
+    try:
+        current = termgov.graph_coverage(SimpleNamespace(ontology=registry, graph=registry._graph))
+    except Exception:
+        return None
+    actual = current.get("actual") or {}
+    if not actual:
+        return None
+    return {
+        "conceptsInScheme": int(actual.get("conceptsInMetricScheme") or 0),
+        "aliases": int(actual.get("aliases") or 0),
+        "versionId": current.get("versionId"),
+        "graph": current.get("graph"),
+        "updatedAt": None,
+    }
 
 
 def _now() -> str:
@@ -925,6 +998,7 @@ def publish_import(
     abox_graphs: list[str] | None = None,
     publish_existing: bool = False,
     expected_version_id: str | None = None,
+    purpose: str | None = None,
 ) -> dict[str, Any]:
     """G-01 publish: dry-run diff/impact, then a governed version publish.
 
@@ -1003,6 +1077,49 @@ def publish_import(
         "reason": record["reason"],
         "canonicalEqualTo": canonical_version["version_id"] if canonical_version else None,
     }
+    # --- G8 terms gate ---
+    # off keeps the payload unchanged unless the non-configurable vocab-zero
+    # guard fires; warn/block evaluate the staged T-Box before any row is
+    # written. The guard compares the *effective* term set against the stored
+    # high-water mark (not the current pointer), so consecutive collapses are
+    # caught as well, and purpose=smoke is the only exemption.
+    terms_gate: dict[str, Any] | None = None
+    terms_cfg = getattr(registry, "_terms_gate", None)
+    if terms_cfg is not None:
+        baseline: dict[str, Any] | None = None
+        baseline_error: str | None = None
+        high_water: dict[str, Any] | None = None
+        try:
+            baseline = termgov.graph_coverage(
+                SimpleNamespace(ontology=registry, graph=graph_store)
+            )
+        except Exception as exc:  # observability must not break publishing
+            baseline_error = f"{type(exc).__name__}: {exc}"
+        try:
+            high_water = _term_high_water(registry, meta)
+        except Exception as exc:
+            baseline_error = baseline_error or f"{type(exc).__name__}: {exc}"
+        terms_gate = termgate.evaluate_content(
+            staging_nt.decode("utf-8"),
+            "nt",
+            terms_cfg,
+            baseline=baseline,
+            high_water=high_water,
+            context={
+                "importId": import_id,
+                "versionId": version_id,
+                "source": "tbox-publish",
+                "dryRun": dry_run,
+                "actor": actor,
+                "path": "POST /ontology/import",
+                "purpose": purpose,
+                "baselineError": baseline_error,
+            },
+        )
+        if terms_gate is not None:
+            termgate.remember(registry, terms_gate)
+            base["termsGate"] = terms_gate
+    # --- end G8 terms gate ---
     if dry_run:
         return {
             **base,
@@ -1025,6 +1142,35 @@ def publish_import(
             provider_code="E_IMPORT_NOT_USABLE",
             details={"importId": import_id, "reason": record["reason"], "usable": False},
         )
+
+    # --- G8 terms gate ---
+    if terms_gate is not None and terms_gate.get("blocked"):
+        raise PortError(
+            code="Conflict",
+            message=(
+                f"term gate blocked publish: {terms_gate['blocking']} blocking finding(s)"
+            ),
+            provider="platform",
+            provider_code=termgate.E_TERM_GATE_BLOCKED,
+            details={
+                "importId": import_id,
+                "versionId": version_id,
+                "gate": terms_gate["gate"],
+                "verdict": terms_gate["verdict"],
+                "blocking": terms_gate["blocking"],
+                "warnings": terms_gate["warnings"],
+                "problems": terms_gate["findings"],
+                "vocabGuard": terms_gate.get("vocabGuard"),
+                "allowed": [
+                    "fix the blocking findings and re-import the T-Box",
+                    "publish a T-Box version that still carries the MetricScheme terms",
+                    "a self-check probe must pass purpose=smoke explicitly; the "
+                    "exemption is recorded in the evidence pack",
+                ],
+            },
+        )
+    # --- end G8 terms gate ---
+    gate_kwargs = {"extra_gates": {"terms": terms_gate}} if terms_gate is not None else {}
 
     with meta.advisory_lock(f"g01:import-publish:{import_id}") as acquired:
         if not acquired:
@@ -1051,6 +1197,8 @@ def publish_import(
                 reason=summary,
                 activate_existing=True,
                 expected_version_id=expected_version_id,
+                purpose=purpose,
+                **gate_kwargs,
             )
             return {
                 **base,
@@ -1076,6 +1224,25 @@ def publish_import(
                 (version_id,),
             )
             published_at = existing["published_at"]
+            if terms_cfg is not None:
+                # Repeat publish of content that is already published: the pointer
+                # did not move, but the mark should still reflect this effective
+                # term set (idempotent re-runs must never lose the baseline).
+                try:
+                    raise_term_high_water(
+                        meta,
+                        termgov.measure_graph(
+                            SimpleNamespace(graph=graph_store), existing["graph_iri"]
+                        ),
+                        version_id,
+                        existing["graph_iri"],
+                    )
+                except Exception as exc:
+                    log.warning(
+                        "term high-water mark not raised",
+                        extra={"event": {"event": "term_high_water_failed",
+                                         "version_id": version_id, "error": str(exc)}},
+                    )
             return {
                 **base,
                 "previousVersionId": (
@@ -1164,6 +1331,8 @@ def publish_import(
             actor=actor,
             reason=summary,
             expected_version_id=expected_version_id,
+            purpose=purpose,
+            **gate_kwargs,
         )
         return {
             **base,
@@ -1219,6 +1388,17 @@ class OntologyRegistry:
         self._materializer: Any = None
         self._abox_graphs: list[str] = []
         self._reason_profile = "EL"
+        # --- G8 terms gate ---
+        # None = no gate (direct/legacy registries); assembly installs the
+        # configured TermsConfig so publish honours terms.gate.
+        self._terms_gate: TermsConfig | None = None
+        self._last_terms_gate: dict[str, Any] | None = None
+        # --- end G8 terms gate ---
+
+    # --- G8 terms gate ---
+    def set_terms_gate(self, config: TermsConfig | None) -> None:
+        self._terms_gate = config
+    # --- end G8 terms gate ---
 
     def set_governance(
         self,
@@ -2715,6 +2895,8 @@ class OntologyRegistry:
         reason: str | None = None,
         activate_existing: bool = False,
         expected_version_id: str | None = None,
+        extra_gates: dict[str, Any] | None = None,
+        purpose: str | None = None,
     ) -> dict[str, Any]:
         row = self._require(version_id)
         # OQ-65 residual / B-5: an archived version is a read-only baseline. It
@@ -2782,7 +2964,10 @@ class OntologyRegistry:
         implicit = False
         diff: dict[str, Any] = {}
         breaking = False
-        gates: dict[str, Any] = {}
+        # G8/O-05: extra gates are recorded alongside SHACL/consistency/breaking
+        # without changing their decisions. Empty by default, so the legacy
+        # payload stays byte-identical when terms.gate=off.
+        gates: dict[str, Any] = dict(extra_gates or {})
         if not governed:
             # S12/OQ-47: there is no direct publish path any more. A call without
             # a proposal is turned into an implicit proposal that must pass the
@@ -2801,7 +2986,7 @@ class OntologyRegistry:
                     "mode": "activate_existing" if activate_existing else "publish",
                     "previousVersionId": self._last_publish_previous(version_id),
                     "publishedBy": actor,
-                    "gates": {},
+                    "gates": gates,
                     "publishedAt": _now(),
                 }
             if row["status"] not in ("draft", "approved", "superseded"):
@@ -2905,6 +3090,77 @@ class OntologyRegistry:
                 "breaking": breaking,
                 "acknowledged": bool(acknowledge_breaking or proposal["acknowledged_breaking"]),
             }
+
+        # --- G8/O-05 vocab-zero guard (both governed and implicit publishes) ---
+        # predicate: high_water.conceptsInScheme > 0 and effective.conceptsInScheme == 0
+        #            => blocking, independent of terms.gate; only purpose=smoke exempts
+        # 判据针对"生效术语集"，不针对"T-Box 图内容"：等术语解耦到独立命名图/指针后，
+        # 版本图里没有术语是正常状态，本判据只比较发布后生效术语集与高水位。
+        # It must run before the tx below: a rejected publish must not leave version
+        # rows or pointer/event changes behind. The implicit branch (POST
+        # /ontology/publish without a proposal) is the path smoke re-publishes take,
+        # so it is covered here too — a guard only wired into publish_import would
+        # never see those.
+        if self._terms_gate is not None and "terms" not in gates:
+            high_water: dict[str, Any] | None = None
+            baseline_error: str | None = None
+            try:
+                high_water = _term_high_water(self, self._meta)
+            except Exception as exc:  # observability must not break publishing
+                baseline_error = f"{type(exc).__name__}: {exc}"
+            snapshot = termgov.snapshot_from_graph(
+                SimpleNamespace(graph=self._graph), row["graph_iri"]
+            )
+            guard = termgate.evaluate_snapshot(
+                snapshot,
+                self._terms_gate,
+                high_water=high_water,
+                context={
+                    "versionId": version_id,
+                    "actor": actor,
+                    "path": "POST /ontology/publish",
+                    "purpose": purpose,
+                    "activateExisting": bool(activate_existing),
+                    "implicit": bool(implicit),
+                    "baselineError": baseline_error,
+                },
+            )
+            if guard is not None:
+                gates["terms"] = guard
+                termgate.remember(self, guard)
+            if guard is not None and guard.get("blocked"):
+                error = PortError(
+                    code="Conflict",
+                    message=(
+                        "term vocab guard blocked publish: the effective term set dropped "
+                        "to zero while the high-water mark is non-zero"
+                    ),
+                    provider="platform",
+                    provider_code=termgate.E_TERM_GATE_BLOCKED,
+                    details={
+                        "versionId": version_id,
+                        "gate": guard["gate"],
+                        "verdict": guard["verdict"],
+                        "vocabGuard": guard["vocabGuard"],
+                        "findings": guard["findings"],
+                        "mode": "activate_existing" if activate_existing else (
+                            "implicit" if implicit else "governed"
+                        ),
+                        "allowed": [
+                            "publish a T-Box version that still carries the MetricScheme terms",
+                            "a self-check probe must pass purpose=smoke explicitly; the "
+                            "exemption is recorded in the evidence pack",
+                        ],
+                    },
+                )
+                self._publish_evidence(
+                    version_id=version_id, row=row, proposal=proposal,
+                    mode="activate_existing" if activate_existing else "publish",
+                    gates=gates, verdict="fail", actor=actor, reason=reason,
+                    diff=diff, error=error,
+                )
+                raise error
+        # --- end G8/O-05 vocab-zero guard ---
 
         current = self._meta.query(
             "SELECT version_id FROM platform.graph_pointer WHERE name = %s", (POINTER_NAME,)
@@ -3160,6 +3416,23 @@ class OntologyRegistry:
                     provider_code="E_ONTOLOGY_MATERIALIZE_FAILED",
                     details={"cause": cause_code, "detail": cause_detail},
                 ) from exc
+
+        # The pointer now points at this version, so it is the effective term set;
+        # raise (never lower) the high-water mark used by the vocab-zero guard.
+        if self._terms_gate is not None:
+            try:
+                raise_term_high_water(
+                    self._meta,
+                    termgov.measure_graph(SimpleNamespace(graph=self._graph), row["graph_iri"]),
+                    version_id,
+                    row["graph_iri"],
+                )
+            except Exception as exc:  # marking must not turn a publish into a failure
+                log.warning(
+                    "term high-water mark not raised",
+                    extra={"event": {"event": "term_high_water_failed",
+                                     "version_id": version_id, "error": str(exc)}},
+                )
 
         evidence = self._publish_evidence(
             version_id=version_id, row=row, proposal=proposal,

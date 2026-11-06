@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 34
+SUPPORTED_SCHEMA_VERSION = 40
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -53,7 +53,55 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (32, "V32__ontology_lifecycle.sql", "O-02 lifecycle transitions + O-04 publish evidence registry"),
     (33, "V33__term_governance.sql", "O-05 term check/import registry"),
     (34, "V34__metrics_core_m01_m06.sql", "G2 metrics-core: M-01 binding fixes + M-06 readiness ledger"),
+    # 集成期重排（doc/_design/54 §2.2 为准）：V35/V36 永久退休，未应用迁移
+    # 统一压成 37–40 连续段；旧号对照见 doc 54 的"新旧号对照表"。
+    (37, "V37__metric_observation_synthetic.sql", "metric_observation data_source gains synthetic (idempotent CHECK swap)"),
+    (38, "V38__ontology_orphan_mark.sql", "append-only orphan markers for lifecycle/evidence rows"),
+    (39, "V39__dict_bindings.sql", "persist 79 dictionary bindings (69 explicit + 10 name_match)"),
+    (40, "V40__term_high_water.sql", "O-05 vocab guard: effective term-set high-water mark"),
 ]
+
+# Retired migration numbers, kept permanently empty.
+# 35 belonged to the withdrawn C2 quota branch; 36 was never used.
+# Numbers are never recycled: renumbering a pending migration into a retired
+# slot makes every environment already at a higher version skip it silently,
+# because the runner applies only versions above the recorded high-water mark.
+RETIRED_MIGRATION_VERSIONS: tuple[int, ...] = (35, 36)
+
+MIGRATION_GAP_HINT = "该迁移不会被自动执行，请人工确认"
+
+
+def migration_gap_versions(
+    current: int,
+    history: set[int] | None,
+    registry: list[tuple[int, str, str]] | None = None,
+) -> list[int]:
+    """Return registered versions <= current that cannot be confirmed as applied.
+
+    Exact check: every registered version at or below the recorded high-water
+    mark must have its own row in platform.schema_version. Retired numbers are
+    excluded from the check because they are intentionally absent forever.
+
+    Degraded check (no platform.schema_version table): only the high-water mark
+    is known, so any non-retired registered version strictly below `current`
+    counts as unconfirmed. Capability boundary: a brand-new database has
+    `current == 0`, where this can prove nothing and returns an empty list.
+    """
+    versions = [row[0] for row in (registry if registry is not None else MIGRATIONS)]
+    if history is not None:
+        return sorted(
+            version
+            for version in versions
+            if version <= current
+            and version not in history
+            and version not in RETIRED_MIGRATION_VERSIONS
+        )
+    return sorted(
+        version
+        for version in versions
+        if 0 < version < current and version not in RETIRED_MIGRATION_VERSIONS
+    )
+
 
 
 class Tx:
@@ -190,7 +238,14 @@ class MetadataPg:
                     "SELECT to_regclass('platform.schema_version') AS reg"
                 ).fetchone()
                 current = 0
+                history: set[int] | None = None
                 if existing and existing["reg"]:
+                    history = {
+                        int(row["version"])
+                        for row in conn.execute(
+                            "SELECT version FROM platform.schema_version"
+                        ).fetchall()
+                    }
                     row = conn.execute(
                         "SELECT COALESCE(MAX(version), 0) AS v FROM platform.schema_version"
                     ).fetchone()
@@ -208,6 +263,22 @@ class MetadataPg:
                             hint="run the matching platform image; do not downgrade data",
                             exit_code=EXIT_CONFIG,
                         )
+                gaps = migration_gap_versions(current, history)
+                if gaps:
+                    raise PlatformError(
+                        code="E_DB_MIGRATION_GAP",
+                        detail=(
+                            f"registered migrations {gaps} are at or below current version "
+                            f"{current} but have no row in platform.schema_version; "
+                            f"retired versions {list(RETIRED_MIGRATION_VERSIONS)} are exempt; "
+                            f"{MIGRATION_GAP_HINT}"
+                        ),
+                        stage="db",
+                        key="schema_version",
+                        provider="postgres",
+                        hint=MIGRATION_GAP_HINT,
+                        exit_code=EXIT_CONFIG,
+                    )
                 for version, filename, description in MIGRATIONS:
                     if version <= current:
                         continue

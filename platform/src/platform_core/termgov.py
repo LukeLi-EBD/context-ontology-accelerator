@@ -458,7 +458,52 @@ def graph_coverage(runtime: Any, *, expect_concepts: int | None = None,
                       expect_concepts=expect_concepts, expect_aliases=expect_aliases)
     report["graph"] = graph_iri
     report["empty"] = False
+    try:
+        report["versionId"] = (runtime.ontology.current() or {}).get("versionId")
+    except Exception:
+        report["versionId"] = None
     return report
+
+
+def measure_graph(runtime: Any, graph_iri: str) -> dict[str, int]:
+    """Effective term-set counts for one graph (cheap COUNT, same filter as coverage).
+
+    The vocab guard compares these counts against a high-water mark, so the
+    predicate stays "effective term set vs baseline" instead of "what the T-Box
+    graph happens to contain". Once terms live in their own named graph this
+    function can be pointed at the term graph without changing the guard.
+    """
+    rows = runtime.graph.query(
+        f"""
+        SELECT (COUNT(DISTINCT ?s) AS ?n) FROM <{graph_iri}> WHERE {{
+          ?s a <{SKOS}Concept> ; <{SKOS}inScheme> <{METRIC_SCHEME}> .
+        }}
+        """
+    )
+    entries = runtime.graph.query(
+        f"""
+        SELECT (COUNT(DISTINCT ?e) AS ?n) FROM <{graph_iri}> WHERE {{
+          ?e a <{TERM_ENTRY}> ; <{TERM}forClass> ?c ; <{TERM}label> ?l .
+        }}
+        """
+    )
+
+    def count(result: dict[str, Any]) -> int:
+        bindings = result.get("bindings") or []
+        if not bindings:
+            return 0
+        raw = _binding_term(bindings[0], "n").get("value")
+        try:
+            return int(float(raw))
+        except (TypeError, ValueError):
+            return 0
+
+    return {
+        "conceptsInScheme": count(rows),
+        "aliases": count(entries),
+        "graph": graph_iri,
+    }
+
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
--- V43: persist the 79 explicit/name_match dictionary bindings as data, not as a
+-- V39: persist the 79 explicit/name_match dictionary bindings as data, not as a
 -- runtime side effect. Previously these bindings only appeared after
 -- POST /catalog/dictionaries/refresh, so a database that never ran refresh kept
 -- the older 36 bindings (26 explicit + 10 name_match) while docs claimed 79.

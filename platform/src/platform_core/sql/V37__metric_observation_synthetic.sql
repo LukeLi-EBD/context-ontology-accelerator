@@ -1,4 +1,4 @@
--- V41: 让 metric_observation 明确承载 synthetic 合成事实的观测行。
+-- V37: 让 metric_observation 明确承载 synthetic 合成事实的观测行。
 --
 -- 背景：V19 把 data_source 限制为 fixture|business；V26 为了 datagen 已把
 -- “所有带 data_source 列的表”统一扩成 fixture|business|synthetic。因此在本
@@ -8,35 +8,36 @@
 --   2) 在表/列注释里写明“观测行是分子/分母输入，不是指标结果缓存”；
 --   3) 不改任何指标定义、不写任何数据。
 --
--- 注意：本分支只提交迁移文件，不在本地/共享库执行。集成方须在 V35-V40 之后
--- 按顺序应用本迁移并登记到 metadata_pg.MIGRATIONS。
+-- 注意：本分支只提交迁移文件；集成期已按升序登记到 metadata_pg.MIGRATIONS
+-- 的重排段（V37），不得回填到已退休号段。
 
 DO $$
 DECLARE
-  con record;
+  con_name text;
+  con_def text;
 BEGIN
-  SELECT con.conname AS constraint_name,
-         pg_get_constraintdef(con.oid) AS definition
-    INTO con
+  SELECT con.conname,
+         pg_get_constraintdef(con.oid)
+    INTO con_name, con_def
     FROM pg_constraint con
    WHERE con.conrelid = 'platform.metric_observation'::regclass
      AND con.contype = 'c'
      AND pg_get_constraintdef(con.oid) LIKE '%data_source%'
    LIMIT 1;
 
-  IF con.constraint_name IS NULL THEN
+  IF con_name IS NULL THEN
     ALTER TABLE platform.metric_observation
       ADD CONSTRAINT metric_observation_data_source_check
       CHECK (data_source IN ('fixture', 'business', 'synthetic'));
-  ELSIF con.definition NOT LIKE '%synthetic%' THEN
+  ELSIF con_def NOT LIKE '%synthetic%' THEN
     EXECUTE format(
       'ALTER TABLE platform.metric_observation DROP CONSTRAINT %I',
-      con.constraint_name
+      con_name
     );
     EXECUTE format(
       'ALTER TABLE platform.metric_observation ADD CONSTRAINT %I '
       'CHECK (data_source IN (''fixture'', ''business'', ''synthetic''))',
-      con.constraint_name
+      con_name
     );
   END IF;
 END $$;
