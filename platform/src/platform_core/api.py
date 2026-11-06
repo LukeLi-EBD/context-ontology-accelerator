@@ -38,6 +38,7 @@ from .assembly import Runtime
 from .bootstrap import CheckResult
 from . import catalog as catalog_module
 from .errors import PortError
+from .metrics import DRIVABLE_KINDS
 from . import webui
 from . import prov as prov_module
 from . import source_ref
@@ -169,7 +170,6 @@ def _metric_json(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
 
 # ---- layered coverage / citation QA helpers -----------------------------
 
-_QA_DRIVABLE_KINDS = ("ratio", "duration", "sum")
 _QA_NUMERIC_RE = re.compile(
     r"(是多少|多少|几个|几[天月年次]|计算|算一下|占比|比例|百分比|百分|率是|率有多|"
     r"数值|求值|统计|合计|总计|平均|最大|最小|趋势)"
@@ -434,11 +434,11 @@ def _qa_fact_eval(
         for item in bindings
     ]
     structural = (
-        kind in _QA_DRIVABLE_KINDS
+        kind in DRIVABLE_KINDS
         and bool(formula)
         and bool(window_kind)
         and bool(numerator_agg)
-        and (kind != "ratio" or bool(denominator_agg))
+        and ("denominator" not in formula or bool(denominator_agg))
     )
     payload: dict[str, Any] = {
         "id": f"{mid}@{version}",
@@ -484,12 +484,15 @@ def _qa_fact_eval(
             howToFix="在口径治理中启用公式或改用变体指标",
         )
         return payload
-    if kind not in _QA_DRIVABLE_KINDS:
+    if kind not in DRIVABLE_KINDS:
         payload.update(
             status="missing",
             code="E_FACTS_NOT_SCALAR",
-            what=f"{mid} 的 metricKind={kind or 'unknown'} 不是标量可计算类型",
-            howToFix="按口径卡/规则集读取，或选择可标量计算的变体",
+            what=(
+                f"{mid} 的 metricKind={kind or 'unknown'} 不在数值直算支持范围"
+                f"（{'/'.join(DRIVABLE_KINDS)}）"
+            ),
+            howToFix="按口径卡/规则集读取，或选择可数值直算的变体",
         )
         return payload
     if not structural:
@@ -497,7 +500,7 @@ def _qa_fact_eval(
             status="missing",
             code="E_FACTS_DEFINITION_QUARTET",
             what=f"{mid} 的四元组不完整（formula/window/aggregate/denominator）",
-            howToFix="补齐 formula_expr、window_kind、numerator_agg（ratio 还需 denominator_agg）",
+            howToFix="补齐 formula_expr、window_kind、numerator_agg（公式含 denominator 时还需 denominator_agg）",
         )
         return payload
     payload["drivable"] = not bool(row.get("formula_disabled"))

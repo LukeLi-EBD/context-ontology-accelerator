@@ -47,7 +47,7 @@ _AGGREGATES = {"sum", "max", "min", "avg", "count", "count_distinct"}
 
 # metric_kind 只决定卡片分类；真正能否计算由 formula/window/aggregate 四元组决定。
 # band（分档标签）与 index/rule_set 仍由各自专用读取路径处理，不进数值直算。
-_DRIVABLE_KINDS = ("ratio", "duration", "sum", "count", "amount", "period_value")
+DRIVABLE_KINDS = ("ratio", "duration", "sum", "count", "amount", "period_value")
 
 
 def _bad(metric_id: str, provider_code: str, message: str, missing: str | None = None) -> PortError:
@@ -294,7 +294,7 @@ class MetricService:
             )
 
         kind = row["metric_kind"]
-        if kind not in _DRIVABLE_KINDS:
+        if kind not in DRIVABLE_KINDS:
             raise _bad(metric_id, DRIVABLE_CODE, "metric kind is not drivable", "metric_kind")
         if not row["formula_expr"] or not row["window_kind"] or not row["numerator_agg"]:
             raise _bad(
