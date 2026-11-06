@@ -96,7 +96,7 @@ class MetricFactsTest(unittest.TestCase):
     # ---- migration -----------------------------------------------------
 
     def test_v20_migration_is_reentrant(self) -> None:
-        self.assertEqual(SUPPORTED_SCHEMA_VERSION, 20)
+        self.assertEqual(SUPPORTED_SCHEMA_VERSION, 21)
         sql = files("platform_core").joinpath("sql/V20__metric_entities.sql").read_text(
             encoding="utf-8"
         )

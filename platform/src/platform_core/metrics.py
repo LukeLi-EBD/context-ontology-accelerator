@@ -9,6 +9,7 @@ happens to exist elsewhere.
 from __future__ import annotations
 
 import ast
+import json
 from datetime import date, datetime, timezone
 from typing import Any
 
@@ -23,10 +24,12 @@ DRIVABLE_CODE = "E_METRIC_NOT_DRIVABLE"
 WINDOW_CODE = "E_METRIC_WINDOW_INSUFFICIENT"
 DENOM_CODE = "E_METRIC_DENOM_ZERO"
 NO_DATA_CODE = "E_METRIC_NO_DATA"
+VARIANT_CODE = "E_METRIC_VARIANT_REQUIRED"
 
 _COLUMNS = (
     "metric_id, name_zh, domain, evidence_basis, publishable, inference, "
-    "formula_disabled, missing, evidence_status, note"
+    "formula_disabled, missing, evidence_status, note, "
+    "effective_date, variant_of, output_mode, rule_set_json"
 )
 
 _COMPUTE_COLUMNS = _COLUMNS + (
@@ -90,7 +93,20 @@ def _eval_formula(expr: str, numerator: float, denominator: float | None) -> flo
     return walk(ast.parse(expr, mode="eval"))
 
 
+def _rule_set(value: Any, output_mode: Any) -> Any:
+    """jsonb comes back parsed from psycopg; tolerate a text payload too."""
+    if value is None or output_mode != "rule_set":
+        return None
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except ValueError:
+            return None
+    return value
+
+
 def _card(row: dict[str, Any]) -> dict[str, Any]:
+    effective = row.get("effective_date")
     return {
         "metricId": row["metric_id"],
         "name": row["name_zh"],
@@ -102,6 +118,10 @@ def _card(row: dict[str, Any]) -> dict[str, Any]:
         "missing": row["missing"],
         "evidenceStatus": row["evidence_status"],
         "note": row["note"],
+        "effectiveDate": effective.isoformat() if effective else None,
+        "variantOf": row.get("variant_of"),
+        "outputMode": row.get("output_mode"),
+        "ruleSet": _rule_set(row.get("rule_set_json"), row.get("output_mode")),
     }
 
 
@@ -149,9 +169,32 @@ class MetricService:
             )
         return _card(rows[0])
 
+    def variants(self, metric_id: str) -> list[str]:
+        rows = self._meta.query(
+            "SELECT metric_id FROM platform.metric_definition "
+            "WHERE variant_of = %s ORDER BY metric_id",
+            (metric_id,),
+        )
+        return [row["metric_id"] for row in rows]
+
+    def _reject_family_index(self, metric_id: str) -> PortError:
+        variants = self.variants(metric_id)
+        return PortError(
+            code="InvalidArgument",
+            message=(
+                f"metric {metric_id} is a family index and has no single formula; "
+                "specify a variant: " + (", ".join(variants) or "(none registered)")
+            ),
+            provider="platform",
+            provider_code=VARIANT_CODE,
+            details={"metricId": metric_id, "variants": variants, "missing": "variant"},
+        )
+
     def output(self, metric_id: str, internal: bool = False) -> dict[str, Any]:
         """Return the governed definition card, or refuse with a typed error."""
         row = self.get(metric_id)
+        if row["outputMode"] == "index":
+            raise self._reject_family_index(metric_id)
         if row["formulaDisabled"]:
             raise PortError(
                 code="PolicyRejected",
@@ -170,7 +213,9 @@ class MetricService:
             )
         payload = dict(row)
         payload["source"] = "INDUSTRY" if row["evidenceBasis"] == "industry" else "REGULATORY"
-        payload["outputType"] = "definition"
+        payload["outputType"] = (
+            "rule_set" if row["outputMode"] == "rule_set" else "definition"
+        )
         return payload
 
     # ---- definition-driven calculator -----------------------------------
@@ -202,6 +247,8 @@ class MetricService:
     ) -> dict[str, Any]:
         """Compute a metric from registered fields + observations, never per-ID code."""
         row = self._compute_row(metric_id)
+        if row["output_mode"] == "index":
+            raise self._reject_family_index(metric_id)
         if row["formula_disabled"]:
             raise PortError(
                 code="PolicyRejected",

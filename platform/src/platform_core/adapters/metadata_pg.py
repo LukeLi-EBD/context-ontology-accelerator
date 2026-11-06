@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 20
+SUPPORTED_SCHEMA_VERSION = 21
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -39,6 +39,7 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (18, "V18__metric_definition.sql", "v3 metric registry: evidence_basis + publishable"),
     (19, "V19__metric_observation.sql", "metric observations + definition-driven calculator fields"),
     (20, "V20__metric_entities.sql", "S14H-04 entity facts: payment records + installment plans"),
+    (21, "V21__metric_definition_v5.sql", "v5 metric verdict: variants/rules/effective_date"),
 ]
 
 

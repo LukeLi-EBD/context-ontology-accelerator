@@ -44,10 +44,22 @@ class MetricGuardTest(unittest.TestCase):
         self.assertEqual(exc.code, "PermissionDenied")
         self.assertEqual(exc.details["missing"], "source")
 
-    def test_bank031_no_source_is_rejected_internally_too(self) -> None:
-        exc = self._rejected("FIN-BANK-031", internal=True)
+    def test_bank031_v5_industry_denominator_is_internal_only(self) -> None:
+        # v5 closed the no-source denominator: basis none -> industry, so an
+        # internal read is allowed, but external release still is not.
+        card = self.metrics.output("FIN-BANK-031", internal=True)
+        self.assertEqual(card["source"], "INDUSTRY")
+        self.assertTrue(card["inference"])
+        self.assertEqual(card["evidenceBasis"], "industry")
+        self.assertFalse(card["publishable"])
+        self.assertEqual(card["effectiveDate"], "2026-11-06")
+        self.assertIsNone(card["variantOf"])
+        self.assertIsNone(card["ruleSet"])
+
+    def test_bank031_no_source_is_rejected_externally(self) -> None:
+        exc = self._rejected("FIN-BANK-031")
         self.assertEqual(exc.provider_code, "E_METRIC_NOT_PUBLISHABLE")
-        self.assertEqual(exc.details["missing"], "source")
+        self.assertEqual(exc.details["missing"], "regulatory_source")
 
     def test_ins003_industry_output_is_marked(self) -> None:
         card = self.metrics.output("FIN-INS-003", internal=True)

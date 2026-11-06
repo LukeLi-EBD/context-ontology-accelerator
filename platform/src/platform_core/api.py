@@ -125,6 +125,11 @@ def _metric_json(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
         "note": row["note"],
         "definitionVersion": row["definition_version"],
         "unit": row["unit"],
+        "effectiveDate": (
+            row["effective_date"].isoformat() if row.get("effective_date") else None
+        ),
+        "variantOf": row.get("variant_of"),
+        "outputMode": row.get("output_mode"),
     }
     if detail:
         payload.update(
@@ -138,6 +143,14 @@ def _metric_json(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
                     "minWindowDays": row["min_window_days"],
                 },
                 "grain": row["grain"],
+                "displayName": row.get("display_name"),
+                "definition": row.get("definition"),
+                "formulaText": row.get("formula_text"),
+                "denominatorText": row.get("denominator_text"),
+                "observationPeriodText": row.get("observation_period"),
+                "granularityText": row.get("granularity"),
+                "provenanceLabel": row.get("provenance_label"),
+                "ruleSet": row.get("rule_set_json"),
             }
         )
     return payload
@@ -625,7 +638,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             SELECT metric_id, name_zh, domain, evidence_basis, publishable, inference,
                    formula_disabled, missing, evidence_status, note, definition_version,
                    metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
-                   min_window_days, grain, unit
+                   min_window_days, grain, unit, effective_date, variant_of, output_mode,
+                   display_name, definition, formula_text, denominator_text,
+                   observation_period, granularity, provenance_label, rule_set_json
               FROM platform.metric_definition
             """
             + where
@@ -651,7 +666,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             SELECT metric_id, name_zh, domain, evidence_basis, publishable, inference,
                    formula_disabled, missing, evidence_status, note, definition_version,
                    metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
-                   min_window_days, grain, unit
+                   min_window_days, grain, unit, effective_date, variant_of, output_mode,
+                   display_name, definition, formula_text, denominator_text,
+                   observation_period, granularity, provenance_label, rule_set_json
               FROM platform.metric_definition
              WHERE metric_id = %s
             """,
