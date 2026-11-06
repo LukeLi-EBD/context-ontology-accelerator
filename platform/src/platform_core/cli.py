@@ -377,7 +377,7 @@ def _build_parser() -> argparse.ArgumentParser:
     bundle_export.add_argument("--tag", required=True, help="bundle tag, e.g. v1-20261105")
     bundle_export.add_argument(
         "--include-blobs", dest="include_blobs", action="store_true",
-        help="copy referenced CAS blobs into bundle/blobs (default: metadata only)",
+        help="copy every committed CAS blob (fs + pg tiers) into bundle/blobs",
     )
 
     bundle_import = sub.add_parser(
@@ -395,6 +395,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--into-empty-platform", dest="into_empty_platform", action="store_true",
         help="restore into the configured database; refused unless it is empty "
              "(migration / disaster recovery path)",
+    )
+    bundle_import.add_argument(
+        "--dry-run", dest="dry_run", action="store_true",
+        help="report how many blobs would be written / already exist / are "
+             "missing; never writes files or database rows",
     )
 
     metrics = sub.add_parser(
@@ -509,6 +514,7 @@ def main(argv: list[str] | None = None) -> int:
             replace=args.replace,
             keep_db_on_failure=args.keep_db_on_failure,
             into_empty_target=args.into_empty_platform,
+            dry_run=args.dry_run,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
         return EXIT_OK if result.get("ok") else 1

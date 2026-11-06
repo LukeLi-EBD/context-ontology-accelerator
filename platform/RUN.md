@@ -210,7 +210,8 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
 
 bundle 是跨环境迁移用的只读包（清单 + 数据文件 + 校验和）。**本体在 Oxigraph，不写入关系库**：
 `graph/tbox.ttl` 是已发布的 Turtle 源，导入时走 `import_document -> publish` 治理链。2026-11-06 演练
-实测导出为 **110 MB / 13 个文件**（不含附件原文），源栈与恢复栈的比对见 `_design/28-迁移恢复演练.md`。
+实测：默认导出 **110 MB / 13 个文件**（不含附件原文）；`--include-blobs` 导出 **772.6 MB / 3206 个文件**
+（含 3191 个 committed blob）。源栈与恢复栈的比对见 `_design/28-迁移恢复演练.md`。
 
 ### 8.1 导出（只读，不写生产库）
 
@@ -218,8 +219,9 @@ bundle 是跨环境迁移用的只读包（清单 + 数据文件 + 校验和）�
 docker compose exec -T platform `
   python -m platform_core.cli export-bundle --config /data/platform.yaml `
   --out /data/freeze --tag <tag>
-# 默认不含附件原文；--include-blobs 会把 data/blobs/ 的 CAS 文件一起打包，
-# 但当前 import-bundle 不消费 blobs/（见 8.5），不要把它当作完整恢复
+# 默认不含附件原文；--include-blobs 会把全部 committed blob 字节（fs CAS + PG
+# bytea 两层）打进 blobs/<aa>/<sha256>，并写 meta/blobs.jsonl 清单。
+# import-bundle 会写回 CAS 并逐个校验 sha256/大小（见 8.6）
 ```
 
 产物落在宿主 `D:\agentABC\data\freeze/<tag>/`（`data/` 已在 `.gitignore` 中）。
@@ -241,14 +243,15 @@ docker compose exec -T platform `
   meta/metric_definitions.jsonl  # 指标口径注册表（2026-11-06 新增）
   meta/metric_observations.jsonl # 指标观测（时间序列，2026-11-06 新增）
   meta/metric_entity_facts.jsonl # ins_payment_record + loan_installment_plan（2026-11-06 新增）
+  meta/blobs.jsonl               # blob 清单（hash/size/mime/tier/refs，仅 --include-blobs）
   vectors/embeddings.npz         # chunk 向量（BGE-M3）
   vectors/README
-  blobs/<aa>/<sha256>            # 仅 --include-blobs 时存在（import 不消费）
+  blobs/<aa>/<sha256>            # 原文 CAS，仅 --include-blobs 时存在（import 会写回）
 ```
 
 **包含关系**：本体 ✔ / 事实 ✔ / 术语 ✔（T-Box 内 `terms#TermEntry` 个体，`source.tbox.termEntries`
-记数）/ 指标定义 ✔ / 观测与实体事实 ✔ / 文档元数据、分块、逐页正文、向量 ✔ / **附件原文字节 ✘**
-（PG 内的 `platform.blob/blob_bytea` 未导出；fs 侧 CAS 仅在 `--include-blobs` 时打包）。
+记数）/ 指标定义 ✔ / 观测与实体事实 ✔ / 文档元数据、分块、逐页正文、向量 ✔ / **附件原文** 默认 ✘、
+`--include-blobs` ✔（fs 与 PG bytea 两层都导出，导入写回 fs CAS）。
 
 ### 8.3 导入
 
@@ -273,10 +276,14 @@ docker compose exec -T platform `
   → `E_BUNDLE_TARGET_NOT_EMPTY`（防止误写生产）；刚启动、只有 bootstrap T-Box 的栈算空
 - 库已存在需 `--replace`（仅限非生产库）；失败保留现场加 `--keep-db-on-failure`
 - 导入前先 `verify_bundle`：清单、每个文件的 sha256/大小/行数、NPZ 维度、账本哈希链、
-  指标注册表内容哈希与术语计数
+  指标注册表内容哈希与术语计数；blob 清单还会逐项核对“文件大小 = 清单大小、文件名 = sha256”
+- **附件原文**：bundle 带 `blobs/` 时，先把所有 payload 校验完再写 CAS（`blobs/<aa>/<sha256>`，
+  tmp→fsync→同卷 rename），已存在则重新校验后跳过；任一 sha256/大小不符即整批失败并回滚本次
+  新写入的文件。恢复后 `platform.blob` 统一为 `tier=fs`，`blob_ref` 一并恢复
+- `--dry-run` 只统计 blob：`total/bytes/toWrite/existing/missing/conflicts`，不落盘、不建库
 - CLI 打印 `checks[]`，任一项 `ok=false` 退出码非 0
 
-### 8.4 核对表（2026-11-06 生产栈 → drill 栈实测）
+### 8.4 核对表（2026-11-06 生产栈 → drill 栈实测，含原文）
 
 | 项 | 源 | 目标 | 结果 |
 | --- | --- | --- | --- |
@@ -285,23 +292,53 @@ docker compose exec -T platform `
 | `metric_definition` | 79（hash 一致） | 79 | 等 |
 | `metric_observation` | 0 | 0 | 等 |
 | `ins_payment_record` / `loan_installment_plan` | 0 / 0 | 0 / 0 | 等 |
-| `document` | 2038 | 2038 | 等 |
-| `document_chunk` | 14190 | 14190 | 等 |
-| `chunk_embedding` | 14163 | 14163 | 等 |
-| `document_page` | 6191 | 6191 | 等 |
-| `fact_event` | 6481 | 6481 | 等 |
+| `document` | 2092 | 2092 | 等 |
+| `document_chunk` | 14244 | 14244 | 等 |
+| `chunk_embedding` | 14215 | 14215 | 等 |
+| `document_page` | 6245 | 6245 | 等 |
+| `fact_event` | 6675 | 6675 | 等 |
+| committed blob（不含 ontology 源 TTL） | 2104 / 693,883,503 B | 2104 / 693,883,503 B | 等 |
+| 附件原文回读 `/documents/{id}/source` | 3 个文档 200 | 3 个文档 200，字节 sha256 一致 | 等（S2 smoke 17/17） |
 | 账本导出字节 | sha256 一致 | 一致 | 等（`created_at` 已保真） |
 
 ### 8.5 硬约束
 
 - **`schemaVersion` 必须与代码完全匹配**（`manifest.schemaVersion == SUPPORTED_SCHEMA_VERSION`，
   当前 20）；不一致直接 `E_BUNDLE_SCHEMA_MISMATCH`，不做隐式升级/降级。
-- **附件原文字节不进 bundle**（`totals.blobs.included=false`）。生产栈 3111 个 blob 元数据、
-  3092 个字节体（约 710 MB）在 PG 的 `platform.blob/blob_bytea`；fs 侧 19 个文件（592 MB）只有
-  `--include-blobs` 才进包，且 `import-bundle` 目前**不读取** `blobs/`。因此恢复栈上
-  `/documents/{id}/source` 会 404 —— 迁移阻断项，完整恢复需另做附件同步（见 §9.5）。
+- **默认仍不含附件原文**（`totals.blobs.included=false`）；需要完整恢复时显式加 `--include-blobs`。
+  导出会读 fs CAS 与 PG `platform.blob_bytea` 两层；导入写回 fs CAS 并恢复 `blob/blob_ref`，
+  逐字节校验通过才算成功（见 8.6）。
 - **恢复后写序列自动校正**：replay 会把 `fact_event` 的 bigserial 设到 `MAX(event_id)` 之后，
   否则新事实写入会撞 `fact_event_pkey`（演练中 `smoke-s8/s12` 曾因此失败）。
+
+### 8.6 bundle 含原文（--include-blobs）
+
+**语义**
+
+- 导出范围是 `platform.blob` 里全部 `state='committed'` 的行，不只是文档引用的那些；
+  每个 blob 的字节从原 tier 读取（`fs` 读 CAS 文件，`pg` 读 `blob_bytea.content`），
+  统一写到 `blobs/<sha前两位>/<sha>`，并生成 `meta/blobs.jsonl`（hash/size/mime/tier/refs）。
+- 导入先把 `meta/blobs.jsonl` 与文件清单交叉校验（文件名=sha256、大小=清单），再写 CAS：
+  tmp → fsync → 同卷 rename；目标已存在则重新校验后跳过，不重写。
+  任一 sha256/大小不符 → `E_BUNDLE_BLOBS`，整批失败并回滚本次新写入的文件，不留半套。
+  成功后 `platform.blob` 统一 `tier='fs'`、`path='blobs/<aa>/<sha>'`，`blob_ref` 一并恢复。
+- `--dry-run` 只统计：`total / bytes / toWrite / existing / missing / conflicts`，不落盘、不建库。
+- 幂等：同一 bundle 第二次导入 `written=0`、`existing=全部`，文件数与总字节不变。
+
+**体积 / 耗时 / 磁盘（2026-11-06 实测）**
+
+| 项 | 实测 |
+| --- | --- |
+| 默认 bundle | 110 MB / 13 个文件（无原文） |
+| 含原文 bundle | **772.6 MB / 3206 个文件**，blob 3191 个 / 697,362,787 B（pg 3174 + fs 17） |
+| 导出 | 约 100 s（读 700 MB 两层字节 + 逐文件 sha256） |
+| 导入 | 约 130 s（verify ~30 s + 700 MB 落盘 + 逐文件校验） |
+| 目标磁盘 | 至少预留 bundle + CAS 两份 ≈ 1.6 GB；导入后 CAS 约 697 MB |
+| 对照结果 | `drill-migrate.ps1` 11/11 等；3 个文档 `/source` 200 且字节 sha256 一致；S2 smoke 17/17 |
+
+> 导入时本体导入会重新生成当前版本的源 TTL（规范化 N-Triples），目标会多 1 个约 207 KB 的
+> `ontology/sources/*` blob；blob 总数对比时排除该来源，其余 2104 个 committed blob
+> （693,883,503 B）逐项相等。
 
 ## 9. 并行双栈（compose 参数化）
 

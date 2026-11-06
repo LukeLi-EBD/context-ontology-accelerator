@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -23,6 +25,7 @@ from psycopg.types.json import Jsonb
 from rdflib import Graph
 
 from .adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+from .adapters.object_fs import FsCasBackend
 from .assembly import Runtime, assemble
 from .config import ConfigBundle
 from .errors import PlatformError, PortError
@@ -53,6 +56,7 @@ METRIC_DEFINITIONS_FILE = "meta/metric_definitions.jsonl"
 METRIC_OBSERVATIONS_FILE = "meta/metric_observations.jsonl"
 METRIC_ENTITY_FILE = "meta/metric_entity_facts.jsonl"
 DOCUMENT_PAGES_FILE = "meta/document_pages.jsonl"
+BLOB_MANIFEST_FILE = "meta/blobs.jsonl"
 
 ENTITY_TABLES = {
     "platform.ins_payment_record": "insPaymentRecord",
@@ -649,27 +653,93 @@ def export_bundle(
         )
         _write_jsonl(bundle_dir / DOCUMENT_PAGES_FILE, page_rows)
 
-        # ---- optional blobs ----------------------------------------------
+        # ---- optional blobs (CAS payloads + reference manifest) ----------
         blob_entries: list[dict[str, Any]] = []
         blob_missing: list[str] = []
         blob_bytes = 0
+        blob_rows: list[dict[str, Any]] = []
+        blob_refs: list[dict[str, Any]] = []
         if include_blobs:
             root = Path(cfg.storage.root)
-            seen: set[str] = set()
-            for row in documents:
-                sha = str(row["sha256"]).strip()
-                if not sha or sha in seen:
-                    continue
-                seen.add(sha)
-                source = root / "blobs" / sha[:2] / sha
-                if not source.is_file():
-                    blob_missing.append(sha)
-                    continue
+            # Every committed blob travels, not only document originals: stale
+            # object references would otherwise make the target store differ
+            # from the source with no way to tell why.
+            blob_rows = runtime.metadata.query(
+                """
+                SELECT hash, size, mime, tier, state, metadata, created_at
+                  FROM platform.blob
+                 WHERE state = 'committed'
+                 ORDER BY hash
+                """
+            )
+            blob_refs = runtime.metadata.query(
+                """
+                SELECT hash, owner_type, owner_id
+                  FROM platform.blob_ref
+                 WHERE hash IN (SELECT hash FROM platform.blob WHERE state = 'committed')
+                 ORDER BY hash, owner_type, owner_id
+                """
+            )
+            refs_by_hash: dict[str, list[dict[str, str]]] = {}
+            for ref in blob_refs:
+                refs_by_hash.setdefault(ref["hash"], []).append(
+                    {"ownerType": ref["owner_type"], "ownerId": ref["owner_id"]}
+                )
+            pg_payloads: dict[str, bytes] = {}
+            pg_hashes = [row["hash"] for row in blob_rows if row["tier"] == "pg"]
+            if pg_hashes:
+                payload_rows = runtime.metadata.query(
+                    "SELECT hash, content FROM platform.blob_bytea WHERE hash = ANY(%s)",
+                    (pg_hashes,),
+                )
+                pg_payloads = {row["hash"]: bytes(row["content"]) for row in payload_rows}
+
+            blob_manifest: list[dict[str, Any]] = []
+            for row in blob_rows:
+                sha = str(row["hash"]).strip()
                 target = bundle_dir / "blobs" / sha[:2] / sha
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(source.read_bytes())
-                blob_bytes += target.stat().st_size
+                if row["tier"] == "pg":
+                    data = pg_payloads.get(sha)
+                    if data is None:
+                        blob_missing.append(sha)
+                        continue
+                    target.write_bytes(data)
+                else:
+                    source = root / "blobs" / sha[:2] / sha
+                    if not source.is_file():
+                        blob_missing.append(sha)
+                        continue
+                    shutil.copyfile(source, target)
+                size = int(row["size"])
+                if target.stat().st_size != size:
+                    raise _err(
+                        "E_BUNDLE_BLOB_SIZE",
+                        f"blob {sha} size mismatch: row={size} payload={target.stat().st_size}",
+                        hash=sha,
+                    )
+                blob_bytes += size
                 blob_entries.append(_file_entry(bundle_dir, f"blobs/{sha[:2]}/{sha}", "blob"))
+                blob_manifest.append(
+                    {
+                        "hash": sha,
+                        "size": size,
+                        "mime": row["mime"],
+                        "tier": row["tier"],
+                        "metadata": row["metadata"] or {},
+                        "createdAt": row["created_at"],
+                        "refs": refs_by_hash.get(sha, []),
+                    }
+                )
+            if blob_missing:
+                # A partial bundle is worse than no bundle: fail the export.
+                raise _err(
+                    "E_BUNDLE_BLOB_MISSING",
+                    f"{len(blob_missing)} committed blob payload(s) are unreadable; "
+                    "refusing to write a partial migration bundle",
+                    missing=blob_missing[:20],
+                )
+            _write_jsonl(bundle_dir / BLOB_MANIFEST_FILE, blob_manifest)
 
         # ---- manifest ----------------------------------------------------
         files: list[dict[str, Any]] = [
@@ -689,6 +759,10 @@ def export_bundle(
             _file_entry(bundle_dir, DOCUMENT_PAGES_FILE, "jsonl", len(page_rows)),
         ]
         files.extend(blob_entries)
+        if include_blobs:
+            files.append(
+                _file_entry(bundle_dir, BLOB_MANIFEST_FILE, "jsonl", len(blob_rows))
+            )
 
         tbox_triples = int(tbox["triples"])
         abox_triples = len(abox_union)
@@ -743,6 +817,11 @@ def export_bundle(
                     "count": len(blob_entries),
                     "bytes": blob_bytes,
                     "missing": len(blob_missing),
+                    "refs": len(blob_refs),
+                    "byTier": {
+                        "pg": sum(1 for row in blob_rows if row["tier"] == "pg"),
+                        "fs": sum(1 for row in blob_rows if row["tier"] == "fs"),
+                    },
                 },
             },
             "files": sorted(files, key=lambda item: item["path"]),
@@ -871,6 +950,62 @@ def verify_bundle(bundle_dir: str | Path, expected_schema: int | None = None) ->
                 path=rel,
             )
 
+    # ---- blobs (optional; present when --include-blobs was used) ---------
+    totals = manifest.get("totals") or {}
+    if BLOB_MANIFEST_FILE in listed:
+        blob_rows = read_ndjson(root / BLOB_MANIFEST_FILE)
+        declared_blobs = totals.get("blobs") or {}
+        expected_count = int(declared_blobs.get("count") or 0)
+        expected_bytes = int(declared_blobs.get("bytes") or 0)
+        if len(blob_rows) != expected_count:
+            raise _err(
+                "E_BUNDLE_BLOB_COUNT",
+                f"blob manifest count mismatch: file={len(blob_rows)} "
+                f"manifest={expected_count}",
+                path=BLOB_MANIFEST_FILE,
+            )
+        actual_bytes = sum(int(row["size"]) for row in blob_rows)
+        if actual_bytes != expected_bytes:
+            raise _err(
+                "E_BUNDLE_BLOB_BYTES",
+                f"blob byte total mismatch: file={actual_bytes} "
+                f"manifest={expected_bytes}",
+                path=BLOB_MANIFEST_FILE,
+            )
+        file_by_path = {item.get("path"): item for item in entries}
+        declared_refs = 0
+        for row in blob_rows:
+            sha = str(row.get("hash") or "")
+            rel = f"blobs/{sha[:2]}/{sha}"
+            item = file_by_path.get(rel)
+            if item is None:
+                raise _err(
+                    "E_BUNDLE_BLOB_MISSING",
+                    f"blob payload is not listed in the manifest: {rel}",
+                    path=rel,
+                )
+            if int(item.get("bytes")) != int(row["size"]):
+                raise _err(
+                    "E_BUNDLE_BLOB_SIZE",
+                    f"blob size mismatch for {rel}: manifest={item.get('bytes')} "
+                    f"blobIndex={row['size']}",
+                    path=rel,
+                )
+            if item.get("sha256") != sha:
+                raise _err(
+                    "E_BUNDLE_BLOB_SHA",
+                    f"blob payload hash does not match its CAS name: {rel}",
+                    path=rel,
+                )
+            declared_refs += len(row.get("refs") or [])
+        if declared_refs != int(declared_blobs.get("refs") or 0):
+            raise _err(
+                "E_BUNDLE_BLOB_REFS",
+                f"blob reference count mismatch: file={declared_refs} "
+                f"manifest={declared_blobs.get('refs')}",
+                path=BLOB_MANIFEST_FILE,
+            )
+
     # ---- vectors --------------------------------------------------------
     vec_path = root / "vectors/embeddings.npz"
     try:
@@ -897,7 +1032,6 @@ def verify_bundle(bundle_dir: str | Path, expected_schema: int | None = None) ->
             expected=1024,
             actual=int(embeddings.shape[1]),
         )
-    totals = manifest.get("totals") or {}
     if len(chunk_ids) != len(embeddings) or len(chunk_ids) != int(totals.get("embeddings") or 0):
         raise _err(
             "E_BUNDLE_VECTOR_COUNT",
@@ -1005,6 +1139,148 @@ def verify_bundle(bundle_dir: str | Path, expected_schema: int | None = None) ->
 # ---------------------------------------------------------------------------
 
 
+_BLOB_UPSERT = """
+INSERT INTO platform.blob
+  (hash, size, mime, tier, path, state, metadata, created_at, refcount,
+   last_verified_at, verified_ok)
+VALUES (%s, %s, %s, 'fs', %s, 'committed', %s, %s, %s, now(), true)
+ON CONFLICT (hash) DO UPDATE SET
+  size = EXCLUDED.size,
+  mime = EXCLUDED.mime,
+  tier = EXCLUDED.tier,
+  path = EXCLUDED.path,
+  state = EXCLUDED.state,
+  metadata = EXCLUDED.metadata,
+  refcount = EXCLUDED.refcount,
+  deleted_at = NULL,
+  last_verified_at = now(),
+  verified_ok = true
+"""
+
+_BLOB_REF_INSERT = """
+INSERT INTO platform.blob_ref (hash, owner_type, owner_id)
+VALUES (%s, %s, %s)
+ON CONFLICT (hash, owner_type, owner_id) DO NOTHING
+"""
+
+
+def _blob_plan(
+    bundle_dir: Path, manifest: dict[str, Any], cfg: ConfigBundle
+) -> dict[str, Any]:
+    """Dry-run: count blobs that would be written, already present or broken."""
+
+    declared = (manifest.get("totals") or {}).get("blobs") or {}
+    blob_file = bundle_dir / BLOB_MANIFEST_FILE
+    rows = read_ndjson(blob_file) if blob_file.is_file() else []
+    fs = FsCasBackend(cfg.storage.root, cfg.storage.tmp_dir)
+    to_write = 0
+    existing = 0
+    missing: list[str] = []
+    conflicts: list[dict[str, Any]] = []
+    for row in rows:
+        sha = str(row["hash"])
+        source = bundle_dir / "blobs" / sha[:2] / sha
+        if not source.is_file():
+            missing.append(sha)
+            continue
+        size = int(row["size"])
+        if source.stat().st_size != size:
+            conflicts.append({"hash": sha, "reason": "bundle size mismatch"})
+            continue
+        target = fs.path_for(sha)
+        if target.is_file():
+            if target.stat().st_size != size:
+                conflicts.append({"hash": sha, "reason": "target size mismatch"})
+            else:
+                existing += 1
+        else:
+            to_write += 1
+    return {
+        "ok": not missing and not conflicts,
+        "dryRun": True,
+        "bundle": str(bundle_dir.resolve()),
+        "blobs": {
+            "included": bool(declared.get("included")),
+            "total": len(rows),
+            "bytes": sum(int(row["size"]) for row in rows),
+            "toWrite": to_write,
+            "existing": existing,
+            "missing": len(missing),
+            "conflicts": len(conflicts),
+            "missingHashes": missing[:20],
+            "conflictDetails": conflicts[:20],
+        },
+    }
+
+
+def _restore_blobs(
+    bundle_dir: Path, manifest: dict[str, Any], cfg: ConfigBundle
+) -> dict[str, Any]:
+    """Write every bundle blob into the target CAS, all-or-nothing.
+
+    Files already present are re-verified and never rewritten. Any size or
+    sha256 mismatch aborts the whole batch and removes files written by this
+    call, so a caller can never observe a half-restored blob store.
+    """
+
+    declared = (manifest.get("totals") or {}).get("blobs") or {}
+    blob_file = bundle_dir / BLOB_MANIFEST_FILE
+    if not blob_file.is_file():
+        if declared.get("included"):
+            raise _err(
+                "E_BUNDLE_BLOB_MISSING",
+                "bundle declares blobs but meta/blobs.jsonl is missing",
+            )
+        return {"included": False, "rows": [], "written": [], "existing": 0}
+
+    rows = read_ndjson(blob_file)
+    fs = FsCasBackend(cfg.storage.root, cfg.storage.tmp_dir)
+    fs.ensure_dirs()
+    written: list[Path] = []
+    existing = 0
+    differences: list[dict[str, Any]] = []
+    for row in rows:
+        sha = str(row["hash"])
+        size = int(row["size"])
+        source = bundle_dir / "blobs" / sha[:2] / sha
+        if not source.is_file():
+            differences.append({"hash": sha, "reason": "payload missing from bundle"})
+            continue
+        if source.stat().st_size != size:
+            differences.append({"hash": sha, "reason": "bundle size mismatch"})
+            continue
+        target = fs.path_for(sha)
+        if target.is_file():
+            if target.stat().st_size != size or _sha256_file(target) != sha:
+                differences.append({"hash": sha, "reason": "target differs; refusing to overwrite"})
+            else:
+                existing += 1
+            continue
+        data = source.read_bytes()
+        if len(data) != size or hashlib.sha256(data).hexdigest() != sha:
+            differences.append({"hash": sha, "reason": "bundle payload failed re-hash"})
+            continue
+        fs.write(sha, data)
+        target = fs.path_for(sha)
+        if target.stat().st_size != size or _sha256_file(target) != sha:
+            differences.append({"hash": sha, "reason": "written file failed verification"})
+            continue
+        written.append(target)
+    if differences:
+        for path in written:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise _err(
+            "E_BUNDLE_BLOBS",
+            f"{len(differences)} blob(s) failed verification; batch aborted, "
+            "no partially restored blob store was left behind",
+            differences=differences[:20],
+        )
+    return {"included": True, "rows": rows, "written": written, "existing": existing}
+
+
 def import_bundle(
     bundle: ConfigBundle,
     bundle_dir: str | Path,
@@ -1012,6 +1288,7 @@ def import_bundle(
     replace: bool = False,
     keep_db_on_failure: bool = False,
     into_empty_target: bool = False,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     """Restore a bundle into a throw-away database. Never writes ``platform``.
 
@@ -1046,6 +1323,14 @@ def import_bundle(
         manifest = verify_bundle(bundle_dir)
         tag = _norm_tag(str(manifest.get("tag") or ""))
         expected = manifest.get("totals") or {}
+
+        if dry_run:
+            # Blob-only plan: report what a real import would write, never touch
+            # the target database or the CAS.
+            plan = _blob_plan(Path(bundle_dir), manifest, cfg)
+            plan["tag"] = tag
+            plan["counts"] = expected
+            return plan
 
         # ---- create the restore database -------------------------------
         step = "create-database"
@@ -1232,6 +1517,43 @@ def import_bundle(
                 ],
             )
 
+        # ---- blobs (CAS payloads + references) --------------------------
+        step = "blobs"
+        blob_result = _restore_blobs(Path(bundle_dir), manifest, cfg)
+        if blob_result["included"]:
+            try:
+                with runtime.metadata.tx() as tx:
+                    tx.executemany(
+                        _BLOB_UPSERT,
+                        [
+                            (
+                                row["hash"],
+                                int(row["size"]),
+                                row["mime"],
+                                f"blobs/{row['hash'][:2]}/{row['hash']}",
+                                Jsonb(row.get("metadata") or {}),
+                                _as_datetime(row.get("createdAt")),
+                                len(row.get("refs") or []),
+                            )
+                            for row in blob_result["rows"]
+                        ],
+                    )
+                    tx.executemany(
+                        _BLOB_REF_INSERT,
+                        [
+                            (row["hash"], ref["ownerType"], ref["ownerId"])
+                            for row in blob_result["rows"]
+                            for ref in (row.get("refs") or [])
+                        ],
+                    )
+            except Exception:
+                for path in blob_result["written"]:
+                    try:
+                        path.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+                raise
+
         # ---- vectors ----------------------------------------------------
         step = "vectors"
         import numpy as np
@@ -1326,7 +1648,8 @@ def import_bundle(
         # ---- consistency checks -----------------------------------------
         step = "checks"
         checks = _verify_restored(
-            runtime, manifest, vec_ids, vec_rows, restore_abox, chunks
+            runtime, manifest, vec_ids, vec_rows, restore_abox, chunks,
+            blob_result["rows"],
         )
         ok = all(item["ok"] for item in checks)
         return {
@@ -1342,6 +1665,13 @@ def import_bundle(
             "aboxGraph": restore_abox,
             "checks": checks,
             "ledger": {"events": len(records), "facts": len(facts), "chain": chain_ok(records)},
+            "blobs": {
+                "included": bool(blob_result["included"]),
+                "count": len(blob_result["rows"]),
+                "bytes": sum(int(row["size"]) for row in blob_result["rows"]),
+                "written": len(blob_result["written"]),
+                "existing": blob_result["existing"],
+            },
             "counts": expected,
         }
     except (PortError, PlatformError) as exc:
@@ -1412,6 +1742,7 @@ def _verify_restored(
     vec_rows: Any,
     restore_abox: str,
     chunks: list[dict[str, Any]],
+    blob_rows: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     import numpy as np
 
@@ -1567,6 +1898,68 @@ def _verify_restored(
                 entity_count,
                 entity_count == int(declared_entities.get(key) or 0),
             )
+
+    declared_blobs = totals.get("blobs") or {}
+    if declared_blobs.get("included"):
+        target_blobs = runtime.metadata.query(
+            """
+            SELECT hash, size FROM platform.blob WHERE state = 'committed'
+            """
+        )
+        by_hash = {str(row["hash"]): int(row["size"]) for row in target_blobs}
+        bundle_rows = list(blob_rows or [])
+        missing = []
+        size_bad = []
+        declared_bytes = 0
+        for row in bundle_rows:
+            sha = str(row["hash"])
+            size = int(row["size"])
+            declared_bytes += size
+            if sha not in by_hash:
+                missing.append(sha)
+            elif by_hash[sha] != size:
+                size_bad.append(sha)
+        import_hashes = {
+            str(row["hash"])
+            for row in runtime.metadata.query(
+                """
+                SELECT DISTINCT hash FROM platform.blob_ref
+                 WHERE owner_id LIKE 'ontology/sources/%%'
+                """
+            )
+        }
+        bundled = {str(row["hash"]) for row in bundle_rows}
+        extras = [
+            sha for sha in by_hash
+            if sha not in bundled and sha not in import_hashes
+        ]
+        refs_declared = sum(len(row.get("refs") or []) for row in bundle_rows)
+        refs_restored = int(
+            runtime.metadata.query("SELECT COUNT(*) AS n FROM platform.blob_ref")[0]["n"]
+        )
+        # Import regenerates one ontology source TTL for provenance, so the
+        # aggregate store can be one blob larger than the bundle. The contract
+        # asserted here is stronger than a total: every bundled blob exists with
+        # the exact byte size, and no unexplained extra blob appears.
+        blobs_ok = (
+            not missing
+            and not size_bad
+            and not extras
+            and refs_restored >= refs_declared
+        )
+        extra_bytes = sum(by_hash[sha] for sha in extras)
+        generated = [sha for sha in by_hash if sha not in bundled and sha in import_hashes]
+        generated_bytes = sum(by_hash[sha] for sha in generated)
+        add(
+            "blobs",
+            declared_blobs.get("count") or 0,
+            len(bundle_rows) - len(missing),
+            blobs_ok,
+            f"bytes={declared_bytes} missing={len(missing)} "
+            f"sizeBad={len(size_bad)} refs={refs_restored}/{refs_declared} "
+            f"unexplainedExtras={len(extras)}(+{extra_bytes}B) "
+            f"importGenerated={len(generated)}(+{generated_bytes}B)",
+        )
 
     restored_graph = Graph()
     nt = runtime.graph.export_graph(pointer["graph"])
