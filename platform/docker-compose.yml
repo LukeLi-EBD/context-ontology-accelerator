@@ -209,6 +209,11 @@ services:
       PLATFORM__RUNTIME__MODE: "${PLATFORM_RUNTIME_MODE:-learn}"
       # S14H-17 burst tier: scripts/burst.ps1 on sets 0 (unlimited), off restores 1.0.
       PLATFORM__EMBEDDING__MAX_CHUNKS_PER_SEC: "${EMBED_MAX_CHUNKS_PER_SEC:-1.0}"
+      # 方案 A：purpose=smoke 自检豁免的内部 token（只在部署层注入，不进镜像、
+      # 不进证据包、不进日志）。未配置 => fail-closed：一律拒绝豁免。
+      # 轮换：改 .env / 本机环境变量 PLATFORM_SMOKE_TOKEN 后重建 api 容器
+      # （docker compose up -d --force-recreate api）；单值 token，切换需一次性窗口。
+      PLATFORM_SMOKE_TOKEN: "${PLATFORM_SMOKE_TOKEN:-}"
     ports:
       - "127.0.0.1:${PLATFORM_PORT:-8080}:8080"
     volumes:

@@ -25,6 +25,8 @@ exemption is recorded in the evidence pack with actor / path / baseline.
 
 from __future__ import annotations
 
+import hmac
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -42,14 +44,72 @@ COVERAGE_METRICS = (
 COVERAGE_DECREASE_CODE = "TERM_COVERAGE_DECREASE"
 VOCAB_ZERO_CODE = "TERM_VOCAB_ZERO"
 VOCAB_ZERO_EXEMPT_CODE = "TERM_VOCAB_ZERO_EXEMPTED"
+VOCAB_ZERO_FORGED_CODE = "TERM_VOCAB_ZERO_EXEMPTION_FORGED"
 SMOKE_PURPOSE = "smoke"
+SMOKE_TOKEN_HEADER = "X-Smoke-Token"
+SMOKE_TOKEN_ENV = "PLATFORM_SMOKE_TOKEN"
 
 # 判据针对"生效术语集"，不针对"T-Box 图内容"：解耦到独立术语命名图/指针后，
 # 版本图里没有术语是正常状态；这里比较的是发布后生效术语集相对高水位是否清零。
 VOCAB_PREDICATE = (
     "high_water.conceptsInScheme > 0 and effective.conceptsInScheme == 0 "
-    "=> blocking, independent of terms.gate; only purpose=smoke may exempt"
+    "=> blocking, independent of terms.gate; only purpose=smoke with a verified "
+    "internal token may exempt"
 )
+
+
+def check_smoke_token(token: str | None, expected: str | None) -> tuple[bool, str]:
+    """Constant-time check of the internal smoke token.
+
+    Returns ``(verified, status)`` where status is one of ``verified`` /
+    ``missing`` / ``invalid`` / ``unconfigured``.  **Fail-closed**: an
+    unconfigured env var never grants the exemption.  Neither the presented nor
+    the expected value is ever returned, so callers cannot leak it by accident.
+    """
+    if not expected:
+        return False, "unconfigured"
+    if not token:
+        return False, "missing"
+    if not hmac.compare_digest(str(token), str(expected)):
+        return False, "invalid"
+    return True, "verified"
+
+
+FORGED_REASONS = {
+    "unconfigured": "smoke token 环境变量未配置，已按 fail-closed 拒绝豁免并照常阻断",
+    "missing": "purpose=smoke 未携带 X-Smoke-Token，按伪造处理并照常阻断",
+    "invalid": "X-Smoke-Token 校验失败，按伪造处理并照常阻断",
+    "not_claimed": "purpose=smoke 未经校验入口，按伪造处理并照常阻断",
+}
+
+
+def smoke_env_context(
+    purpose: str | None,
+    *,
+    env_name: str | None = None,
+    remote_addr: str | None = None,
+) -> dict[str, Any]:
+    """In-process self-check probes: same check, token presented from the env.
+
+    ``platform smoke-sN`` runs inside the API container and calls the registry
+    directly, so it cannot send an HTTP header. It presents the same secret via
+    ``PLATFORM_SMOKE_TOKEN`` and goes through ``check_smoke_token`` (constant
+    time). **Fail-closed**: unset env => ``unconfigured`` => exemption refused.
+    """
+    if str(purpose or "").strip().lower() != SMOKE_PURPOSE:
+        return {
+            "purposeVerified": None,
+            "purposeStatus": "not_claimed",
+            "remoteAddr": remote_addr,
+        }
+    value = os.environ.get(env_name or SMOKE_TOKEN_ENV) or None
+    verified, status = check_smoke_token(value, value)
+    return {
+        "purposeVerified": verified,
+        "purposeStatus": status,
+        "remoteAddr": remote_addr,
+    }
+
 
 
 
@@ -137,17 +197,28 @@ def evaluate_snapshot(
     }
     zero_fired = hw_metric > 0 and actual_metric == 0
     zero_finding: dict[str, Any] | None = None
+    forged_finding: dict[str, Any] | None = None
     exemption: dict[str, Any] | None = None
+    context = context or {}
+    claimed_smoke = str(context.get("purpose") or "").strip().lower() == SMOKE_PURPOSE
+    # 方案 A：只有"声称 smoke 且 token 校验通过"才给豁免；任何未校验/错 token/
+    # 环境变量未配置的 smoke 声明都按伪造处理，零术语阻断照旧生效（fail-closed）。
+    purpose_verified = bool(context.get("purposeVerified"))
+    token_status = str(context.get("purposeStatus") or "not_claimed")
+    remote_addr = context.get("remoteAddr")
     if zero_fired:
-        if str((context or {}).get("purpose") or "").strip().lower() == SMOKE_PURPOSE:
+        if claimed_smoke and purpose_verified:
             exemption = {
                 "purpose": SMOKE_PURPOSE,
-                "actor": (context or {}).get("actor"),
-                "path": (context or {}).get("path"),
-                "versionId": (context or {}).get("versionId"),
+                "actor": context.get("actor"),
+                "path": context.get("path"),
+                "versionId": context.get("versionId"),
                 "baseline": high_water_block,
                 "current": effective,
-                "reason": "purpose=smoke 显式豁免：自检探针允许发布不含术语的 T-Box 版本",
+                "reason": "purpose=smoke + 内部 token 校验通过，自检探针允许发布不含术语的 T-Box 版本",
+                "tokenStatus": "verified",
+                "purposeVerified": True,
+                "remoteAddr": remote_addr,
                 "exemptedAt": _now(),
             }
             zero_finding = {
@@ -175,17 +246,37 @@ def evaluate_snapshot(
                 "current": effective,
                 "message": (
                     f"生效术语集的 MetricScheme 概念从 {hw_metric} 掉到 0；"
-                    "生产路径一律阻断，不受 terms.gate 档位影响（仅 purpose=smoke 可豁免）"
+                    "生产路径一律阻断，不受 terms.gate 档位影响"
+                    "（仅 purpose=smoke 且内部 token 校验通过可豁免）"
                 ),
             }
         findings.append(zero_finding)
+        if claimed_smoke and not purpose_verified:
+            # 伪造/未配置/漏带 token 的 smoke 声明：阻断照旧（zero_finding 已是
+            # blocking），另记一条 FORGED，便于事后区分"被拦下"和"未尝试豁免"。
+            forged_finding = {
+                "code": VOCAB_ZERO_FORGED_CODE,
+                "severity": "blocking",
+                "blocking": True,
+                "defaultBlocking": True,
+                "forced": False,
+                "purpose": SMOKE_PURPOSE,
+                "tokenStatus": token_status,
+                "purposeVerified": False,
+                "remoteAddr": remote_addr,
+                "baseline": high_water_block,
+                "current": effective,
+                "message": FORGED_REASONS.get(token_status, FORGED_REASONS["not_claimed"]),
+            }
+            findings.append(forged_finding)
 
     # ``off`` keeps the original "no findings attached" contract unless the
-    # non-configurable vocab guard fires.
+    # non-configurable vocab guard fires; a forged smoke claim must still be
+    # recorded so gate=off cannot hide the attempt.
     if config.gate == "off":
         if zero_finding is None:
             return None
-        findings = [zero_finding]
+        findings = [item for item in (zero_finding, forged_finding) if item]
         declines = []
 
     blocking = sum(1 for item in findings if item["blocking"])
@@ -226,6 +317,10 @@ def evaluate_snapshot(
             "zeroDrop": zero_fired,
             "forcedBlocking": forced > 0,
             "exemption": exemption,
+            "purpose": context.get("purpose"),
+            "purposeVerified": purpose_verified,
+            "tokenStatus": token_status,
+            "remoteAddr": remote_addr,
         },
         "checkedAt": _now(),
         "readOnly": True,

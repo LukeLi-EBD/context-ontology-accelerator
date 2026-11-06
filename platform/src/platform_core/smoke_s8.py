@@ -12,6 +12,7 @@ from pathlib import Path
 
 import httpx
 
+from . import termgate
 from .assembly import Runtime
 from .errors import PortError
 
@@ -99,7 +100,10 @@ def run_smoke_s8(runtime: Runtime, base_url: str) -> int:
             version = runtime.ontology.import_source(
                 str(path), "1.0.0", on_conflict="new_version"
             )
-            runtime.ontology.publish(version["versionId"], acknowledge_breaking=True)
+            runtime.ontology.publish(
+                version["versionId"], acknowledge_breaking=True, purpose="smoke",
+                **termgate.smoke_env_context("smoke"),
+            )
             inferred = f"urn:platform:inferred:{version['versionId']}"
 
             # 2. assert six A-Box facts from four different sources

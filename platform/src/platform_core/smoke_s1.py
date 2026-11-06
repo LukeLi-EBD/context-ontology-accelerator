@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from . import termgate
 from .adapters.graph_oxigraph import OxigraphHttpStore
 from .adapters.ontology_pg import OntologyRegistry
 from .assembly import Runtime
@@ -81,7 +82,10 @@ def run_smoke_s1(runtime: Runtime) -> int:
     if v1:
         published = suite.run(
             "publish.v1",
-            lambda: registry.publish(v1["versionId"], acknowledge_breaking=True),
+            lambda: registry.publish(
+                v1["versionId"], acknowledge_breaking=True, purpose="smoke",
+                **termgate.smoke_env_context("smoke"),
+            ),
         )
         if published:
             pointer = registry.current()
@@ -103,7 +107,10 @@ def run_smoke_s1(runtime: Runtime) -> int:
     if v2:
         suite.run(
             "publish.v2",
-            lambda: registry.publish(v2["versionId"], acknowledge_breaking=True),
+            lambda: registry.publish(
+                v2["versionId"], acknowledge_breaking=True, purpose="smoke",
+                **termgate.smoke_env_context("smoke"),
+            ),
         )
         pointer = registry.current()
         if pointer and pointer["versionId"] == v2["versionId"]:

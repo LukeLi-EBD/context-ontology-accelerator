@@ -7,6 +7,7 @@ codes so clients see provider codes instead of stack traces.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import time
@@ -24,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from . import __version__
 from . import entity_view
 from . import healthboard
+from . import termgate
 from .adapters.ontology_pg import (
     build_import_document,
     get_import_record,
@@ -1428,6 +1430,27 @@ def _governance_actor(body: dict[str, Any]) -> str:
     return _governance_field(body, "actor", ACTOR_REQUIRED)
 
 
+def _smoke_guard(
+    request: Request, purpose: Any, terms_cfg: Any
+) -> dict[str, Any]:
+    """方案 A：只认携带内部 token 的 `purpose=smoke`，且 fail-closed。
+
+    密钥只从环境变量读取（变量名来自 ``terms.smoke_token_env``），用
+    ``hmac.compare_digest`` 常量时间比较；token 值不进日志/证据包/错误信息。
+    """
+    claimed = str(purpose or "").strip().lower() == termgate.SMOKE_PURPOSE
+    remote_addr = getattr(getattr(request, "client", None), "host", None)
+    if not claimed:
+        return {"purpose_verified": None, "purpose_status": "not_claimed",
+                "remote_addr": remote_addr}
+    env_name = getattr(terms_cfg, "smoke_token_env", None) or termgate.SMOKE_TOKEN_ENV
+    expected = os.environ.get(env_name) or None
+    ok, status = termgate.check_smoke_token(
+        request.headers.get(termgate.SMOKE_TOKEN_HEADER), expected
+    )
+    return {"purpose_verified": ok, "purpose_status": status, "remote_addr": remote_addr}
+
+
 def _governance_reason(body: dict[str, Any]) -> str:
     return _governance_field(body, "reason", REASON_REQUIRED)
 
@@ -2795,7 +2818,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         )
 
     @app.post("/ontology/publish")
-    def ontology_publish(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    def ontology_publish(
+        request: Request, body: dict[str, Any] = Body(...)
+    ) -> dict[str, Any]:
         version_id = body.get("versionId")
         if not isinstance(version_id, str) or not version_id:
             raise PortError(
@@ -2804,16 +2829,17 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 provider="platform",
                 provider_code="E_ONTOLOGY_VERSION_REQUIRED",
             )
+        smoke = _smoke_guard(request, body.get("purpose"), termgate.terms_config(runtime))
         return runtime.ontology.publish(
             version_id,
             proposal_id=body.get("proposalId"),
             acknowledge_breaking=bool(body.get("acknowledgeBreaking", False)),
             actor=body.get("actor", "operator"),
             reason=body.get("reason"),
-            # Explicit self-check exemption only: `purpose=smoke` lets a probe
-            # publish a T-Box without terms; the exemption is recorded in the
-            # evidence pack (actor / path / high-water baseline).
+            # `purpose=smoke` 只有在携带内部 token 时才豁免（fail-closed）；
+            # 豁免/伪造都会写进证据包与 ontology_event 审计链。
             purpose=body.get("purpose"),
+            **smoke,
         )
 
     @app.post("/ontology/rollback")
@@ -3209,7 +3235,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.post("/ontology/imports/{import_id}/publish")
     @app.post("/api/ontology/imports/{import_id}/publish")
     def ontology_import_publish(
-        import_id: str, body: dict[str, Any] | None = Body(default=None)
+        import_id: str,
+        request: Request,
+        body: dict[str, Any] | None = Body(default=None),
     ) -> dict[str, Any]:
         payload = body or {}
         dry_run = payload.get("dryRun", True)
@@ -3220,6 +3248,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 provider="platform",
                 provider_code="E_ONTOLOGY_IMPORT_BODY",
             )
+        smoke = _smoke_guard(request, payload.get("purpose"), termgate.terms_config(runtime))
         return publish_import(
             runtime.metadata,
             runtime.graph,
@@ -3232,9 +3261,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             acknowledge_breaking=bool(payload.get("acknowledgeBreaking", False)),
             abox_graphs=runtime.config.reasoning.abox_graphs,
             publish_existing=bool(payload.get("publishExisting", False)),
-            # Only `purpose=smoke` exempts the vocab-zero guard; it is recorded
-            # in the evidence pack rather than silently disabling the gate.
+            # 同上：`purpose=smoke` 必须带内部 token，未配置/错 token 一律按伪造
+            # 记录并照常阻断（零术语判定本身不变）。
             purpose=payload.get("purpose"),
+            **smoke,
         )
 
     @app.put("/ontology/shapes")

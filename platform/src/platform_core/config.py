@@ -318,6 +318,9 @@ class TermsConfig(_Strict):
     gate: str = "warn"
     blocking_codes: list[str] = Field(default_factory=lambda: list(DEFAULT_TERMS_BLOCKING_CODES))
     coverage_decrease_tolerance: float = Field(default=0.0, ge=0.0, le=1.0)
+    # 方案 A：`purpose=smoke` 必须携带内部 token。名字是保存密钥的**环境变量名**，
+    # 密钥本身不进配置文件、不进日志、不进证据包。未配置 => fail-closed（拒绝豁免）。
+    smoke_token_env: str = "PLATFORM_SMOKE_TOKEN"
 
 
 # --- end G8 terms gate config ---

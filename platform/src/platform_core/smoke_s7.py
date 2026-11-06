@@ -11,6 +11,7 @@ from pathlib import Path
 
 import httpx
 
+from . import termgate
 from .assembly import Runtime
 from .errors import PortError
 
@@ -119,7 +120,10 @@ def run_smoke_s7(runtime: Runtime, base_url: str) -> int:
             version = runtime.ontology.import_source(
                 str(path), "1.0.0", on_conflict="new_version"
             )
-            runtime.ontology.publish(version["versionId"], acknowledge_breaking=True)
+            runtime.ontology.publish(
+                version["versionId"], acknowledge_breaking=True, purpose="smoke",
+                **termgate.smoke_env_context("smoke"),
+            )
             suite.check(
                 "ontology.publish",
                 runtime.ontology.current()["versionId"] == version["versionId"],

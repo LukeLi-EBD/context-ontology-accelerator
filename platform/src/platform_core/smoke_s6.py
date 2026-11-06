@@ -10,6 +10,7 @@ from pathlib import Path
 
 import httpx
 
+from . import termgate
 from .assembly import Runtime, assemble
 from .config import load_config
 from .errors import PlatformError, PortError
@@ -92,7 +93,10 @@ def run_smoke_s6(runtime: Runtime, base_url: str, bad_config: str) -> int:
         v1 = runtime.ontology.import_source(
             str(_write(tmp_dir, f"s6-{nonce}-v1.ttl", _tbox(nonce))), "1.0.0"
         )
-        runtime.ontology.publish(v1["versionId"], acknowledge_breaking=True)
+        runtime.ontology.publish(
+            v1["versionId"], acknowledge_breaking=True, purpose="smoke",
+            **termgate.smoke_env_context("smoke"),
+        )
         alice = f"urn:platform:smoke:{nonce}:alice"
         runtime.graph.update(
             f"INSERT DATA {{ GRAPH <{abox}> {{ <{alice}> a <urn:platform:smoke:{nonce}:Student> . }} }}"
