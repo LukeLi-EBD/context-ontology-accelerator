@@ -30,7 +30,7 @@ BINDING_OVERRIDES: tuple[dict[str, Any], ...] = (
         "metric_id": "FIN-BANK-013",
         "definition_version": "v3.0",
         "role": "denominator",
-        "value_expr": "balance_start",
+        "value_expr": "GREATEST(balance_start - period_decrease_amount, 0)",
     },
     {
         "metric_id": "FIN-BANK-014",
@@ -42,7 +42,7 @@ BINDING_OVERRIDES: tuple[dict[str, Any], ...] = (
         "metric_id": "FIN-BANK-014",
         "definition_version": "v3.0",
         "role": "denominator",
-        "value_expr": "balance_start",
+        "value_expr": "GREATEST(balance_start - period_decrease_amount, 0)",
     },
     {
         "metric_id": "FIN-BANK-015",
@@ -54,7 +54,7 @@ BINDING_OVERRIDES: tuple[dict[str, Any], ...] = (
         "metric_id": "FIN-BANK-015",
         "definition_version": "v3.0",
         "role": "denominator",
-        "value_expr": "balance_start",
+        "value_expr": "GREATEST(balance_start - period_decrease_amount, 0)",
     },
     {
         "metric_id": "FIN-BANK-016",
@@ -66,7 +66,7 @@ BINDING_OVERRIDES: tuple[dict[str, Any], ...] = (
         "metric_id": "FIN-BANK-016",
         "definition_version": "v3.0",
         "role": "denominator",
-        "value_expr": "balance_start",
+        "value_expr": "GREATEST(balance_start - period_decrease_amount, 0)",
     },
     {
         "metric_id": "FIN-INS-018",

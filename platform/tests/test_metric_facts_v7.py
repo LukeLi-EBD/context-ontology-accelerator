@@ -290,8 +290,9 @@ class MetricFactsV7Test(unittest.TestCase):
 
     # ----------------------------------------------------------------- bank
     def test_02_bank_migration_dpd_fpd(self) -> None:
+        # 期初正常类向下迁徙 90（A：100-10）／（期初正常类余额 300 − 期间减少 30）
         self.assertAlmostEqual(self._value("FIN-BANK-013", AS_OF, "TEST-BANK"),
-                               100 / 270 * 100, places=6)
+                               90 / 270 * 100, places=6)
         self.assertAlmostEqual(self._value("FIN-BANK-017", AS_OF, "TEST-BANK"),
                                1 / 2 * 100, places=6)
         self.assertAlmostEqual(self._value("FIN-BANK-033", YEAR, "TEST-BANK"),

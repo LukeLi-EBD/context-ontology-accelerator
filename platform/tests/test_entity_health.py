@@ -23,6 +23,7 @@ sys.path.insert(0, os.environ.get("PLATFORM_SRC", "/app/src"))
 sys.path.insert(0, "../src")
 
 import platform_core.api as api_module
+from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
 from platform_core.errors import PortError
 
 RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -159,7 +160,8 @@ class FakeGraph:
 
 
 class FakeMetadata:
-    def __init__(self, *, bindings=None, import_row=None, jobs=0, schema_version=30):
+    def __init__(self, *, bindings=None, import_row=None, jobs=0,
+                 schema_version=SUPPORTED_SCHEMA_VERSION):
         self.bindings = bindings or []
         self.import_row = import_row
         self.jobs = jobs
@@ -267,7 +269,7 @@ class HealthDashboardTests(unittest.TestCase):
                 "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
             },
             jobs=3,
-            schema_version=30,
+            schema_version=SUPPORTED_SCHEMA_VERSION,
         )
         runtime = _runtime(metadata=metadata, graph=graph, ontology=FakeOntology())
         with _client(runtime) as client:
