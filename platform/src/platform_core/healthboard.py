@@ -71,6 +71,91 @@ def _pointer(runtime: Any) -> dict[str, Any] | None:
     return pointer if isinstance(pointer, dict) else None
 
 
+_POINTER_WARNING_IMPACT = (
+    "T-Box/answerable 的 ontology 层直接按指针指向的图取数；指针非 published 时"
+    "读数不代表有效基线，/answerable/panel 的覆盖数可能骤降，禁止据此做验收或发布判断。"
+)
+
+
+def pointer_status(runtime: Any) -> dict[str, Any]:
+    """tbox/current 指针的可观测状态（只读）。
+
+    不参与 /readyz 的状态码判定，避免“启动即崩”；调用方按 ``ok`` 字段告警。
+    """
+    def _iso(value: Any) -> Any:
+        return value.isoformat() if hasattr(value, "isoformat") else value
+
+    base: dict[str, Any] = {
+        "name": "tbox/current",
+        "ok": False,
+        "level": "error",
+        "status": "unreadable",
+        "versionId": None,
+        "semver": None,
+        "tripleCount": None,
+        "updatedBy": None,
+        "updatedAt": None,
+        "subject": "tbox/current 指针（版本状态不变量）",
+        "source": "platform.graph_pointer + platform.ontology_version",
+    }
+    try:
+        rows = runtime.metadata.query(
+            """
+            SELECT p.version_id, p.updated_by, p.updated_at,
+                   v.status, v.semver, v.triple_count
+              FROM platform.graph_pointer p
+              LEFT JOIN platform.ontology_version v ON v.version_id = p.version_id
+             WHERE p.name = 'tbox/current'
+            """
+        )
+    except Exception as exc:
+        return {
+            **base,
+            "warning": f"tbox/current 指针状态不可读：{exc}",
+            "impact": _POINTER_WARNING_IMPACT,
+        }
+    if not rows:
+        return {
+            **base,
+            "status": "missing",
+            "warning": "tbox/current 指针不存在",
+            "impact": "无指针即无 T-Box 基线；面板与问答的 ontology 层取不到图。",
+        }
+
+    row = rows[0]
+    version_id = row.get("version_id")
+    status = row.get("status")
+    if status is None:
+        status_value = "missing_version"
+        warning = (
+            f"tbox/current 指向 {version_id}，但该版本行已不存在（孤儿指针）"
+        )
+    elif status != "published":
+        status_value = str(status)
+        warning = (
+            f"tbox/current 指向 {version_id}（{status}），不是 published："
+            "该版本已作废，但读侧仍按其图问答"
+        )
+    else:
+        status_value = "published"
+        warning = None
+
+    ok = status_value == "published"
+    return {
+        **base,
+        "ok": ok,
+        "level": "ok" if ok else "error",
+        "status": status_value,
+        "versionId": version_id,
+        "semver": row.get("semver"),
+        "tripleCount": row.get("triple_count"),
+        "updatedBy": row.get("updated_by"),
+        "updatedAt": _iso(row.get("updated_at")),
+        "warning": warning,
+        "impact": None if ok else _POINTER_WARNING_IMPACT,
+    }
+
+
 def _abox_graphs(runtime: Any) -> list[str]:
     try:
         status = runtime.reasoning.status()
@@ -789,6 +874,7 @@ def dashboard(runtime: Any) -> dict[str, Any]:
             "graph": tbox_graph,
             "source": "GET /ontology/versions（tbox/current 指针）",
         },
+        "pointerStatus": pointer_status(runtime),
         "ontologyDiff": "GET /health/ontology-diff",
         "dataSource": {
             "endpoints": [

@@ -1385,6 +1385,51 @@ class OntologyRegistry:
         )
         return event_id
 
+    def _assert_pointer_precondition(
+        self,
+        version_id: str,
+        expected_version_id: str | None,
+        actual_version_id: str | None,
+        actor: str,
+        reason: str | None,
+        operation: str,
+    ) -> None:
+        """可选的前置条件：指针必须仍是调用方看到的版本。
+
+        ``expected_version_id`` 为 None 时保持原行为（调用方无需改动）。
+        不匹配时不写指针，只追加一条审计事件，然后返回 409。
+        """
+        if expected_version_id is None or actual_version_id == expected_version_id:
+            return
+        with self._meta.tx() as tx:
+            self._append_event(
+                tx,
+                version_id,
+                None,
+                "pointer_precondition_rejected",
+                actor,
+                reason or "expectedVersionId mismatch",
+                {
+                    "operation": operation,
+                    "expectedVersionId": expected_version_id,
+                    "actualVersionId": actual_version_id,
+                },
+            )
+        raise PortError(
+            code="Conflict",
+            message=(
+                f"tbox/current precondition failed: expected {expected_version_id}, "
+                f"actual {actual_version_id or 'none'}"
+            ),
+            provider="platform",
+            provider_code="E_ONTOLOGY_POINTER_PRECONDITION",
+            details={
+                "expectedVersionId": expected_version_id,
+                "actualVersionId": actual_version_id,
+                "operation": operation,
+            },
+        )
+
     def ensure_chain(self) -> dict[str, Any]:
         """Backfill prev_event/hash for events written before S11 (none expected)."""
         with self._meta.tx() as tx:
@@ -2609,6 +2654,7 @@ class OntologyRegistry:
         actor: str = "operator",
         reason: str | None = None,
         activate_existing: bool = False,
+        expected_version_id: str | None = None,
     ) -> dict[str, Any]:
         row = self._require(version_id)
         # OQ-65 residual / B-5: an archived version is a read-only baseline. It
@@ -2804,6 +2850,9 @@ class OntologyRegistry:
             "SELECT version_id FROM platform.graph_pointer WHERE name = %s", (POINTER_NAME,)
         )
         previous_id = current[0]["version_id"] if current else None
+        self._assert_pointer_precondition(
+            version_id, expected_version_id, previous_id, actor, reason, "publish"
+        )
         implicit_pid = f"prop-{uuid.uuid4().hex[:12]}" if implicit else None
         pid = proposal["proposal_id"] if proposal else implicit_pid
         impact = {
@@ -3128,7 +3177,8 @@ class OntologyRegistry:
             )
 
     def rollback_to(
-        self, version_id: str, actor: str = "operator", reason: str | None = None
+        self, version_id: str, actor: str = "operator", reason: str | None = None,
+        expected_version_id: str | None = None,
     ) -> dict[str, Any]:
         target = self._require(version_id)
         if target["status"] == "draft":
@@ -3159,6 +3209,9 @@ class OntologyRegistry:
             "SELECT version_id FROM platform.graph_pointer WHERE name = %s", (POINTER_NAME,)
         )
         previous_id = current[0]["version_id"] if current else None
+        self._assert_pointer_precondition(
+            version_id, expected_version_id, previous_id, actor, reason, "rollback"
+        )
         if previous_id == version_id:
             return {
                 "id": version_id, "status": "published", "previous": version_id,

@@ -1695,8 +1695,28 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         except Exception as exc:
             results["storage"] = {"status": "fail", "detail": str(exc)}
 
+        try:
+            pointer = healthboard.pointer_status(runtime)
+        except Exception as exc:  # 观测项不得影响就绪状态码
+            pointer = {
+                "name": "tbox/current",
+                "ok": False,
+                "level": "error",
+                "status": "unreadable",
+                "warning": f"tbox/current 指针状态不可读：{exc}",
+            }
+        warnings = [] if pointer.get("ok") else [pointer.get("warning") or "tbox/current 非 published"]
         healthy = all(item["status"] == "ok" for item in results.values())
-        return JSONResponse(status_code=200 if healthy else 503, content={"status": "ok" if healthy else "degraded", "checks": results})
+        return JSONResponse(
+            status_code=200 if healthy else 503,
+            content={
+                "status": "ok" if healthy else "degraded",
+                "checks": results,
+                "pointerStatus": pointer,
+                "warnings": warnings,
+                "note": "pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）",
+            },
+        )
 
     @app.get("/health/dashboard")
     def health_dashboard() -> dict[str, Any]:
@@ -2810,6 +2830,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             acknowledge_breaking=bool(body.get("acknowledgeBreaking", False)),
             actor=body.get("actor", "operator"),
             reason=body.get("reason"),
+            expected_version_id=body.get("expectedVersionId"),
         )
 
     @app.post("/ontology/rollback")
@@ -2823,7 +2844,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 provider_code="E_ONTOLOGY_VERSION_REQUIRED",
             )
         return runtime.ontology.rollback_to(
-            version_id, actor=body.get("actor", "operator"), reason=body.get("reason")
+            version_id, actor=body.get("actor", "operator"), reason=body.get("reason"),
+            expected_version_id=body.get("expectedVersionId"),
         )
 
     @app.get("/ontology/events")
@@ -2973,6 +2995,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             actor=actor,
             reason=body.get("reason"),
             activate_existing=publish_existing,
+            expected_version_id=body.get("expectedVersionId"),
         )
         return {"ok": True, **result}
 
@@ -2994,7 +3017,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         version_id = _governance_field(body, "versionId", "E_ONTOLOGY_VERSION_REQUIRED")
         before = runtime.ontology.current()
         result = runtime.ontology.rollback_to(
-            version_id, actor=actor, reason=body.get("reason")
+            version_id, actor=actor, reason=body.get("reason"),
+            expected_version_id=body.get("expectedVersionId"),
         )
         return {
             "ok": True,
