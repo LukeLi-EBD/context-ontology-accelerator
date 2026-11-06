@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
+from importlib.resources import files
 
 sys.path.insert(0, "/app/src")
 
@@ -18,6 +19,7 @@ from fastapi.testclient import TestClient
 import platform_core.api as api_module
 from platform_core.assembly import assemble
 from platform_core.config import load_config
+from platform_core.sqlsplit import split_sql_statements
 
 CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
 AS_OF = "2025-12-31"
@@ -239,6 +241,72 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertEqual(
             response.json()["error"]["providerCode"], "E_METRIC_WINDOW_INSUFFICIENT"
         )
+
+    # ------------------------------------------------------------ M-06 ledger
+    def test_16_readiness_ledger(self) -> None:
+        response = self.client.get("/metrics-readiness")
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertEqual(body["count"], 20)
+        self.assertEqual(body["counts"]["executed"], 16)
+        self.assertEqual(body["counts"]["registered_only"], 1)
+        self.assertEqual(body["counts"]["not_executable"], 3)
+        by_id = {(item["itemKind"], item["metricId"]): item for item in body["items"]}
+        self.assertEqual(by_id[("partial", "CUST-005")]["status"], "registered_only")
+        self.assertEqual(by_id[("partial", "FIN-BANK-019")]["status"], "not_executable")
+        self.assertEqual(by_id[("rule", "FIN-BANK-007")]["detail"]["ruleCount"], 4)
+
+    def test_17_registered_only_export(self) -> None:
+        response = self.client.get(
+            "/metrics-readiness", params={"status": "registered_only", "format": "csv"}
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertIn("text/csv", response.headers["content-type"])
+        lines = [line for line in response.text.splitlines() if line]
+        self.assertEqual(len(lines), 2)  # header + CUST-005 only
+        self.assertTrue(lines[0].startswith("item_kind,metric_id,status"))
+        self.assertIn("CUST-005", lines[1])
+        self.assertIn("registered_only", lines[1])
+        self.assertNotIn("executed", response.text)
+
+    def test_18_readiness_invalid_status(self) -> None:
+        response = self.client.get(
+            "/metrics-readiness", params={"status": "partial"}
+        )
+        self.assertEqual(response.status_code, 400, response.text)
+        self.assertEqual(
+            response.json()["error"]["providerCode"],
+            "E_METRIC_READINESS_STATUS_INVALID",
+        )
+
+    def test_19_v34_reentrant(self) -> None:
+        sql = files("platform_core").joinpath(
+            "sql/V34__metrics_core_m01_m06.sql"
+        ).read_text(encoding="utf-8")
+        statements = split_sql_statements(sql)
+
+        def snapshot() -> tuple:
+            rows = self.meta.query(
+                "SELECT item_kind, metric_id, status, reason, detail::text AS detail,"
+                " evidence_ref, checked_at FROM platform.metric_readiness"
+                " ORDER BY item_kind, metric_id"
+            )
+            bindings = self.meta.query(
+                "SELECT metric_id, role, value_expr, filter_sql, window_column"
+                " FROM platform.metric_field_binding"
+                " WHERE metric_id IN ('FIN-BANK-013','FIN-BANK-014','FIN-BANK-015',"
+                "'FIN-BANK-016','FIN-INS-018') ORDER BY metric_id, role"
+            )
+            return (tuple(tuple(sorted(r.items())) for r in rows),
+                    tuple(tuple(sorted(r.items())) for r in bindings))
+
+        before = snapshot()
+        for _ in range(2):
+            with self.meta.tx() as tx:
+                for statement in statements:
+                    tx.execute(statement, None)
+        self.assertEqual(snapshot(), before)
+
 
 if __name__ == "__main__":
     unittest.main()
