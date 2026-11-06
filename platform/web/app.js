@@ -131,7 +131,8 @@ async function searchEntities() {
     const data = await api(`/ui/api/entities?q=${encodeURIComponent(query)}&limit=30`);
     target.innerHTML = (data.items || []).length
       ? `<table><tr><th>实体</th><th>label</th><th>类型</th></tr>${data.items.map((item) =>
-          `<tr><td><a href="#" data-iri="${esc(item.iri)}" class="entity-link mono">${esc(item.iri)}</a></td>
+          `<tr><td><a href="entity.html?iri=${encodeURIComponent(item.iri)}" class="mono">${esc(item.iri)}</a>
+           · <a href="#" data-iri="${esc(item.iri)}" class="entity-link">邻居</a></td>
            <td>${esc(item.label)}</td><td class="mono">${esc(item.types.map(localName).join(', ') || '-')}</td></tr>`).join('')}</table>`
       : empty('无匹配实体');
     target.querySelectorAll('.entity-link').forEach((link) => {

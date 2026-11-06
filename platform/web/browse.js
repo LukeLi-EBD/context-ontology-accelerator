@@ -147,9 +147,16 @@
       const tbody = document.createElement('tbody');
       data.items.forEach(function (item) {
         const tr = document.createElement('tr');
-        [item.iri, item.label, item.graph].forEach(function (value) {
+        [item.iri, item.label, item.graph].forEach(function (value, index) {
           const td = document.createElement('td');
-          td.textContent = value == null ? '—' : value;
+          if (index === 0 && value) {
+            const link = document.createElement('a');
+            link.href = 'entity.html?iri=' + encodeURIComponent(value);
+            link.textContent = value;
+            td.appendChild(link);
+          } else {
+            td.textContent = value == null ? '—' : value;
+          }
           tr.appendChild(td);
         });
         tbody.appendChild(tr);

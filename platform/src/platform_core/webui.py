@@ -269,25 +269,44 @@ def neighbors(runtime: Runtime, iri: str, limit: int = 50) -> dict[str, Any]:
     if not graphs:
         return {"iri": iri, "edges": [], "nodes": [], "graphs": []}
     points = " ".join(f"<{graph}>" for graph in graphs)
-    result = runtime.graph.query(
+    # Two simple one-hop lookups instead of `GRAPH ?g { ... UNION ... }`:
+    # Oxigraph hangs on the union-under-variable-graph shape (30s timeout, 504)
+    # while these split queries answer in ~1ms on the same graphs.
+    cap = max(1, min(limit, 200))
+    outgoing = runtime.graph.query(
         f"""
-        SELECT ?s ?p ?o WHERE {{
+        SELECT ?p ?o WHERE {{
           VALUES ?g {{ {points} }}
-          GRAPH ?g {{
-            {{ BIND(<{iri}> AS ?s) ?s ?p ?o }}
-            UNION
-            {{ ?s ?p <{iri}> }}
-          }}
+          GRAPH ?g {{ <{iri}> ?p ?o }}
         }}
-        LIMIT {max(1, min(limit, 200))}
+        LIMIT {cap}
+        """
+    )
+    incoming = runtime.graph.query(
+        f"""
+        SELECT ?s ?p WHERE {{
+          VALUES ?g {{ {points} }}
+          GRAPH ?g {{ ?s ?p <{iri}> }}
+        }}
+        LIMIT {cap}
         """
     )
     edges = []
+    seen: set[tuple[str, str, str]] = set()
     nodes: dict[str, dict[str, Any]] = {iri: {"iri": iri, "label": _local(iri)}}
-    for binding in result["bindings"]:
+    for binding in outgoing["bindings"]:
         row = _values(binding)
-        edge = {"s": row.get("s", ""), "p": row.get("p", ""), "o": row.get("o", "")}
-        edges.append(edge)
+        edge = {"s": iri, "p": row.get("p", ""), "o": row.get("o", "")}
+        if (edge["s"], edge["p"], edge["o"]) not in seen:
+            seen.add((edge["s"], edge["p"], edge["o"]))
+            edges.append(edge)
+    for binding in incoming["bindings"]:
+        row = _values(binding)
+        edge = {"s": row.get("s", ""), "p": row.get("p", ""), "o": iri}
+        if (edge["s"], edge["p"], edge["o"]) not in seen:
+            seen.add((edge["s"], edge["p"], edge["o"]))
+            edges.append(edge)
+    for edge in edges:
         for key in ("s", "o"):
             term = edge[key]
             if term.startswith("http") or term.startswith("urn:"):

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>健康看板 · 本体平台</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="health">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="entity.html" data-nav="entity">实体详情</a>
+      <a href="health.html" data-nav="health" class="active">健康看板</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+      <a href="governance.html" data-nav="governance">治理控制台</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>系统状态 <span class="sub">只读聚合 · GET /health/dashboard</span>
+        <button id="refresh" style="margin-left:auto">刷新</button>
+      </h2>
+      <div id="health-summary" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>覆盖率 <span class="sub">T-Box 声明 vs A-Box 实际使用</span></h2>
+      <div id="health-coverage" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>质量与推理 <span class="sub">孤实例 / 无标签类 / SHACL / 推理失败</span></h2>
+      <div id="health-quality" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>迁移与 schema 一致性 <span class="sub">platform.schema_version vs 代码版本</span></h2>
+      <div id="health-migration" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>本体 diff <span class="sub">GET /health/ontology-diff · 只读</span></h2>
+      <form id="diff-form" class="toolbar">
+        <label for="diff-from">from</label>
+        <input type="text" id="diff-from" placeholder="留空 = 上一版" maxlength="120">
+        <label for="diff-to">to</label>
+        <input type="text" id="diff-to" placeholder="留空 = tbox/current" maxlength="120">
+        <button class="primary" type="submit">对比</button>
+        <span id="diff-state" class="sub"></span>
+      </form>
+      <div id="diff-result" class="empty">留空 from/to 可比较 tbox/current 与上一版。</div>
+    </section>
+
+    <section class="panel">
+      <h2>数据来源</h2>
+      <div id="health-source" class="hint">—</div>
+    </section>
+  </main>
+  <script src="health.js"></script>
+</body>
+</html>

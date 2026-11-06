@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实体详情 · 本体平台</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="entity">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="entity.html" data-nav="entity" class="active">实体详情</a>
+      <a href="health.html" data-nav="health">健康看板</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+      <a href="governance.html" data-nav="governance">治理控制台</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>实体详情 <span class="sub">只读 · GET /ui/api/entity · 徽标由后端判定</span></h2>
+      <form id="entity-form" class="toolbar">
+        <input type="text" id="entity-iri" placeholder="urn:platform:... 或 http://..." style="flex:1;min-width:320px" maxlength="2048">
+        <button class="primary" type="submit">查看</button>
+        <span id="entity-state" class="sub"></span>
+      </form>
+      <div id="entity-summary" class="empty">输入 IRI 后查询，或从“只读浏览 / 本体浏览”的实例列表点击进入。</div>
+    </section>
+
+    <section class="panel">
+      <h2>类归属与父类链 <span id="class-count" class="sub"></span></h2>
+      <div id="entity-classes" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>必需属性与取值 <span id="required-count" class="sub"></span></h2>
+      <div id="entity-required" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>属性取值</h2>
+      <div id="entity-properties" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>邻居子图 <span id="neighbor-count" class="sub"></span></h2>
+      <div id="entity-neighbors" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>相关指标 <span class="sub">按 metric_field_binding 反查 · 弱匹配失败显式标记</span></h2>
+      <div id="entity-metrics" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>来源与溯源 <span class="sub">sourceRef 可点击</span></h2>
+      <div id="entity-sources" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>数据来源</h2>
+      <div id="entity-source-note" class="hint">—</div>
+    </section>
+  </main>
+  <script src="entity.js"></script>
+</body>
+</html>

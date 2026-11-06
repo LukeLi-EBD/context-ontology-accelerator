@@ -22,6 +22,8 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from . import entity_view
+from . import healthboard
 from .adapters.ontology_pg import (
     build_import_document,
     get_import_record,
@@ -1695,6 +1697,19 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         healthy = all(item["status"] == "ok" for item in results.values())
         return JSONResponse(status_code=200 if healthy else 503, content={"status": "ok" if healthy else "degraded", "checks": results})
 
+    @app.get("/health/dashboard")
+    def health_dashboard() -> dict[str, Any]:
+        """B-04 read-only aggregate: coverage, orphans, SHACL, inference, schema."""
+        return healthboard.dashboard(runtime)
+
+    @app.get("/health/ontology-diff")
+    def health_ontology_diff(
+        from_version: str | None = Query(default=None, alias="from", max_length=120),
+        to_version: str | None = Query(default=None, alias="to", max_length=120),
+    ) -> dict[str, Any]:
+        """B-04 read-only T-Box diff; defaults to tbox/current vs previous version."""
+        return healthboard.ontology_diff(runtime, from_version, to_version)
+
     # ---- S2 documents ---------------------------------------------------
 
     @app.post("/documents")
@@ -3310,6 +3325,14 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         limit: int = Query(default=50, ge=1, le=200),
     ) -> dict[str, Any]:
         return webui.neighbors(runtime, iri, limit=limit)
+
+    @app.get("/ui/api/entity")
+    def ui_entity(
+        iri: str = Query(min_length=1, max_length=2048),
+        limit: int = Query(default=50, ge=1, le=200),
+    ) -> dict[str, Any]:
+        """B-03 read-only entity detail: classes, required props, neighbours, badge."""
+        return entity_view.entity_detail(runtime, iri, limit=limit)
 
     @app.get("/ui/api/candidates")
     def ui_candidates(
