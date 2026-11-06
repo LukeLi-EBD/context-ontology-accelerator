@@ -18,6 +18,15 @@
     return body;
   }
 
+  // 4xx 不是异常场景（例如只读端点拒绝写查询），这里保留状态码与原始 body，
+  // 交给调用方原样展示；普通视图仍用上面的 getJson。
+  async function requestJson(url) {
+    const response = await fetch(API_BASE + url, { headers: { Accept: 'application/json' } });
+    let body = null;
+    try { body = await response.json(); } catch (err) { body = null; }
+    return { ok: response.ok, status: response.status, body: body };
+  }
+
   function showEmpty(node, message) {
     node.classList.add('empty');
     node.textContent = message;
@@ -29,12 +38,13 @@
   }
 
   // ---- tabs ---------------------------------------------------------------
-  const loaded = { ontology: false, metrics: false, terms: false };
+  const VIEWS = ['ontology', 'metrics', 'terms', 'triples', 'sparql'];
+  const loaded = { ontology: false, metrics: false, terms: false, triples: false, sparql: false };
   const tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       tabs.forEach(function (item) { item.classList.toggle('active', item === tab); });
-      ['ontology', 'metrics', 'terms'].forEach(function (name) {
+      VIEWS.forEach(function (name) {
         el('view-' + name).hidden = (name !== tab.dataset.view);
       });
       const view = tab.dataset.view;
@@ -46,11 +56,15 @@
     if (view === 'ontology') return loadOntology();
     if (view === 'metrics') return loadMetrics();
     if (view === 'terms') return loadTerms();
+    if (view === 'triples') return loadTriples();
+    if (view === 'sparql') return loadSparql();
     return null;
   }
 
   // ---- ontology -----------------------------------------------------------
   const instanceState = { classIri: null, className: '', limit: 20, offset: 0, total: 0 };
+  // 支持 browse.html?class=<IRI> 深链（口径卡"查看该类实例"入口），类树加载后自动选中。
+  const initialClassIri = new URLSearchParams(location.search).get('class');
 
   function classNode(node) {
     const li = document.createElement('li');
@@ -161,6 +175,14 @@
         data.tree.forEach(function (node) { root.appendChild(classNode(node)); });
         treeBox.appendChild(root);
       }
+      if (initialClassIri) {
+        const match = findClassNode(data.tree || [], initialClassIri);
+        if (match) {
+          selectClass(match);
+        } else {
+          el('instance-head').textContent = '未找到类：' + initialClassIri;
+        }
+      }
       if (!data.properties || data.properties.length === 0) {
         showEmpty(propBox, '当前没有属性（接口返回 0 条）。');
       } else {
@@ -187,6 +209,15 @@
       renderError(treeBox, err);
       renderError(propBox, err);
     }
+  }
+
+  function findClassNode(nodes, iri) {
+    for (let i = 0; i < (nodes || []).length; i += 1) {
+      if (nodes[i].iri === iri) { return nodes[i]; }
+      const hit = findClassNode(nodes[i].children, iri);
+      if (hit) { return hit; }
+    }
+    return null;
   }
 
   // ---- metrics ------------------------------------------------------------
@@ -292,6 +323,8 @@
       box.appendChild(field('formulaDisabled', m.formulaDisabled));
       box.appendChild(field('missing', m.missing));
       box.appendChild(field('note', m.note));
+      // 异步补"相关实体/事实"块，不阻塞详情其余字段。
+      renderMetricLinks(box, m);
     } catch (err) {
       box.className = 'detail empty';
       box.textContent = '加载失败：' + err.message;
@@ -301,6 +334,369 @@
   el('metrics-refresh').addEventListener('click', loadMetrics);
   ['filter-domain', 'filter-basis', 'filter-publishable'].forEach(function (id) {
     el(id).addEventListener('change', loadMetrics);
+  });
+
+  // ---- metric -> ontology deep links --------------------------------------
+  // 后端 metric 详情没有实/类绑定字段（实测全部指标 0 条含 IRI），
+  // 唯一可用线索是 grain 文本与当前 T-Box 类的 localName 同名。
+  // 因此这里只做"弱关联"并在界面明示依据；匹配不到就显示"未绑定"，不构造链接。
+  const classCache = { list: null, promise: null };
+
+  function localNameOf(iri) {
+    if (!iri) return null;
+    const parts = String(iri).split(/[#/]/);
+    return parts[parts.length - 1] || null;
+  }
+
+  function ontologyClassList() {
+    if (classCache.list) return Promise.resolve(classCache.list);
+    if (!classCache.promise) {
+      classCache.promise = getJson('/browse/ontology/tree').then(function (data) {
+        classCache.list = data.classes || [];
+        return classCache.list;
+      }).catch(function (err) {
+        classCache.promise = null;
+        throw err;
+      });
+    }
+    return classCache.promise;
+  }
+
+  function makeLink(href, text, title) {
+    const link = document.createElement('a');
+    link.href = href;
+    link.textContent = text;
+    if (title) { link.title = title; }
+    link.className = 'deep-link';
+    return link;
+  }
+
+  function renderClassBinding(cls) {
+    const row = document.createElement('div');
+    row.className = 'binding';
+    const label = document.createElement('strong');
+    label.textContent = cls.label || localNameOf(cls.iri);
+    row.appendChild(label);
+    row.appendChild(document.createTextNode(' · '));
+    row.appendChild(makeLink(
+      'browse.html?class=' + encodeURIComponent(cls.iri), '查看该类实例', cls.iri));
+    row.appendChild(document.createTextNode(' · '));
+    row.appendChild(makeLink(
+      'ontology.html?entity=' + encodeURIComponent(cls.iri), '本体实体页', cls.iri));
+    const instanceBox = document.createElement('div');
+    instanceBox.className = 'sub binding-instances';
+    instanceBox.textContent = '实例加载中…';
+    row.appendChild(instanceBox);
+    getJson('/browse/ontology/instances?class=' + encodeURIComponent(cls.iri) + '&limit=5')
+      .then(function (data) {
+        const items = data.items || [];
+        instanceBox.textContent = '共 ' + (data.total || 0) + ' 条实例';
+        if (items.length === 0) {
+          instanceBox.textContent += '（当前命名图里没有该类的个体）';
+          return;
+        }
+        instanceBox.textContent += '，前 ' + items.length + ' 条：';
+        items.forEach(function (item, index) {
+          if (index > 0) { instanceBox.appendChild(document.createTextNode(' / ')); }
+          instanceBox.appendChild(makeLink(
+            'ontology.html?entity=' + encodeURIComponent(item.iri),
+            item.label || item.iri,
+            item.iri));
+        });
+      })
+      .catch(function (err) {
+        instanceBox.textContent = '实例加载失败：' + err.message;
+      });
+    return row;
+  }
+
+  async function renderMetricLinks(box, metric) {
+    const wrap = document.createElement('div');
+    wrap.className = 'metric-links';
+    const head = document.createElement('h4');
+    head.textContent = '相关实体/事实';
+    wrap.appendChild(head);
+    const body = document.createElement('div');
+    body.className = 'metric-links-body empty';
+    body.textContent = '正在匹配当前 T-Box…';
+    wrap.appendChild(body);
+    box.appendChild(wrap);
+
+    const grain = metric.grain == null ? '' : String(metric.grain).trim();
+    if (!grain) {
+      showEmpty(body, '未绑定：该口径未给出 grain，无法定位到本体类或实例。');
+      return;
+    }
+    let classes;
+    try {
+      classes = await ontologyClassList();
+    } catch (err) {
+      showEmpty(body, '未绑定：读取本体类失败（' + err.message + '）。');
+      return;
+    }
+    const matches = classes.filter(function (item) {
+      const local = localNameOf(item.iri);
+      return local && local.toLowerCase() === grain.toLowerCase();
+    });
+    if (matches.length === 0) {
+      showEmpty(body, '未绑定：grain=' + grain + '，当前 T-Box 没有同名类（按类 localName 精确同名匹配）。');
+      return;
+    }
+    body.classList.remove('empty');
+    body.textContent = '';
+    const basis = document.createElement('div');
+    basis.className = 'sub';
+    basis.textContent = '弱关联：按 grain=' + grain + ' 与本体类 localName 同名匹配，不是口径显式声明的绑定。';
+    body.appendChild(basis);
+    matches.slice(0, 3).forEach(function (cls) {
+      body.appendChild(renderClassBinding(cls));
+    });
+  }
+
+  // ---- triples ------------------------------------------------------------
+  const tripleState = { limit: 20, offset: 0 };
+
+  function tripleFilters() {
+    return {
+      subject: el('triple-subject').value.trim(),
+      predicate: el('triple-predicate').value.trim(),
+      object: el('triple-object').value.trim(),
+      graph: el('triple-graph').value.trim(),
+    };
+  }
+
+  async function loadTriples(resetOffset) {
+    const table = el('triples-table');
+    const empty = el('triples-empty');
+    if (resetOffset) { tripleState.offset = 0; }
+    const current = tripleFilters();
+    const params = new URLSearchParams();
+    ['subject', 'predicate', 'object', 'graph'].forEach(function (name) {
+      if (current[name]) { params.set(name, current[name]); }
+    });
+    tripleState.limit = parseInt(el('triple-limit').value, 10) || 20;
+    params.set('limit', String(tripleState.limit));
+    params.set('offset', String(tripleState.offset));
+    table.hidden = true;
+    empty.hidden = true;
+    el('triples-status').textContent = '加载中…';
+    try {
+      const data = await getJson('/browse/triples?' + params.toString());
+      const items = data.items || [];
+      let status = '· 返回 ' + items.length + ' 条 · offset=' + tripleState.offset;
+      if (data.truncated) { status += ' · truncated=true（服务端可能截断结果）'; }
+      el('triples-status').textContent = status;
+      const page = Math.floor(tripleState.offset / tripleState.limit) + 1;
+      el('triples-page').textContent = '第 ' + page + ' 页';
+      el('triples-prev').disabled = tripleState.offset <= 0;
+      // 接口不返回 total，只有本页满页时才认为可能还有下一页。
+      el('triples-next').disabled = items.length < tripleState.limit;
+      if (items.length === 0) {
+        showEmpty(empty, '当前条件下没有三元组（接口返回 0 条）。');
+        empty.hidden = false;
+        return;
+      }
+      const tbody = table.querySelector('tbody');
+      tbody.innerHTML = '';
+      items.forEach(function (item) {
+        const tr = document.createElement('tr');
+        [item.graph, item.subject, item.predicate, item.object].forEach(function (value) {
+          const td = document.createElement('td');
+          td.className = 'mono';
+          td.textContent = value == null ? '—' : String(value);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.hidden = false;
+    } catch (err) {
+      el('triples-status').textContent = '';
+      showEmpty(empty, '加载失败：' + err.message);
+      empty.hidden = false;
+    }
+  }
+
+  el('triples-query').addEventListener('click', function () { loadTriples(true); });
+  el('triples-reset').addEventListener('click', function () {
+    ['triple-subject', 'triple-predicate', 'triple-object', 'triple-graph'].forEach(function (id) {
+      el(id).value = '';
+    });
+    el('triple-limit').value = '20';
+    loadTriples(true);
+  });
+  ['triple-subject', 'triple-predicate', 'triple-object', 'triple-graph'].forEach(function (id) {
+    el(id).addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') { event.preventDefault(); loadTriples(true); }
+    });
+  });
+  el('triples-prev').addEventListener('click', function () {
+    tripleState.offset = Math.max(0, tripleState.offset - tripleState.limit);
+    loadTriples(false);
+  });
+  el('triples-next').addEventListener('click', function () {
+    tripleState.offset += tripleState.limit;
+    loadTriples(false);
+  });
+
+  // ---- sparql -------------------------------------------------------------
+  const DEFAULT_SPARQL = 'SELECT ?g ?s ?p ?o\nWHERE { GRAPH ?g { ?s ?p ?o } }\nLIMIT 20';
+
+  function loadSparql() {
+    if (!el('sparql-query').value) { el('sparql-query').value = DEFAULT_SPARQL; }
+  }
+
+  // 绑定 term 形状：{kind:'iri'|'literal'|'bnode', iri|value|label, datatype, lang}
+  function sparqlTerm(term) {
+    if (!term || typeof term !== 'object') { return '—'; }
+    if (term.kind === 'iri') { return term.iri || '—'; }
+    if (term.kind === 'literal') {
+      let text = term.value == null ? '' : String(term.value);
+      if (term.lang) { text += ' @' + term.lang; }
+      else if (term.datatype) { text += ' ^^' + term.datatype; }
+      return text;
+    }
+    if (term.kind === 'bnode') { return '_:' + (term.label || term.value || ''); }
+    return JSON.stringify(term);
+  }
+
+  function renderSparqlResult(box, body) {
+    box.classList.remove('empty');
+    box.textContent = '';
+    if (!body || !body.kind) {
+      const pre = document.createElement('pre');
+      pre.className = 'result-raw';
+      pre.textContent = JSON.stringify(body, null, 2);
+      box.appendChild(pre);
+      return;
+    }
+    if (body.kind === 'ask') {
+      const line = document.createElement('div');
+      line.className = 'sub';
+      line.textContent = 'ASK · boolean=' + String(body.boolean);
+      box.appendChild(line);
+      if (body.truncated) {
+        const note = document.createElement('div');
+        note.className = 'sub';
+        note.textContent = 'truncated=true（服务端可能截断结果）';
+        box.appendChild(note);
+      }
+      return;
+    }
+    const variables = body.variables || [];
+    const bindings = body.bindings || [];
+    if (variables.length === 0) {
+      showEmpty(box, 'SELECT 没有返回变量（接口 variables=[]）。');
+      return;
+    }
+    if (bindings.length === 0) {
+      showEmpty(box, 'SELECT 返回 0 行（接口 bindings=[]）。');
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    variables.forEach(function (name) {
+      const th = document.createElement('th');
+      th.textContent = '?' + name;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    bindings.forEach(function (binding) {
+      const tr = document.createElement('tr');
+      const values = binding.values || {};
+      variables.forEach(function (name) {
+        const td = document.createElement('td');
+        td.className = 'mono';
+        const text = sparqlTerm(values[name]);
+        td.textContent = text;
+        td.title = text;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    box.appendChild(table);
+    if (body.truncated) {
+      const note = document.createElement('div');
+      note.className = 'sub';
+      note.textContent = 'truncated=true（服务端可能截断结果）';
+      box.appendChild(note);
+    }
+  }
+
+  function renderSparqlError(box, response) {
+    box.hidden = false;
+    box.textContent = '';
+    const error = response.body && response.body.error ? response.body.error : null;
+    const rows = [
+      ['HTTP 状态', String(response.status)],
+      ['providerCode', error ? (error.providerCode || '—') : '—'],
+      ['code', error ? (error.code || '—') : '—'],
+      ['provider', error ? (error.provider || '—') : '—'],
+      ['retryable', error ? String(error.retryable) : '—'],
+      ['message', error ? (error.message || '—') : '—'],
+      ['details', error && error.details ? JSON.stringify(error.details) : '{}'],
+    ];
+    const table = document.createElement('table');
+    table.className = 'error-table';
+    rows.forEach(function (pair) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.textContent = pair[0];
+      const td = document.createElement('td');
+      td.textContent = pair[1];
+      tr.appendChild(th);
+      tr.appendChild(td);
+      table.appendChild(tr);
+    });
+    box.appendChild(table);
+    const pre = document.createElement('pre');
+    pre.className = 'result-raw';
+    pre.textContent = response.body ? JSON.stringify(response.body, null, 2) : '(空响应体)';
+    box.appendChild(pre);
+  }
+
+  async function runSparql() {
+    const query = el('sparql-query').value.trim();
+    const status = el('sparql-status');
+    const errorBox = el('sparql-error');
+    const result = el('sparql-result');
+    errorBox.hidden = true;
+    errorBox.textContent = '';
+    result.className = 'empty';
+    if (!query) {
+      result.textContent = '请输入 SELECT 或 ASK 查询。';
+      return;
+    }
+    result.textContent = '运行中…';
+    status.textContent = '· GET /browse/sparql';
+    const response = await requestJson('/browse/sparql?query=' + encodeURIComponent(query));
+    if (!response.ok) {
+      status.textContent = '· HTTP ' + response.status;
+      result.textContent = '查询被拒绝（错误详见上方）。';
+      renderSparqlError(errorBox, response);
+      return;
+    }
+    const body = response.body || {};
+    if (body.kind === 'select') {
+      status.textContent = '· kind=select · ' + ((body.bindings || []).length) + ' 行';
+    } else if (body.kind === 'ask') {
+      status.textContent = '· kind=ask · boolean=' + String(body.boolean);
+    } else {
+      status.textContent = '· HTTP ' + response.status;
+    }
+    renderSparqlResult(result, body);
+  }
+
+  el('sparql-run').addEventListener('click', runSparql);
+  el('sparql-query').addEventListener('keydown', function (event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      event.preventDefault();
+      runSparql();
+    }
   });
 
   // ---- terms --------------------------------------------------------------

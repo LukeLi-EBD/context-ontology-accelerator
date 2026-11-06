@@ -27,6 +27,8 @@
         <button class="tab active" data-view="ontology" role="tab">本体</button>
         <button class="tab" data-view="metrics" role="tab">口径卡</button>
         <button class="tab" data-view="terms" role="tab">术语别名</button>
+        <button class="tab" data-view="triples" role="tab">三元组</button>
+        <button class="tab" data-view="sparql" role="tab">SPARQL</button>
       </div>
 
       <div id="view-ontology" class="view">
@@ -112,6 +114,59 @@
             </table>
           </div>
         </div>
+      </div>
+
+      <div id="view-triples" class="view" hidden>
+        <div class="filters">
+          <label>subject（IRI）
+            <input type="text" id="triple-subject" placeholder="留空为任意，如 https://… 或 urn:…">
+          </label>
+          <label>predicate（IRI）
+            <input type="text" id="triple-predicate" placeholder="留空为任意">
+          </label>
+          <label>object（IRI 或字面量）
+            <input type="text" id="triple-object" placeholder="留空为任意；非 IRI 按字面量匹配">
+          </label>
+          <label>graph（IRI）
+            <input type="text" id="triple-graph" placeholder="留空为全部命名图">
+          </label>
+          <label>limit
+            <select id="triple-limit">
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <button id="triples-query">查询</button>
+          <button id="triples-reset">清空条件</button>
+          <span id="triples-status" class="sub"></span>
+        </div>
+        <div class="hint">只读：GET /browse/triples。留空条件时默认遍历全部命名图（平台默认图为空，需带 GRAPH 或指定 graph）。</div>
+        <div id="triples-empty" class="empty" hidden>当前条件下没有三元组（接口返回 0 条）。</div>
+        <table id="triples-table" class="data-table" hidden>
+          <thead>
+            <tr><th>命名图</th><th>subject</th><th>predicate</th><th>object</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="pager">
+          <button id="triples-prev" disabled>上一页</button>
+          <span id="triples-page" class="sub"></span>
+          <button id="triples-next" disabled>下一页</button>
+        </div>
+      </div>
+
+      <div id="view-sparql" class="view" hidden>
+        <div class="warnbox">只读端点：仅接受 SELECT / ASK。写查询与 SERVICE 不做前端拦截，由后端返回
+          400 错误，本页原样展示 HTTP 状态、providerCode、message 与原始 JSON。</div>
+        <textarea id="sparql-query" class="sparql-input" rows="7" spellcheck="false"
+          placeholder="SELECT ?s ?p ?o WHERE { GRAPH ?g { ?s ?p ?o } } LIMIT 20"></textarea>
+        <div class="toolbar">
+          <button id="sparql-run" class="primary">运行查询</button>
+          <span id="sparql-status" class="sub"></span>
+        </div>
+        <div id="sparql-error" class="error" hidden></div>
+        <div id="sparql-result" class="empty">尚未运行查询</div>
       </div>
     </section>
   </main>

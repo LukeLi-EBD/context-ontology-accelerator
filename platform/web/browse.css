@@ -144,3 +144,63 @@
   border-bottom: 1px solid var(--line);
   overflow-wrap: anywhere;
 }
+
+/* ---- triples / sparql --------------------------------------------------- */
+
+.filters input[type="text"] { min-width: 190px; }
+
+.sparql-input {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  font: 12px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.sparql-input:focus { outline: 2px solid #cfe0f5; border-color: var(--accent); }
+
+.error-table { margin-bottom: 8px; font-size: 12px; }
+.error-table th { width: 130px; white-space: nowrap; }
+.error-table td { overflow-wrap: anywhere; }
+
+.result-raw {
+  white-space: pre-wrap;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin: 6px 0 0;
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  max-height: 320px;
+  overflow: auto;
+}
+
+#sparql-result { max-height: 420px; overflow: auto; }
+
+/* ---- metric deep links -------------------------------------------------- */
+
+.metric-links {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.metric-links h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+
+.metric-links-body { font-size: 12px; }
+
+.binding {
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 12px;
+}
+
+.binding:last-child { border-bottom: 0; }
+.binding-instances { margin-top: 2px; }
+
+.deep-link { text-decoration: none; }
+.deep-link:hover { text-decoration: underline; }

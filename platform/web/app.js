@@ -765,6 +765,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('entity-q').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') { event.preventDefault(); searchEntities(); }
     });
+    // 支持 ontology.html?entity=<IRI> 深链：直接展示该实体的邻居子图。
+    const entityIri = new URLSearchParams(location.search).get('entity');
+    if (entityIri) {
+      document.getElementById('entity-q').value = entityIri;
+      loadNeighbors(entityIri);
+    }
   }
   if (page === 'documents') {
     document.getElementById('upload-form').addEventListener('submit', uploadDocument);
