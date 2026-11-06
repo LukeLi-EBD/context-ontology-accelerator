@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 
 sys.path.insert(0, "/app/src")
 
@@ -21,8 +21,10 @@ CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
 YEAR = {"start": "2025-01-01", "end": "2025-12-31"}
 TWO_YEARS = {"start": "2024-01-01", "end": "2025-12-31"}
 JAN = {"start": "2025-01-01", "end": "2025-01-30"}
+Q4 = {"start": "2025-10-01", "end": "2025-12-31"}
 # compile() resolves an instant window from start (falling back to end), so callers
-# pass the as-of date as both bounds.
+# pass the as-of date as both bounds. Period metrics must not use this: a point
+# window is rejected with E_METRIC_WINDOW_INSUFFICIENT.
 AS_OF = {"start": "2025-12-31", "end": "2025-12-31"}
 
 FACT_TABLES = (
@@ -41,6 +43,7 @@ class MetricFactsV7Test(unittest.TestCase):
         cls.runtime.metadata.migrate()
         cls.meta = cls.runtime.metadata
         cls.compiler = MetricCompiler(cls.meta)
+        cls.started_at = datetime.now(timezone.utc)
         cls._cleanup()
         cls._load()
 
@@ -224,7 +227,8 @@ class MetricFactsV7Test(unittest.TestCase):
 
     def _run(self, metric_id: str, window: dict) -> dict:
         result = self.compiler.execute(
-            metric_id, start=window["start"], end=window["end"], internal=True
+            metric_id, start=window["start"], end=window["end"],
+            internal=True, data_source="fixture",
         )
         return {r["entityKey"]: r["value"] for r in result["rows"]}
 
@@ -291,9 +295,9 @@ class MetricFactsV7Test(unittest.TestCase):
     # ----------------------------------------------------------------- bank
     def test_02_bank_migration_dpd_fpd(self) -> None:
         # 期初正常类向下迁徙 90（A：100-10）／（期初正常类余额 300 − 期间减少 30）
-        self.assertAlmostEqual(self._value("FIN-BANK-013", AS_OF, "TEST-BANK"),
+        self.assertAlmostEqual(self._value("FIN-BANK-013", Q4, "TEST-BANK"),
                                90 / 270 * 100, places=6)
-        self.assertAlmostEqual(self._value("FIN-BANK-017", AS_OF, "TEST-BANK"),
+        self.assertAlmostEqual(self._value("FIN-BANK-017", Q4, "TEST-BANK"),
                                1 / 2 * 100, places=6)
         self.assertAlmostEqual(self._value("FIN-BANK-033", YEAR, "TEST-BANK"),
                                1 / 2 * 100, places=6)
@@ -364,13 +368,13 @@ class MetricFactsV7Test(unittest.TestCase):
         proxy = self._run("CUST-005", AS_OF)
         self.assertEqual(set(proxy), {"CU3"})
         self.assertAlmostEqual(proxy["CU3"], 30, places=6)
-        retention = self._run("CUST-006", AS_OF)
+        retention = self._run("CUST-006", Q4)
         self.assertAlmostEqual(retention["K1"], 60, places=6)
         self.assertAlmostEqual(retention["K2"], 50, places=6)
-        churn = self._run("CUST-007", AS_OF)
+        churn = self._run("CUST-007", Q4)
         self.assertAlmostEqual(churn["K1"], 60, places=6)
         self.assertAlmostEqual(churn["K2"], 60, places=6)
-        self.assertAlmostEqual(self._value("CUST-008", AS_OF, "TEST-CUST"), 40, places=6)
+        self.assertAlmostEqual(self._value("CUST-008", Q4, "TEST-CUST"), 40, places=6)
 
     def test_08_customer_aum_point_and_daily_average(self) -> None:
         aum = self._run("CUST-012", AS_OF)
@@ -380,8 +384,14 @@ class MetricFactsV7Test(unittest.TestCase):
         self.assertAlmostEqual(daily["CU1"], 200, places=6)
 
     def test_09_no_metric_observation_written(self) -> None:
-        rows = self.meta.query("SELECT COUNT(*) AS n FROM platform.metric_observation")
-        self.assertEqual(rows[0]["n"], 0)
+        # Not "the table is empty": other suites write observations into the
+        # same database. Only this run's writes are in scope.
+        rows = self.meta.query(
+            "SELECT COUNT(*) AS n FROM platform.metric_observation "
+            "WHERE computed_at >= %s",
+            (self.started_at,),
+        )
+        self.assertEqual(int(rows[0]["n"]), 0)
 
 
 if __name__ == "__main__":

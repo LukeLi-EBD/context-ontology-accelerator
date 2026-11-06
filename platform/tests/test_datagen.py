@@ -127,8 +127,6 @@ class DatagenTest(unittest.TestCase):
                      "metric_definition", "metric_field_binding", "fact_assertion"):
             self.assertEqual(after[name], self.snapshot[name], name)
         self.assertGreaterEqual(after["ontology_version"], self.snapshot["ontology_version"])
-        self.assertEqual(after["metric_observation"], 0)
-        self.assertEqual(after["metric_observation_synthetic"], 0)
 
     def test_f_same_seed_is_byte_identical(self) -> None:
         info = introspect(self.meta, SCHEMA)

@@ -81,7 +81,7 @@ class FactModelV6Test(unittest.TestCase):
         )
         return int(rows[0]["n"])
 
-    def _compute(self, metric_id: str, **window):
+    def _compute(self, metric_id: str, institution: str | None = None, **window):
         start = window.get("start") or window.get("as_of")
         end = window.get("end") or window.get("as_of")
         projected = self.projector.project(
@@ -94,13 +94,15 @@ class FactModelV6Test(unittest.TestCase):
         self.assertTrue(projected["ok"], projected)
         if "as_of" in window:
             return self.runtime.metrics.compute(
-                metric_id, internal=True, as_of=window["as_of"]
+                metric_id, internal=True, as_of=window["as_of"],
+                institution=institution,
             )
         return self.runtime.metrics.compute(
             metric_id,
             internal=True,
             period_start=window["start"],
             period_end=window["end"],
+            institution=institution,
         )
 
     # ---- hand-checked computations -------------------------------------
@@ -115,8 +117,14 @@ class FactModelV6Test(unittest.TestCase):
 
     def test_02_bank_032_limit_utilization(self) -> None:
         """Active non-test non-internal: F1 900/1000 + F2 100/500 = 1000/1500
-        -> 66.6667%; F3 frozen, F4 test, F5 internal excluded."""
-        result = self._compute("FIN-BANK-032", as_of=date(2025, 12, 31))
+        -> 66.6667%; F3 frozen, F4 test, F5 internal excluded.
+
+        Scoped to this suite's institution: synthetic observations for the
+        same metric and as_of are written by the datagen track into the same
+        database, and an unscoped sum would include them."""
+        result = self._compute(
+            "FIN-BANK-032", institution="B1", as_of=date(2025, 12, 31)
+        )
         self.assertAlmostEqual(result["value"], 66.666667, places=6)
 
     def test_03_bank_035_collection_recovery(self) -> None:
@@ -148,15 +156,19 @@ class FactModelV6Test(unittest.TestCase):
         """January issue dates, non-investment: P1 (1000-50) + P2 2000 = 2950;
         P3 investment-linked and P4 issued in February are excluded."""
         result = self._compute(
-            "FIN-INS-001", start=date(2025, 1, 1), end=date(2025, 1, 31)
+            "FIN-INS-001", institution="I1", start=date(2025, 1, 1), end=date(2025, 1, 31)
         )
         self.assertAlmostEqual(result["value"], 2950.0, places=6)
         self.assertEqual(result["unit"], "元")
 
     def test_07_customer_products_per_customer(self) -> None:
         """Active customers M1,M2 (S1) and M4 (S2) = 3; active holdings
-        M1 x2 + M2 x2 + M4 x1 = 5 -> 5/3 = 1.6667 products per customer."""
-        result = self._compute("CUST-010", as_of=date(2025, 12, 31))
+        M1 x2 + M2 x2 + M4 x1 = 5 -> 5/3 = 1.6667 products per customer.
+
+        Scoped to this suite's institution (see test_02)."""
+        result = self._compute(
+            "CUST-010", institution="B1", as_of=date(2025, 12, 31)
+        )
         self.assertAlmostEqual(result["value"], 5 / 3, places=6)
 
     # ---- rule executor -------------------------------------------------
@@ -221,10 +233,17 @@ class FactModelV6Test(unittest.TestCase):
                 "WHERE data_source = 'fixture'"
             )
             self.assertGreater(int(rows[0]["n"]), 0, table)
+        # Scope to the entity keys this suite projected. Other tracks write
+        # synthetic/business observations for the same definitions into the
+        # same database; asserting "no non-fixture row for this metric at all"
+        # would go red as soon as the platform is used normally.
         rows = self.meta.query(
             "SELECT COUNT(*) AS n FROM platform.metric_observation "
-            "WHERE metric_id = ANY(%s) AND data_source <> 'fixture'",
-            (list(METRICS),),
+            "WHERE metric_id = ANY(%s) AND data_source <> 'fixture' "
+            "AND entity_key IN ("
+            " SELECT entity_key FROM platform.metric_observation "
+            " WHERE metric_id = ANY(%s) AND data_source = 'fixture')",
+            (list(METRICS), list(METRICS)),
         )
         self.assertEqual(int(rows[0]["n"]), 0)
         fixture_rows = self.meta.query(
