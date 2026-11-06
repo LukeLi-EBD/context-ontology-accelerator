@@ -41,6 +41,132 @@ ACCOUNTS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Definition agg vs binding agg
+# ---------------------------------------------------------------------------
+# The compiler reads only platform.metric_field_binding.agg; the published
+# caliber is metric_definition.numerator_agg/denominator_agg. A divergence is
+# tolerated only when it is proven equivalent. Keys are (metric_id, role);
+# values are (definition_agg, binding_agg, evidence). "Equivalent" means the
+# business caliber matches, with the precondition spelled out in the evidence;
+# it is not a license to keep a known-wrong aggregation.
+AGG_EQUIVALENT_WHITELIST: dict[tuple[str, str], tuple[str, str, str]] = {
+    ("CUST-006", "numerator"): (
+        "count_distinct", "sum",
+        "定义=明细粒度的客户号去重（retained_customers 列注释：第 N 月仍活跃的 cohort 客户数）；"
+        "绑定 sum 作用于已按 cohort 去重的预聚合列。cust_cohort_stat 唯一键 "
+        "(cohort_key, as_of, data_source) 保证每 cohort 每快照一行，cohort=获客月分区互不重叠，"
+        "故 Σ预聚合去重户数 = 明细去重户数。前提：窗口内同一 cohort 只有一个观察快照"
+        "（当前 synthetic 为 1200 cohort / 1 snapshot）。",
+    ),
+    ("CUST-006", "denominator"): (
+        "count_distinct", "sum",
+        "同 CUST-006 分子：cohort_customers 列注释=按客户号去重；cohort 分区互不重叠，"
+        "Σ预聚合户数 = 明细去重户数（前提同上：窗口内单快照）。",
+    ),
+    ("CUST-007", "numerator"): (
+        "count_distinct", "sum",
+        "分子口径=流失户数=cohort_customers−active_customers（列注释：cohort 初始户数、"
+        "观察窗口内有效行为户数，均按客户号去重）；两列在预聚合行内相减后 sum，"
+        "等价于明细粒度去重流失户数（cohort 分区不重叠，前提同 CUST-006）。",
+    ),
+    ("CUST-007", "denominator"): (
+        "count_distinct", "sum",
+        "同 CUST-006 分母：cohort_customers 已按客户号去重，Σ=明细去重初始户数"
+        "（前提同 CUST-006）。",
+    ),
+    ("CUST-008", "numerator"): (
+        "count_distinct", "sum",
+        "分子=本月且上月也活跃的客户数（active_and_prior_month 列注释）；绑定按 institution "
+        "对 cohort 行求和，cohort=获客月分区不重叠，Σ=明细粒度去重户数。",
+    ),
+    ("CUST-008", "denominator"): (
+        "count_distinct", "sum",
+        "分母=上月活跃客户数（prior_month_active 列注释：按客户号去重，月末活跃口径）；"
+        "按 institution 对 cohort 行求和，cohort 分区不重叠，Σ=明细去重户数。",
+    ),
+    ("FIN-BANK-025", "numerator"): (
+        "sum", "max",
+        "bank_concentration_stat 唯一键 (institution, as_of, data_source) + 绑定 instant 等值取 "
+        "as_of ⇒ 每机构每快照恰好 1 行 ⇒ SUM(x)=MAX(x)=x；实测 1440 个机构×快照分组，"
+        "SUM<>MAX 为 0。max_single_customer_loan 本身已是机构内单一客户最大值。",
+    ),
+    ("FIN-BANK-026", "numerator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：唯一键保证每机构每快照 1 行，SUM=MAX="
+        "max_single_customer_exposure；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-026", "denominator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：每机构每快照 1 行，SUM=MAX=tier1_capital_net；"
+        "实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-027", "numerator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM=MAX=max_group_exposure；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-027", "denominator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM=MAX=tier1_capital_net；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-028", "numerator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM=MAX=max_group_credit；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-028", "denominator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM=MAX=capital_net；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-029", "numerator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM=MAX=total_related_exposure；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-029", "denominator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM=MAX=capital_net；实测 1440 组无差异。",
+    ),
+    ("FIN-BANK-030", "numerator"): (
+        "sum", "max",
+        "同 FIN-BANK-025 的 n=1 推演：SUM(GREATEST(...))=MAX(GREATEST(...))；"
+        "实测 1440 组无差异。",
+    ),
+    ("FIN-INS-024", "numerator"): (
+        "count_distinct", "sum",
+        "定义=按 VIN 去重（renewed_vehicle_count 列注释：到期车辆中实际在本司续保的车辆数）；"
+        "绑定 sum 作用于预聚合列。ins_persistence_stat 唯一键 "
+        "(institution, product, channel, cohort_period, valuation_basis, renewal_year, data_source) "
+        "保证一行=一批 cohort 的车辆数，车辆按 cohort 分区不重叠，Σ=明细去重 VIN 数。",
+    ),
+    ("FIN-INS-024", "denominator"): (
+        "count_distinct", "sum",
+        "同 FIN-INS-024 分子：due_vehicle_count 列注释=按车辆/VIN 去重（含脱保车辆）；"
+        "cohort 行分区不重叠，Σ=明细去重 VIN 数。",
+    ),
+}
+
+# Divergences judged NOT equivalent. These are definition defects (or missing
+# quartet fields), reported for the definition owner; they may not be
+# whitelisted. Keys are (metric_id, role); values are
+# (definition_agg, binding_agg, impact_and_fix_owner).
+AGG_DEFINITION_DEFECTS: dict[tuple[str, str], tuple[str | None, str, str]] = {
+    ("CUST-013", "denominator"): (
+        "count", "count_distinct",
+        "定义文本要求分母=期内自然日天数；count(as_of) 数的是行数（产品大类×快照日），"
+        "count_distinct(as_of) 数的是有数据的快照日数，两者都不是自然日数。"
+        "影响：产出的是“有快照日的 AUM 均值”而非自然日日均，采样越稀偏离越大，"
+        "方向不固定；publishable=false，尚未对外。修法需定义 Owner 先定自然日口径，"
+        "不能靠改绑定猜。",
+    ),
+    ("FIN-INS-017", "denominator"): (
+        None, "count_distinct",
+        "metric_definition.denominator_agg 为空（quartet 缺项）；denominator_text 要求"
+        "按保单号去重并剔除退保/注销，绑定的 count_distinct(policy_no) + "
+        "policy_status='in_force' 与文本一致。影响：publishable=true 时对外只能看到"
+        "实际取值，看不到分母口径声明；修法是补定义字段，不是改绑定。",
+    ),
+}
+
+
 class G2MetricsCoreTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -404,23 +530,10 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertNotIn("reason", empty)
 
     def test_23_definition_binding_agg_consistency(self) -> None:
-        # metric_definition.numerator_agg/denominator_agg and the binding agg
-        # are two sources; the compiler only reads the binding. Freeze the
-        # current difference set so a new divergence fails loudly.
-        baseline = {
-            ("CUST-006", "numerator"), ("CUST-006", "denominator"),
-            ("CUST-007", "numerator"), ("CUST-007", "denominator"),
-            ("CUST-008", "numerator"), ("CUST-008", "denominator"),
-            ("CUST-013", "denominator"),
-            ("FIN-BANK-025", "numerator"),
-            ("FIN-BANK-026", "numerator"), ("FIN-BANK-026", "denominator"),
-            ("FIN-BANK-027", "numerator"), ("FIN-BANK-027", "denominator"),
-            ("FIN-BANK-028", "numerator"), ("FIN-BANK-028", "denominator"),
-            ("FIN-BANK-029", "numerator"), ("FIN-BANK-029", "denominator"),
-            ("FIN-BANK-030", "numerator"),
-            ("FIN-INS-017", "denominator"),
-            ("FIN-INS-024", "numerator"), ("FIN-INS-024", "denominator"),
-        }
+        # The compiler reads only the binding agg, so every divergence between
+        # the published definition and the binding must be either proven
+        # equivalent (whitelist) or a recorded definition defect. A divergence
+        # outside both lists fails; a non-equivalent entry may not be whitelisted.
         rows = self.meta.query(
             "SELECT d.metric_id, b.role, d.numerator_agg, d.denominator_agg,"
             " b.agg FROM platform.metric_definition d"
@@ -433,11 +546,28 @@ class G2MetricsCoreTest(unittest.TestCase):
             "        OR (b.role = 'denominator'"
             "         AND COALESCE(d.denominator_agg,'') <> COALESCE(b.agg,'')))"
         )
-        observed = {(r["metric_id"], r["role"]) for r in rows}
-        self.assertEqual(observed, baseline,
-                         f"mismatch count changed: {len(observed)}")
+        observed = {
+            (r["metric_id"], r["role"]): (
+                r["numerator_agg"] if r["role"] == "numerator" else r["denominator_agg"],
+                r["agg"],
+            )
+            for r in rows
+        }
+        allowed = {k: (v[0], v[1]) for k, v in AGG_EQUIVALENT_WHITELIST.items()}
+        defects = {k: (v[0], v[1]) for k, v in AGG_DEFINITION_DEFECTS.items()}
+        self.assertEqual(observed, {**allowed, **defects},
+                         f"definition/binding agg divergence changed: {sorted(observed)}")
         self.assertEqual(len(observed), 20)
         self.assertEqual(len({m for m, _ in observed}), 12)
+        self.assertTrue(set(allowed).isdisjoint(defects),
+                        "whitelist and defect list must be disjoint")
+        for key, (def_agg, bind_agg, evidence) in AGG_EQUIVALENT_WHITELIST.items():
+            self.assertTrue(evidence.strip(), f"whitelist entry {key} has no evidence")
+            self.assertNotEqual(def_agg, bind_agg, f"whitelist entry {key} is not a divergence")
+        for key, (def_agg, bind_agg, impact) in AGG_DEFINITION_DEFECTS.items():
+            self.assertTrue(impact.strip(), f"defect entry {key} has no impact note")
+            self.assertNotIn(key, AGG_EQUIVALENT_WHITELIST,
+                             f"non-equivalent divergence {key} must not be whitelisted")
 
     def test_24_datasource_mismatch_is_explicit(self) -> None:
         # A source that does not exist in the fact table is reported, not
