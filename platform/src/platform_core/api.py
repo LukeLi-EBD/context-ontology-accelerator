@@ -3761,4 +3761,122 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return healthboard.snapshot_compare(runtime, from_, to)
     # --- end G1 ---
 
+    # --- G2 metrics-core routes ---
+    @app.get("/metrics/{metric_id}/compute")
+    def metric_compute(
+        metric_id: str,
+        internal: bool = False,
+        as_of: date | None = Query(None, alias="asOf"),
+        period_start: date | None = Query(None, alias="periodStart"),
+        period_end: date | None = Query(None, alias="periodEnd"),
+        data_source: str = Query("fixture", alias="dataSource"),
+    ) -> dict[str, Any]:
+        """Scheme-A compute: direct fact-table aggregation, no observation cache.
+
+        Non-executable metrics return a stable provider code plus the missing
+        reason (E_METRIC_NOT_STRUCTURALLY_COMPUTABLE / E_METRIC_BINDING_MISSING /
+        E_METRIC_RULE_SET_ONLY / E_METRIC_WINDOW_INSUFFICIENT ...), never 0.
+        """
+        from .metric_compiler import MetricCompiler
+
+        start, end = period_start, period_end
+        if as_of is not None and start is None and end is None:
+            start = end = as_of
+        compiler = MetricCompiler(runtime.metadata)
+        result = compiler.execute(
+            metric_id, start=start, end=end, internal=internal, data_source=data_source
+        )
+        return {
+            **result,
+            "rowCount": len(result["rows"]),
+            "computedAt": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.get("/metrics-readiness")
+    def metrics_readiness(
+        status: str | None = None,
+        kind: str | None = None,
+        format: str = "json",
+    ) -> Any:
+        """M-06 ledger export. registered_only is never reported as executable."""
+        if status is not None and status not in (
+            "executed", "registered_only", "not_executable"
+        ):
+            raise _browse_error(
+                "E_METRIC_READINESS_STATUS_INVALID",
+                "status must be executed|registered_only|not_executable",
+                {"status": status},
+            )
+        if kind is not None and kind not in ("partial", "rule"):
+            raise _browse_error(
+                "E_METRIC_READINESS_KIND_INVALID",
+                "kind must be partial|rule",
+                {"kind": kind},
+            )
+        clauses: list[str] = []
+        params: list[Any] = []
+        if status is not None:
+            clauses.append("status = %s")
+            params.append(status)
+        if kind is not None:
+            clauses.append("item_kind = %s")
+            params.append(kind)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        rows = runtime.metadata.query(
+            "SELECT item_kind, metric_id, status, reason, detail, evidence_ref,"
+            f" checked_at FROM platform.metric_readiness{where}"
+            " ORDER BY item_kind, metric_id",
+            tuple(params),
+        )
+        items = [
+            {
+                "itemKind": row["item_kind"],
+                "metricId": row["metric_id"],
+                "status": row["status"],
+                "reason": row["reason"],
+                "detail": row["detail"],
+                "evidenceRef": row["evidence_ref"],
+                "checkedAt": str(row["checked_at"]),
+            }
+            for row in rows
+        ]
+        counts_rows = runtime.metadata.query(
+            "SELECT status, COUNT(*) AS n FROM platform.metric_readiness GROUP BY status"
+        )
+        counts = {row["status"]: int(row["n"]) for row in counts_rows}
+        for key in ("executed", "registered_only", "not_executable"):
+            counts.setdefault(key, 0)
+        if format == "csv":
+            import csv
+            import io
+
+            buffer = io.StringIO()
+            writer = csv.writer(buffer)
+            writer.writerow(
+                ["item_kind", "metric_id", "status", "reason", "evidence_ref", "checked_at"]
+            )
+            for item in items:
+                writer.writerow(
+                    [
+                        item["itemKind"], item["metricId"], item["status"],
+                        item["reason"], item["evidenceRef"], item["checkedAt"],
+                    ]
+                )
+            suffix = status or kind or "all"
+            return Response(
+                content=buffer.getvalue(),
+                media_type="text/csv; charset=utf-8",
+                headers={
+                    "Content-Disposition":
+                        f'attachment; filename="metric-readiness-{suffix}.csv"'
+                },
+            )
+        return {
+            "items": items,
+            "count": len(items),
+            "counts": counts,
+            "filter": {"status": status, "kind": kind},
+        }
+    # --- end G2 ---
+
     return app
