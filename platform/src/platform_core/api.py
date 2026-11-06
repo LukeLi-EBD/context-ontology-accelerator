@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, Query, UploadFile, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -44,6 +46,49 @@ from . import prov as prov_module
 from . import source_ref
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
+
+# Same enumeration the observation table's CHECK accepts. A computation must
+# name its source explicitly: there is no "default" that can silently mean
+# fixture, business or synthetic.
+METRIC_DATA_SOURCES = ("fixture", "business", "synthetic")
+
+
+def _caller(request: Request) -> dict[str, Any]:
+    """Best available caller identity. The platform has no auth, so say so."""
+    actor = (request.headers.get("x-actor") or "").strip()
+    return {
+        "actor": actor or "anonymous",
+        "client": request.client.host if request.client else None,
+        "userAgent": request.headers.get("user-agent"),
+        "requestId": request.headers.get("x-request-id"),
+    }
+
+
+def _record_computation(
+    metadata: Any,
+    request: Request,
+    *,
+    endpoint: str,
+    metric_id: str,
+    definition_version: str | None,
+    window: dict[str, Any],
+    data_source: str,
+    computed_at: str,
+    **extra: Any,
+) -> dict[str, Any]:
+    """Write one computation audit record (not a PROV decision) and return its ref."""
+    locator = {
+        "metricId": metric_id,
+        "definitionVersion": definition_version,
+        "endpoint": endpoint,
+        "window": window,
+        "dataSource": data_source,
+        "computedAt": computed_at,
+        "caller": _caller(request),
+        **extra,
+    }
+    return source_ref.register_computation(metadata, locator)
+
 
 _HTTP_STATUS = {
     "InvalidArgument": 400,
@@ -1663,6 +1708,37 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         }
         return JSONResponse(status_code=_HTTP_STATUS.get(exc.code, 500), content=body)
 
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError):
+        # dataSource is declared required so OpenAPI shows it, but FastAPI answers
+        # a missing query param with 422. The metric endpoints speak PortError;
+        # answer with the stable 400 code and the allowed enumeration instead.
+        parts = [part for part in request.url.path.split("/") if part]
+        if (
+            parts[:1] == ["metrics"]
+            and parts[-1:] == ["compute"]
+            and any("dataSource" in err.get("loc", ()) for err in exc.errors())
+        ):
+            body = {
+                "error": {
+                    "code": "InvalidArgument",
+                    "provider": "platform",
+                    "providerCode": "E_METRIC_DATA_SOURCE_REQUIRED",
+                    "message": (
+                        "dataSource is required; allowed: "
+                        + ", ".join(METRIC_DATA_SOURCES)
+                    ),
+                    "retryable": False,
+                    "details": {
+                        "metricId": parts[-2],
+                        "field": "dataSource",
+                        "allowedDataSources": list(METRIC_DATA_SOURCES),
+                    },
+                }
+            }
+            return JSONResponse(status_code=400, content=body)
+        return await request_validation_exception_handler(request, exc)
+
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:
         return {"status": "ok", "version": __version__}
@@ -1977,6 +2053,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.get("/metrics/{metric_id}/output")
     def metric_output(
         metric_id: str,
+        request: Request,
         internal: bool = False,
         compute: bool = False,
         as_of: date | None = Query(None, alias="asOf"),
@@ -1987,7 +2064,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     ) -> dict[str, Any]:
         if not compute:
             return runtime.metrics.output(metric_id, internal=internal)
-        return runtime.metrics.compute(
+        result = runtime.metrics.compute(
             metric_id,
             internal=internal,
             as_of=as_of,
@@ -1996,6 +2073,50 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             entity_key=entity_key,
             institution=institution,
         )
+        if result.get("value") is not None:
+            result["computationRef"] = _record_computation(
+                runtime.metadata,
+                request,
+                endpoint=f"/metrics/{metric_id}/output?compute=true",
+                metric_id=metric_id,
+                definition_version=result.get("definitionVersion"),
+                window=result.get("window") or {},
+                data_source=str(result.get("dataSource") or ""),
+                computed_at=str(result.get("computedAt") or datetime.now(timezone.utc).isoformat()),
+                value=result.get("value"),
+                unit=result.get("unit"),
+                fixture=result.get("fixture"),
+                sampleCount=result.get("sampleCount"),
+                observationRef=(result.get("sourceRef") or {}).get("ref"),
+            )
+        return result
+
+    @app.get("/metrics/{metric_id}/computations")
+    def metric_computations(
+        metric_id: str,
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        """Audit trail for computed values. Deliberately not part of the PROV chain."""
+        rows = runtime.metadata.query(
+            "SELECT source_ref, locator, issued_at FROM platform.source_ref_registry "
+            "WHERE ref_kind = %s AND locator->>'metricId' = %s "
+            "ORDER BY issued_at DESC LIMIT %s",
+            (source_ref.METRIC_COMPUTATION, metric_id, limit),
+        )
+        return {
+            "metricId": metric_id,
+            "count": len(rows),
+            "records": [
+                {
+                    "ref": row["source_ref"],
+                    "refType": source_ref.METRIC_COMPUTATION,
+                    "issuedAt": source_ref.jsonable({"issued_at": row["issued_at"]})["issued_at"],
+                    "locator": row["locator"],
+                    "resolveUrl": source_ref._resolve_url(row["source_ref"]),
+                }
+                for row in rows
+            ],
+        }
 
     # ---- read-only browse API (metrics / ontology / terms) ---------------
 
@@ -3792,11 +3913,19 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.get("/metrics/{metric_id}/compute")
     def metric_compute(
         metric_id: str,
+        request: Request,
         internal: bool = False,
         as_of: date | None = Query(None, alias="asOf"),
         period_start: date | None = Query(None, alias="periodStart"),
         period_end: date | None = Query(None, alias="periodEnd"),
-        data_source: str = Query("fixture", alias="dataSource"),
+        data_source: str = Query(
+            ...,
+            alias="dataSource",
+            description=(
+                "Fact data source to aggregate: fixture | business | synthetic. "
+                "Required: no implicit default."
+            ),
+        ),
     ) -> dict[str, Any]:
         """Scheme-A compute: direct fact-table aggregation, no observation cache.
 
@@ -3813,11 +3942,30 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         result = compiler.execute(
             metric_id, start=start, end=end, internal=internal, data_source=data_source
         )
-        return {
+        computed_at = datetime.now(timezone.utc).isoformat()
+        fact_tables = result.pop("factTables", [])
+        payload = {
             **result,
             "rowCount": len(result["rows"]),
-            "computedAt": datetime.now(timezone.utc).isoformat(),
+            "computedAt": computed_at,
         }
+        if result["rows"]:
+            payload["computationRef"] = _record_computation(
+                runtime.metadata,
+                request,
+                endpoint=f"/metrics/{metric_id}/compute",
+                metric_id=metric_id,
+                definition_version=result["definitionVersion"],
+                window=result["window"],
+                data_source=data_source,
+                computed_at=computed_at,
+                windowKind=result["windowKind"],
+                fixture=data_source == "fixture",
+                factTables=fact_tables,
+                rowCount=len(result["rows"]),
+                sampleRows=result["rows"][:3],
+            )
+        return payload
 
     @app.get("/metrics-readiness")
     def metrics_readiness(

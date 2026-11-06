@@ -20,7 +20,13 @@ obs     ``src://obs/<metric>@<version>?entity=..``    metric_observation
 obs-set ``src://obs-set/<metric>@<version>?..``       metric_observation
 fact    ``src://fact/<table>?<key columns>``          fact table row
 doc     ``src://doc/<document_id>#c<seq>``            document_chunk
+computation ``src://computation/<id>``                source_ref_registry
 ======  ============================================  ==================
+
+A ``computation`` ref is different on purpose: it points at an *audit record*
+(a computation event -- metric, window, data source, caller, time), not at a
+live value row. It is the traceability carrier for the value endpoints and is
+deliberately kept out of the PROV decision chain, which only records rulings.
 
 ``platform.source_ref_registry`` records every ref that an API response handed
 out. The registry is audit storage, not the source of truth: resolution always
@@ -34,6 +40,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import uuid
 from decimal import Decimal
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
@@ -53,11 +60,13 @@ OBSERVATION_SET = "metric_observation_set"
 OBSERVATION_ROW = "metric_observation_row"
 FACT_ROW = "fact_row"
 DOCUMENT_CHUNK = "document_chunk"
+METRIC_COMPUTATION = "metric_computation"
 
 _TABLE_RE = re.compile(r"^platform\.[a-z0-9_]+$")
 _COL_RE = re.compile(r"^[a-z0-9_]+$")
 _METRIC_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _DOC_RE = re.compile(r"^[0-9a-f]{8,128}$")
+_COMPUTATION_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _CHUNK_FRAGMENT_RE = re.compile(r"^c(\d+)$")
 _CHUNK_SUFFIX_RE = re.compile(r":(\d+)$")
 
@@ -163,6 +172,30 @@ def fact_row_ref(table: str, key: dict[str, Any]) -> str:
 def chunk_ref(document_id: str, chunk_no: int) -> str:
     """Ref for one document chunk: document id + 0-based chunk ordinal."""
     return f"{REF_SCHEME}://doc/{document_id}#c{int(chunk_no)}"
+
+
+def computation_ref(computation_id: str) -> str:
+    """Ref for one computation event; the registry row is the record itself."""
+    return f"{REF_SCHEME}://computation/{computation_id}"
+
+
+def computation_descriptor(computation_id: str, locator: dict[str, Any]) -> dict[str, Any]:
+    return _descriptor(
+        METRIC_COMPUTATION, computation_ref(computation_id),
+        "platform.source_ref_registry", locator,
+    )
+
+
+def register_computation(metadata: Any, locator: dict[str, Any]) -> dict[str, Any]:
+    """Record one computation event and return its ``computation`` ref descriptor.
+
+    Computations are not rulings, so they do not go to the PROV decision chain;
+    this registry row is the audit record: definition version, window, source,
+    caller and time all live in its locator.
+    """
+    descriptor = computation_descriptor(uuid.uuid4().hex, locator)
+    register_ref(metadata, descriptor)
+    return descriptor
 
 
 def _resolve_url(ref: str) -> str:
@@ -300,9 +333,15 @@ def parse_ref(ref: str) -> dict[str, Any]:
     if parsed.scheme != REF_SCHEME:
         raise _err(MALFORMED, "source_ref must use the src:// scheme", ref=ref)
     kind = parsed.netloc
-    if kind not in ("obs", "obs-set", "fact", "doc"):
+    if kind not in ("obs", "obs-set", "fact", "doc", "computation"):
         raise _err(TYPE_UNSUPPORTED, f"unsupported source_ref kind: {kind}", ref=ref)
     query = {key: values[0] for key, values in parse_qs(parsed.query).items()}
+    if kind == "computation":
+        computation_id = unquote(parsed.path.lstrip("/"))
+        if not _COMPUTATION_RE.match(computation_id):
+            raise _err(MALFORMED, "invalid computation id in ref", ref=ref)
+        return {"kind": kind, "computationId": computation_id,
+                "locator": {"computationId": computation_id}}
     if kind in ("obs", "obs-set"):
         target = unquote(parsed.path.lstrip("/"))
         if "@" not in target:
@@ -404,6 +443,24 @@ def _registry_row(metadata: Any, ref: str) -> dict[str, Any] | None:
     except Exception:  # noqa: BLE001 - older schema without the registry
         return None
     return rows[0] if rows else None
+
+
+def _resolve_computation(metadata: Any, parsed: dict[str, Any], ref: str) -> dict[str, Any]:
+    """A computation ref resolves to its own audit record, not to a value row."""
+    row = _registry_row(metadata, ref)
+    if not row:
+        return {"rows": [], "rowCount": 0}
+    return {
+        "rows": [{
+            "ref": row["source_ref"],
+            "refKind": row["ref_kind"],
+            "targetTable": row["target_table"],
+            "locator": row.get("locator") or {},
+            "issuedAt": _jsonable({"issued_at": row["issued_at"]})["issued_at"],
+            "resolveCount": row.get("resolve_count"),
+        }],
+        "rowCount": 1,
+    }
 
 
 def _resolve_observation(metadata: Any, parsed: dict[str, Any], ref: str) -> dict[str, Any]:
@@ -516,6 +573,8 @@ def resolve(metadata: Any, ref: str) -> dict[str, Any]:
         live = _resolve_observation_set(metadata, parsed, ref)
     elif parsed["kind"] == "fact":
         live = _resolve_fact(metadata, parsed, ref)
+    elif parsed["kind"] == "computation":
+        live = _resolve_computation(metadata, parsed, ref)
     else:
         live = _resolve_chunk(metadata, parsed, ref)
 
@@ -536,6 +595,8 @@ def resolve(metadata: Any, ref: str) -> dict[str, Any]:
         ref_type, target_table = OBSERVATION_SET, "platform.metric_observation"
     elif parsed["kind"] == "fact":
         ref_type, target_table = FACT_ROW, parsed["table"]
+    elif parsed["kind"] == "computation":
+        ref_type, target_table = METRIC_COMPUTATION, "platform.source_ref_registry"
     else:
         ref_type, target_table = DOCUMENT_CHUNK, "platform.document_chunk"
     descriptor = _descriptor(
