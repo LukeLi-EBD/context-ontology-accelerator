@@ -3564,4 +3564,265 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ],
         }
 
+    # --- G3 metrics-report routes ---
+    # M-02: 对外出数清单与 publishable 治理。清单 100% 来自 platform.metric_definition，
+    # 不做手工维护；可算性直接采用库内 computability_tier，且“可算”不等于“已有观测值”。
+
+    _G3_METRIC_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit, effective_date,
+               variant_of, output_mode, provenance_label, computability_tier
+          FROM platform.metric_definition
+         ORDER BY metric_id
+    """
+
+    _G3_TIER_LABELS = {
+        "structurally_computable": "结构性可算（需事实与观测）",
+        "blocked_semantics": "语义阻断",
+        "blocked_external": "对外阻断",
+    }
+    _G3_TIER_TONES = {
+        "structurally_computable": "ok",
+        "blocked_semantics": "warn",
+        "blocked_external": "bad",
+    }
+    _G3_GAP_LABELS = {
+        "regulatory_source": "缺监管原文",
+        "source": "缺事实来源",
+        "entity": "缺实体绑定",
+    }
+
+    def _g3_text(value: Any) -> str:
+        if value is None:
+            return "口径未给出"
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        text = str(value).strip()
+        return text or "口径未给出"
+
+    def _g3_evidence(row: dict[str, Any]) -> dict[str, Any]:
+        basis = (row.get("evidence_basis") or "none").strip() or "none"
+        provenance = (row.get("provenance_label") or "").strip()
+        if basis == "regulatory":
+            return {
+                "code": basis,
+                "basisLabel": "监管原文",
+                "source": provenance or "监管原文",
+                "hasRegulatoryText": True,
+            }
+        if basis == "industry":
+            return {
+                "code": basis,
+                "basisLabel": "行业通行（未获监管原文）",
+                "source": provenance or "行业通行",
+                "hasRegulatoryText": False,
+            }
+        return {
+            "code": basis,
+            "basisLabel": "无证据",
+            "source": provenance or "未给出",
+            "hasRegulatoryText": False,
+        }
+
+    def _g3_metric_row(row: dict[str, Any]) -> dict[str, Any]:
+        metric_id = str(row.get("metric_id") or "")
+        tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
+        evidence = _g3_evidence(row)
+        publishable = bool(row.get("publishable"))
+        formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
+        external_eligible = bool(
+            publishable
+            and evidence["code"] == "regulatory"
+            and tier == "structurally_computable"
+        )
+        if external_eligible:
+            external_status = "external_candidate"
+            external_label = "对外可出数候选（需事实与观测）"
+            external_reason = "证据为监管原文、publishable=true、口径结构性可算"
+        elif evidence["code"] == "industry":
+            external_status = "internal_baseline"
+            external_label = "行业基线（不外报）"
+            external_reason = "行业公式未获监管原文，仅作内部基线"
+        elif not publishable:
+            external_status = "unpublishable"
+            external_label = "不可发布"
+            external_reason = "publishable=false"
+        else:
+            external_status = "blocked"
+            external_label = "不可对外"
+            external_reason = f"口径未达结构性可算：{tier}"
+
+        missing = row.get("missing")
+        if row.get("output_mode") == "index":
+            gap = "族索引：需指定变体（E_METRIC_VARIANT_REQUIRED）"
+            gap_code = "variant_required"
+        elif missing:
+            gap = _G3_GAP_LABELS.get(str(missing), _g3_text(missing))
+            gap_code = str(missing)
+        elif not formula:
+            gap = "公式缺失"
+            gap_code = "formula_missing"
+        elif tier != "structurally_computable":
+            gap = _G3_TIER_LABELS.get(tier, tier)
+            gap_code = tier
+        elif row.get("inference"):
+            gap = "口径为推导，无成文原文"
+            gap_code = "inference_only"
+        else:
+            gap = "—"
+            gap_code = None
+
+        return {
+            "metricId": metric_id,
+            "nameZh": row.get("name_zh"),
+            "displayName": row.get("display_name"),
+            "domain": row.get("domain"),
+            "publishable": publishable,
+            "evidenceBasis": evidence["code"],
+            "evidenceBasisLabel": evidence["basisLabel"],
+            "evidenceSource": evidence["source"],
+            "hasRegulatoryText": evidence["hasRegulatoryText"],
+            "formula": formula or "口径未给出",
+            "formulaExpr": row.get("formula_expr"),
+            "computability": tier,
+            "computabilityLabel": _G3_TIER_LABELS.get(tier, tier),
+            "computabilityTone": _G3_TIER_TONES.get(tier, "muted"),
+            "gap": gap,
+            "gapCode": gap_code,
+            "missing": missing,
+            "externalEligible": external_eligible,
+            "externalStatus": external_status,
+            "externalLabel": external_label,
+            "externalReason": external_reason,
+            "variantOf": row.get("variant_of"),
+            "outputMode": row.get("output_mode"),
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "inference": bool(row.get("inference")),
+            "evidenceStatus": row.get("evidence_status"),
+            "definitionVersion": row.get("definition_version"),
+        }
+
+    def _g3_manifest(
+        scope: str,
+        domain: str | None,
+        evidence_basis: str | None,
+        publishable: bool | None,
+    ) -> dict[str, Any]:
+        raw = runtime.metadata.query(_G3_METRIC_SQL)
+        items = [_g3_metric_row(row) for row in raw]
+        all_items = list(items)
+        if domain:
+            items = [item for item in items if item["domain"] == domain]
+        if evidence_basis:
+            items = [item for item in items if item["evidenceBasis"] == evidence_basis]
+        if publishable is not None:
+            items = [item for item in items if item["publishable"] is bool(publishable)]
+        if scope == "external":
+            items = [item for item in items if item["externalEligible"]]
+
+        tiers: dict[str, int] = {}
+        for item in items:
+            tiers[item["computability"]] = tiers.get(item["computability"], 0) + 1
+        external_count = sum(1 for item in items if item["externalEligible"])
+        meta = {
+            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "source": "platform.metric_definition",
+            "scope": scope,
+            "total": len(items),
+            "allTotal": len(all_items),
+            "counts": {
+                "publishableTrue": sum(1 for item in items if item["publishable"]),
+                "industry": sum(1 for item in items if item["evidenceBasis"] == "industry"),
+                "regulatory": sum(1 for item in items if item["evidenceBasis"] == "regulatory"),
+                "externalEligible": external_count,
+                "computability": tiers,
+            },
+            "externalScopeRule": (
+                "evidence_basis=regulatory 且 publishable=true 且 computability_tier=structurally_computable"
+            ),
+            "disclaimer": "可算性仅表示口径四元组与公式可编译，不代表已有观测值；本清单不承诺业务数值。",
+        }
+        return {
+            "items": items,
+            "count": len(items),
+            "meta": meta,
+            "filters": {
+                "scope": scope,
+                "domain": domain,
+                "evidenceBasis": evidence_basis,
+                "publishable": publishable,
+            },
+        }
+
+    @app.get("/metrics/report/manifest")
+    def metrics_report_manifest(
+        scope: str = Query(default="all", pattern="^(all|external)$"),
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> dict[str, Any]:
+        return _g3_manifest(scope, domain, evidenceBasis, publishable)
+
+    @app.get("/metrics/report/manifest.csv")
+    def metrics_report_manifest_csv(
+        scope: str = Query(default="all", pattern="^(all|external)$"),
+        domain: str | None = None,
+        evidenceBasis: str | None = None,
+        publishable: bool | None = None,
+    ) -> Response:
+        import csv
+        import io
+
+        payload = _g3_manifest(scope, domain, evidenceBasis, publishable)
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "metric_id",
+                "名称",
+                "域",
+                "evidence_basis",
+                "证据来源",
+                "publishable",
+                "可算性",
+                "公式",
+                "对外状态",
+                "对外判定说明",
+                "缺口",
+                "variant_of",
+                "output_mode",
+                "definition_version",
+            ]
+        )
+        for item in payload["items"]:
+            writer.writerow(
+                [
+                    item["metricId"],
+                    item["nameZh"] or "",
+                    item["domain"] or "",
+                    item["evidenceBasis"],
+                    item["evidenceSource"],
+                    str(item["publishable"]).lower(),
+                    item["computabilityLabel"],
+                    item["formula"],
+                    item["externalLabel"],
+                    item["externalReason"],
+                    item["gap"],
+                    item["variantOf"] or "",
+                    item["outputMode"] or "",
+                    item["definitionVersion"] or "",
+                ]
+            )
+        body = "\ufeff" + buffer.getvalue()
+        filename = f"metrics-manifest-{date.today():%Y%m%d}.csv"
+        return Response(
+            content=body.encode("utf-8"),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # --- end G3 ---
+
     return app
