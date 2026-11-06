@@ -13,6 +13,7 @@ from typing import Any
 
 from .adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
 from .errors import PortError
+from .ontology_lifecycle import summarize as _lifecycle_summary
 
 RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 RDFS = "http://www.w3.org/2000/01/rdf-schema#"
@@ -444,10 +445,28 @@ def ontology_diff(
         "exampleLimit": EXAMPLE_LIMIT,
         "breaking": bool(summary.get("breaking")),
         "breakingItems": summary.get("breakingItems") or summary.get("impacts") or [],
+        # O-02: the diff response carries the proposal/version flow so
+        # /health/ontology-diff can answer "who moved this version, when, why".
+        "lifecycle": _lifecycle_block(runtime, [from_version, to_version]),
         "sampledAt": sampled_at,
         "source": "GET /health/ontology-diff（runtime.ontology.diff + 图差异示例查询）",
         "readOnly": True,
     }
+
+
+def _lifecycle_block(runtime: Any, version_ids: list[str]) -> dict[str, Any]:
+    """Lifecycle block for /health/ontology-diff; never fails the diff itself."""
+    try:
+        return _lifecycle_summary(runtime.metadata, version_ids)
+    except Exception as exc:  # pre-V32 database or fake metadata in tests
+        return {
+            "versions": {},
+            "items": [],
+            "empty": True,
+            "emptyReason": f"流转表不可读：{exc}",
+            "source": "platform.ontology_lifecycle_transition",
+            "readOnly": True,
+        }
 
 
 def dashboard(runtime: Any) -> dict[str, Any]:

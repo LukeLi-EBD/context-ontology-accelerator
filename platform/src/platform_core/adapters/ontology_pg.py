@@ -32,6 +32,7 @@ from rdflib import BNode, Graph, Namespace, OWL, RDF, RDFS, URIRef
 from ..config import OntologyConfig
 from ..errors import EXIT_CONFIG, PortError, PlatformError
 from ..facts import event_hash
+from ..ontology_lifecycle import list_transitions, record_transition, validate_transition
 from ..ports import Manifest
 from ..termlex import assert_guards_compilable
 from .graph_oxigraph import OxigraphHttpStore, parse_rdf
@@ -2254,6 +2255,19 @@ class OntologyRegistry:
         }
         proposal_id = f"prop-{uuid.uuid4().hex[:12]}"
         with self._meta.tx() as tx:
+            if row["status"] == "draft":
+                record_transition(
+                    tx, entity_kind="version", entity_id=version_id, version_id=version_id,
+                    proposal_id=None, from_status="draft", to_status="proposed",
+                    actor=actor, reason="proposal submitted",
+                    payload={"changeSummary": change_summary.strip()},
+                )
+            record_transition(
+                tx, entity_kind="proposal", entity_id=proposal_id, version_id=version_id,
+                proposal_id=proposal_id, from_status=None, to_status="proposed",
+                actor=actor, reason="proposal submitted",
+                payload={"changeSummary": change_summary.strip(), "against": against_version},
+            )
             tx.execute(
                 "UPDATE platform.ontology_version SET status = 'proposed' WHERE version_id = %s",
                 (version_id,),
@@ -2304,16 +2318,35 @@ class OntologyRegistry:
                 provider="platform",
                 provider_code="E_ONTOLOGY_PROPOSAL_STATUS",
             )
-        if proposal["status"] != "proposed":
+        if proposal["status"] not in ("proposed", "review"):
             raise PortError(
                 code="Conflict",
-                message=f"proposal {proposal_id} is {proposal['status']}, not proposed",
+                message=(
+                    f"proposal {proposal_id} is {proposal['status']}; only proposed/review "
+                    "can be approved"
+                ),
                 provider="platform",
                 provider_code="E_ONTOLOGY_PROPOSAL_STATUS",
                 details={"status": proposal["status"]},
             )
         version_id = proposal["version_id"]
+        reviewed_implicitly = proposal["status"] == "proposed"
+        validate_transition("proposal", proposal["status"], "approved")
         with self._meta.tx() as tx:
+            if reviewed_implicitly:
+                # Compatibility edge proposed -> approved is recorded as the two
+                # real steps, so no review/actor/time is ever missing.
+                record_transition(
+                    tx, entity_kind="proposal", entity_id=proposal_id,
+                    version_id=version_id, proposal_id=proposal_id,
+                    from_status="proposed", to_status="review", actor=actor,
+                    reason=reason or "implicit review before approve",
+                    payload={"implicit": True},
+                )
+                self._append_event(
+                    tx, version_id, proposal_id, "review", actor,
+                    reason or "implicit review before approve", {"implicit": True},
+                )
             tx.execute(
                 "UPDATE platform.ontology_proposal "
                 "SET status = 'approved', approved_by = %s, approved_at = now() "
@@ -2323,6 +2356,20 @@ class OntologyRegistry:
             tx.execute(
                 "UPDATE platform.ontology_version SET status = 'approved' WHERE version_id = %s",
                 (version_id,),
+            )
+            record_transition(
+                tx, entity_kind="proposal", entity_id=proposal_id,
+                version_id=version_id, proposal_id=proposal_id,
+                from_status="review", to_status="approved", actor=actor,
+                reason=reason,
+                payload={"changeSummary": proposal["change_summary"],
+                         "breaking": bool(proposal["breaking"])},
+            )
+            record_transition(
+                tx, entity_kind="version", entity_id=version_id,
+                version_id=version_id, proposal_id=proposal_id,
+                from_status=proposal["status"], to_status="approved", actor=actor,
+                reason=reason,
             )
             self._append_event(
                 tx, version_id, proposal_id, "approved", actor, reason,
@@ -2334,6 +2381,84 @@ class OntologyRegistry:
             "status": "approved",
             "approvedBy": actor,
             "approvedAt": _now(),
+            "reviewedImplicitly": reviewed_implicitly,
+        }
+
+    def review(
+        self, proposal_id: str, actor: str = "operator", reason: str | None = None
+    ) -> dict[str, Any]:
+        """Move proposed -> review; repeated calls are idempotent, not illegal."""
+        proposal = self._proposal_fetch(proposal_id)
+        if proposal is None:
+            raise PortError(
+                code="NotFound",
+                message=f"ontology proposal not found: {proposal_id}",
+                provider="postgres",
+                provider_code="E_ONTOLOGY_PROPOSAL_NOT_FOUND",
+            )
+        if proposal["status"] == "review":
+            return {
+                "proposalId": proposal_id,
+                "versionId": proposal["version_id"],
+                "status": "review",
+                "reviewedBy": proposal.get("reviewed_by") or actor,
+                "reviewedAt": _now(),
+                "unchanged": True,
+            }
+        validate_transition("proposal", proposal["status"], "review")
+        version_id = proposal["version_id"]
+        with self._meta.tx() as tx:
+            tx.execute(
+                "UPDATE platform.ontology_proposal SET status = 'review' WHERE proposal_id = %s",
+                (proposal_id,),
+            )
+            tx.execute(
+                "UPDATE platform.ontology_version SET status = 'review' WHERE version_id = %s",
+                (version_id,),
+            )
+            record_transition(
+                tx, entity_kind="proposal", entity_id=proposal_id,
+                version_id=version_id, proposal_id=proposal_id,
+                from_status=proposal["status"], to_status="review",
+                actor=actor, reason=reason,
+                payload={"changeSummary": proposal["change_summary"]},
+            )
+            record_transition(
+                tx, entity_kind="version", entity_id=version_id,
+                version_id=version_id, proposal_id=proposal_id,
+                from_status=proposal["status"], to_status="review",
+                actor=actor, reason=reason,
+            )
+            self._append_event(
+                tx, version_id, proposal_id, "review", actor, reason,
+                {"changeSummary": proposal["change_summary"], "breaking": bool(proposal["breaking"])},
+            )
+        return {
+            "proposalId": proposal_id,
+            "versionId": version_id,
+            "status": "review",
+            "reviewedBy": actor,
+            "reviewedAt": _now(),
+            "reason": reason,
+            "unchanged": False,
+        }
+
+    def transitions(
+        self,
+        proposal_id: str | None = None,
+        version_id: str | None = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        items = list_transitions(
+            self._meta, version_id=version_id, proposal_id=proposal_id, limit=limit
+        )
+        return {
+            "items": items,
+            "count": len(items),
+            "filter": {"proposalId": proposal_id, "versionId": version_id},
+            "empty": not items,
+            "emptyReason": None if items else "无流转记录",
+            "readOnly": True,
         }
 
     def list_proposals(self, version_id: str | None = None) -> dict[str, Any]:
@@ -2692,6 +2817,22 @@ class OntologyRegistry:
                     {"changeSummary": summary, "breaking": bool(breaking),
                      "implicit": True},
                 )
+                # O-02: an implicit proposal still walks the full chain, so the
+                # lifecycle view never shows an approved/published proposal that
+                # skipped review.
+                record_transition(
+                    tx, entity_kind="proposal", entity_id=implicit_pid,
+                    version_id=version_id, proposal_id=implicit_pid,
+                    from_status="proposed", to_status="review", actor=actor,
+                    reason="implicit review during direct publish",
+                    payload={"implicit": True, "mode": "direct_publish"},
+                )
+                record_transition(
+                    tx, entity_kind="proposal", entity_id=implicit_pid,
+                    version_id=version_id, proposal_id=implicit_pid,
+                    from_status="review", to_status="approved", actor=actor,
+                    reason=reason, payload={"breaking": bool(breaking), "implicit": True},
+                )
             if acknowledge_breaking and breaking:
                 if not implicit:
                     tx.execute(
@@ -2704,6 +2845,10 @@ class OntologyRegistry:
                     actor, reason, {"breakingItems": diff.get("breakingItems", [])},
                 )
             if previous_id and previous_id != version_id:
+                prior = tx.query(
+                    "SELECT status FROM platform.ontology_version WHERE version_id = %s",
+                    (previous_id,),
+                )
                 tx.execute(
                     "UPDATE platform.ontology_version SET status = 'superseded' "
                     "WHERE version_id = %s AND status = 'published'",
@@ -2713,6 +2858,14 @@ class OntologyRegistry:
                     tx, previous_id, None, "superseded", actor, reason,
                     {"replacedBy": version_id},
                 )
+                if prior and prior[0]["status"] == "published":
+                    record_transition(
+                        tx, entity_kind="version", entity_id=previous_id,
+                        version_id=previous_id, proposal_id=None,
+                        from_status="published", to_status="superseded",
+                        actor=actor, reason=reason or f"superseded by {version_id}",
+                        payload={"replacedBy": version_id},
+                    )
             # Forward publishing an existing version records this run's real
             # timestamp; a plain first publish has published_at NULL anyway.
             tx.execute(
@@ -2751,6 +2904,25 @@ class OntologyRegistry:
                     "breaking": bool(breaking),
                     "gates": gates,
                 },
+            )
+            # O-02: close the chain with approved -> published on both the
+            # proposal and the version entity.
+            if pid is not None:
+                record_transition(
+                    tx, entity_kind="proposal", entity_id=pid,
+                    version_id=version_id, proposal_id=pid,
+                    from_status="approved", to_status="published",
+                    actor=actor, reason=reason,
+                    payload={"previousVersionId": previous_id,
+                             "mode": "activate_existing" if activate_existing else "publish"},
+                )
+            record_transition(
+                tx, entity_kind="version", entity_id=version_id,
+                version_id=version_id, proposal_id=pid,
+                from_status=row["status"], to_status="published",
+                actor=actor, reason=reason,
+                payload={"previousVersionId": previous_id,
+                         "activateExisting": bool(activate_existing)},
             )
 
         if governed or implicit:
@@ -2900,6 +3072,10 @@ class OntologyRegistry:
         with self._meta.tx() as tx:
             tx.execute("SELECT pg_advisory_xact_lock(hashtext('platform:ontology:publish'))")
             if previous_id:
+                prior = tx.query(
+                    "SELECT status FROM platform.ontology_version WHERE version_id = %s",
+                    (previous_id,),
+                )
                 tx.execute(
                     "UPDATE platform.ontology_version SET status = 'superseded' "
                     "WHERE version_id = %s AND status = 'published'",
@@ -2909,6 +3085,14 @@ class OntologyRegistry:
                     tx, previous_id, None, "superseded", actor, reason,
                     {"rolledBackTo": version_id},
                 )
+                if prior and prior[0]["status"] == "published":
+                    record_transition(
+                        tx, entity_kind="version", entity_id=previous_id,
+                        version_id=previous_id, proposal_id=None,
+                        from_status="published", to_status="superseded",
+                        actor=actor, reason=reason or f"rolled back to {version_id}",
+                        payload={"rolledBackTo": version_id},
+                    )
             tx.execute(
                 "UPDATE platform.ontology_version "
                 "SET status = 'published', published_at = COALESCE(published_at, now()) "
@@ -2932,6 +3116,13 @@ class OntologyRegistry:
                     "target": version_id,
                     "publishedBy": actor,
                 },
+            )
+            record_transition(
+                tx, entity_kind="version", entity_id=version_id,
+                version_id=version_id, proposal_id=None,
+                from_status=target["status"], to_status="published",
+                actor=actor, reason=reason,
+                payload={"previousVersionId": previous_id, "mode": "rollback"},
             )
         if self._materializer is not None:
             try:
@@ -2993,6 +3184,12 @@ class OntologyRegistry:
                 payload["batch"] = batch
             self._append_event(
                 tx, version_id, None, "deprecated", actor, reason, payload,
+            )
+            record_transition(
+                tx, entity_kind="version", entity_id=version_id,
+                version_id=version_id, proposal_id=None,
+                from_status=target["status"], to_status="deprecated",
+                actor=actor, reason=reason, payload=payload,
             )
         return {
             "id": version_id,

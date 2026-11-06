@@ -3564,4 +3564,64 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ],
         }
 
+    # --- G1 ontology routes ---
+    # Ownership: ontology governance line (O-02..O-06). Append-only block: no
+    # existing handler or module-level helper above is modified. Everything here
+    # is additive and read/write-scoped to governance; publish semantics are
+    # untouched except that publish now also writes lifecycle transitions.
+
+    @app.post("/governance/proposals/{proposal_id}/review")
+    def governance_proposal_review(
+        proposal_id: str,
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        """O-02: proposed -> review. Actor and reason are mandatory."""
+        actor = _governance_actor(body)
+        reason = _governance_reason(body)
+        return runtime.ontology.review(proposal_id, actor=actor, reason=reason)
+
+    @app.get("/governance/proposals/{proposal_id}/transitions")
+    def governance_proposal_transitions(
+        proposal_id: str,
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        return runtime.ontology.transitions(proposal_id=proposal_id, limit=limit)
+
+    @app.get("/governance/versions/{version_id}/transitions")
+    def governance_version_transitions(
+        version_id: str,
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        return runtime.ontology.transitions(version_id=version_id, limit=limit)
+
+    @app.get("/health/ontology-diff/flow")
+    def health_ontology_diff_flow(
+        versionId: str | None = Query(None),
+        proposalId: str | None = Query(None),
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        """O-02: explicit lifecycle view. /health/ontology-diff also embeds
+        the same block under `lifecycle`."""
+        if proposalId:
+            payload = runtime.ontology.transitions(proposal_id=proposalId, limit=limit)
+            payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
+            return payload
+        if not versionId:
+            pointer = healthboard._pointer(runtime)
+            versionId = (pointer or {}).get("versionId")
+        if not versionId:
+            return {
+                "items": [],
+                "count": 0,
+                "empty": True,
+                "emptyReason": "未指定 versionId，且 tbox/current 指针不存在",
+                "readOnly": True,
+            }
+        from .ontology_lifecycle import flow
+
+        payload = flow(runtime.metadata, versionId)
+        payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
+        return payload
+    # --- end G1 ---
+
     return app
