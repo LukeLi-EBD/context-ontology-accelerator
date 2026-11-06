@@ -924,6 +924,7 @@ def publish_import(
     acknowledge_breaking: bool = False,
     abox_graphs: list[str] | None = None,
     publish_existing: bool = False,
+    expected_version_id: str | None = None,
 ) -> dict[str, Any]:
     """G-01 publish: dry-run diff/impact, then a governed version publish.
 
@@ -1010,6 +1011,12 @@ def publish_import(
             "publishExisting": bool(publish_existing),
         }
 
+    # 前置条件：import-publish 与其他发布入口用同一口径，避免“换个端点绕过”。
+    registry._assert_pointer_precondition(
+        version_id, expected_version_id, previous_version, actor,
+        change_summary or f"G-01 import {import_id}", "import-publish",
+    )
+
     if not record["usable"]:
         raise PortError(
             code="Conflict",
@@ -1043,6 +1050,7 @@ def publish_import(
                 actor=actor,
                 reason=summary,
                 activate_existing=True,
+                expected_version_id=expected_version_id,
             )
             return {
                 **base,
@@ -1155,6 +1163,7 @@ def publish_import(
             acknowledge_breaking=acknowledge_breaking,
             actor=actor,
             reason=summary,
+            expected_version_id=expected_version_id,
         )
         return {
             **base,

@@ -152,14 +152,20 @@ class FakeOntology:
                 "status": "approved", "approvedBy": actor, "reason": reason}
 
     def publish(self, version_id, proposal_id=None, acknowledge_breaking=False,
-                actor="operator", reason=None, activate_existing=False):
+                actor="operator", reason=None, activate_existing=False,
+                expected_version_id=None):
         self.publish_calls.append(
             {"versionId": version_id, "proposalId": proposal_id,
              "acknowledgeBreaking": acknowledge_breaking, "actor": actor,
-             "reason": reason, "publishExisting": activate_existing}
+             "reason": reason, "publishExisting": activate_existing,
+             "expectedVersionId": expected_version_id}
         )
         if self.publish_error:
             raise self.publish_error
+        actual = (self.pointer or {}).get("versionId")
+        if expected_version_id is not None and actual != expected_version_id:
+            raise _port("Conflict", "E_ONTOLOGY_POINTER_PRECONDITION",
+                        f"tbox/current expected {expected_version_id}, actual {actual}")
         if proposal_id:
             proposal = self.get_proposal(proposal_id)
             if proposal["status"] != "approved":
@@ -177,11 +183,17 @@ class FakeOntology:
             },
         }
 
-    def rollback_to(self, version_id, actor="operator", reason=None):
+    def rollback_to(self, version_id, actor="operator", reason=None,
+                    expected_version_id=None):
         self.rollback_calls.append({"mode": "to", "versionId": version_id,
-                                    "actor": actor, "reason": reason})
+                                    "actor": actor, "reason": reason,
+                                    "expectedVersionId": expected_version_id})
         if self.rollback_error:
             raise self.rollback_error
+        actual = (self.pointer or {}).get("versionId")
+        if expected_version_id is not None and actual != expected_version_id:
+            raise _port("Conflict", "E_ONTOLOGY_POINTER_PRECONDITION",
+                        f"tbox/current expected {expected_version_id}, actual {actual}")
         version = self.get(version_id)
         self.pointer = {"versionId": version_id}
         return {"versionId": version_id, "status": version["status"],
