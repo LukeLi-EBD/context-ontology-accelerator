@@ -246,6 +246,9 @@ class ConsistencyGateEvidenceTests(unittest.TestCase):
         self.assertFalse(result["emptyAbox"])
         self.assertEqual(result["aboxGraphsUnavailable"], [])
         self.assertEqual(len(result["inputHash"]), 64)
+        self.assertEqual(result["verdict"], "pass")
+        self.assertTrue(result["checked"])
+        self.assertIsNone(result["emptyAboxReason"])
 
     def test_explicit_empty_when_abox_not_included(self):
         registry = self._registry({"urn:abox:a": b"<s> <p> <o> .\n"}, ["urn:abox:a"])
@@ -256,6 +259,11 @@ class ConsistencyGateEvidenceTests(unittest.TestCase):
         self.assertEqual(result["aboxGraphTriples"], {})
         self.assertEqual(result["aboxTriples"], 0)
         self.assertTrue(result["emptyAbox"])
+        # An empty A-Box cannot falsify consistency, so the gate must not claim
+        # a pass; the raw reasoner answer stays available for the record.
+        self.assertEqual(result["verdict"], "not_applicable")
+        self.assertFalse(result["checked"])
+        self.assertEqual(result["emptyAboxReason"], "no A-Box graphs configured")
 
     def test_unreadable_graph_is_not_reported_as_empty(self):
         registry = self._registry(
@@ -269,6 +277,10 @@ class ConsistencyGateEvidenceTests(unittest.TestCase):
         self.assertEqual(result["aboxGraphs"], ["urn:abox:main"])
         self.assertEqual(result["aboxTriples"], 0)
         self.assertTrue(result["emptyAbox"])
+        self.assertEqual(result["verdict"], "not_applicable")
+        self.assertEqual(
+            result["emptyAboxReason"], "configured A-Box graphs are unreadable"
+        )
 
     def test_inconsistent_gate_keeps_input_evidence(self):
         registry = self._registry(
