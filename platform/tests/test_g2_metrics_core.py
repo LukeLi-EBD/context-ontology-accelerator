@@ -265,21 +265,21 @@ class G2MetricsCoreTest(unittest.TestCase):
 
     def test_02_normal_migration(self) -> None:
         # numerator 80 (100 start - 20 decrease); denominator 280 ((100-20)+(200-0))
-        rows = self._rows(self._compute("FIN-BANK-013", asOf=AS_OF))
+        rows = self._rows(self._compute("FIN-BANK-013", **Q4))
         self.assertAlmostEqual(rows[INST]["numerator"], 80.0, places=6)
         self.assertAlmostEqual(rows[INST]["denominator"], 280.0, places=6)
         self.assertAlmostEqual(rows[INST]["value"], 28.571429, places=5)
 
     def test_03_special_migration(self) -> None:
-        rows = self._rows(self._compute("FIN-BANK-014", asOf=AS_OF))
+        rows = self._rows(self._compute("FIN-BANK-014", **Q4))
         self.assertAlmostEqual(rows[INST]["value"], 75.0, places=5)
 
     def test_04_substandard_migration(self) -> None:
-        rows = self._rows(self._compute("FIN-BANK-015", asOf=AS_OF))
+        rows = self._rows(self._compute("FIN-BANK-015", **Q4))
         self.assertAlmostEqual(rows[INST]["value"], 60.0, places=5)
 
     def test_05_doubtful_migration(self) -> None:
-        rows = self._rows(self._compute("FIN-BANK-016", asOf=AS_OF))
+        rows = self._rows(self._compute("FIN-BANK-016", **Q4))
         self.assertAlmostEqual(rows[INST]["value"], 60.0, places=5)
 
     def test_06_concentration(self) -> None:
@@ -301,12 +301,12 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertAlmostEqual(rows["term_life"]["value"], 66.666667, places=5)
 
     def test_09_recomputable_after_new_fact(self) -> None:
-        first = self._rows(self._compute("FIN-BANK-013", asOf=AS_OF))[INST]["value"]
+        first = self._rows(self._compute("FIN-BANK-013", **Q4))[INST]["value"]
         extra = ("A10", "normal", 100, "normal", "special", 100, 0)
         with self.meta.tx() as tx:
             self._loan(tx, extra)
         try:
-            second = self._rows(self._compute("FIN-BANK-013", asOf=AS_OF))[INST]
+            second = self._rows(self._compute("FIN-BANK-013", **Q4))[INST]
             # numerator 80+100=180; denominator 280+100=380 -> 47.368421%
             self.assertAlmostEqual(second["numerator"], 180.0, places=6)
             self.assertAlmostEqual(second["value"], 47.368421, places=6)
@@ -317,7 +317,7 @@ class G2MetricsCoreTest(unittest.TestCase):
                 " AND account_id = 'A10'",
                 None,
             )
-        restored = self._rows(self._compute("FIN-BANK-013", asOf=AS_OF))[INST]["value"]
+        restored = self._rows(self._compute("FIN-BANK-013", **Q4))[INST]["value"]
         self.assertAlmostEqual(restored, first, places=6)
 
     # -------------------------------------------------------- explicit errors
@@ -515,9 +515,20 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertAlmostEqual(row["denominator"], 280.0, places=6)
         self.assertAlmostEqual(row["value"], 28.571429, places=5)
 
-        as_of = self._compute("FIN-BANK-013", asOf=AS_OF).json()
-        self.assertEqual(as_of["window"], {"start": AS_OF, "end": AS_OF})
-        self.assertAlmostEqual(as_of["rows"][0]["value"], 28.571429, places=5)
+        # A period value is a range, never a point: asOf alone must be refused
+        # with the same code as /output, not collapsed into a one-day window.
+        degenerate = self._compute("FIN-BANK-013", asOf=AS_OF)
+        self.assertEqual(degenerate.status_code, 400, degenerate.text)
+        error = degenerate.json()["error"]
+        self.assertEqual(error["providerCode"], "E_METRIC_WINDOW_INSUFFICIENT")
+        self.assertEqual(error["message"], "period metric requires a full window")
+
+        single_day = self._compute("FIN-BANK-013", periodStart=AS_OF, periodEnd=AS_OF)
+        self.assertEqual(single_day.status_code, 400, single_day.text)
+        self.assertEqual(
+            single_day.json()["error"]["providerCode"],
+            "E_METRIC_WINDOW_INSUFFICIENT",
+        )
 
         # A period that excludes the 2025-12-31 snapshot really returns nothing;
         # the window is applied instead of silently using the period start.
@@ -572,7 +583,7 @@ class G2MetricsCoreTest(unittest.TestCase):
     def test_24_datasource_mismatch_is_explicit(self) -> None:
         # A source that does not exist in the fact table is reported, not
         # silently returned as an empty result.
-        response = self._compute("FIN-BANK-013", asOf=AS_OF, dataSource="business")
+        response = self._compute("FIN-BANK-013", **Q4, dataSource="business")
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
         self.assertTrue(body["noData"])
@@ -581,14 +592,18 @@ class G2MetricsCoreTest(unittest.TestCase):
         self.assertIn("fixture", body["availableDataSources"])
         self.assertNotIn("business", body["availableDataSources"])
 
-        # Default is still fixture; when fixture rows exist it computes normally.
-        default = self.client.get("/metrics/FIN-BANK-013/compute",
-                                  params={"asOf": AS_OF})
-        self.assertEqual(default.status_code, 200, default.text)
-        default_body = default.json()
-        self.assertEqual(default_body["dataSource"], "fixture")
-        self.assertFalse(default_body["noData"])
-        self.assertNotIn("reason", default_body)
+        # There is no implicit default: omitting dataSource is refused, and the
+        # error names the enumeration instead of silently reading fixture.
+        missing = self.client.get("/metrics/FIN-BANK-013/compute",
+                                  params={"periodStart": Q4["periodStart"],
+                                          "periodEnd": Q4["periodEnd"]})
+        self.assertEqual(missing.status_code, 400, missing.text)
+        error = missing.json()["error"]
+        self.assertEqual(error["providerCode"], "E_METRIC_DATA_SOURCE_REQUIRED")
+        self.assertEqual(
+            error["details"]["allowedDataSources"],
+            ["fixture", "business", "synthetic"],
+        )
 
     def test_25_no_period_metric_has_instant_bindings(self) -> None:
         # Guard the whole definition set, not just 013-018: a period metric

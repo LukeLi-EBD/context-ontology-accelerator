@@ -18,8 +18,8 @@ from platform_core.assembly import assemble
 from platform_core.config import load_config
 from platform_core.errors import PortError
 from platform_core.metric_compiler import (
-    BINDING_MISSING, EXPR_UNSUPPORTED, PUBLISH, RULE_SET_ONLY, MetricCompiler,
-    formula_to_sql,
+    BINDING_MISSING, EXPR_UNSUPPORTED, PUBLISH, RULE_SET_ONLY, WINDOW,
+    MetricCompiler, formula_to_sql,
 )
 from platform_core.sqlsplit import split_sql_statements
 
@@ -152,8 +152,13 @@ class MetricCompilerV7Test(unittest.TestCase):
                     (h[0], h[1], h[2], h[3], AS_OF, "I1", "fixture", True),
                 )
 
-    def _rows(self, metric_id: str, internal: bool = False, **window) -> dict[str, dict]:
-        result = self.compiler.execute(metric_id, internal=internal, **window)
+    def _rows(
+        self, metric_id: str, internal: bool = False, data_source: str = "fixture",
+        **window,
+    ) -> dict[str, dict]:
+        result = self.compiler.execute(
+            metric_id, internal=internal, data_source=data_source, **window
+        )
         return {str(r["entityKey"]): r for r in result["rows"]}
 
     # ---------------------------------------------------------------- values
@@ -207,12 +212,17 @@ class MetricCompilerV7Test(unittest.TestCase):
     # ------------------------------------------------------------ gate/errors
     def test_09_external_gate(self) -> None:
         with self.assertRaises(PortError) as ctx:
-            self.compiler.execute("CUST-001", start=AS_OF, end=AS_OF)
+            self.compiler.execute(
+                "CUST-001", start=AS_OF, end=AS_OF, data_source="fixture"
+            )
         self.assertEqual(ctx.exception.provider_code, PUBLISH)
 
     def test_10_rule_metric_routes_to_rules(self) -> None:
         with self.assertRaises(PortError) as ctx:
-            self.compiler.execute("FIN-BANK-034", internal=True, start=AS_OF, end=AS_OF)
+            self.compiler.execute(
+                "FIN-BANK-034", internal=True, start=AS_OF, end=AS_OF,
+                data_source="fixture",
+            )
         self.assertEqual(ctx.exception.provider_code, RULE_SET_ONLY)
 
     def test_11_unsupported_expression(self) -> None:
@@ -222,8 +232,31 @@ class MetricCompilerV7Test(unittest.TestCase):
 
     def test_12_missing_binding(self) -> None:
         with self.assertRaises(PortError) as ctx:
-            self.compiler.compile("FIN-BANK-001", internal=True, start=AS_OF, end=AS_OF)
+            self.compiler.compile(
+                "FIN-BANK-001", internal=True, start=AS_OF, end=AS_OF,
+                data_source="fixture",
+            )
         self.assertEqual(ctx.exception.provider_code, BINDING_MISSING)
+
+    def test_14_period_window_must_be_a_range(self) -> None:
+        # min_window_days is 0 for these definitions, so the threshold cannot
+        # reject a one-day "period". The compiler must reject it explicitly.
+        with self.assertRaises(PortError) as ctx:
+            self.compiler.compile(
+                "FIN-BANK-013", start=AS_OF, end=AS_OF, data_source="fixture"
+            )
+        self.assertEqual(ctx.exception.provider_code, WINDOW)
+        self.assertEqual(
+            ctx.exception.message, "period metric requires a full window"
+        )
+
+        with self.assertRaises(PortError) as ctx:
+            self.compiler.compile(
+                "FIN-BANK-013", start="2025-12-31", end="2025-12-30",
+                data_source="fixture",
+            )
+        self.assertEqual(ctx.exception.provider_code, WINDOW)
+        self.assertEqual(ctx.exception.message, "window end precedes start")
 
     def test_13_migrations_reentrant(self) -> None:
         # replay V23+V24+V25+V30 twice: row count, definitions and binding count

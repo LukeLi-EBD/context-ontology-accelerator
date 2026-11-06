@@ -188,7 +188,8 @@ class MetricDecisionsV8Test(unittest.TestCase):
     # ------------------------------------------------- CUST-002 binding
     def test_07_cust002_counts_distinct_days(self) -> None:
         result = self.compiler.execute(
-            "CUST-002", internal=True, start=YEAR["start"], end=YEAR["end"]
+            "CUST-002", internal=True, start=YEAR["start"], end=YEAR["end"],
+            data_source="fixture",
         )
         rows = {r["entityKey"]: r for r in result["rows"]}
         # C1: {2025-01-05, 2025-01-10} = 2; refund on 01-10 excluded.
@@ -200,13 +201,14 @@ class MetricDecisionsV8Test(unittest.TestCase):
     def test_08_non_scalar_and_derived_are_explicit(self) -> None:
         with self.assertRaises(PortError) as ctx:
             self.compiler.compile("FIN-BANK-002", internal=True, start="2025-12-31",
-                                  end="2025-12-31")
+                                  end="2025-12-31", data_source="fixture")
         self.assertEqual(ctx.exception.provider_code, RULE_SET_ONLY)
 
         # Derived metrics have no independent numerator aggregate -> quartet gate.
         with self.assertRaises(PortError) as ctx:
             self.compiler.compile("FIN-BANK-019", internal=True,
-                                  start=YEAR["start"], end=YEAR["end"])
+                                  start=YEAR["start"], end=YEAR["end"],
+                                  data_source="fixture")
         self.assertEqual(ctx.exception.provider_code, NOT_COMPUTABLE)
 
         # The metric-reference syntax itself is rejected, never silently degraded.
@@ -216,7 +218,7 @@ class MetricDecisionsV8Test(unittest.TestCase):
 
         with self.assertRaises(PortError) as ctx:
             self.compiler.compile("CUST-004", internal=True, start="2025-12-31",
-                                  end="2025-12-31")
+                                  end="2025-12-31", data_source="fixture")
         self.assertEqual(ctx.exception.provider_code, NOT_COMPUTABLE)
 
     def test_09_four_tier_distribution(self) -> None:
