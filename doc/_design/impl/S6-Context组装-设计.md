@@ -1,8 +1,9 @@
 # S6 Context 组装 · 设计
 
-> 切片：S6 · 版本：v0.1 · 日期：2026-11-05
+> 切片：S6 · 版本：v0.2 · 日期：2026-11-06（v0.1 2026-11-05；本次仅追加性能回写 §10，未改设计语义）
 > 上游：04 §5.3（`ContextResolver` v1 契约）、03 §6.5（D19 RRF `k=60` 写死）、03 §6.5（D20 默认只读最新版本）、10 §3（S6）
 > 原则：D18「只做编排」——子图交 Oxigraph 求值，召回交 pgvector/FTS，融合沿用 S3 的固定 RRF；**应用层不做结果集合并/重排**。
+> 性能回写：`/context/resolve` p50 **62 ms**（c1/c4，固定 query 60/80 req），详见 `_design/26-context-resolve-性能优化.md`；见 §10 性能回写。
 
 ## 1. 目标、范围与不做
 
@@ -189,7 +190,28 @@ context:
 - 空结果探针使用固定串 `zzzqqqxxxjjj`（先实测 pg_trgm/FTS 均为 0 命中；原 `zzqx-none-<nonce>` 会被 trigram 命中）。
 - 回归：`smoke-s4` 22/22、`smoke-s5` 27/27（形状调整后），全量 `tests/acceptance.ps1` **passed=29 failed=0**（含 `smoke-s6` 与 `bad_config_context`）。
 
-## 10. 可复现命令
+## 10. 性能回写（2026-11-06，C-5）
+
+> 数据与结论全部来自 `_design/26-context-resolve-性能优化.md` §0/§2；本节只做设计回写，不重复实测。
+
+| 指标 | 优化前 | 优化后 | 判据 |
+| --- | --- | --- | --- |
+| `/context/resolve` p50（c1，60 req） | 2884 ms | **62 ms** | ≤800 ms，通过 |
+| `/context/resolve` p50（c4，80 req） | 3049 ms | **62 ms** | c4/c1 = 1.0 ≤ 1.5，通过 |
+| 24 条 query 轮转 p50（c1/c4） | — | 94 / 94 ms | 记录项 |
+| MRR@10（6 条 gold） | 0.5000 | 0.5000 | 不下降，守住 |
+| `search.hybrid` 自身 | 2858 ms | 181 ms | 主要收益来源 |
+
+对设计的回写结论：
+
+1. **RRF 结构不变**：两路检索与 `k=60` 未改；优化只发生在 `search.hybrid` 内部（词法路 GIN 条件、CJK 别名过滤、query embedding 缓存与规则、后处理 SQL 化）。
+2. **编排层职责不变**：`ContextResolver` 仍只做查询与参数编排，未引入应用层重排；因此 §1“不做应用层重排”的约束未被性能优化破坏。
+3. **分段耗时**（26 文档 §2）：`search.hybrid` 62 ms、`graph.seed/facts` 1 ms，编排开销可忽略。
+4. **未覆盖**：p95/p99 未纳入本轮硬指标（26 文档 §4 已如实登记）。
+
+> 交叉引用：`_design/26-context-resolve-性能优化.md`（原始分段数据、逐项改动收益、无收益回退项、质量指标对照）。
+
+## 11. 可复现命令
 
 ```powershell
 cd D:\agentABC\_impl
