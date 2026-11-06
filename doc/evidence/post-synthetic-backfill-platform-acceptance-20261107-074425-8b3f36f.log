@@ -1,0 +1,170 @@
+﻿# 验收栈灌数据后复验（synthetic）— 2026-11-07 07:42–07:52（本机）
+#
+# 本文件是“已灌数据后”证据，与空库证据分开保存；不覆盖、不改写任何既有日志。
+# 空库基线证据：acceptance-s0s13-...-054610-5386a04.log / acceptance-s14-...-055018-5386a04.log
+#
+# 栈：platform-acceptance（api 127.0.0.1:8082 / PG 5433 / reasoner 7882 / embedding 8083）
+# 镜像：agent-platform:0.1-s5，容器 image id = sha256:80cb274fda31be8f691d2b1614b94e512ea4ef13a56af134f31bfc943c605677
+# git HEAD：8b3f36f（镜像构建源码点 5386a04）
+# 验收栈 schema_version=40，tbox/current=ont-6e81732555e5，metric_definition=85
+# 共享栈 agent-platform（8080）未被触碰：tbox/current 仍为 ont-11f92ebb3326
+#
+# ==============================================================================
+# 0. 灌数据前的实际基线（只读核对）
+# ==============================================================================
+# metric_observation = 0
+# fact_assertion     = 0
+# document           = 39
+# metric_field_binding = 95
+#
+# 注意（如实说明）：28 张事实表并非空表。此前的空库 S14 运行中，tests/test_datagen.py
+# 以 seed=42 执行过 datagen（clean=True），因此事实表里已经存在同一份 synthetic 数据。
+# 本次带 --clean 重新生成的是同一份确定性数据（两次 sha 相同），不是从共享栈搬运。
+#
+# ==============================================================================
+# 1. datagen（仓库内生成器，data_source=synthetic）
+# ==============================================================================
+# 命令：
+#   docker exec platform-acceptance-api platform datagen \
+#     --config /data/platform.yaml --seed 42 --scale 1.0 --schema platform \
+#     --rows-per-table 1000 --clean
+#
+# 结果：status=completed，seed=42，scale=1.0，schema=platform
+#       rowsPerTable=1000，masterRows=5000
+#       28 张事实表合计 161,549 行
+#       fk.orphans=0（22 条关系）
+#       time.violations=0（15 项检查）
+#       money.violations=0（10 项检查）
+#       coverage: sizeOk=true, coverageOk=true, missingCases=[]
+#       reproducibility.ok=true，
+#         sha=32a7d631859eef3d66c3218bdac187c9298b39fbc4a81fb5935be4d596480a04（两次一致）
+#
+# 本次生成后的表行数（rowCounts）：
+#   cust_master=6000  ins_policy=6000  bank_loan_account=5020  loan_installment_plan=15000
+#   bank_loan_repayment=15000  bank_credit_facility=5000  bank_credit_application=2000
+#   bank_collection_case=1500  bank_collection_recovery=1500  bank_npl_snapshot=1000
+#   bank_disposal_event=1000  bank_provision_snapshot=1440  bank_concentration_stat=1440
+#   bank_deposit_account=5000  bank_ews_signal=5000  ins_claim_case=2000
+#   ins_claim_reserve_snapshot=2000  ins_payment_record=6000  ins_policy_event=1500
+#   ins_underwriting_stat=8000  ins_persistence_stat=14400  cust_transaction=11030
+#   cust_campaign_touch=2000  cust_complaint=1500  cust_product_holding=9999
+#   cust_behavior_snapshot=5000  cust_cohort_stat=1200  cust_aum_snapshot=25020
+#
+# ==============================================================================
+# 2. 投影落观测（metric_observation）
+# ==============================================================================
+# 命令：
+#   docker exec platform-acceptance-api python -m platform_core.metric_backfill \
+#     --config /data/platform.yaml --apply --data-source synthetic --as-of 2025-12-31
+#
+# totals：structurallyComputable=74，numeric=62，ruleSet=12，
+#         succeeded=66，failed=8，rowsWritten=37,471
+#
+# 落库结果（psql 只读核对）：
+#   metric_observation = 37,471 行
+#   distinct metric_id = 55
+#   data_source=synthetic 37,471；fixture=true 0
+#   computed_at 范围 = 2026-11-07 07:44:25.388654+08 .. 2026-11-07 07:44:29.117816+08
+#   → 本次写入前该表为 0 行，因此 37,471 行全部来自本次投影，没有修复前历史行混入。
+#
+# 未产出观测的 8 条（backfill 自报）：
+#   FIN-BANK-035      project  E_METRIC_NO_DATA  fact function returned no rows
+#   FIN-BANK-036-v1   project  E_METRIC_NO_DATA  fact function returned no rows
+#   FIN-INS-004       compile  E_METRIC_NO_DATA  compiler returned no entity rows
+#   FIN-INS-017       compile  E_METRIC_EVIDENCE_MISSING（已写 5 行，读取路径仍拒绝：
+#                               definition quartet incomplete / denominator agg missing）
+#   FIN-INS-021       project  E_METRIC_NO_DATA  fact function returned no rows
+#   FIN-INS-022-v2    compile  E_METRIC_NO_DATA  compiler returned no entity rows
+#   FIN-INS-023-v2    compile  E_METRIC_NO_DATA  compiler returned no entity rows
+#   FIN-INS-025       compile  E_METRIC_NO_DATA  compiler returned no entity rows
+#
+# 已定位的失败原因（数据形态，不是绑定缺失）：
+#   FIN-INS-021 的 fact function 只取 ins_payment_record.installment_no = 13 的行；
+#     生成器当前每张保单只产 installment_no = 1（实测 max_i=1），故返回 0 行。
+#   FIN-INS-004 / 022-v2 / 023-v2 / 025 的绑定带 filter_sql：
+#     INS-004 payment_type='current' AND policy_year>=2 AND status_as_of={end};
+#     INS-022/023 valuation_basis='natural' AND renewal_year=2/3;
+#     INS-025 channel='individual_agent'。生成数据在这些组合过滤后无实体行。
+#
+# ==============================================================================
+# 3. 15 条 /answer 用例涉及的 10 个指标逐条复算
+#    （dataSource=synthetic + 完整窗口；HTTP /metrics/{id}/output?compute=true）
+# ==============================================================================
+# 窗口：instant → asOf=2025-12-31；period → periodStart=2025-01-01&periodEnd=2025-12-31
+#
+# case    metric          kind     HTTP  value                    unit  sampleCount  obs行数
+# V01/P01 FIN-BANK-001    instant  200   333.0                    天    5000         5000
+# V02/P02 FIN-BANK-017    period   200   40.0384061449832        %    15           15
+# V03/P03 FIN-INS-018     period   200   100.0                   %    4            4
+# V04     FIN-BANK-008    instant  200   61.253601136133085      %    20           20
+# V06     FIN-BANK-022    instant  200   90.0                    %    20           20
+# V07     FIN-BANK-025    instant  200   19.81402214311094       %    20           20
+# V09     FIN-INS-008     period   200   28.947368421052634      %    20           20
+# V10     FIN-BANK-013    period   200   47.8055012816739        %    20           20
+# V11     FIN-BANK-028    instant  200   1.8000000000000003      %    20           20
+# V12     CUST-012        instant  403   E_METRIC_NOT_PUBLISHABLE（missing=regulatory_source）
+#         ↳ internal=true 复算：433,149,829.0 元，sampleCount=5000，obs行数=5000
+#
+# 说明：V12 是 definition 型用例（/answer 不取值），公网出口被 publishable 治理拒绝属预期；
+#       用 internal=true 只为核对“数据确实已落库并可算”。
+#
+# ==============================================================================
+# 4. 三个问题的答案
+# ==============================================================================
+# Q1. /output?compute=true&dataSource=synthetic 现在是否出数？
+#     是。10 个指标中 9 个 HTTP 200 且 value 非空；第 10 个（CUST-012）是治理性 403
+#     （E_METRIC_NOT_PUBLISHABLE），不是无数据。FIN-BANK-001 = 333.0 天 / 5000 行。
+#
+# Q2. FIN-BANK-001 到底卡在哪？
+#     两个读取路径要分开：
+#     (a) /metrics/{id}/output?compute=true → 读 metric_observation：
+#         灌数据前是 E_METRIC_NO_DATA（数据不足），灌数据后 200 出数。
+#     (b) /metrics/{id}/compute → 走 MetricCompiler 直读事实表：
+#         仍返回 E_METRIC_BINDING_MISSING（metric_field_binding 中该指标 0 行绑定，
+#         它走 fact_function 路由）。这与 test_g2 的 test_12 断言一致。
+#     结论：按用户看到的 /output 路径，它卡的是“数据不足”，不是 E_METRIC_BINDING_MISSING；
+#           E_METRIC_BINDING_MISSING 属于 /compute 编译器路径，灌数据不会改变它。
+#
+# Q3. metric_observation 有几行是本次生成的？有没有混入修复前历史行？
+#     37,471 行，55 个指标，全部 data_source=synthetic、fixture=false，
+#     computed_at 全部落在 2026-11-07 07:44:25–07:44:29。
+#     灌数据前该表经核对为 0 行 → 无历史行混入，也没有 fixture 行被误标。
+#
+# ==============================================================================
+# 5. 受影响用例：无
+# ==============================================================================
+# 灌数据后在验收栈上执行标准入口（scripts/acceptance-s14.ps1，全量 unittest）：
+#   discovered_total=422 excluded=0 discovered=422 executed=422
+#   passed=422 failed=0 errors=0 skipped=0 exit=0
+#   证据：doc/evidence/acceptance-s14-platform-acceptance-20261107-075228-8b3f36f.log
+#
+# 之前单独复跑的模块（均在灌数据后执行，全部 OK）：
+#   tests.test_answer_layers            6/6
+#   tests.test_q4_answerable + test_g4_retrieval  19/19
+#   tests.test_g2_metrics_core          25/25
+#   test_metric_facts / test_metric_compute / test_metric_facts_v7 / test_metric_v6 /
+#   test_metric_loader / test_source_ref / test_prov   61/61
+#   tests.test_datagen                  7/7
+#
+# 特别核对：
+#   - test_g2_metrics_core.test_12_missing_binding 仍绿：FIN-BANK-001 的 /compute 仍 400
+#     E_METRIC_BINDING_MISSING，未被观测行影响。
+#   - test_answer_layers 的 FIN-INS-021 facts=degraded 仍绿：该指标本次未产出观测行，
+#     E_FACTS_NO_OBSERVATION 依旧成立。
+#   - test_datagen 的 PROTECTED_SQL 快照仍绿：datagen 不写 metric_observation。
+#
+# ==============================================================================
+# 6. 隔离栈终态与回到空库
+# ==============================================================================
+# 当前：platform-acceptance 各容器仍在运行（api 8082 / PG 5433 / reasoner 7882 /
+#       embedding 8083；fuseki 3031 在本轮前已运行，卷保留）。
+# 回到空库：acceptance-stack.ps1 的 down 动作内部执行 `docker compose down -v --remove-orphans`
+#   （PG/Oxigraph 命名卷随之删除）；宿主 bind 数据根 D:\agentABC\data-acceptance 需
+#   额外加 -RemoveDataRoot 才会删除（脚本拒绝删除默认共享数据根）。
+#   即：powershell -ExecutionPolicy Bypass -File scripts\acceptance-stack.ps1 down -RemoveDataRoot
+#   之后再 up，即为全新空库。（注：脚本参数是 -RemoveDataRoot；`-v` 已在 down 内部固定传入。）
+#
+# 共享栈核对：agent-platform（8080）tbox/current 仍为 ont-11f92ebb3326，未改动；
+# 本轮所有写操作均通过 platform-acceptance 容器/其 PG(5433) 完成。
+# reasoning.abox_graphs / max_assembly_bytes 未改动。
+# ==============================================================================

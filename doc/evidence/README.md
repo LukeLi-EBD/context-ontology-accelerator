@@ -47,6 +47,8 @@
 | 2026-11-07 05:46 | `acceptance-s0s13-platform-acceptance-20261107-054610-5386a04.log` | **对外可用点（HEAD 5386a04）空库 S0–S13**：44/44，0 skipped，exit 0；无 TypeError/exit 70；指针严格恢复 |
 | 2026-11-07 05:50 | `acceptance-s14-platform-acceptance-20261107-055018-5386a04.log` | **对外可用点空库 S14 全量**：422 discovered / 422 executed / 422 passed / 0 skipped，exit 0 |
 | 2026-11-07 05:49 | `implicit-publish-proof-platform-acceptance-20261107-054931-5386a04.log` | 隐式发布分支定向实证：无 token / 错 token 均干净的 409 `E_TERM_GATE_BLOCKED`（mode=implicit，含完整响应体），无 500/KeyError |
+| 2026-11-07 07:44 | `post-synthetic-backfill-platform-acceptance-20261107-074425-8b3f36f.log` | **已灌数据后（非空库）**：datagen 28 表 161,549 行（synthetic）、投影落观测 37,471 行 / 55 指标（全部 synthetic，无 fixture、无历史行）；15 条 `/answer` 涉及的 10 指标逐条复算有值；`FIN-BANK-001` `/output` 数据不足已解除（333 天 / 5000 行），`/compute` 仍 `E_METRIC_BINDING_MISSING` |
+| 2026-11-07 07:52 | `acceptance-s14-platform-acceptance-20261107-075228-8b3f36f.log` | **已灌数据后 S14 全量**：422 discovered / 422 executed / 422 passed / 0 failed / 0 skipped，exit 0；灌数据未改变任何用例断言 |
 
 隔离栈 S14 的早期失败定性（**未跳过、未删除用例**）。其中"环境夹具缺失"一类已在
 2026-11-07 04:37 从根因修复（测试改为解析活指针、词表随 bootstrap 播种），见 69 第 9 节：
