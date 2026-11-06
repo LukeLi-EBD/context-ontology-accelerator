@@ -12,9 +12,12 @@ The live tests use urn:s14term: and restore the pointer and delete their
 version/graph/evidence rows in tearDown.
 """
 
+import hashlib
 import os
 import tempfile
 import unittest
+import uuid
+from importlib.resources import files
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -42,6 +45,7 @@ from platform_core.config import (
     load_config,
 )
 from platform_core.errors import EXIT_CONFIG, PlatformError
+from platform_core.sqlsplit import split_sql_statements
 from platform_core.validation import ShaclValidator
 
 BASE = {"database": {"url": "postgresql://platform:platform_dev@postgres:5432/platform"}}
@@ -72,6 +76,17 @@ ALIAS_MISSING_TARGET_TTL = SKOS_PREFIX + """
 
 DEFINITION_GAP_TTL = SKOS_PREFIX + """
 <urn:s14term:C> a skos:Concept ; skos:prefLabel "C"@zh .
+"""
+
+# No MetricScheme concept at all: the effective term set is zero. Used by the
+# vocab-zero guard tests (the old ratio checks produce no finding for it).
+NO_TERMS_TTL = SKOS_PREFIX + """
+<urn:s14term:NoTermsWidget> a owl:Class ; rdfs:label "NoTermsWidget"@en .
+"""
+
+NO_TERMS_NT = b"""\
+<urn:s14term:NoTermsNT> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> \
+<http://www.w3.org/2002/07/owl#Class> .
 """
 
 ROOT_SHAPES_TTL = """\
@@ -235,6 +250,91 @@ class GateSemanticsTests(unittest.TestCase):
             ]
         )
 
+    # --- vocab-zero guard: effective term set vs high-water mark -----------
+
+    def test_7_zero_drop_blocks_at_every_tier(self):
+        snapshot = self._snapshot(NO_TERMS_TTL)
+        for gate in ("off", "warn", "block"):
+            with self.subTest(gate=gate):
+                result = termgate.evaluate_snapshot(
+                    snapshot,
+                    TermsConfig(gate=gate),
+                    high_water={"conceptsInScheme": 85, "aliases": 18,
+                                "versionId": "ont-hw", "graph": "urn:platform:graph:tbox:ont-hw"},
+                )
+                self.assertIsNotNone(result)
+                self.assertTrue(result["blocked"])
+                self.assertEqual(result["verdict"], "blocked")
+                self.assertTrue(result["enforced"])
+                self.assertEqual(result["gate"], gate)
+                codes = [item["code"] for item in result["findings"]]
+                self.assertEqual(codes, [termgate.VOCAB_ZERO_CODE])
+                self.assertTrue(result["vocabGuard"]["zeroDrop"])
+                self.assertTrue(result["vocabGuard"]["forcedBlocking"])
+                self.assertIsNone(result["vocabGuard"]["exemption"])
+
+    def test_8_first_import_without_a_mark_is_not_blocked(self):
+        result = termgate.evaluate_snapshot(
+            self._snapshot(NO_TERMS_TTL), TermsConfig(gate="warn")
+        )
+        self.assertFalse(result["blocked"])
+        self.assertEqual(result["verdict"], "pass")
+        self.assertFalse(result["vocabGuard"]["zeroDrop"])
+
+    def test_9_smoke_exemption_records_actor_path_and_baseline(self):
+        result = termgate.evaluate_snapshot(
+            self._snapshot(NO_TERMS_TTL),
+            TermsConfig(gate="block"),
+            high_water={"conceptsInScheme": 85, "aliases": 18, "versionId": "ont-published"},
+            context={
+                "purpose": "smoke",
+                "actor": "smoke-selftest",
+                "path": "POST /ontology/publish",
+                "versionId": "ont-probe",
+            },
+        )
+        self.assertFalse(result["blocked"])
+        exemption = result["vocabGuard"]["exemption"]
+        self.assertEqual(exemption["purpose"], "smoke")
+        self.assertEqual(exemption["actor"], "smoke-selftest")
+        self.assertEqual(exemption["path"], "POST /ontology/publish")
+        self.assertEqual(exemption["versionId"], "ont-probe")
+        self.assertEqual(exemption["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(exemption["baseline"]["versionId"], "ont-published")
+        self.assertEqual(exemption["current"]["conceptsInScheme"], 0)
+        self.assertTrue(exemption["exemptedAt"])
+        stored = [
+            item for item in result["findings"]
+            if item["code"] == termgate.VOCAB_ZERO_EXEMPT_CODE
+        ]
+        self.assertEqual(len(stored), 1)
+        self.assertFalse(stored[0]["blocking"])
+        self.assertEqual(stored[0]["exemption"]["actor"], "smoke-selftest")
+
+    def test_10_other_purposes_are_not_exemptions(self):
+        result = termgate.evaluate_snapshot(
+            self._snapshot(NO_TERMS_TTL),
+            TermsConfig(gate="warn"),
+            high_water={"conceptsInScheme": 85},
+            context={"purpose": "audit", "actor": "ci-bot", "path": "POST /ontology/publish"},
+        )
+        self.assertTrue(result["blocked"])
+        self.assertIsNone(result["vocabGuard"]["exemption"])
+
+    def test_11_consecutive_collapse_uses_the_mark_not_the_pointer(self):
+        # The pointer is already at zero, so every ratio in the live baseline is
+        # None/0 and the old checks stay silent. The mark is what catches the
+        # second (third, ...) collapse.
+        result = termgate.evaluate_snapshot(
+            self._snapshot(NO_TERMS_TTL),
+            TermsConfig(gate="off"),
+            baseline={"actual": {"conceptsInMetricScheme": 0, "aliases": 0}},
+            high_water={"conceptsInScheme": 85, "versionId": "ont-hw"},
+        )
+        self.assertIsNotNone(result)
+        self.assertTrue(result["blocked"])
+        self.assertEqual(result["coverage"]["actual"]["conceptsInMetricScheme"], 0)
+
 
 DSN = os.environ.get(
     "TEST_PG_DSN",
@@ -266,6 +366,15 @@ class PublishGateTests(unittest.TestCase):
     def setUpClass(cls):
         cls.meta = MetadataPg(DSN)
         cls.meta.open(retry_seconds=15)
+        # The live stack may still run an image whose schema stops at V42. Apply
+        # the V43 DDL directly (idempotent) instead of bumping schema_version
+        # under that older image; the next migrate() will pick V43 up normally.
+        ddl = (
+            files("platform_core").joinpath("sql/V43__term_high_water.sql")
+            .read_text(encoding="utf-8")
+        )
+        for statement in split_sql_statements(ddl):
+            cls.meta.execute(statement)
         cls.graph = OxigraphHttpStore(OXIGRAPH_URL)
         cls.objects = _FakeObjects()
         cls.registry = OntologyRegistry(cls.meta, cls.graph, cls.objects, OntologyConfig())
@@ -323,6 +432,7 @@ class PublishGateTests(unittest.TestCase):
 
     def setUp(self):
         self.created: list[dict] = []
+        self.manual_versions: list[str] = []
         rows = self.meta.query(
             "SELECT version_id, updated_by FROM platform.graph_pointer WHERE name = %s",
             (POINTER_NAME,),
@@ -333,6 +443,15 @@ class PublishGateTests(unittest.TestCase):
             (self.original_pointer,) if self.original_pointer else (None,),
         )
         self.original_status = status[0]["status"] if status else "published"
+        self.original_mark = self.meta.query(
+            "SELECT scope, concepts_in_scheme, aliases, version_id, graph_iri "
+            "FROM platform.term_high_water"
+        )
+        # These fixtures use urn:s14term:, not the fsldm MetricScheme, so their
+        # effective term set is zero. Pin the mark to zero (first-import
+        # semantics) so the vocab-zero guard stays out of the ratio tests;
+        # tests 12-14 install their own non-zero mark explicitly.
+        self._set_mark(concepts=0, aliases=0)
 
     def tearDown(self):
         self.registry.set_terms_gate(None)
@@ -351,6 +470,40 @@ class PublishGateTests(unittest.TestCase):
                     "UPDATE platform.ontology_version SET status = %s WHERE version_id = %s",
                     (self.original_status, self.original_pointer),
                 )
+        else:
+            with self.meta.tx() as tx:
+                tx.execute("DELETE FROM platform.graph_pointer WHERE name = %s", (POINTER_NAME,))
+        with self.meta.tx() as tx:
+            tx.execute("DELETE FROM platform.term_high_water")
+            for row in self.original_mark:
+                tx.execute(
+                    "INSERT INTO platform.term_high_water "
+                    "(scope, concepts_in_scheme, aliases, version_id, graph_iri) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    (
+                        row["scope"], row["concepts_in_scheme"], row["aliases"],
+                        row["version_id"], row["graph_iri"],
+                    ),
+                )
+        for version_id in self.manual_versions:
+            with self.meta.tx() as tx:
+                tx.execute(
+                    "DELETE FROM platform.ontology_evidence WHERE version_id = %s", (version_id,)
+                )
+                tx.execute(
+                    "DELETE FROM platform.ontology_proposal WHERE version_id = %s", (version_id,)
+                )
+                tx.execute(
+                    "DELETE FROM platform.ontology_event WHERE version_id = %s", (version_id,)
+                )
+                tx.execute(
+                    "DELETE FROM platform.ontology_version WHERE version_id = %s", (version_id,)
+                )
+            try:
+                self.graph.update(f"DROP SILENT GRAPH <urn:platform:graph:tbox:{version_id}>")
+            except Exception:
+                pass
+        self.manual_versions = []
         for record in self.created:
             version_id = _import_version_id(record["importId"])
             with self.meta.tx() as tx:
@@ -418,7 +571,39 @@ class PublishGateTests(unittest.TestCase):
             (version_id,),
         )
 
-    def test_7_off_is_byte_identical_to_the_legacy_dry_run_payload(self):
+    def _set_mark(self, concepts: int = 85, aliases: int = 18) -> None:
+        """Install a non-zero high-water mark without publishing a real version."""
+        with self.meta.tx() as tx:
+            tx.execute("DELETE FROM platform.term_high_water")
+            tx.execute(
+                "INSERT INTO platform.term_high_water "
+                "(scope, concepts_in_scheme, aliases, version_id, graph_iri) "
+                "VALUES ('metric', %s, %s, 'ont-mark-baseline', "
+                "'urn:platform:graph:tbox:ont-mark-baseline')",
+                (concepts, aliases),
+            )
+
+    def _insert_draft_version(self, nt: bytes) -> str:
+        """Create a draft version row + graph, so POST /ontology/publish is implicit."""
+        version_id = "ont-" + uuid.uuid4().hex[:12]
+        graph_iri = f"urn:platform:graph:tbox:{version_id}"
+        self.graph.replace_graph(graph_iri, nt, "nt")
+        count = self.graph.count_graph(graph_iri)
+        with self.meta.tx() as tx:
+            tx.execute(
+                "INSERT INTO platform.ontology_version "
+                "(version_id, semver, status, content_hash, triple_count, "
+                " source_format, source_key, graph_iri, label) "
+                "VALUES (%s, '0.0.0', 'draft', %s, %s, 'turtle', %s, %s, %s)",
+                (
+                    version_id, hashlib.sha256(nt).hexdigest(), count,
+                    f"sources/{version_id}.nt", graph_iri, "g8 vocab guard test",
+                ),
+            )
+        self.manual_versions.append(version_id)
+        return version_id
+
+    def test_7_off_attaches_no_gate_when_the_effective_term_set_is_nonzero(self):
         record = self._import(DUPLICATE_TTL, "g8off")
         self.registry.set_terms_gate(TermsConfig(gate="off"))
         baseline_keys = {
@@ -426,15 +611,118 @@ class PublishGateTests(unittest.TestCase):
             "diff", "impact", "usable", "reason", "canonicalEqualTo",
             "published", "publishedAt", "publishExisting",
         }
-        with mock.patch.object(
-            termgate, "evaluate_content", side_effect=AssertionError("off must not evaluate")
-        ):
-            response = self._publish(record["importId"], dry_run=True)
+        response = self._publish(record["importId"], dry_run=True)
         self.assertEqual(response.status_code, 200, response.text)
         payload = response.json()
         self.assertEqual(set(payload), baseline_keys)
         self.assertNotIn("termsGate", payload)
         self.assertNotIn("terms", (payload.get("gates") or {}))
+
+    def test_12_implicit_publish_zeroing_terms_is_blocked_without_a_request(self):
+        self.registry.set_terms_gate(TermsConfig(gate="warn"))
+        self._set_mark()
+        version_id = self._insert_draft_version(NO_TERMS_NT)
+        before = self.registry.current()
+        response = self.client.post(
+            "/ontology/publish",
+            json={"versionId": version_id, "actor": "ci-bot", "acknowledgeBreaking": True},
+        )
+        self.assertEqual(response.status_code, 409, response.text)
+        error = response.json()["error"]
+        self.assertEqual(error["providerCode"], "E_TERM_GATE_BLOCKED")
+        guard = error["details"]["vocabGuard"]
+        self.assertTrue(guard["zeroDrop"])
+        self.assertTrue(guard["forcedBlocking"])
+        self.assertIsNone(guard["exemption"])
+        self.assertEqual(guard["highWater"]["conceptsInScheme"], 85)
+        self.assertEqual(guard["effective"]["conceptsInScheme"], 0)
+        self.assertEqual(error["details"]["gate"], "warn")
+        self.assertTrue(error["details"]["allowed"])
+
+        self.assertEqual((self.registry.current() or {}).get("versionId"),
+                         (before or {}).get("versionId"))
+        rows = self.meta.query(
+            "SELECT status FROM platform.ontology_version WHERE version_id = %s",
+            (version_id,),
+        )
+        self.assertEqual(rows[0]["status"], "draft")
+        packs = self._evidence(version_id)
+        self.assertEqual(len(packs), 1)
+        stored = packs[0]["payload"]
+        self.assertEqual(stored["verdict"], "fail")
+        self.assertTrue(stored["gates"]["terms"]["vocabGuard"]["zeroDrop"])
+
+    def test_13_implicit_publish_purpose_smoke_is_exempted_and_leaves_a_trace(self):
+        self.registry.set_terms_gate(TermsConfig(gate="warn"))
+        self._set_mark()
+        version_id = self._insert_draft_version(NO_TERMS_NT)
+        response = self.client.post(
+            "/ontology/publish",
+            json={
+                "versionId": version_id, "actor": "smoke-selftest",
+                "purpose": "smoke", "acknowledgeBreaking": True,
+            },
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        terms = payload["gates"]["terms"]
+        self.assertFalse(terms["blocked"])
+        exemption = terms["vocabGuard"]["exemption"]
+        self.assertEqual(exemption["purpose"], "smoke")
+        self.assertEqual(exemption["actor"], "smoke-selftest")
+        self.assertEqual(exemption["path"], "POST /ontology/publish")
+        self.assertEqual(exemption["versionId"], version_id)
+        self.assertEqual(exemption["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(exemption["current"]["conceptsInScheme"], 0)
+        self.assertEqual(payload["previousVersionId"], self.original_pointer)
+
+        stored = self._evidence(version_id)[0]["payload"]
+        self.assertEqual(stored["verdict"], "pass")
+        self.assertEqual(
+            stored["gates"]["terms"]["vocabGuard"]["exemption"]["actor"], "smoke-selftest"
+        )
+        self.assertEqual(
+            stored["gates"]["terms"]["vocabGuard"]["exemption"]["baseline"]["conceptsInScheme"],
+            85,
+        )
+
+    def test_14_import_publish_zero_terms_is_blocked_then_exempted_by_smoke(self):
+        self.registry.set_terms_gate(TermsConfig(gate="warn"))
+        self._set_mark()
+        record = self._import(NO_TERMS_TTL, "g8zero")
+        version_id = _import_version_id(record["importId"])
+
+        denied = self._publish(record["importId"], dry_run=False)
+        self.assertEqual(denied.status_code, 409, denied.text)
+        error = denied.json()["error"]
+        self.assertEqual(error["providerCode"], "E_TERM_GATE_BLOCKED")
+        self.assertTrue(error["details"]["vocabGuard"]["zeroDrop"])
+        self.assertEqual(error["details"]["vocabGuard"]["highWater"]["conceptsInScheme"], 85)
+        self.assertEqual(
+            self.meta.query(
+                "SELECT version_id FROM platform.ontology_version WHERE version_id = %s",
+                (version_id,),
+            ),
+            [],
+        )
+
+        allowed = self.client.post(
+            f"/ontology/imports/{record['importId']}/publish",
+            json={
+                "dryRun": False, "acknowledgeBreaking": True,
+                "actor": "smoke-selftest", "purpose": "smoke",
+            },
+        )
+        self.assertEqual(allowed.status_code, 200, allowed.text)
+        payload = allowed.json()
+        exemption = payload["termsGate"]["vocabGuard"]["exemption"]
+        self.assertEqual(exemption["purpose"], "smoke")
+        self.assertEqual(exemption["actor"], "smoke-selftest")
+        self.assertEqual(exemption["path"], "POST /ontology/import")
+        self.assertEqual(exemption["baseline"]["conceptsInScheme"], 85)
+        self.assertEqual(exemption["current"]["conceptsInScheme"], 0)
+        stored = self._evidence(payload["versionId"])[0]["payload"]
+        self.assertTrue(stored["gates"]["terms"]["vocabGuard"]["exemption"])
 
     def test_8_warn_publishes_and_records_the_gate_in_evidence(self):
         record = self._import(DUPLICATE_TTL, "g8warn")

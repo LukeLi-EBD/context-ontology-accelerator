@@ -2810,6 +2810,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             acknowledge_breaking=bool(body.get("acknowledgeBreaking", False)),
             actor=body.get("actor", "operator"),
             reason=body.get("reason"),
+            # Explicit self-check exemption only: `purpose=smoke` lets a probe
+            # publish a T-Box without terms; the exemption is recorded in the
+            # evidence pack (actor / path / high-water baseline).
+            purpose=body.get("purpose"),
         )
 
     @app.post("/ontology/rollback")
@@ -3228,6 +3232,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             acknowledge_breaking=bool(payload.get("acknowledgeBreaking", False)),
             abox_graphs=runtime.config.reasoning.abox_graphs,
             publish_existing=bool(payload.get("publishExisting", False)),
+            # Only `purpose=smoke` exempts the vocab-zero guard; it is recorded
+            # in the evidence pack rather than silently disabling the gate.
+            purpose=payload.get("purpose"),
         )
 
     @app.put("/ontology/shapes")
