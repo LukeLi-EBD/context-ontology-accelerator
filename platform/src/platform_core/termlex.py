@@ -145,6 +145,11 @@ class TermLexicon:
         self._keys = sorted(entries, key=lambda item: (-len(item["surface"]), item["surface"]))
         self.guard_rejected = 0
 
+    @property
+    def entries(self) -> list[dict[str, Any]]:
+        """Read-only copy of the surface entries (O-03 impact dependency view)."""
+        return [dict(item) for item in self._entries]
+
     # ---- build -----------------------------------------------------------
 
     @classmethod

@@ -3564,4 +3564,201 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ],
         }
 
+    # --- G1 ontology routes ---
+    # Ownership: ontology governance line (O-02..O-06). Append-only block: no
+    # existing handler or module-level helper above is modified. Everything here
+    # is additive and read/write-scoped to governance; publish semantics are
+    # untouched except that publish now also writes lifecycle transitions.
+
+    @app.post("/governance/proposals/{proposal_id}/review")
+    def governance_proposal_review(
+        proposal_id: str,
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        """O-02: proposed -> review. Actor and reason are mandatory."""
+        actor = _governance_actor(body)
+        reason = _governance_reason(body)
+        return runtime.ontology.review(proposal_id, actor=actor, reason=reason)
+
+    @app.get("/governance/proposals/{proposal_id}/transitions")
+    def governance_proposal_transitions(
+        proposal_id: str,
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        return runtime.ontology.transitions(proposal_id=proposal_id, limit=limit)
+
+    @app.get("/governance/versions/{version_id}/transitions")
+    def governance_version_transitions(
+        version_id: str,
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        return runtime.ontology.transitions(version_id=version_id, limit=limit)
+
+    @app.get("/health/ontology-diff/flow")
+    def health_ontology_diff_flow(
+        versionId: str | None = Query(None),
+        proposalId: str | None = Query(None),
+        limit: int = Query(200, ge=1, le=2000),
+    ) -> dict[str, Any]:
+        """O-02: explicit lifecycle view. /health/ontology-diff also embeds
+        the same block under `lifecycle`."""
+        if proposalId:
+            payload = runtime.ontology.transitions(proposal_id=proposalId, limit=limit)
+            payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
+            return payload
+        if not versionId:
+            pointer = healthboard._pointer(runtime)
+            versionId = (pointer or {}).get("versionId")
+        if not versionId:
+            return {
+                "items": [],
+                "count": 0,
+                "empty": True,
+                "emptyReason": "未指定 versionId，且 tbox/current 指针不存在",
+                "readOnly": True,
+            }
+        from .ontology_lifecycle import flow
+
+        payload = flow(runtime.metadata, versionId)
+        payload["filter"] = {"proposalId": proposalId, "versionId": versionId}
+        return payload
+
+    # ---- O-03 change impact analysis (read-only) -------------------------
+
+    @app.get("/ontology/impact")
+    def ontology_impact(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+        sample: int = Query(5, ge=0, le=10),
+    ) -> dict[str, Any]:
+        from . import impact as impact_module
+
+        return impact_module.analyze(runtime, from_, to, sample)
+
+    @app.get("/ontology/impact/export")
+    def ontology_impact_export(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+        sample: int = Query(5, ge=0, le=10),
+        format: str = Query("markdown"),
+    ) -> Response:
+        from . import impact as impact_module
+
+        report = impact_module.analyze(runtime, from_, to, sample)
+        filename, media_type, body = impact_module.export(report, format)
+        return Response(
+            content=body,
+            media_type=media_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # ---- O-04 publish gate evidence packs (read + download) -------------
+
+    @app.get("/ontology/evidence")
+    def ontology_evidence_list(
+        versionId: str | None = Query(None),
+        verdict: str | None = Query(None),
+        limit: int = Query(50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        from . import evidence as evidence_module
+
+        return evidence_module.list_packs(
+            runtime.metadata, version_id=versionId, verdict=verdict, limit=limit
+        )
+
+    @app.get("/ontology/evidence/{evidence_id}/download")
+    def ontology_evidence_download(evidence_id: str) -> Response:
+        from . import evidence as evidence_module
+        import json as _json
+
+        pack = evidence_module.fetch(runtime.metadata, evidence_id)
+        evidence_module.check_download(pack)
+        path = evidence_module.materialize(runtime.config.storage.root, pack)
+        runtime.metadata.execute(
+            "UPDATE platform.ontology_evidence SET path = %s WHERE evidence_id = %s",
+            (str(path), evidence_id),
+        )
+        body = _json.dumps(pack, ensure_ascii=False, indent=2, sort_keys=True)
+        return Response(
+            content=body,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{evidence_id}.json"',
+                "X-Evidence-SHA256": str(pack.get("sha256") or ""),
+                "X-Evidence-Path": str(path),
+            },
+        )
+
+    # ---- O-05 term-layer governance (coverage / diff / import check) -----
+
+    @app.get("/ontology/terms/coverage")
+    def ontology_terms_coverage(
+        expectConcepts: int | None = Query(None, ge=0),
+        expectAliases: int | None = Query(None, ge=0),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        return termgov.graph_coverage(
+            runtime, expect_concepts=expectConcepts, expect_aliases=expectAliases
+        )
+
+    @app.post("/ontology/terms/diff")
+    def ontology_terms_diff(
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        content = str(body.get("content") or "")
+        if not content.strip():
+            raise PortError(
+                code="InvalidArgument", message="body.content is required (SKOS text)",
+                provider="platform", provider_code="E_TERM_CONTENT_REQUIRED",
+            )
+        report = termgov.diff_against_graph(
+            runtime, content, str(body.get("format") or "turtle"),
+            source_name=body.get("sourceName"),
+        )
+        termgov.record_check(runtime.metadata, report, source_kind="import",
+                             version_id=(body.get("versionId")), actor="operator")
+        return report
+
+    @app.post("/ontology/terms/import")
+    def ontology_terms_import(
+        body: dict[str, Any] = Body(...),
+    ) -> dict[str, Any]:
+        from . import termgov
+
+        content = str(body.get("content") or "")
+        if not content.strip():
+            raise PortError(
+                code="InvalidArgument", message="body.content is required (SKOS text)",
+                provider="platform", provider_code="E_TERM_CONTENT_REQUIRED",
+            )
+        report = termgov.diff_against_graph(
+            runtime, content, str(body.get("format") or "turtle"),
+            source_name=body.get("sourceName"),
+        )
+        termgov.record_check(runtime.metadata, report, source_kind="import",
+                             version_id=body.get("versionId"), actor="operator")
+        if bool(body.get("dryRun", True)):
+            return {"dryRun": True, "diff": report}
+        return termgov.record_import(runtime.metadata, report,
+                                    source_name=body.get("sourceName"))
+
+    @app.get("/ontology/terms/checks")
+    def ontology_terms_checks(limit: int = Query(50, ge=1, le=500)) -> dict[str, Any]:
+        from . import termgov
+
+        return termgov.list_checks(runtime.metadata, limit=limit)
+
+    # ---- O-06 health snapshot comparison --------------------------------
+
+    @app.get("/health/ontology-snapshot")
+    def health_ontology_snapshot(
+        from_: str | None = Query(None, alias="from"),
+        to: str | None = Query(None),
+    ) -> dict[str, Any]:
+        return healthboard.snapshot_compare(runtime, from_, to)
+    # --- end G1 ---
+
     return app
