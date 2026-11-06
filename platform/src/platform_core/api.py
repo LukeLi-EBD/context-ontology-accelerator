@@ -3651,6 +3651,43 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             media_type=media_type,
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+
+    # ---- O-04 publish gate evidence packs (read + download) -------------
+
+    @app.get("/ontology/evidence")
+    def ontology_evidence_list(
+        versionId: str | None = Query(None),
+        verdict: str | None = Query(None),
+        limit: int = Query(50, ge=1, le=500),
+    ) -> dict[str, Any]:
+        from . import evidence as evidence_module
+
+        return evidence_module.list_packs(
+            runtime.metadata, version_id=versionId, verdict=verdict, limit=limit
+        )
+
+    @app.get("/ontology/evidence/{evidence_id}/download")
+    def ontology_evidence_download(evidence_id: str) -> Response:
+        from . import evidence as evidence_module
+        import json as _json
+
+        pack = evidence_module.fetch(runtime.metadata, evidence_id)
+        evidence_module.check_download(pack)
+        path = evidence_module.materialize(runtime.config.storage.root, pack)
+        runtime.metadata.execute(
+            "UPDATE platform.ontology_evidence SET path = %s WHERE evidence_id = %s",
+            (str(path), evidence_id),
+        )
+        body = _json.dumps(pack, ensure_ascii=False, indent=2, sort_keys=True)
+        return Response(
+            content=body,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{evidence_id}.json"',
+                "X-Evidence-SHA256": str(pack.get("sha256") or ""),
+                "X-Evidence-Path": str(path),
+            },
+        )
     # --- end G1 ---
 
     return app

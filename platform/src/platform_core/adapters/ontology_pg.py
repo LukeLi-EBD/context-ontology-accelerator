@@ -2487,6 +2487,56 @@ class OntologyRegistry:
             )
         return self._row_to_proposal(row)
 
+    def _publish_evidence(
+        self, *, version_id: str, row: dict[str, Any], proposal: dict[str, Any] | None,
+        mode: str, gates: dict[str, Any], verdict: str, actor: str,
+        reason: str | None, diff: dict[str, Any] | None = None,
+        error: PortError | None = None,
+    ) -> dict[str, Any]:
+        """O-04: observe publish gates and persist an evidence pack.
+
+        Bookkeeping must never change the gate verdict: any failure here is
+        swallowed and reported in the publish payload.
+        """
+        try:
+            from ..evidence import build_pack, record
+
+            against = None
+            against_id = (diff or {}).get("from")
+            if against_id and against_id != version_id:
+                rows = self._meta.query(
+                    "SELECT version_id, semver, content_hash, triple_count "
+                    "FROM platform.ontology_version WHERE version_id = %s",
+                    (against_id,),
+                )
+                against = rows[0] if rows else None
+            shapes = None
+            if self._validator is not None:
+                try:
+                    version = self._validator.shapes_version()  # type: ignore[attr-defined]
+                except Exception:
+                    version = None
+                shapes = {"version": version}
+            pack = build_pack(
+                version=row, against=against, proposal=proposal, mode=mode,
+                gates=gates, verdict=verdict, actor=actor, reason=reason,
+                diff=diff, error=error, shapes=shapes,
+            )
+            record(self._meta, pack)
+            return {
+                "evidenceId": pack["evidenceId"],
+                "sha256": pack["sha256"],
+                "verdict": verdict,
+                "downloadUrl": f"/ontology/evidence/{pack['evidenceId']}/download",
+            }
+        except Exception as exc:
+            log.warning(
+                "ontology evidence pack not written",
+                extra={"event": {"event": "ontology_evidence_failed",
+                                 "version_id": version_id, "error": str(exc)}},
+            )
+            return {"verdict": verdict, "error": str(exc)}
+
     def _gate_shacl(self, nt: bytes, graph_iri: str) -> dict[str, Any]:
         if self._validator is None:
             raise PortError(
@@ -2665,25 +2715,33 @@ class OntologyRegistry:
             pointer = self._pointer()
             against = pointer["versionId"] if pointer else None
             diff = self.diff(against, version_id)
-            tbox_nt = self._graph.export_graph(row["graph_iri"])
-            gates["shacl"] = self._gate_shacl(tbox_nt, row["graph_iri"])
-            gates["consistency"] = self._gate_consistency(tbox_nt)
-            breaking = bool(diff["breaking"])
-            if breaking and not acknowledge_breaking:
-                raise PortError(
-                    code="Conflict",
-                    message=(
-                        "implicit publish contains breaking changes; pass "
-                        "acknowledgeBreaking=true to confirm them"
-                    ),
-                    provider="platform",
-                    provider_code="E_ONTOLOGY_BREAKING",
-                    details={
-                        "mode": "implicit",
-                        "breakingItems": diff.get("breakingItems", []),
-                        "diff": diff,
-                    },
+            try:
+                tbox_nt = self._graph.export_graph(row["graph_iri"])
+                gates["shacl"] = self._gate_shacl(tbox_nt, row["graph_iri"])
+                gates["consistency"] = self._gate_consistency(tbox_nt)
+                breaking = bool(diff["breaking"])
+                if breaking and not acknowledge_breaking:
+                    raise PortError(
+                        code="Conflict",
+                        message=(
+                            "implicit publish contains breaking changes; pass "
+                            "acknowledgeBreaking=true to confirm them"
+                        ),
+                        provider="platform",
+                        provider_code="E_ONTOLOGY_BREAKING",
+                        details={
+                            "mode": "implicit",
+                            "breakingItems": diff.get("breakingItems", []),
+                            "diff": diff,
+                        },
+                    )
+            except PortError as exc:
+                evidence = self._publish_evidence(
+                    version_id=version_id, row=row, proposal=proposal,
+                    mode="direct_publish", gates=gates, verdict="fail",
+                    actor=actor, reason=reason, diff=diff, error=exc,
                 )
+                raise
             gates["breaking"] = {
                 "breaking": breaking, "acknowledged": bool(acknowledge_breaking),
             }
@@ -2713,22 +2771,30 @@ class OntologyRegistry:
                 )
 
         if governed:
-            tbox_nt = self._graph.export_graph(row["graph_iri"])
-            gates["shacl"] = self._gate_shacl(tbox_nt, row["graph_iri"])
-            gates["consistency"] = self._gate_consistency(tbox_nt)
             diff = proposal["diff"] or {}
-            breaking = bool(proposal["breaking"])
-            if breaking and not (acknowledge_breaking or proposal["acknowledged_breaking"]):
-                raise PortError(
-                    code="Conflict",
-                    message="proposal contains breaking changes; acknowledge them to publish",
-                    provider="platform",
-                    provider_code="E_ONTOLOGY_BREAKING",
-                    details={
-                        "breakingItems": diff.get("breakingItems", []),
-                        "diff": diff,
-                    },
+            try:
+                tbox_nt = self._graph.export_graph(row["graph_iri"])
+                gates["shacl"] = self._gate_shacl(tbox_nt, row["graph_iri"])
+                gates["consistency"] = self._gate_consistency(tbox_nt)
+                breaking = bool(proposal["breaking"])
+                if breaking and not (acknowledge_breaking or proposal["acknowledged_breaking"]):
+                    raise PortError(
+                        code="Conflict",
+                        message="proposal contains breaking changes; acknowledge them to publish",
+                        provider="platform",
+                        provider_code="E_ONTOLOGY_BREAKING",
+                        details={
+                            "breakingItems": diff.get("breakingItems", []),
+                            "diff": diff,
+                        },
+                    )
+            except PortError as exc:
+                evidence = self._publish_evidence(
+                    version_id=version_id, row=row, proposal=proposal,
+                    mode="governed", gates=gates, verdict="fail",
+                    actor=actor, reason=reason, diff=diff, error=exc,
                 )
+                raise
             gates["breaking"] = {
                 "breaking": breaking,
                 "acknowledged": bool(acknowledge_breaking or proposal["acknowledged_breaking"]),
@@ -2931,6 +2997,17 @@ class OntologyRegistry:
                     version_id, previous_id, pid, actor,
                     "materializer not configured",
                 )
+                evidence = self._publish_evidence(
+                    version_id=version_id, row=row, proposal=proposal,
+                    mode="activate_existing" if activate_existing else "publish",
+                    gates=gates, verdict="fail", actor=actor, reason=reason,
+                    diff=diff, error=PortError(
+                        code="Unsupported",
+                        message="materialization gate is not configured",
+                        provider="platform",
+                        provider_code="E_ONTOLOGY_GATE_UNAVAILABLE",
+                    ),
+                )
                 raise PortError(
                     code="Unsupported",
                     message="materialization gate is not configured; publish reverted",
@@ -2950,6 +3027,18 @@ class OntologyRegistry:
                 self._restore_after_failed_publish(
                     version_id, previous_id, pid, actor, cause_detail,
                 )
+                evidence = self._publish_evidence(
+                    version_id=version_id, row=row, proposal=proposal,
+                    mode="activate_existing" if activate_existing else "publish",
+                    gates=gates, verdict="fail", actor=actor, reason=reason,
+                    diff=diff, error=PortError(
+                        code="Conflict",
+                        message=f"materialization failed: {cause_detail}",
+                        provider="platform",
+                        provider_code="E_ONTOLOGY_MATERIALIZE_FAILED",
+                        details={"cause": cause_code, "detail": cause_detail},
+                    ),
+                )
                 log.warning(
                     "ontology publish reverted after materialization failure",
                     extra={"event": {"event": "ontology_publish_reverted",
@@ -2963,6 +3052,11 @@ class OntologyRegistry:
                     details={"cause": cause_code, "detail": cause_detail},
                 ) from exc
 
+        evidence = self._publish_evidence(
+            version_id=version_id, row=row, proposal=proposal,
+            mode="activate_existing" if activate_existing else "publish",
+            gates=gates, verdict="pass", actor=actor, reason=reason, diff=diff,
+        )
         log.info(
             "ontology published",
             extra={
@@ -2989,6 +3083,7 @@ class OntologyRegistry:
             "publishedBy": actor,
             "idempotent": False,
             "gates": gates,
+            "evidence": evidence,
             "publishedAt": _now(),
         }
 
