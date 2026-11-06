@@ -342,6 +342,62 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertEqual(facts["dataSource"], "synthetic")
         self.assertFalse(facts["fixture"])
 
+    def test_output_compute_requires_data_source_and_passes_it_down(self):
+        calls = []
+
+        class FakeMetrics:
+            def output(self, metric_id, **_kwargs):
+                return {"metricId": metric_id}
+
+            def compute(self, metric_id, **kwargs):
+                calls.append((metric_id, kwargs))
+                return {
+                    "metricId": metric_id,
+                    "value": None,
+                    "dataSource": kwargs.get("data_source"),
+                }
+
+        runtime = SimpleNamespace(
+            metadata=FakeMetadata(),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+            metrics=FakeMetrics(),
+        )
+        with TestClient(api_module.create_app(runtime, [])) as client:
+            missing = client.get(
+                "/metrics/FIN-BANK-001/output",
+                params={"compute": "true", "asOf": "2025-12-31"},
+            )
+            self.assertEqual(missing.status_code, 400, missing.text)
+            error = missing.json()["error"]
+            self.assertEqual(error["providerCode"], "E_METRIC_DATA_SOURCE_REQUIRED")
+            self.assertEqual(
+                error["details"]["allowedDataSources"],
+                ["fixture", "business", "synthetic"],
+            )
+
+            ok = client.get(
+                "/metrics/FIN-BANK-001/output",
+                params={
+                    "compute": "true",
+                    "asOf": "2025-12-31",
+                    "dataSource": "synthetic",
+                },
+            )
+            self.assertEqual(ok.status_code, 200, ok.text)
+            self.assertEqual(ok.json()["dataSource"], "synthetic")
+            self.assertEqual(calls[-1][1]["data_source"], "synthetic")
+
+            card = client.get("/metrics/FIN-BANK-001/output")
+            self.assertEqual(card.status_code, 200)
+            self.assertEqual(card.json(), {"metricId": "FIN-BANK-001"})
+            card_ignores_source = client.get(
+                "/metrics/FIN-BANK-001/output", params={"dataSource": "fixture"}
+            )
+            self.assertEqual(card_ignores_source.status_code, 200)
+            self.assertEqual(card_ignores_source.json(), {"metricId": "FIN-BANK-001"})
+            self.assertEqual(len(calls), 1)
+
 
 ENTITY_DETAIL = {
     "label": "测试实体",

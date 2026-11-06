@@ -2082,9 +2082,29 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         period_end: date | None = Query(None, alias="periodEnd"),
         entity_key: str | None = Query(None, alias="entityKey"),
         institution: str | None = None,
+        data_source: str | None = Query(
+            None,
+            alias="dataSource",
+            description=(
+                "Fact source to aggregate over: fixture | business | synthetic. "
+                "Required when compute=true; ignored when compute=false."
+            ),
+        ),
     ) -> dict[str, Any]:
         if not compute:
             return runtime.metrics.output(metric_id, internal=internal)
+        if not data_source:
+            raise PortError(
+                code="InvalidArgument",
+                message="dataSource is required; allowed: " + ", ".join(METRIC_DATA_SOURCES),
+                provider="platform",
+                provider_code="E_METRIC_DATA_SOURCE_REQUIRED",
+                details={
+                    "metricId": metric_id,
+                    "field": "dataSource",
+                    "allowedDataSources": list(METRIC_DATA_SOURCES),
+                },
+            )
         result = runtime.metrics.compute(
             metric_id,
             internal=internal,
@@ -2093,6 +2113,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             period_end=period_end,
             entity_key=entity_key,
             institution=institution,
+            data_source=data_source,
         )
         if result.get("value") is not None:
             result["computationRef"] = _record_computation(
@@ -2102,7 +2123,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 metric_id=metric_id,
                 definition_version=result.get("definitionVersion"),
                 window=result.get("window") or {},
-                data_source=str(result.get("dataSource") or ""),
+                data_source=data_source,
                 computed_at=str(result.get("computedAt") or datetime.now(timezone.utc).isoformat()),
                 value=result.get("value"),
                 unit=result.get("unit"),
