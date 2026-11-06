@@ -227,7 +227,8 @@ _QA_METRIC_HINT_RE = re.compile(
 _QA_FACT_TABLE_RE = re.compile(r"^platform\.[a-z0-9_]+$")
 _QA_OBS_SQL = (
     "SELECT metric_id, definition_version, count(*) AS n, "
-    "bool_or(fixture) AS has_fixture, min(window_start) AS ws, max(window_end) AS we "
+    "bool_or(fixture) AS has_fixture, string_agg(DISTINCT data_source, ',') AS ds, "
+    "min(window_start) AS ws, max(window_end) AS we "
     "FROM platform.metric_observation GROUP BY metric_id, definition_version"
 )
 _QA_BINDING_SQL = (
@@ -497,7 +498,7 @@ def _qa_fact_eval(
         "drivable": False,
         "observationRows": obs_count,
         "fixture": has_fixture,
-        "dataSource": ("fixture" if has_fixture else "business") if obs_count else None,
+        "dataSource": (obs_row or {}).get("ds") if obs_count else None,
         "factTables": [
             {"table": table, "rows": table_counts.get(table)} for table in fact_tables
         ],

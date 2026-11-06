@@ -323,6 +323,25 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertTrue(seen)
         self.assertTrue(all(item.get("persist") is False for item in seen))
 
+    def test_facts_data_source_comes_from_observation_row(self):
+        row = {
+            "metric_id": "FIN-BANK-001",
+            "definition_version": "v3.0",
+            "metric_kind": "duration",
+            "formula_expr": "numerator",
+            "window_kind": "instant",
+            "numerator_agg": "max",
+            "denominator_agg": None,
+            "publishable": True,
+            "output_mode": None,
+            "name_zh": "逾期天数",
+        }
+        obs = {"n": 5, "has_fixture": False, "ds": "synthetic",
+               "ws": "2025-12-31", "we": "2025-12-31"}
+        facts = api_module._qa_fact_eval(row, obs, [], {})
+        self.assertEqual(facts["dataSource"], "synthetic")
+        self.assertFalse(facts["fixture"])
+
 
 ENTITY_DETAIL = {
     "label": "测试实体",

@@ -439,7 +439,7 @@ class MetricService:
             "source": "INDUSTRY" if row["evidence_basis"] == "industry" else "REGULATORY",
             "inference": row["inference"],
             "publishable": row["publishable"],
-            "dataSource": stats["data_source"] or ("fixture" if fixture else "business"),
+            "dataSource": stats["data_source"] or None,
             "fixture": fixture,
             "sampleCount": int(stats["sample_count"]),
             "computedAt": (stats["computed_at"].isoformat()
