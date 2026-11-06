@@ -35,6 +35,11 @@ def _row(
     variant_of=None,
     provenance="原文",
     formula_disabled=False,
+    denominator_text=None,
+    window_text="period（自然月）",
+    min_window_days=28,
+    grain="institution",
+    granularity=None,
 ):
     return {
         "metric_id": metric_id,
@@ -52,13 +57,14 @@ def _row(
         "metric_kind": "ratio",
         "formula_expr": formula_expr,
         "formula_text": formula_text,
+        "denominator_text": denominator_text,
         "numerator_agg": "sum",
         "denominator_agg": "sum",
         "window_kind": "month",
-        "min_window_days": 28,
-        "observation_period": "period（自然月）",
-        "grain": "institution",
-        "granularity": "institution",
+        "min_window_days": min_window_days,
+        "observation_period": window_text,
+        "grain": grain,
+        "granularity": granularity or grain,
         "unit": "%",
         "effective_date": "2026-01-01",
         "variant_of": variant_of,
@@ -286,6 +292,137 @@ class IndustryBaselineTests(unittest.TestCase):
         self.assertFalse(check["allPresent"])
         self.assertEqual(check["violations"], ["FIN-BANK-002"])
         self.assertEqual(check["missingIds"], ["FIN-INS-026"])
+
+
+FAMILY_ROWS = [
+    _row(
+        "FIN-BANK-036",
+        basis="industry",
+        publishable=False,
+        tier="blocked_semantics",
+        output_mode="index",
+        formula_text="不适用（族索引）",
+        denominator_text="不适用（族索引；v1=期初不良资产余额，v2=期内处置标的账面金额）",
+        window_text="不适用（族索引；季度/年度）",
+        grain="",
+        granularity="不适用（族索引）",
+        provenance="行业通行",
+    ),
+    _row(
+        "FIN-BANK-036-v1",
+        basis="industry",
+        publishable=True,
+        variant_of="FIN-BANK-036",
+        denominator_text="期初不良资产余额（单位 元）",
+        window_text="period（季度/年度，≥90 天）",
+        min_window_days=90,
+        granularity="institution/product/处置方式",
+        provenance="行业通行",
+    ),
+    _row(
+        "FIN-BANK-036-v2",
+        basis="industry",
+        publishable=False,
+        variant_of="FIN-BANK-036",
+        denominator_text="期内完成处置的不良资产账面金额（有回收方式）",
+        window_text="period（季度/年度；与 v1 同一报告期）",
+        min_window_days=90,
+        granularity="institution，可按 product/处置方式",
+        provenance="行业通行",
+    ),
+    _row(
+        "FIN-INS-022",
+        domain="insurance",
+        basis="industry",
+        publishable=False,
+        tier="blocked_semantics",
+        output_mode="index",
+        formula_text="不适用（族索引）",
+        denominator_text="不适用（族索引）",
+        window_text="不适用（族索引；变体观察期见 v1/v2）",
+        granularity="不适用（族索引）",
+        provenance="行业通行",
+    ),
+    _row(
+        "FIN-INS-022-v1",
+        domain="insurance",
+        basis="industry",
+        publishable=True,
+        variant_of="FIN-INS-022",
+        denominator_text="该批新单首个保单年度实收规模保费",
+        window_text="period（12 个月 cohort，观察至宽限期截止）",
+        min_window_days=365,
+        grain="product",
+        provenance="行业通行",
+    ),
+    _row(
+        "FIN-INS-022-v2",
+        domain="insurance",
+        basis="industry",
+        publishable=False,
+        variant_of="FIN-INS-022",
+        denominator_text="该批期交新单首个保单年度实收规模保费；按保单号去重",
+        window_text="period（评价期前溯 12 个月承保 cohort）",
+        min_window_days=365,
+        grain="product",
+        provenance="行业通行",
+    ),
+    _row("FIN-BANK-001"),
+]
+
+
+class FamilyTests(unittest.TestCase):
+    def test_1_families_group_index_and_variants(self):
+        with _client(FAMILY_ROWS) as client:
+            payload = client.get("/metrics/report/families").json()
+        self.assertEqual(payload["count"], 2)
+        self.assertEqual([f["familyId"] for f in payload["families"]],
+                         ["FIN-BANK-036", "FIN-INS-022"])
+        bank036 = payload["families"][0]
+        self.assertEqual(bank036["indexMetricId"], "FIN-BANK-036")
+        self.assertTrue(bank036["selectionRequired"])
+        self.assertEqual(bank036["variantCount"], 2)
+        self.assertEqual([v["metricId"] for v in bank036["variants"]],
+                         ["FIN-BANK-036-v1", "FIN-BANK-036-v2"])
+
+    def test_2_window_denominator_and_grain_are_side_by_side(self):
+        with _client(FAMILY_ROWS) as client:
+            family = client.get("/metrics/report/families/FIN-BANK-036").json()["family"]
+        diffs = {diff["field"]: diff for diff in family["diffs"]}
+        self.assertEqual(set(diffs), {"observationPeriod", "denominator", "grain", "formula"})
+        self.assertTrue(diffs["denominator"]["different"])
+        self.assertTrue(diffs["observationPeriod"]["different"])
+        self.assertTrue(diffs["grain"]["different"])
+        for variant in family["variants"]:
+            self.assertIn("text", variant["window"])
+            self.assertIn("minWindowDays", variant["window"])
+            self.assertIn("denominator", variant)
+            self.assertIn("grain", variant)
+
+    def test_3_variant_required_guidance_is_explicit(self):
+        with _client(FAMILY_ROWS) as client:
+            payload = client.get("/metrics/report/families").json()
+        family = payload["families"][0]
+        self.assertEqual(family["guidance"]["code"], "E_METRIC_VARIANT_REQUIRED")
+        self.assertIn("回填 metric_id", family["guidance"]["message"])
+        self.assertEqual(len(family["guidance"]["howTo"]), 3)
+        self.assertEqual(payload["guidance"]["code"], "E_METRIC_VARIANT_REQUIRED")
+        self.assertFalse(family["variants"][0]["externalEligible"])
+
+    def test_4_unknown_family_is_typed_404(self):
+        with _client(FAMILY_ROWS) as client:
+            response = client.get("/metrics/report/families/NOPE-FAMILY")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json()["error"]["providerCode"], "E_METRIC_FAMILY_NOT_FOUND"
+        )
+
+    def test_5_industry_variants_keep_internal_notice(self):
+        with _client(FAMILY_ROWS) as client:
+            family = client.get("/metrics/report/families/FIN-INS-022").json()["family"]
+        for variant in family["variants"]:
+            self.assertEqual(variant["internalNotice"], "内部基线、不外报")
+            self.assertFalse(variant["externalEligible"])
 
 
 if __name__ == "__main__":

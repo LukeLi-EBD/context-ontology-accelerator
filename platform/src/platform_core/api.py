@@ -3887,6 +3887,146 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
+    # M-03: 多口径并列与族索引。族索引本身不出数，出数前必须选择变体并回填 metric_id。
+
+    _G3_FAMILY_SQL = """
+        SELECT metric_id, name_zh, display_name, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, definition_version, metric_kind,
+               formula_expr, formula_text, numerator_agg, denominator_agg, window_kind,
+               min_window_days, observation_period, grain, granularity, unit,
+               variant_of, output_mode, provenance_label, computability_tier
+          FROM platform.metric_definition
+         WHERE output_mode = 'index' OR variant_of IS NOT NULL
+         ORDER BY metric_id
+    """
+    _G3_VARIANT_GUIDANCE = {
+        "code": "E_METRIC_VARIANT_REQUIRED",
+        "message": "该指标是口径族索引，不直接出数；请先选择变体并回填 metric_id。",
+        "howTo": [
+            "在族索引详情中选择一个变体（窗口/分母/粒度会并排展示）",
+            "前端将变体 metric_id 回填到详情与 URL",
+            "再用该 metric_id 调用 /metrics/{metric_id}/output",
+        ],
+    }
+
+    def _g3_variant(row: dict[str, Any]) -> dict[str, Any]:
+        tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
+        evidence = _g3_evidence(row)
+        publishable = bool(row.get("publishable"))
+        formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
+        return {
+            "metricId": str(row.get("metric_id") or ""),
+            "nameZh": row.get("name_zh"),
+            "displayName": row.get("display_name"),
+            "publishable": publishable,
+            "evidenceBasis": evidence["code"],
+            "externalEligible": bool(
+                publishable
+                and evidence["code"] == "regulatory"
+                and tier == "structurally_computable"
+            ),
+            "internalNotice": evidence.get("notice"),
+            "formula": formula or "口径未给出",
+            "formulaDisabled": bool(row.get("formula_disabled")),
+            "computability": tier,
+            "computabilityLabel": _G3_TIER_LABELS.get(tier, tier),
+            "window": {
+                "kind": row.get("window_kind"),
+                "minWindowDays": row.get("min_window_days"),
+                "text": _g3_text(row.get("observation_period")),
+            },
+            "denominator": _g3_text(row.get("denominator_text") or row.get("denominator_agg")),
+            "denominatorText": row.get("denominator_text"),
+            "grain": _g3_text(row.get("granularity") or row.get("grain")),
+            "grainCode": row.get("grain"),
+            "metricKind": row.get("metric_kind"),
+            "unit": row.get("unit"),
+        }
+
+    def _g3_family_payload(
+        family_id: str,
+        index_row: dict[str, Any] | None,
+        variant_rows: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        variants = [_g3_variant(row) for row in variant_rows]
+
+        def diff(field: str, label: str, getter) -> dict[str, Any]:
+            values = {item["metricId"]: getter(item) for item in variants}
+            return {
+                "field": field,
+                "label": label,
+                "values": values,
+                "different": len(set(values.values())) > 1,
+            }
+
+        return {
+            "familyId": family_id,
+            "indexMetricId": (
+                index_row.get("metric_id") if index_row is not None else family_id
+            ),
+            "nameZh": (
+                index_row.get("name_zh") if index_row is not None else family_id
+            ),
+            "selectionRequired": True,
+            "guidance": _G3_VARIANT_GUIDANCE,
+            "variantCount": len(variants),
+            "variants": variants,
+            "diffs": [
+                diff(
+                    "observationPeriod",
+                    "观察窗口",
+                    lambda item: "%s（%s 天）"
+                    % (item["window"]["text"], item["window"]["minWindowDays"] or 0),
+                ),
+                diff("denominator", "分母", lambda item: item["denominator"]),
+                diff("grain", "粒度", lambda item: item["grain"]),
+                diff("formula", "公式", lambda item: item["formula"]),
+            ],
+            "source": "platform.metric_definition",
+        }
+
+    def _g3_families() -> list[dict[str, Any]]:
+        rows = runtime.metadata.query(_G3_FAMILY_SQL)
+        indexes = {
+            str(row["metric_id"]): row
+            for row in rows
+            if row.get("output_mode") == "index"
+        }
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            parent = row.get("variant_of")
+            if not parent:
+                continue
+            grouped.setdefault(str(parent), []).append(row)
+        family_ids = sorted(set(indexes) | set(grouped))
+        return [
+            _g3_family_payload(family_id, indexes.get(family_id), grouped.get(family_id, []))
+            for family_id in family_ids
+        ]
+
+    @app.get("/metrics/report/families")
+    def metrics_report_families() -> dict[str, Any]:
+        families = _g3_families()
+        return {
+            "families": families,
+            "count": len(families),
+            "guidance": _G3_VARIANT_GUIDANCE,
+            "source": "platform.metric_definition",
+        }
+
+    @app.get("/metrics/report/families/{family_id}")
+    def metrics_report_family(family_id: str) -> dict[str, Any]:
+        for family in _g3_families():
+            if family["familyId"] == family_id:
+                return {"family": family, "source": "platform.metric_definition"}
+        raise PortError(
+            code="NotFound",
+            message=f"metric family not found: {family_id}",
+            provider="platform",
+            provider_code="E_METRIC_FAMILY_NOT_FOUND",
+            details={"familyId": family_id},
+        )
+
     # --- end G3 ---
 
     return app
