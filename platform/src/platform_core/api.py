@@ -1239,9 +1239,28 @@ def _qa_answer(
                 compute_output["error"] = "metric_service_unavailable"
             else:
                 try:
+                    # The facts layer already resolved the observed window and
+                    # data source; hand them to compute instead of dropping them.
+                    window = fact_eval.get("window") or {}
+                    compute_kwargs: dict[str, Any] = {}
+                    if selected_metric.get("windowKind") == "instant":
+                        raw_as_of = window.get("end") or window.get("start")
+                        if raw_as_of:
+                            compute_kwargs["as_of"] = date.fromisoformat(str(raw_as_of)[:10])
+                    elif window.get("start") and window.get("end"):
+                        compute_kwargs["period_start"] = date.fromisoformat(
+                            str(window["start"])[:10]
+                        )
+                        compute_kwargs["period_end"] = date.fromisoformat(
+                            str(window["end"])[:10]
+                        )
+                    data_source = fact_eval.get("dataSource")
+                    if data_source and "," not in str(data_source):
+                        compute_kwargs["data_source"] = str(data_source)
                     computed = metrics_port.compute(
                         metric_id_value,
                         internal=False,
+                        **compute_kwargs,
                     )
                     value = computed
                     answer_type = "value"
