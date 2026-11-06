@@ -319,5 +319,34 @@ ENTITY_DETAIL = {
 }
 
 
+class EntityProvenanceTests(unittest.TestCase):
+    def test_every_field_has_badge_and_missing_provenance_says_none(self):
+        with patch.object(api_module.entity_view, "entity_detail", return_value=ENTITY_DETAIL):
+            with _client() as client:
+                payload = client.get(
+                    "/entity/provenance", params={"iri": "urn:test:e1"}
+                ).json()
+        self.assertEqual(payload["summary"]["total"], 5)
+        self.assertFalse(payload["empty"])
+        fields = {item["label"]: item for item in payload["fields"]}
+        self.assertEqual(fields["名称"]["badge"]["label"], "有溯源")
+        self.assertIn("/source/resolve", fields["名称"]["links"][0]["url"])
+        self.assertEqual(fields["年龄"]["badge"]["label"], "有溯源")
+        self.assertIn("/browse/facts", fields["年龄"]["links"][0]["url"])
+        self.assertEqual(fields["备注"]["badge"]["state"], "none")
+        self.assertEqual(fields["备注"]["badge"]["label"], "无")
+        self.assertTrue(fields["备注"]["badge"]["basis"])
+        self.assertEqual(fields["seeAlso"]["badge"]["label"], "有溯源")
+        self.assertEqual(fields["推理属性"]["badge"]["label"], "仅推理")
+        for item in payload["fields"]:
+            self.assertIn("badge", item)
+            self.assertIn(item["badge"]["state"], ("evidenced", "inferred", "none"))
+
+    def test_missing_entity_iri_is_rejected_by_validation(self):
+        with _client() as client:
+            response = client.get("/entity/provenance")
+        self.assertEqual(response.status_code, 422)
+
+
 if __name__ == "__main__":
     unittest.main()

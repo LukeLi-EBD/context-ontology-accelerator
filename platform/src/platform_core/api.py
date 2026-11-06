@@ -4293,6 +4293,147 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "readOnly": True,
         }
 
+    def _g4_provenance_fields(detail: dict[str, Any], iri: str) -> dict[str, Any]:
+        from urllib.parse import quote
+
+        sources = list(detail.get("sources") or [])
+        edges = list((detail.get("neighbors") or {}).get("edges") or [])
+        related = list((detail.get("relatedMetrics") or {}).get("items") or [])
+        bindings: dict[str, dict[str, Any]] = {}
+        for metric in related:
+            for binding in metric.get("bindings") or []:
+                column = str(binding.get("entityColumn") or "").strip().lower()
+                if column:
+                    bindings[column] = {
+                        "metricId": metric.get("metricId"),
+                        "factTable": binding.get("factTable"),
+                        "entityColumn": binding.get("entityColumn"),
+                        "role": binding.get("role"),
+                    }
+
+        def _ref_url(ref: str) -> str:
+            return "/source/resolve?ref=" + quote(str(ref), safe="")
+
+        fields = []
+        for prop in detail.get("properties") or []:
+            property_iri = str(prop.get("property") or "")
+            local = str(_local_name(property_iri) or property_iri).lower()
+            values = list(prop.get("values") or [])
+            asserted = any(
+                edge.get("s") == iri
+                and edge.get("p") == property_iri
+                and not edge.get("inferred")
+                for edge in edges
+            )
+            inferred_only = (
+                any(
+                    edge.get("s") == iri
+                    and edge.get("p") == property_iri
+                    and edge.get("inferred")
+                    for edge in edges
+                )
+                and not asserted
+            )
+            links: list[dict[str, Any]] = []
+            state = "none"
+            basis = "无 sourceRef / PROV 溯源"
+            has_source_ref = False
+            has_prov = False
+            value_text = ""
+            for value in values:
+                if isinstance(value, dict) and value.get("kind") == "literal":
+                    value_text = str(value.get("value") or "")
+                    break
+            for source in sources:
+                text = str(source.get("text") or "")
+                if value_text and len(value_text) >= 2 and value_text in text:
+                    links.append(
+                        {
+                            "kind": "source_ref",
+                            "ref": source.get("ref"),
+                            "url": source.get("resolveUrl") or _ref_url(str(source.get("ref"))),
+                        }
+                    )
+                    state = "evidenced"
+                    basis = "字段值命中 PROV/sourceRef 证据文本"
+                    has_source_ref = True
+                    has_prov = source.get("kind") in ("unparsed", "doc", "fact", "obs", "obs-set")
+                    break
+            if state == "none" and local in bindings:
+                binding = bindings[local]
+                table = binding.get("factTable")
+                links.append(
+                    {
+                        "kind": "fact_binding",
+                        "ref": table,
+                        "url": "/browse/facts?table=" + quote(str(table or ""), safe=""),
+                    }
+                )
+                links.append({"kind": "prov", "url": "/prov/verify"})
+                state = "evidenced"
+                basis = "指标事实字段绑定（可回溯到事实表/PROV 校验）"
+                has_source_ref = True
+                has_prov = True
+            if state == "none" and property_iri in (
+                "http://www.w3.org/2000/01/rdf-schema#seeAlso",
+                "http://www.w3.org/ns/prov#wasDerivedFrom",
+                "http://www.w3.org/ns/prov#wasGeneratedBy",
+            ):
+                state = "evidenced"
+                basis = "该字段本身承载 sourceRef / PROV 关系"
+                links.append({"kind": "prov", "url": "/prov/verify"})
+                has_source_ref = True
+                has_prov = True
+            if state == "none" and inferred_only:
+                state = "inferred"
+                basis = "仅推理图出现，无断言 sourceRef / PROV"
+                links.append({"kind": "prov", "url": "/prov/verify"})
+                has_prov = True
+            fields.append(
+                {
+                    "property": property_iri,
+                    "label": prop.get("label") or _local_name(property_iri) or property_iri,
+                    "values": values,
+                    "valueText": value_text or None,
+                    "asserted": asserted,
+                    "inferredOnly": inferred_only,
+                    "badge": {
+                        "state": state,
+                        "label": "有溯源" if state == "evidenced" else ("仅推理" if state == "inferred" else "无"),
+                        "basis": basis,
+                    },
+                    "hasSourceRef": has_source_ref,
+                    "hasProv": has_prov,
+                    "links": links,
+                }
+            )
+        summary = {
+            "total": len(fields),
+            "evidenced": sum(1 for item in fields if item["badge"]["state"] == "evidenced"),
+            "inferred": sum(1 for item in fields if item["badge"]["state"] == "inferred"),
+            "none": sum(1 for item in fields if item["badge"]["state"] == "none"),
+            "withSourceRef": sum(1 for item in fields if item["hasSourceRef"]),
+            "withProv": sum(1 for item in fields if item["hasProv"]),
+            "coverageRate": round(
+                sum(1 for item in fields if item["badge"]["state"] != "none") / len(fields), 4
+            )
+            if fields
+            else 0.0,
+        }
+        return {
+            "iri": iri,
+            "label": detail.get("label"),
+            "fields": fields,
+            "summary": summary,
+            "entitySources": sources,
+            "evidenceBadge": detail.get("evidenceBadge"),
+            "empty": len(fields) == 0,
+            "emptyReason": "no_fields" if not fields else None,
+            "note": "每个字段都有徽标；无溯源显式显示「无」",
+            "readOnly": True,
+            "source": "GET /entity/provenance",
+        }
+
     @app.get("/answerable/panel")
     def g4_answerable_panel(
         intent: str = Query(default="all"),
@@ -4395,6 +4536,14 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 provider_code="E_ANSWER_STRATEGY_INVALID",
             )
         return _g4_answer_quality_data(strategy, limit, caseId)
+
+    @app.get("/entity/provenance")
+    def g4_entity_provenance(
+        iri: str = Query(min_length=1, max_length=2048),
+        limit: int = Query(default=50, ge=1, le=200),
+    ) -> dict[str, Any]:
+        detail = entity_view.entity_detail(runtime, iri, limit=limit)
+        return _g4_provenance_fields(detail, iri)
 
     # --- end G4 ---
 
