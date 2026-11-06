@@ -30,6 +30,7 @@ from platform_core.adapters.ontology_pg import (
 )
 from platform_core.adapters.reasoner_robot import ReasonerClient
 from platform_core.config import OntologyConfig, ReasoningConfig
+from platform_core.errors import PortError
 from platform_core.validation import ShaclValidator
 
 DSN = os.environ.get(
@@ -465,6 +466,25 @@ class PublishTests(unittest.TestCase):
         self.assertIn(
             "published", [e["action"] for e in self._events(version_y)]
         )
+
+    def test_10_deprecated_version_is_a_read_only_baseline(self):
+        """B-5: archived rows never trigger a source/graph reload (hash drift)."""
+        version = self._publish_superseded("p10")
+        self.registry.deprecate(version, actor="t-archive", reason="archive for test")
+        tbox_graph = f"urn:platform:graph:tbox:{version}"
+        self.graph.update(f"DROP SILENT GRAPH <{tbox_graph}>")
+
+        with self.assertRaises(PortError) as publish_ctx:
+            self.registry.publish(version)
+        self.assertEqual(publish_ctx.exception.provider_code, "E_ONTOLOGY_STATUS")
+        self.assertTrue(publish_ctx.exception.details.get("readOnly"))
+        # Rejected before _ensure_graph: the dropped graph must stay absent.
+        self.assertEqual(self.graph.count_graph(tbox_graph), 0)
+
+        with self.assertRaises(PortError) as rollback_ctx:
+            self.registry.rollback_to(version, actor="t-rollback")
+        self.assertEqual(rollback_ctx.exception.provider_code, "E_ONTOLOGY_READONLY")
+        self.assertEqual(self.graph.count_graph(tbox_graph), 0)
 
 
 def publish_import_version(import_id: str) -> str:

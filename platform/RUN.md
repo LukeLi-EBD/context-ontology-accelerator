@@ -153,8 +153,10 @@ UI：浏览器打开 `http://127.0.0.1:8080/`（原生 HTML，无需前端构建
 | `docker compose exec -T platform platform smoke-s1` | 逐项 `[PASS]`，退出码 0 |
 | `docker compose exec -T platform platform smoke-embed` | 8/8 `[PASS]`（含 `E_EMBED_MODEL_MISMATCH` 守卫断言） |
 | `powershell -File tests/acceptance.ps1` | 逐项输出 `[PASS] name detail` / `[FAIL] name detail`，末尾统计；**退出码 0 = 全部通过**，非 0 = 有失败项 |
+| `powershell -File scripts/acceptance-s14.ps1` | S14 专项一键验收：g01 / governance / browse / terms / metric / q7 / q8；末尾 `S14 ACCEPTANCE passed=N failed=N skipped=N`，**失败退出码 1** |
 
 `acceptance.ps1` 覆盖 `docker compose config`、各 smoke-sN、演示库纯净性等；单项失败不中断，最后汇总。
+`acceptance-s14.ps1` 用当前镜像 + 挂载工作树 `src`/`tests` 跑 S14 用例（默认 `-ComposeProject agent-platform`、`-Image agent-platform:0.1-s5`、网络 `<project>_default`），自动持重型锁；失败**不会计成 skipped**，而是计入 `failed` 并退出 1。可用 `-NoLock` 跑已持锁场景。
 所有 smoke 写入独立命名图并在结束时清理，不污染演示库。
 
 ## 5. 并发与资源

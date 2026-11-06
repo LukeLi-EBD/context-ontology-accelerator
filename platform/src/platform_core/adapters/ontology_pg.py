@@ -2436,10 +2436,27 @@ class OntologyRegistry:
         activate_existing: bool = False,
     ) -> dict[str, Any]:
         row = self._require(version_id)
+        # OQ-65 residual / B-5: an archived version is a read-only baseline. It
+        # must be rejected before any graph check, otherwise a cache miss would
+        # try to reload it from the original TTL and surface the historical
+        # canonicalizer drift as E_ONTOLOGY_HASH_MISMATCH.
+        if row["status"] in ("deprecated", "rejected"):
+            raise PortError(
+                code="Conflict",
+                message=(
+                    f"version {version_id} is {row['status']}; an archived version is "
+                    "a read-only baseline and cannot be published"
+                ),
+                provider="platform",
+                provider_code="E_ONTOLOGY_STATUS",
+                details={"status": row["status"], "readOnly": True},
+            )
         # Graph integrity is checked before any governance branch so a damaged or
         # unreachable graph always fails without touching version/pointer state.
-        loaded = self._load_graph(row)
-        count = self._graph.count_graph(row["graph_iri"])
+        # Only reload when the graph is actually missing/short: reloading on every
+        # publish made two concurrent publish-existing calls clear each other's
+        # graph, and one observed count=0 (test_8 concurrent forward publish).
+        count = self._ensure_graph(row)
         if count != row["triple_count"]:
             raise PortError(
                 code="DataLoss",
@@ -2781,7 +2798,7 @@ class OntologyRegistry:
                     "event": "ontology_publish",
                     "version_id": version_id,
                     "graph": row["graph_iri"],
-                    "triples": loaded["triples"],
+                    "triples": count,
                     "governed": True,
                     "implicit": implicit,
                 }
@@ -2847,13 +2864,28 @@ class OntologyRegistry:
         self, version_id: str, actor: str = "operator", reason: str | None = None
     ) -> dict[str, Any]:
         target = self._require(version_id)
-        if target["status"] in ("draft",):
+        if target["status"] == "draft":
             raise PortError(
                 code="Conflict",
                 message=f"version {version_id} is draft; only imported/reviewed history can be restored",
                 provider="platform",
                 provider_code="E_ONTOLOGY_STATUS",
                 details={"status": target["status"]},
+            )
+        # B-5: archived versions are read-only baselines. Activating one would
+        # rebuild its graph from the original TTL, which for pre-S14H-P0 rows
+        # carries a different canonical hash. Use restore-deprecated (batch) or
+        # re-import the source as a new version instead.
+        if target["status"] == "deprecated":
+            raise PortError(
+                code="Conflict",
+                message=(
+                    f"version {version_id} is deprecated; archived versions are read-only "
+                    "baselines (use restore-deprecated or import the source again)"
+                ),
+                provider="platform",
+                provider_code="E_ONTOLOGY_READONLY",
+                details={"status": target["status"], "readOnly": True},
             )
         self._ensure_graph(target)
         current = self._meta.query(
