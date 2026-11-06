@@ -3564,4 +3564,65 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ],
         }
 
+    # --- G6 dict routes ---
+    @app.get("/catalog/dictionaries/views/{view}")
+    def catalog_dictionary_view(
+        view: str,
+        catalog: str | None = None,
+        schema: str | None = None,
+        table: str | None = None,
+        column: str | None = None,
+        sourceKind: str | None = None,
+        q: str | None = None,
+        limit: int = Query(default=20, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
+    ) -> dict[str, Any]:
+        if view not in catalog_module.DICT_VIEWS:
+            raise _browse_error(
+                catalog_module.VIEW_INVALID,
+                f"unknown dictionary view: {view}",
+                {"view": view, "allowed": list(catalog_module.DICT_VIEWS)},
+            )
+        if sourceKind and sourceKind not in catalog_module.SOURCE_KINDS:
+            raise _browse_error(
+                "E_DICT_FILTER_INVALID",
+                f"unsupported filter value: {sourceKind}",
+                {"value": sourceKind, "allowed": list(catalog_module.SOURCE_KINDS)},
+            )
+        filters = {
+            "catalog": catalog,
+            "schema": schema,
+            "table": table,
+            "column": column,
+            "sourceKind": sourceKind,
+            "q": q,
+        }
+        if view == "missing_comment":
+            filters["missingComment"] = True
+        elif view == "unbound":
+            filters["unbound"] = True
+        elif view == "mappable_unbound":
+            filters["mappableUnbound"] = True
+        result = _catalog_service().list(filters, limit=limit, offset=offset)
+        result["view"] = view
+        return result
+
+    @app.post("/catalog/dictionaries/bind")
+    def catalog_dictionary_bind(
+        body: dict[str, Any] | None = Body(default=None),
+    ) -> dict[str, Any]:
+        payload = body or {}
+        return _catalog_service().record_manual_binding(
+            table=payload.get("table") or "",
+            column=payload.get("column") or "",
+            property_iri=payload.get("propertyIri") or "",
+            operator=payload.get("operator") or "",
+            basis=payload.get("basis") or "",
+            note=payload.get("note"),
+            catalog=payload.get("catalog") or "platform",
+            schema=payload.get("schema") or "platform",
+        )
+
+    # --- end G6 ---
+
     return app

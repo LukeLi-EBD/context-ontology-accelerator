@@ -82,7 +82,39 @@ class FakeRepo:
             value = filters.get(field)
             if value:
                 rows = [row for row in rows if row.get(column) == value]
+        if filters.get("missingComment"):
+            rows = [row for row in rows if not row.get("comment")]
+        if filters.get("unbound"):
+            rows = [row for row in rows if row.get("binding_method") == "none"]
+        if filters.get("mappable"):
+            rows = [
+                row
+                for row in rows
+                if row.get("binding_method") != "none"
+                or catalog.is_mappable(row["table_name"], row["column_name"])
+            ]
+        if filters.get("mappableUnbound"):
+            rows = [
+                row
+                for row in rows
+                if row.get("binding_method") == "none"
+                and catalog.is_mappable(row["table_name"], row["column_name"])
+            ]
         return rows[offset: offset + limit], len(rows)
+
+    def table_row(self, catalog_name, schema_name, table, column):
+        row = self.rows.get((catalog_name, schema_name, table, column))
+        return dict(row) if row else None
+
+    def set_manual_binding(
+        self, catalog_name, schema_name, table, column, property_iri, confidence, note
+    ):
+        row = self.rows[(catalog_name, schema_name, table, column)]
+        row["property_iri"] = property_iri
+        row["binding_method"] = "manual"
+        row["confidence"] = confidence
+        row["binding_note"] = note
+        row["observed_at"] = "2026-11-06T01:00:00+00:00"
 
     def table_rows(self, catalog_name, schema_name, table):
         return [row for key, row in self.rows.items() if key[2] == table]
@@ -158,6 +190,20 @@ class BindingTests(unittest.TestCase):
             "本地编号",
             catalog.resolve_binding("bank_loan_account", "deposit_id")["bindingNote"],
         )
+
+    def test_as_of_binds_to_observation_date(self) -> None:
+        binding = catalog.resolve_binding("bank_loan_account", "as_of")
+        self.assertEqual(binding["bindingMethod"], "explicit")
+        self.assertEqual(
+            binding["propertyIri"], "https://w3id.org/fsldm/core#observationDate"
+        )
+
+    def test_mappable_candidate_stays_unbound(self) -> None:
+        binding = catalog.resolve_binding("bank_loan_account", "period_start")
+        self.assertEqual(binding["bindingMethod"], "none")
+        self.assertIsNone(binding["propertyIri"])
+        self.assertIn("可映射候选", binding["bindingNote"])
+        self.assertTrue(catalog.is_mappable("bank_loan_account", "period_start"))
 
 
 class RefreshTests(unittest.TestCase):
@@ -255,6 +301,224 @@ class QueryTests(unittest.TestCase):
         with self.assertRaises(PortError) as caught:
             service.table("no_such_table")
         self.assertEqual(caught.exception.provider_code, "E_DICT_TABLE_NOT_FOUND")
+
+
+MIXED_COLUMNS = [
+    {
+        "table": "bank_loan_account",
+        "column": "customer_no",
+        "dataType": "character varying",
+        "isNullable": False,
+        "comment": "客户号",
+        "ordinal": 1,
+    },
+    {
+        "table": "bank_loan_account",
+        "column": "as_of",
+        "dataType": "date",
+        "isNullable": False,
+        "comment": "观察时点",
+        "ordinal": 2,
+    },
+    {
+        "table": "bank_loan_account",
+        "column": "product",
+        "dataType": "character varying",
+        "isNullable": True,
+        "comment": "产品代码",
+        "ordinal": 3,
+    },
+    {
+        "table": "bank_loan_account",
+        "column": "period_start",
+        "dataType": "date",
+        "isNullable": True,
+        "comment": None,
+        "ordinal": 4,
+    },
+    {
+        "table": "bank_loan_account",
+        "column": "dpd_start",
+        "dataType": "integer",
+        "isNullable": True,
+        "comment": None,
+        "ordinal": 5,
+    },
+    {
+        "table": "bank_loan_account",
+        "column": "created_at",
+        "dataType": "timestamp with time zone",
+        "isNullable": False,
+        "comment": None,
+        "ordinal": 6,
+    },
+]
+
+
+class DictHarness(unittest.TestCase):
+    columns = MIXED_COLUMNS
+
+    def make_service(self):
+        repo = FakeRepo()
+        service = catalog.CatalogService(
+            FakeRuntime(),
+            repository=repo,
+            mysql_dsn="",
+            pg_introspector=lambda schema, tables: list(self.columns),
+        )
+        service.refresh(sources=["pg"])
+        return service, repo
+
+
+class CoverageTests(DictHarness):
+    def test_column_coverage_is_zero_gap(self) -> None:
+        service, repo = self.make_service()
+        report = service.coverage()
+        self.assertTrue(report["complete"])
+        self.assertEqual(report["totals"]["tables"], 1)
+        self.assertEqual(report["totals"]["expectedColumns"], 6)
+        self.assertEqual(report["totals"]["dictionaryRows"], 6)
+        self.assertEqual(report["totals"]["missingColumns"], 0)
+        self.assertEqual(report["totals"]["extraColumns"], 0)
+        item = report["items"][0]
+        self.assertEqual(item["missingColumns"], [])
+        self.assertEqual(item["extraColumns"], [])
+        # Uncommented columns must still be present.
+        self.assertIn(
+            ("platform", "platform", "bank_loan_account", "created_at"), repo.rows
+        )
+
+    def test_binding_rate_uses_mappable_denominator(self) -> None:
+        service, _repo = self.make_service()
+        report = service.coverage()
+        binding = report["binding"]
+        self.assertEqual(binding["total"], 6)
+        self.assertEqual(binding["mappable"], 4)  # 3 bound + period_start candidate
+        self.assertEqual(binding["bound"], 3)
+        self.assertEqual(binding["unbound"], 1)
+        self.assertEqual(binding["rate"], 0.75)
+        self.assertEqual(binding["ratePercent"], 75.0)
+        self.assertEqual(
+            binding["unboundColumns"],
+            [{"table": "bank_loan_account", "column": "period_start"}],
+        )
+
+
+class ManualBindingTests(DictHarness):
+    def test_manual_binding_records_operator_basis_and_time(self) -> None:
+        service, repo = self.make_service()
+        result = service.record_manual_binding(
+            table="bank_loan_account",
+            column="period_start",
+            property_iri="https://w3id.org/fsldm/core#validFrom",
+            operator="data-ops",
+            basis="期初观察日按 validFrom 登记",
+            note="O-01 人工确认",
+        )
+        self.assertEqual(result["bindingMethod"], "manual")
+        self.assertEqual(result["propertyIri"], "https://w3id.org/fsldm/core#validFrom")
+        self.assertEqual(result["confidence"], 1.0)
+        self.assertEqual(result["manualOperator"], "data-ops")
+        self.assertEqual(result["manualBasis"], "期初观察日按 validFrom 登记")
+        self.assertTrue(result["manualAt"])
+        self.assertIn("人工绑定", result["bindingNote"])
+        stored = repo.rows[("platform", "platform", "bank_loan_account", "period_start")]
+        audit = catalog.parse_manual_note(stored["binding_note"])
+        self.assertEqual(audit["operator"], "data-ops")
+        self.assertEqual(audit["basis"], "期初观察日按 validFrom 登记")
+        self.assertTrue(audit["at"])
+
+    def test_manual_binding_requires_operator_basis_and_known_property(self) -> None:
+        service, _repo = self.make_service()
+        cases = [
+            ({"operator": "", "basis": "x"}, "operator"),
+            ({"operator": "ops", "basis": ""}, "basis"),
+            ({"operator": "ops", "basis": "x", "property_iri": "example"}, "propertyIri"),
+            (
+                {
+                    "operator": "ops",
+                    "basis": "x",
+                    "property_iri": "https://example.com/nope",
+                },
+                "propertyIri",
+            ),
+        ]
+        for overrides, field in cases:
+            payload = {
+                "table": "bank_loan_account",
+                "column": "period_start",
+                "property_iri": "https://w3id.org/fsldm/core#validFrom",
+                "operator": "ops",
+                "basis": "依据",
+            }
+            payload.update(overrides)
+            with self.assertRaises(PortError) as caught:
+                service.record_manual_binding(**payload)
+            self.assertEqual(caught.exception.provider_code, "E_DICT_BINDING_INVALID")
+            self.assertEqual(
+                (caught.exception.details or {}).get("field"), field
+            )
+
+    def test_manual_binding_rejects_unknown_column(self) -> None:
+        service, _repo = self.make_service()
+        with self.assertRaises(PortError) as caught:
+            service.record_manual_binding(
+                table="bank_loan_account",
+                column="no_such_column",
+                property_iri="https://w3id.org/fsldm/core#validFrom",
+                operator="ops",
+                basis="依据",
+            )
+        self.assertEqual(caught.exception.provider_code, "E_DICT_COLUMN_NOT_FOUND")
+
+    def test_refresh_preserves_manual_binding(self) -> None:
+        service, repo = self.make_service()
+        service.record_manual_binding(
+            table="bank_loan_account",
+            column="period_start",
+            property_iri="https://w3id.org/fsldm/core#validFrom",
+            operator="data-ops",
+            basis="期初观察日按 validFrom 登记",
+        )
+        service.refresh(sources=["pg"])
+        stored = repo.rows[("platform", "platform", "bank_loan_account", "period_start")]
+        self.assertEqual(stored["binding_method"], "manual")
+        self.assertEqual(
+            stored["property_iri"], "https://w3id.org/fsldm/core#validFrom"
+        )
+        audit = catalog.parse_manual_note(stored["binding_note"])
+        self.assertEqual(audit["operator"], "data-ops")
+
+
+class FilterViewTests(DictHarness):
+    def test_missing_comment_view(self) -> None:
+        service, _repo = self.make_service()
+        page = service.list({"missingComment": True}, limit=50)
+        self.assertEqual(page["total"], 3)
+        self.assertEqual(
+            {item["column"] for item in page["items"]},
+            {"period_start", "dpd_start", "created_at"},
+        )
+
+    def test_unbound_view(self) -> None:
+        service, _repo = self.make_service()
+        page = service.list({"unbound": True}, limit=50)
+        self.assertEqual(page["total"], 3)
+
+    def test_mappable_view(self) -> None:
+        service, _repo = self.make_service()
+        page = service.list({"mappable": True}, limit=50)
+        self.assertEqual(page["total"], 4)
+        self.assertEqual(
+            {item["column"] for item in page["items"]},
+            {"customer_no", "as_of", "product", "period_start"},
+        )
+
+    def test_mappable_unbound_view_keeps_denominator_honest(self) -> None:
+        service, _repo = self.make_service()
+        page = service.list({"mappableUnbound": True}, limit=50)
+        self.assertEqual(page["total"], 1)
+        self.assertEqual(page["items"][0]["column"], "period_start")
 
 
 if __name__ == "__main__":
