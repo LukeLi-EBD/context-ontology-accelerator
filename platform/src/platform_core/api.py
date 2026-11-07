@@ -42,7 +42,7 @@ from .assembly import Runtime
 from .bootstrap import CheckResult
 from . import catalog as catalog_module
 from .errors import PortError
-from .metrics import DRIVABLE_KINDS
+from .metrics import DRIVABLE_KINDS, _AGGREGATES
 from . import webui
 from . import prov as prov_module
 from . import source_ref
@@ -4248,9 +4248,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "hasRegulatoryText": False,
         }
 
-    # 与 MetricService.compute（metrics._AGGREGATES）保持一致：compiler 支持的
-    # count/count_distinct 不在 compute 的可执行集合里，预检不能放宽。
-    _G3_EXEC_AGGREGATES = {"sum", "max", "min", "avg"}
+    # 预检与执行共用同一个聚合集合（metrics._AGGREGATES），不另存副本：
+    # count / count_distinct 在事实层已完成去重，compute 读取观测行时按实体内
+    # 预聚合值跨实体 SUM 合成，因此预检必须放行，否则会把可算指标误判为不可算。
+    _G3_EXEC_AGGREGATES = frozenset(_AGGREGATES)
 
     def _g3_execution(row: dict[str, Any]) -> dict[str, Any]:
         """按库内实况判定可执行路径，不把“资格”当成“可算”。
