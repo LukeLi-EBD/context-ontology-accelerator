@@ -226,7 +226,7 @@ def main() -> int:
 
     # ---- 输出 ----
     ts = datetime.now(TZ).strftime("%Y%m%dT%H%M%S")
-    out = f"D:/agentABC/wt/r-qa-integration/doc/_qa/knowledge-gap/quantify_{ts}.json"
+    out = f"D:/agentABC/wt/r-qa-integration/doc/_design/knowledge-gap/quantify_{ts}.json"
     with open(out, "w", encoding="utf-8") as f:
         json.dump(ev, f, ensure_ascii=False, indent=2)
 

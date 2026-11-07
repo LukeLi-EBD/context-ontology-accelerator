@@ -19,7 +19,7 @@
 #   3. 不写 term:TermEntry        -> TermEntry 18 不变
 #   4. 不写 skos:notation / inScheme term:MetricScheme -> MetricScheme 85 不变
 #   5. 不写具体数值：保留月数、触发阈值、步骤时限、审批角色一律留空，
-#      标注为「待人工输入」（见 doc/_qa/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §4）
+#      标注为「待人工输入」（见 doc/_design/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §4）
 #
 # 副作用（必须知情）：因为不挂 termBatch，这 3 个类不会进入术语门禁的形状校验，
 # 也不会进入 termlex 的检索词表；它们只被 answerable 的全图 label 扫描看到。

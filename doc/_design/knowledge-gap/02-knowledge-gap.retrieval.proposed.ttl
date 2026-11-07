@@ -45,11 +45,11 @@ term:entry-KG01_Retention a term:TermEntry ;
     term:label "记录保留"@zh ;
     term:status term:inferred ;
     term:confidence term:high ;
-    dct:source "doc/_qa/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §3（候选词面判定）" .
+    dct:source "doc/_design/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §3（候选词面判定）" .
 
 term:entry-KG02_Disposal a term:TermEntry ;
     term:forClass policy:DisposalProcedure ;
     term:label "处置流程"@zh ;
     term:status term:inferred ;
     term:confidence term:high ;
-    dct:source "doc/_qa/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §3（候选词面判定）" .
+    dct:source "doc/_design/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §3（候选词面判定）" .

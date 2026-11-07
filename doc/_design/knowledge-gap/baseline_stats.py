@@ -123,7 +123,7 @@ out["propHits"] = {k: [i["local"] + "|" + (i["label"] or "") for i in v]
 
 # 5) 全量属性清单（可核对，写 TSV）
 ts = datetime.now(TZ).strftime("%Y%m%dT%H%M%S")
-tsv = f"D:/agentABC/wt/r-qa-integration/doc/_qa/knowledge-gap/properties_{ts}.tsv"
+tsv = f"D:/agentABC/wt/r-qa-integration/doc/_design/knowledge-gap/properties_{ts}.tsv"
 with open(tsv, "w", encoding="utf-8") as f:
     f.write("iri\tlocal\tlabel\tdomain\trange\n")
     for p in sorted(props, key=lambda x: x["s"]):
@@ -132,7 +132,7 @@ with open(tsv, "w", encoding="utf-8") as f:
 out["propertiesTsv"] = tsv
 
 json.dump({"collectedAt": datetime.now(TZ).isoformat(), "baseline": docs, "classify": out},
-          open(f"D:/agentABC/wt/r-qa-integration/doc/_qa/knowledge-gap/baseline_{ts}.json", "w", encoding="utf-8"),
+          open(f"D:/agentABC/wt/r-qa-integration/doc/_design/knowledge-gap/baseline_{ts}.json", "w", encoding="utf-8"),
           ensure_ascii=False, indent=2)
 print(json.dumps({"baseline": docs, "classify": {k: out[k] for k in ("classCount", "propCount", "classClassify", "propClassify", "classHits", "propHits")}},
                  ensure_ascii=False, indent=2))

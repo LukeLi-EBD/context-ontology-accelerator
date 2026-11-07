@@ -8,7 +8,7 @@ TARGET = "https://w3id.org/fsldm/policy#"
 
 for path in ("01-knowledge-gap.proposed.ttl", "02-knowledge-gap.retrieval.proposed.ttl"):
     g = Graph()
-    g.parse("D:/agentABC/wt/r-qa-integration/doc/_qa/knowledge-gap/" + path, format="turtle")
+    g.parse("D:/agentABC/wt/r-qa-integration/doc/_design/knowledge-gap/" + path, format="turtle")
     subjects = {s for s in g.subjects() if str(s).startswith(TARGET)}
     classes = {s for s in g.subjects(RDF.type, URIRef("http://www.w3.org/2002/07/owl#Class"))
                if str(s).startswith(TARGET)}
