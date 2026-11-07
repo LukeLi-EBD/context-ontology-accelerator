@@ -20,7 +20,13 @@ sys.path.insert(0, "/app/src")
 from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
 from platform_core.assembly import assemble
 from platform_core.config import load_config
-from platform_core.metric_facts import FactLoader, MetricProjector
+from platform_core.metric_facts import (
+    SEMANTICS_INVALID,
+    FactLoader,
+    MetricProjector,
+    _Reject,
+    _validate_distinct_semantics,
+)
 from platform_core.sqlsplit import split_sql_statements
 
 CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
@@ -260,6 +266,23 @@ class MetricFactsTest(unittest.TestCase):
             {row["metric_id"] for row in rows},
             {"FIN-INS-015", "FIN-INS-016", "FIN-INS-018", "FIN-INS-021", "FIN-INS-025"},
         )
+
+    def test_distinct_count_supply_is_validated(self) -> None:
+        _validate_distinct_semantics(
+            "FIN-INS-015", [{"entity_key": "A", "denominator": 3}]
+        )
+        for bad in (
+            [
+                {"entity_key": "A", "denominator": 3},
+                {"entity_key": "A", "denominator": 3},
+            ],
+            [{"entity_key": "A", "denominator": None}],
+            [{"entity_key": "A", "denominator": 2.5}],
+            [{"entity_key": "A", "denominator": -1}],
+        ):
+            with self.assertRaises(_Reject) as raised:
+                _validate_distinct_semantics("FIN-INS-015", bad)
+            self.assertEqual(raised.exception.code, SEMANTICS_INVALID)
 
     # ---- FIN-BANK-001: instant aggregation -----------------------------
 
