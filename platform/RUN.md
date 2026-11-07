@@ -450,3 +450,58 @@ powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget 
 脚本默认参数：source=`agent-platform`（8080，只读导出）、target=`platform-drill`
 （8083/5434/7884/7882，数据根 `D:/agentABC/data-drill`）。任何一项计数不等都会打印 `MISMATCH` 并以
 非 0 退出；它不会 `down` 默认栈，也不会写默认库。
+
+## 10. 生产/验收栈的非仓库内配置清单
+
+仓库只提供结构与默认值；下列配置**必须由部署环境提供**，缺一项就会以可观察的方式失败。换机器/
+新栈按此清单逐项核对后再启动。
+
+| 配置项 | 位置（均不在仓库内） | 必填内容 | 缺失/错误的可观察后果 |
+| --- | --- | --- | --- |
+| `platform.yaml` | `${PLATFORM_DATA_ROOT}/platform.yaml`（api 以 `--config` 读取，默认挂载 `D:/agentABC/data`） | `database.url` 与栈的 `POSTGRES_PASSWORD` 一致；`paths` 指向数据根；`reasoning.abox_graphs` **至少同时含** `urn:platform:graph:abox:main` 与 `urn:platform:graph:abox:synthetic` | 缺文件 → api 启动失败；口令不一致 → `password authentication failed`；`abox_graphs` 只剩 `abox:main`（与仓库 `platform.example.yaml:121-122` 一样）→ `/reasoning/status.aboxGraphs` 只报 main 且 `abox:main` 计数 0，`emptyAbox=true`、`coverage.instances.graphs` 与状态集合不一致，P01 的「状态与看板不一致」原样重现，B04 实例数归零 |
+| `platform/.env` | `platform/.env`（gitignored，compose `env_file` 注入） | `POSTGRES_PASSWORD`、`ARK_API_KEY`、`PLATFORM_SMOKE_TOKEN` | 见下三行 |
+| `PLATFORM_SMOKE_TOKEN` | `.env` 或本机环境变量，经 compose 传 `PLATFORM_SMOKE_TOKEN` 给 api | 单值内部 token；轮换后 `docker compose up -d --force-recreate api` | 未配置 → fail-closed：`purpose=smoke` 发布一律 409 `E_TERM_GATE_BLOCKED`（`tokenStatus="unconfigured"`），smoke 自检探针全部被拒——这是安全默认，不是功能回归 |
+| `ARK_API_KEY` | 同上 | Ark/豆包 key | 抽取与 LLM 问答步骤失败或降级，只读本体/指标接口不受影响 |
+| 镜像 tag | 部署侧 override（见 10.2） | 指向本次发布镜像（如 `agent-platform:merged-42`） | 不带 override → 回落 `docker-compose.yml` 的默认 `agent-platform:0.1-s5`；该镜像 schema 上限低于当前迁移链（`SUPPORTED_SCHEMA_VERSION = 42`），api 就绪检查报 `E_DB_MIGRATION_MISMATCH` |
+| BGE-M3 权重 | `${PLATFORM_DATA_ROOT}/models/bge-m3` | 完整模型目录 | `learn`/`embedding` profile 起不来，检索降级为 `lexicalOnly` |
+| T-Box/SHACL 种子 | `${PLATFORM_DATA_ROOT}/seed/`（自 `platform/seed/` 复制） | `bootstrap.ttl`、`shacl.ttl` 等 | 首次引导失败：`E_ONTOLOGY_TBOX_MISSING`（退出码 69），`/tbox/current` 为空 |
+| `robot/robot.jar` | `${PLATFORM_DATA_ROOT}/robot/robot.jar`（构建期也允许联网下载） | HermiT 推理所需 | reasoner 无法物化，A-Box 推理保持 deferred、`/reasoning/status` 推理计数不增长 |
+
+> `datagen.allow_official_schema: true` 仅验收栈需要（允许 synthetic 写入 `platform.*` 事实表）。
+> 生产栈保持 `false`；否则 `run` 会以 `E_DATAGEN_TARGET_FORBIDDEN` 拒绝写官方 schema。这是数据
+> 安全开关，不是部署便利项。
+
+### 10.1 新栈启动前最小核对
+
+1. `docker compose config` 里 `platform.image` 与预期 tag 一致（不是默认 `0.1-s5`）；
+2. `PLATFORM_SMOKE_TOKEN` 非空，且 `purpose=smoke` 探针返回 200 而非 409；
+3. `/reasoning/status` 的 `aboxGraphs` 与 `/health/dashboard` 的 `coverage.instances.graphs` 是同一非空集合；
+4. `GET /tbox/current` 非空、`/readyz` 返回 200。
+
+### 10.2 镜像 tag 与 override：属部署环境，不入仓
+
+判断依据：
+
+- 现有 8080/8082 override 的**全部内容只有一行 `image:`**（`merged-42` / `merged-r02`）。提交进仓库
+  等于把某一时点的 tag 固化，下一次重建即过期，并会诱导新栈误用旧 tag（本轮已发生 tag 与库版本
+  错位，8082 库在 42 而镜像只支持 40）。
+- 这些 override 位于各工作树的 `platform/` 下（如
+  `wt/metrics-report/platform/docker-compose.8080-override.yml`），是单次部署的临时产物，路径不可移植。
+- 仓库能承诺的是「构建 + 运行契约」，不是某次部署的快照：`docker-compose.yml`（结构与默认镜像）
+  + `docker-compose.oxigraph-host.yml` / `docker-compose.acceptance.yml`（网络与端口形态）+ 本节
+  清单已足以重建。tag → commit → image id 的台账由部署侧维护。
+
+复现当前形态（部署侧自行创建 override，内容两行）：
+
+```yaml
+services:
+  platform:
+    image: agent-platform:<tag>
+```
+
+```powershell
+docker compose -f platform/docker-compose.yml -f <override> up -d --no-deps platform
+docker inspect agent-platform-api --format '{{.Config.Image}} {{.Image}}'   # tag 与 image id 双核对
+```
+
+不改 `SUPPORTED_SCHEMA_VERSION`：本清单只约束部署，schema 版本号等口径基准表定稿后再统一调整。

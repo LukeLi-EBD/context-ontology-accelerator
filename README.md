@@ -1,18 +1,17 @@
-# ✦ Context Ontology Accelerator
+# 本体平台（Ontology Platform）
 
-An open-source semantic context layer for AWS that combines knowledge graphs, formal ontologies, and rule-based systems with modern AI — enabling agents to retrieve context, validate it against business logic, and determine correct actions.
+单机、单用户的本体加速器：以本体为核心，围绕「术语 → 指标口径 → 事实」做版本化治理，并提供带引用的问答入口。
 
-## Architecture
+- **本体为核心**：版本化 T-Box 发布、术语门禁与高水位审计、RDFS/OWL EL 推理物化；本体版本指针是唯一事实来源。
+- **口径治理**：指标定义、字段绑定、观测聚合语义分层登记；事实层可追溯，可算性预检与计算共用同一判定集合。
+- **可引用问答**：答案区分 `value` 与 `definition` 意图，带图、表、文档引用与覆盖度标注，不做无依据推断。
 
-The system follows a **Scan → Model → Serve** workflow:
-
-- **Scan** — Connect data sources, discover schemas, enrich metadata, ingest unstructured documents
-- **Model** — Induce and manage ontologies, define metrics, build a unified semantic graph
-- **Serve** — Query via SPARQL federation (VKG), traverse the knowledge graph, serve context to AI agents via MCP
-
-Access is governed by namespace isolation and role-based access control: namespace-scoped roles (owner, maintainer, data-steward, data-analyst) plus **platform-level roles** (`platform-admin`, `platform-viewer`) that apply across all namespaces. See the [control-plane docs](packages/control-plane/README.md) for the grants and authorization model.
+运行与开发入口：[platform/README.md](platform/README.md)（上手指南）、[platform/RUN.md](platform/RUN.md)（运行手册与部署前置清单）。设计与集成契约见 [doc/_design/](doc/_design/)。
 
 ## Quick Start
+
+> 本平台的运行入口在 [platform/README.md](platform/README.md) 与 [platform/RUN.md](platform/RUN.md)。
+> 以下为上游 AWS COA 框架的开发步骤，不参与本平台的单机运行。
 
 ### Prerequisites
 
@@ -49,26 +48,20 @@ make test       # run unit tests
 ## Repository Structure
 
 ```
-semantic-context/
-├── models/              # Smithy API models (source of truth for API contracts)
-├── smithy-generated/    # Auto-generated from Smithy (OpenAPI, Python interfaces, TS client)
-├── infra/               # AWS CDK (TypeScript) — foundation + per-service stacks
-├── packages/
-│   ├── control-plane/           # Control Plane APIs
-│   ├── data-layer/              # Data Layer APIs (query, retrieval, traversal)
-│   ├── sources/                 # Unified data source ingestion (database + documents)
-│   ├── ontology-engine/         # Ontology induction, reasoning (HermiT/ELK)
-│   ├── metric-service/          # Metric authoring and resolution
-│   ├── vkg/                     # Virtual Knowledge Graph (Ontop)
-│   ├── mcp-server/              # MCP tools for AI agents
-│   ├── context-manager/         # Serve layer Context Manager (query orchestration, upstream clients)
-│   └── web-app/                 # React + Cloudscape frontend
-├── libs/common/         # Shared Python config, logging, exceptions
-├── libs/ts-shared/      # Shared TypeScript interfaces and constants
-├── connectors/          # Athena federation connectors: toolkit, reference connector, Databricks
-├── coa-skills/          # Agent skills for driving a deployed COA (control-plane)
-├── scripts/             # CI-agnostic build/test/deploy scripts
-└── external-docs/       # Published documentation (getting-started, deployment guides)
+coa/
+├── platform/                 # 本项目主体：单机本体平台
+│   ├── src/platform_core/    # API、本体/指标/问答/推理实现与迁移 SQL（sql/V1–V42）
+│   ├── web/                  # 浏览、问答、看板前端
+│   ├── tests/                # 全量 unittest 套件（2026-11-07 基线 456 例 OK / 3 skip）
+│   ├── scripts/              # stack.ps1、up.ps1、seed.ps1、drill-migrate.ps1 等
+│   └── seed/                 # T-Box（bootstrap.ttl）与 SHACL 种子
+├── doc/                      # 设计与记录（_design 编号设计/集成契约、_arch、_impl、_fsldm 等）
+├── VERSION                   # 平台版本号
+└── 上游 AWS COA 框架（保留，不参与本平台单机运行）
+    ├── models/ smithy-generated/   # Smithy API 模型与生成物
+    ├── infra/                      # AWS CDK 基础设施
+    ├── packages/                   # control-plane、data-layer、ontology-engine、metric-service、vkg、mcp-server…
+    └── libs/ connectors/ coa-skills/ external-docs/ scripts/ tests/
 ```
 
 ## Tech Stack
