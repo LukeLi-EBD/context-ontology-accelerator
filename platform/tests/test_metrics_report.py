@@ -28,6 +28,7 @@ def _row(
     basis="regulatory",
     publishable=True,
     tier="structurally_computable",
+    metric_kind="ratio",
     formula_text="numerator/denominator*100",
     formula_expr="numerator / denominator",
     missing=None,
@@ -61,7 +62,7 @@ def _row(
         "evidence_status": "defined",
         "note": None,
         "definition_version": "v3",
-        "metric_kind": "ratio",
+        "metric_kind": metric_kind,
         "formula_expr": formula_expr,
         "formula_text": formula_text,
         "denominator_text": denominator_text,
@@ -226,11 +227,12 @@ class ManifestTests(unittest.TestCase):
 
     def test_8_external_counts_separate_eligibility_from_executable(self):
         rows = [
-            _row("FIN-BANK-001"),
+            _row("FIN-BANK-001", numerator_bindings=0, denominator_bindings=0),
             _row("FIN-INS-002", output_mode="rule_set"),
-            _row("FIN-INS-003", numerator_bindings=0, denominator_bindings=0),
-            _row("FIN-INS-004", observation_count=0, observation_start=None,
+            _row("FIN-INS-003", observation_count=0, observation_start=None,
                  observation_end=None),
+            _row("FIN-INS-004", metric_kind="amount", formula_expr="numerator",
+                 numerator_bindings=0, denominator_bindings=0),
         ]
         with _client(rows) as client:
             payload = client.get(
@@ -240,21 +242,23 @@ class ManifestTests(unittest.TestCase):
         execution = payload["meta"]["execution"]
         self.assertEqual(counts["externalEligible"], 4)
         self.assertEqual(counts["externalCandidates"], 4)
-        self.assertEqual(counts["executableNow"], 1)
-        self.assertEqual(execution["executableNow"], 1)
+        # binding 不是 compute 的门槛；amount 已放开，故两条为 compute。
+        self.assertEqual(counts["executableNow"], 2)
+        self.assertEqual(execution["executableNow"], 2)
         self.assertEqual(execution["ruleSetOnly"], 1)
-        self.assertEqual(execution["unavailable"], 2)
-        self.assertEqual(
-            execution["byReason"], {"binding_missing": 1, "no_observations": 1}
-        )
+        self.assertEqual(execution["unavailable"], 1)
+        self.assertEqual(execution["byReason"], {"no_observations": 1})
         self.assertIn("只读预检", execution["basis"])
-        self.assertIn("未含 binding", execution["note"])
+        self.assertIn("未含观测与窗口", execution["note"])
 
     def test_9_manifest_row_declares_execution_path_and_reason(self):
         rows = [
-            _row("FIN-BANK-001"),
+            _row("FIN-BANK-001", numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-014", metric_kind="amount", formula_expr="numerator",
+                 numerator_bindings=0, denominator_bindings=0),
             _row("FIN-INS-002", output_mode="rule_set"),
-            _row("FIN-INS-003", numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-003", observation_count=0, observation_start=None,
+                 observation_end=None),
         ]
         with _client(rows) as client:
             payload = client.get("/metrics/report/manifest").json()
@@ -262,8 +266,14 @@ class ManifestTests(unittest.TestCase):
         compute = by_id["FIN-BANK-001"]
         self.assertEqual(compute["executionPath"], "compute")
         self.assertTrue(compute["executable"])
-        # 资格判定只看三项，必须在说明里写明未检查 binding/窗口。
-        self.assertIn("未含 binding/窗口/观测", compute["externalReason"])
+        # 资格判定只看三项，必须在说明里写明未检查观测与窗口。
+        self.assertIn("未含观测与窗口", compute["externalReason"])
+        # compute 不校验 binding：没有 binding 但已有观测，仍应判为可算。
+        self.assertNotIn("numeratorBinding", compute["executionChecks"])
+        amount = by_id["FIN-INS-014"]
+        self.assertEqual(amount["executionPath"], "compute")
+        self.assertTrue(amount["executable"])
+        self.assertEqual(amount["executionReasonCode"], "compute_ready")
         rule_set = by_id["FIN-INS-002"]
         self.assertEqual(rule_set["executionPath"], "rule_set")
         self.assertFalse(rule_set["executable"])
@@ -272,14 +282,15 @@ class ManifestTests(unittest.TestCase):
         self.assertIn("rule_set_only", rule_set["externalReason"])
         missing = by_id["FIN-INS-003"]
         self.assertEqual(missing["executionPath"], "unavailable")
-        self.assertEqual(missing["executionReasonCode"], "binding_missing")
-        self.assertIn("numerator binding", missing["executionReason"])
+        self.assertEqual(missing["executionReasonCode"], "no_observations")
+        self.assertIn("无任何观测", missing["executionReason"])
 
     def test_10_csv_export_carries_execution_columns(self):
         rows = [
-            _row("FIN-BANK-001"),
+            _row("FIN-BANK-001", numerator_bindings=0, denominator_bindings=0),
             _row("FIN-INS-002", output_mode="rule_set"),
-            _row("FIN-INS-003", numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-003", observation_count=0, observation_start=None,
+                 observation_end=None),
         ]
         with _client(rows) as client:
             body = client.get(

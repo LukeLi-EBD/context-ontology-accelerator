@@ -285,7 +285,7 @@ class MetricService:
             )
 
         kind = row["metric_kind"]
-        if kind not in ("ratio", "duration", "sum"):
+        if kind not in ("ratio", "duration", "sum", "amount"):
             raise _bad(metric_id, DRIVABLE_CODE, "metric kind is not drivable", "metric_kind")
         if not row["formula_expr"] or not row["window_kind"] or not row["numerator_agg"]:
             raise _bad(

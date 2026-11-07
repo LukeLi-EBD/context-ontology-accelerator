@@ -3677,13 +3677,13 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     def _g3_execution(row: dict[str, Any]) -> dict[str, Any]:
         """按库内实况判定可执行路径，不把“资格”当成“可算”。
 
-        顺序对齐 MetricService.compute / MetricCompiler 的前置条件：
-        rule_set -> 公式停用 -> kind -> 四元组 -> 聚合合法 -> binding -> 观测 -> 窗口。
+        顺序对齐 MetricService.compute（即 /metrics/{id}/output?compute=true 的实现）：
+        rule_set -> 公式停用 -> 族索引 -> kind -> 四元组 -> 聚合合法 -> 观测 -> 窗口。
+        compute 不校验 binding（binding 只用于 compiler/重算路径），此处同样不把
+        缺 binding 判成不可算，否则会把已能算出数的指标误标为不可算。
         """
         mode = (row.get("output_mode") or "").strip()
         kind = (row.get("metric_kind") or "").strip()
-        numerator_bindings = int(row.get("numerator_bindings") or 0)
-        denominator_bindings = int(row.get("denominator_bindings") or 0)
         observation_count = int(row.get("observation_count") or 0)
         window_kind = (row.get("window_kind") or "").strip()
         min_window_days = int(row.get("min_window_days") or 0)
@@ -3698,7 +3698,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         checks = {
             "ruleSet": mode == "rule_set" or kind == "rule_set",
             "formulaDisabled": bool(row.get("formula_disabled")),
-            "metricKind": kind in ("ratio", "duration", "sum"),
+            "metricKind": kind in ("ratio", "duration", "sum", "amount"),
             "quartet": bool(
                 row.get("formula_expr")
                 and window_kind
@@ -3713,8 +3713,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 )
             ),
             "windowKind": window_kind in ("instant", "period"),
-            "numeratorBinding": numerator_bindings > 0,
-            "denominatorBinding": kind != "ratio" or denominator_bindings > 0,
             "observations": observation_count > 0,
             "window": window_sufficient,
         }
@@ -3749,7 +3747,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         if not checks["metricKind"]:
             return result(
                 "unavailable", False, "metric_kind_not_drivable",
-                f"metric_kind={kind or '空'}，compute 不支持该类型",
+                f"metric_kind={kind or '空'}，compute 不支持该类型（仅 ratio/duration/sum/amount）",
             )
         if not checks["quartet"]:
             missing = []
@@ -3776,18 +3774,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             return result(
                 "unavailable", False, "window_invalid",
                 f"window_kind={window_kind or '空'}，compute 不支持",
-            )
-        if not checks["numeratorBinding"]:
-            return result(
-                "unavailable", False, "binding_missing",
-                "缺 numerator binding，无法编译到事实字段",
-                missingFields=["numerator"],
-            )
-        if not checks["denominatorBinding"]:
-            return result(
-                "unavailable", False, "binding_missing",
-                "缺 denominator binding，无法编译到事实字段",
-                missingFields=["denominator"],
             )
         if not checks["observations"]:
             return result(
@@ -3828,7 +3814,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             external_label = "对外可出数候选（需事实与观测）"
             external_reason = (
                 "证据为监管原文、publishable=true、口径结构性可算；"
-                "资格判定未含 binding/窗口/观测，实际可执行性见 executionPath"
+                "资格判定未含观测与窗口，实际可执行性见 executionPath"
                 if execution["executable"]
                 else "证据为监管原文、publishable=true、口径结构性可算；"
                 f"但当前不可直接 compute（{execution['reasonCode']}）：{execution['reason']}"
@@ -3976,13 +3962,14 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "unavailable": len(candidates) - len(executable_now) - len(rule_set_only),
                 "byReason": execution_reasons,
                 "basis": (
-                    "只读预检：按库内 metric_field_binding、metric_observation 与窗口实况判定，"
-                    "不调用 compute、不写库；实际出数仍需按窗口参数调用 "
+                    "只读预检：按库内 kind/四元组/聚合/观测/窗口实况判定，口径与 "
+                    "MetricService.compute 一致，不调用 compute、不写库；实际出数仍需按窗口参数调用 "
                     "/metrics/{metric_id}/output?compute=true"
                 ),
                 "note": (
                     "资格判定（externalEligible）只看 evidence_basis/publishable/computability_tier，"
-                    "未含 binding、观测与窗口；是否真能算出数见 executableNow。"
+                    "未含观测与窗口；是否真能算出数见 executableNow。compute 不校验 binding，"
+                    "binding 缺失不计入不可算。"
                 ),
             },
             "industryNotice": _G3_INDUSTRY_NOTICE,
