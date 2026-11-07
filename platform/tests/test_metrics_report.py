@@ -45,6 +45,8 @@ def _row(
     window_kind="period",
     numerator_bindings=1,
     denominator_bindings=1,
+    numerator_agg="sum",
+    denominator_agg="sum",
     observation_count=1,
     observation_start=date(2025, 1, 1),
     observation_end=date(2025, 12, 31),
@@ -66,8 +68,8 @@ def _row(
         "formula_expr": formula_expr,
         "formula_text": formula_text,
         "denominator_text": denominator_text,
-        "numerator_agg": "sum",
-        "denominator_agg": "sum",
+        "numerator_agg": numerator_agg,
+        "denominator_agg": denominator_agg,
         "window_kind": window_kind,
         "min_window_days": min_window_days,
         "observation_period": window_text,
@@ -306,6 +308,50 @@ class ManifestTests(unittest.TestCase):
         rule_line = next(line for line in lines[1:] if "FIN-INS-002" in line)
         self.assertIn("rule_set", rule_line)
         self.assertIn("false", rule_line)
+
+    def test_11_kind_whitelist_tracks_compute_drivable_kinds(self):
+        # count / period_value are drivable by MetricService.compute, so the
+        # static manifest check must use the same DRIVABLE_KINDS whitelist.
+        # Tier still decides external eligibility independently of that.
+        rows = [
+            _row("CUST-009", domain="customer", metric_kind="count",
+                 formula_expr="numerator", numerator_agg="count_distinct",
+                 denominator_agg=None, window_kind="instant", min_window_days=0),
+            _row("CUST-013", domain="customer", metric_kind="period_value",
+                 tier="blocked_semantics",
+                 formula_expr="numerator / denominator", numerator_agg="sum",
+                 denominator_agg="count", window_kind="period", min_window_days=30),
+            _row("CUST-002", domain="customer", metric_kind="count",
+                 tier="blocked_semantics", formula_expr="numerator",
+                 numerator_agg="count", denominator_agg=None),
+            _row("FIN-BANK-001", metric_kind="band", formula_expr=None,
+                 formula_text=None),
+        ]
+        with _client(rows) as client:
+            payload = client.get("/metrics/report/manifest").json()
+            external = client.get(
+                "/metrics/report/manifest", params={"scope": "external"}
+            ).json()
+        by_id = {item["metricId"]: item for item in payload["items"]}
+        for metric_id in ("CUST-009", "CUST-013", "CUST-002"):
+            item = by_id[metric_id]
+            self.assertEqual(item["executionPath"], "compute")
+            self.assertTrue(item["executable"])
+            self.assertEqual(item["executionReasonCode"], "compute_ready")
+        self.assertFalse(by_id["CUST-002"]["externalEligible"])
+        self.assertFalse(by_id["CUST-013"]["externalEligible"])
+        self.assertEqual(external["meta"]["counts"]["externalCandidates"], 2)
+        self.assertEqual(
+            [item["metricId"] for item in external["items"] if item["executable"]],
+            ["CUST-009"],
+        )
+        unsupported = by_id["FIN-BANK-001"]
+        self.assertEqual(unsupported["executionPath"], "unavailable")
+        self.assertEqual(
+            unsupported["executionReasonCode"], "metric_kind_not_drivable"
+        )
+        for kind in ("ratio", "duration", "sum", "count", "amount", "period_value"):
+            self.assertIn(kind, unsupported["executionReason"])
 
 
 E1_IDS = (

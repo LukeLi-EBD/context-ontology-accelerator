@@ -1,8 +1,10 @@
 """G2 metrics-core: M-01 compute route + M-06 readiness ledger.
 
 Fixtures are written with data_source='fixture' and removed in tearDownClass;
-no metric_observation rows are touched. Values below are hand-computed from
-the inserted rows, not copied from any prior run.
+no metric_observation rows are touched. Window/source assertions use dedicated
+probe definitions (and a probe fact table) so they do not depend on what other
+suites left in the shared fact tables. Values below are hand-computed from the
+inserted rows, not copied from any prior run.
 """
 
 from __future__ import annotations
@@ -25,6 +27,15 @@ CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
 AS_OF = "2025-12-31"
 Q4 = {"periodStart": "2025-10-01", "periodEnd": "2025-12-31"}
 INST = "M01-INST-A"
+
+# Dedicated probe metrics: the window/source assertions must not depend on
+# whether other suites left rows (of any data_source) in the global fact tables.
+# WINDOW_PROBE reads only this class's institution rows; SOURCE_PROBE reads a
+# table owned by this class, so its availableDataSources is deterministic.
+WINDOW_PROBE = "TEST-METRIC-PERIOD-WINDOW"
+SOURCE_PROBE = "TEST-METRIC-SOURCE-PROBE"
+SOURCE_PROBE_TABLE = "platform.qa_datasource_probe"
+PROBE_IDS = (WINDOW_PROBE, SOURCE_PROBE)
 
 # account rows: (id, risk_class, principal_balance, start_class, end_class,
 #                balance_start, period_decrease_amount)
@@ -203,6 +214,7 @@ class G2MetricsCoreTest(unittest.TestCase):
         cls.meta = cls.runtime.metadata
         cls.client = TestClient(api_module.create_app(cls.runtime, []))
         cls._load()
+        cls._seed_probes()
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -210,6 +222,19 @@ class G2MetricsCoreTest(unittest.TestCase):
             for table in ("bank_loan_account", "bank_concentration_stat",
                           "ins_policy", "ins_claim_case"):
                 tx.execute(f"DELETE FROM platform.{table} WHERE data_source = 'fixture'", None)
+            tx.execute(
+                "DELETE FROM platform.metric_field_binding WHERE metric_id = ANY(%s)",
+                (list(PROBE_IDS),),
+            )
+            tx.execute(
+                "DELETE FROM platform.metric_definition WHERE metric_id = ANY(%s)",
+                (list(PROBE_IDS),),
+            )
+            tx.execute(f"DROP TABLE IF EXISTS {SOURCE_PROBE_TABLE}", None)
+        cls.meta.execute(
+            "DELETE FROM platform.source_ref_registry WHERE source_ref LIKE %s OR source_ref LIKE %s",
+            (f"%{WINDOW_PROBE}%", f"%{SOURCE_PROBE}%"),
+        )
         cls.runtime.close()
 
     # ------------------------------------------------------------- fixtures
@@ -269,6 +294,135 @@ class G2MetricsCoreTest(unittest.TestCase):
                      claim[4] == "paid" and claim[5] or 0, claim[5], claim[4],
                      "fixture", True),
                 )
+
+    @classmethod
+    def _seed_probes(cls) -> None:
+        """Definitions/bindings used by the window and source assertions."""
+        with cls.meta.tx() as tx:
+            tx.execute(
+                "DELETE FROM platform.metric_field_binding WHERE metric_id = ANY(%s)",
+                (list(PROBE_IDS),),
+            )
+            tx.execute(
+                "DELETE FROM platform.metric_observation WHERE metric_id = ANY(%s)",
+                (list(PROBE_IDS),),
+            )
+            tx.execute(
+                """
+                INSERT INTO platform.metric_definition
+                  (metric_id, name_zh, domain, evidence_basis, publishable, inference,
+                   formula_disabled, missing, evidence_status, note, definition_version,
+                   metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
+                   min_window_days, grain, unit)
+                VALUES (%s, '迁徙率窗口测试指标', 'bank', 'regulatory', true, false,
+                        false, NULL, 'EVIDENCED', 'test-only', 'v1', 'ratio',
+                        'numerator / denominator * 100', 'sum', 'sum', 'period', 0,
+                        'institution', '%%')
+                ON CONFLICT (metric_id) DO UPDATE SET
+                  definition_version = EXCLUDED.definition_version,
+                  metric_kind = EXCLUDED.metric_kind,
+                  formula_expr = EXCLUDED.formula_expr,
+                  numerator_agg = EXCLUDED.numerator_agg,
+                  denominator_agg = EXCLUDED.denominator_agg,
+                  window_kind = EXCLUDED.window_kind,
+                  min_window_days = EXCLUDED.min_window_days,
+                  grain = EXCLUDED.grain,
+                  unit = EXCLUDED.unit,
+                  publishable = EXCLUDED.publishable,
+                  formula_disabled = false
+                """,
+                (WINDOW_PROBE,),
+            )
+            tx.execute(
+                """
+                INSERT INTO platform.metric_field_binding
+                  (metric_id, definition_version, role, fact_table, entity_column,
+                   value_expr, agg, filter_sql, window_column, window_mode)
+                VALUES
+                  (%s, 'v1', 'numerator', 'platform.bank_loan_account', 'institution',
+                   'GREATEST(balance_start - period_decrease_amount, 0)', 'sum',
+                   'institution = ''M01-INST-A'' AND risk_class_start = ''normal'' AND '
+                   'risk_class_end IN (''special'',''substandard'',''doubtful'',''loss'')',
+                   'as_of', 'period'),
+                  (%s, 'v1', 'denominator', 'platform.bank_loan_account', 'institution',
+                   'GREATEST(balance_start - period_decrease_amount, 0)', 'sum',
+                   'institution = ''M01-INST-A'' AND risk_class_start = ''normal''',
+                   'as_of', 'period')
+                ON CONFLICT (metric_id, definition_version, role) DO UPDATE SET
+                  fact_table = EXCLUDED.fact_table,
+                  entity_column = EXCLUDED.entity_column,
+                  value_expr = EXCLUDED.value_expr,
+                  agg = EXCLUDED.agg,
+                  filter_sql = EXCLUDED.filter_sql,
+                  window_column = EXCLUDED.window_column,
+                  window_mode = EXCLUDED.window_mode
+                """,
+                (WINDOW_PROBE, WINDOW_PROBE),
+            )
+            tx.execute(
+                """
+                INSERT INTO platform.metric_definition
+                  (metric_id, name_zh, domain, evidence_basis, publishable, inference,
+                   formula_disabled, missing, evidence_status, note, definition_version,
+                   metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
+                   min_window_days, grain, unit)
+                VALUES (%s, '来源探测测试指标', 'bank', 'regulatory', true, false,
+                        false, NULL, 'EVIDENCED', 'test-only', 'v1', 'sum',
+                        'numerator', 'sum', NULL, 'period', 0, 'entity', '个')
+                ON CONFLICT (metric_id) DO UPDATE SET
+                  definition_version = EXCLUDED.definition_version,
+                  metric_kind = EXCLUDED.metric_kind,
+                  formula_expr = EXCLUDED.formula_expr,
+                  numerator_agg = EXCLUDED.numerator_agg,
+                  denominator_agg = EXCLUDED.denominator_agg,
+                  window_kind = EXCLUDED.window_kind,
+                  min_window_days = EXCLUDED.min_window_days,
+                  grain = EXCLUDED.grain,
+                  unit = EXCLUDED.unit,
+                  publishable = EXCLUDED.publishable,
+                  formula_disabled = false
+                """,
+                (SOURCE_PROBE,),
+            )
+            tx.execute(f"DROP TABLE IF EXISTS {SOURCE_PROBE_TABLE}", None)
+            tx.execute(
+                f"""
+                CREATE TABLE {SOURCE_PROBE_TABLE} (
+                  entity_key text NOT NULL,
+                  as_of date NOT NULL,
+                  numerator numeric NOT NULL,
+                  data_source text NOT NULL,
+                  fixture boolean NOT NULL DEFAULT true,
+                  PRIMARY KEY (entity_key, as_of, data_source)
+                )
+                """,
+                None,
+            )
+            tx.execute(f"DELETE FROM {SOURCE_PROBE_TABLE}", None)
+            tx.execute(
+                f"INSERT INTO {SOURCE_PROBE_TABLE}"
+                " (entity_key, as_of, numerator, data_source, fixture)"
+                " VALUES ('QA-DS-1', '2025-12-31', 1, 'fixture', true)",
+                None,
+            )
+            tx.execute(
+                """
+                INSERT INTO platform.metric_field_binding
+                  (metric_id, definition_version, role, fact_table, entity_column,
+                   value_expr, agg, filter_sql, window_column, window_mode)
+                VALUES (%s, 'v1', 'numerator', %s, 'entity_key', 'numerator', 'sum',
+                        NULL, 'as_of', 'period')
+                ON CONFLICT (metric_id, definition_version, role) DO UPDATE SET
+                  fact_table = EXCLUDED.fact_table,
+                  entity_column = EXCLUDED.entity_column,
+                  value_expr = EXCLUDED.value_expr,
+                  agg = EXCLUDED.agg,
+                  filter_sql = EXCLUDED.filter_sql,
+                  window_column = EXCLUDED.window_column,
+                  window_mode = EXCLUDED.window_mode
+                """,
+                (SOURCE_PROBE, SOURCE_PROBE_TABLE),
+            )
 
     # ------------------------------------------------------------- helpers
     def _compute(self, metric_id: str, **params):
@@ -529,9 +683,10 @@ class G2MetricsCoreTest(unittest.TestCase):
 
     # ------------------------------------------------- period window + source
     def test_22_period_window_takes_effect(self) -> None:
-        # 013 is defined as period. With a period request the compiler must use
-        # [periodStart, periodEnd], not collapse the window onto periodStart.
-        period = self._compute("FIN-BANK-013", **Q4)
+        # The probe is defined as period and reads only this class's institution
+        # rows. With a period request the compiler must use [periodStart, periodEnd],
+        # not collapse the window onto periodStart.
+        period = self._compute(WINDOW_PROBE, **Q4)
         self.assertEqual(period.status_code, 200, period.text)
         body = period.json()
         self.assertEqual(body["window"], {"start": Q4["periodStart"],
@@ -544,22 +699,22 @@ class G2MetricsCoreTest(unittest.TestCase):
 
         # A period value is a range, never a point: asOf alone must be refused
         # with the same code as /output, not collapsed into a one-day window.
-        degenerate = self._compute("FIN-BANK-013", asOf=AS_OF)
+        degenerate = self._compute(WINDOW_PROBE, asOf=AS_OF)
         self.assertEqual(degenerate.status_code, 400, degenerate.text)
         error = degenerate.json()["error"]
         self.assertEqual(error["providerCode"], "E_METRIC_WINDOW_INSUFFICIENT")
         self.assertEqual(error["message"], "period metric requires a full window")
 
-        single_day = self._compute("FIN-BANK-013", periodStart=AS_OF, periodEnd=AS_OF)
+        single_day = self._compute(WINDOW_PROBE, periodStart=AS_OF, periodEnd=AS_OF)
         self.assertEqual(single_day.status_code, 400, single_day.text)
         self.assertEqual(
             single_day.json()["error"]["providerCode"],
             "E_METRIC_WINDOW_INSUFFICIENT",
         )
 
-        # A period that excludes the 2025-12-31 snapshot really returns nothing;
+        # A period that excludes the probe's snapshot really returns nothing;
         # the window is applied instead of silently using the period start.
-        empty = self._compute("FIN-BANK-013", periodStart="2025-01-01",
+        empty = self._compute(WINDOW_PROBE, periodStart="2025-01-01",
                               periodEnd="2025-06-30").json()
         self.assertTrue(empty["noData"])
         self.assertEqual(empty["rowCount"], 0)
@@ -609,8 +764,9 @@ class G2MetricsCoreTest(unittest.TestCase):
 
     def test_24_datasource_mismatch_is_explicit(self) -> None:
         # A source that does not exist in the fact table is reported, not
-        # silently returned as an empty result.
-        response = self._compute("FIN-BANK-013", **Q4, dataSource="business")
+        # silently returned as an empty result. The probe is bound to a table
+        # this class owns and fills with fixture rows only.
+        response = self._compute(SOURCE_PROBE, **Q4, dataSource="business")
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
         self.assertTrue(body["noData"])

@@ -5,10 +5,11 @@ Run inside the platform container (same as the other integration tests):
   docker compose exec platform python -m unittest tests.test_answer_layers -v
 
 The T-Box pointer and metric registry are read live. Facts-layer assertions run
-against a test-only metric definition (QA_FIXTURE_METRIC) that has no
-observations, so "degraded" does not depend on whether some other dataset has
-observed a real metric such as FIN-INS-021. The fixture row is inserted in
-setUpClass and removed in tearDownClass.
+against test-only metric definitions (QA_FIXTURE_METRIC and
+QA_FIXTURE_RULE_METRIC) with no observations, so "degraded" does not depend on
+whether some other dataset has observed a real metric such as FIN-INS-021 or
+FIN-BANK-002. The fixture rows are inserted in setUpClass and removed in
+tearDownClass.
 """
 
 import os
@@ -18,11 +19,14 @@ from platform_core.api import _qa_answer, _qa_answerable
 from platform_core.assembly import assemble
 from platform_core.config import load_config
 
-# Test-only definition: unique id, no observations. fact_function is set and no
-# metric_field_binding rows exist, so the facts layer always degrades with
+# Test-only definitions: unique ids, no observations. fact_function is set and
+# no metric_field_binding rows exist, so the facts layer always degrades with
 # E_FACTS_NO_OBSERVATION instead of depending on fact-table contents.
 QA_FIXTURE_METRIC = "TEST-METRIC-NO-OBS"
+# rule_set fixture: routing is decided by output_mode, never by observations.
+QA_FIXTURE_RULE_METRIC = "TEST-METRIC-RULE-SET"
 QA_FIXTURE_VERSION = "v1"
+QA_FIXTURE_METRICS = (QA_FIXTURE_METRIC, QA_FIXTURE_RULE_METRIC)
 
 
 def _current_tbox_version(runtime) -> str:
@@ -58,11 +62,11 @@ class AnswerLayerTest(unittest.TestCase):
 
     @classmethod
     def _seed_fixture(cls):
-        """Insert the no-observation definition these assertions run against."""
+        """Insert the no-observation definitions these assertions run against."""
         meta = cls.runtime.metadata
         meta.execute(
-            "DELETE FROM platform.metric_observation WHERE metric_id = %s",
-            (QA_FIXTURE_METRIC,),
+            "DELETE FROM platform.metric_observation WHERE metric_id = ANY(%s)",
+            (list(QA_FIXTURE_METRICS),),
         )
         meta.execute(
             """
@@ -92,18 +96,47 @@ class AnswerLayerTest(unittest.TestCase):
             """,
             (QA_FIXTURE_METRIC, QA_FIXTURE_VERSION),
         )
+        meta.execute(
+            """
+            INSERT INTO platform.metric_definition
+              (metric_id, name_zh, domain, evidence_basis, publishable, inference,
+               formula_disabled, missing, evidence_status, note, definition_version,
+               metric_kind, formula_expr, numerator_agg, denominator_agg, window_kind,
+               min_window_days, grain, unit, output_mode, rule_set_json)
+            VALUES (%s, '答案分层测试规则指标（无观测）', 'bank', 'regulatory', true,
+                    false, false, NULL, 'EVIDENCED', 'test-only', %s,
+                    'rule_set', NULL, NULL, NULL, 'instant', 0, 'customer', '次',
+                    'rule_set', '{"rules": []}')
+            ON CONFLICT (metric_id) DO UPDATE SET
+              name_zh = EXCLUDED.name_zh,
+              definition_version = EXCLUDED.definition_version,
+              metric_kind = EXCLUDED.metric_kind,
+              formula_expr = EXCLUDED.formula_expr,
+              numerator_agg = EXCLUDED.numerator_agg,
+              denominator_agg = EXCLUDED.denominator_agg,
+              window_kind = EXCLUDED.window_kind,
+              min_window_days = EXCLUDED.min_window_days,
+              grain = EXCLUDED.grain,
+              unit = EXCLUDED.unit,
+              output_mode = EXCLUDED.output_mode,
+              rule_set_json = EXCLUDED.rule_set_json,
+              publishable = EXCLUDED.publishable,
+              formula_disabled = false
+            """,
+            (QA_FIXTURE_RULE_METRIC, QA_FIXTURE_VERSION),
+        )
 
     @classmethod
     def tearDownClass(cls):
         try:
             meta = cls.runtime.metadata
             meta.execute(
-                "DELETE FROM platform.metric_observation WHERE metric_id = %s",
-                (QA_FIXTURE_METRIC,),
+                "DELETE FROM platform.metric_observation WHERE metric_id = ANY(%s)",
+                (list(QA_FIXTURE_METRICS),),
             )
             meta.execute(
-                "DELETE FROM platform.metric_definition WHERE metric_id = %s",
-                (QA_FIXTURE_METRIC,),
+                "DELETE FROM platform.metric_definition WHERE metric_id = ANY(%s)",
+                (list(QA_FIXTURE_METRICS),),
             )
         finally:
             try:
@@ -210,7 +243,9 @@ class AnswerLayerTest(unittest.TestCase):
         )
 
     def test_answer_rule_metric_routes_to_rules(self):
-        result = _qa_answer(self.runtime, "逾期分档（M0–M6）是什么")
+        result = _qa_answer(
+            self.runtime, "逾期分档（M0–M6）是什么", metric_id=QA_FIXTURE_RULE_METRIC
+        )
         self.assertFalse(result["refused"])
         self.assertEqual(result["answerType"], "rule_set")
         self.assertFalse(result["degraded"])
@@ -222,7 +257,9 @@ class AnswerLayerTest(unittest.TestCase):
         self.assertEqual(steps["compute"]["output"]["mode"], "rule_set")
         self.assertIsNone(steps["compute"]["output"]["value"])
         self.assertIn("rule-set", {item["kind"] for item in result["citations"]})
-        self.assertEqual(steps["compute"]["input"]["metricId"], "FIN-BANK-002")
+        self.assertEqual(
+            steps["compute"]["input"]["metricId"], QA_FIXTURE_RULE_METRIC
+        )
 
 
 if __name__ == "__main__":

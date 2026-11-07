@@ -4282,7 +4282,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         checks = {
             "ruleSet": mode == "rule_set" or kind == "rule_set",
             "formulaDisabled": bool(row.get("formula_disabled")),
-            "metricKind": kind in ("ratio", "duration", "sum", "amount"),
+            "metricKind": kind in DRIVABLE_KINDS,
             "quartet": bool(
                 row.get("formula_expr")
                 and window_kind
@@ -4331,7 +4331,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         if not checks["metricKind"]:
             return result(
                 "unavailable", False, "metric_kind_not_drivable",
-                f"metric_kind={kind or '空'}，compute 不支持该类型（仅 ratio/duration/sum/amount）",
+                f"metric_kind={kind or '空'}，compute 不支持该类型（仅 {'/'.join(DRIVABLE_KINDS)}）",
             )
         if not checks["quartet"]:
             missing = []
