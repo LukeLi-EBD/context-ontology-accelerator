@@ -276,6 +276,10 @@ class ReasoningConfig(_Strict):
     max_assembly_bytes: int = Field(
         default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024
     )
+    # Offline-window guard: when false (default) a governed publish/rollback
+    # does NOT start a full A-Box materialization. Inference then runs only via
+    # the explicit offline `materialize` action, never as a publish side effect.
+    materialize_online: bool = False
 
 
 class LogConfig(_Strict):
@@ -332,6 +336,22 @@ class TermsConfig(_Strict):
 # --- end G8 terms gate config ---
 
 
+class EntityViewConfig(_Strict):
+    """Entity detail presentation filters.
+
+    Only the read-only entity view applies these; both the graphs and
+    /browse/sparql keep every triple. Extend the list when other meta-level
+    types should stop being shown as neighbours/classes.
+    """
+
+    ignore_types: list[str] = Field(
+        default_factory=lambda: [
+            "http://www.w3.org/2002/07/owl#Thing",
+            "http://www.w3.org/2002/07/owl#NamedIndividual",
+        ]
+    )
+
+
 class PlatformConfig(_Strict):
     mode: Literal["dev", "single", "test"] = "single"
     config_version: int = 1
@@ -352,6 +372,7 @@ class PlatformConfig(_Strict):
     reasoning: ReasoningConfig = Field(default_factory=ReasoningConfig)
     search: SearchConfig = Field(default_factory=SearchConfig)
     context: ContextConfig = Field(default_factory=ContextConfig)
+    entity_view: EntityViewConfig = Field(default_factory=EntityViewConfig)
     extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
     datagen: DatagenConfig = Field(default_factory=DatagenConfig)
     # --- G8 terms gate config ---

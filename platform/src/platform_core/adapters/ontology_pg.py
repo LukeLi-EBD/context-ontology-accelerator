@@ -3587,6 +3587,9 @@ class OntologyRegistry:
                     "jobId": materialized.get("jobId"),
                     "inferred": materialized.get("inferred"),
                     "skipped": materialized.get("skipped"),
+                    # reasoning.materialize_online=false records the deferral here
+                    # so evidence says "offline window" instead of an unexplained skip.
+                    "deferred": materialized.get("deferred"),
                 }
             except Exception as exc:
                 cause_code = getattr(exc, "provider_code", None) or getattr(exc, "code", "Internal")
