@@ -101,6 +101,7 @@ class AnswerLayerTest(unittest.TestCase):
         result = _qa_answer(self.runtime, "13个月继续率（有效保单件数）的口径是什么")
         self.assertFalse(result["refused"])
         self.assertEqual(result["answerType"], "definition")
+        self.assertFalse(result["degraded"])
         self.assertIsNone(result["value"])
         self.assertIsNone(result["dataSource"])
         self.assertEqual(result["ontologyVersion"], self.tbox_version)
@@ -143,6 +144,7 @@ class AnswerLayerTest(unittest.TestCase):
         result = _qa_answer(self.runtime, "逾期分档（M0–M6）是什么")
         self.assertFalse(result["refused"])
         self.assertEqual(result["answerType"], "rule_set")
+        self.assertFalse(result["degraded"])
         self.assertIsNone(result["value"])
         steps = {item["step"]: item for item in result["steps"]}
         self.assertEqual(steps["metric"]["status"], "covered")

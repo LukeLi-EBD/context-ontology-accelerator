@@ -940,7 +940,12 @@ def _qa_answerable(
             "answerable": answerable,
             "valueAnswerable": value_answerable,
             "answerMode": "value" if value_answerable else ("definition" if answerable else "none"),
-            "degraded": bool(base.get("degraded")) or facts_status == "degraded" or not graph_ok,
+            # A definition/rule-set answer does not depend on observations, so a
+            # facts layer without values must not degrade the whole answer. Only
+            # value questions fall back to a degraded (non-numeric) answer.
+            "degraded": bool(base.get("degraded"))
+            or not graph_ok
+            or (intent == "value" and facts_status in ("degraded", "missing", "unavailable")),
             "missing": missing,
             "layers": layers,
             "candidates": candidates,
