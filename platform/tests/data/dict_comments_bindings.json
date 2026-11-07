@@ -1,0 +1,634 @@
+[
+  {
+    "table": "bank_collection_case",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "bank_collection_case",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_collection_case",
+    "column": "status_as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：状态/指标截至日 status_as_of 即 observationDate"
+  },
+  {
+    "table": "bank_collection_recovery",
+    "column": "recovery_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：催收回款发生日 eventTimestamp（语义近似）"
+  },
+  {
+    "table": "bank_concentration_stat",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "bank_credit_application",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "bank_credit_application",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_credit_facility",
+    "column": "agreement_id",
+    "propertyIri": "https://w3id.org/fsldm/core#agreementId",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：agreement_id ≈ agreementId"
+  },
+  {
+    "table": "bank_credit_facility",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "bank_credit_facility",
+    "column": "effective_from",
+    "propertyIri": "https://w3id.org/fsldm/core#validFrom",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：额度生效起始时间 validFrom（语义近似）"
+  },
+  {
+    "table": "bank_credit_facility",
+    "column": "effective_to",
+    "propertyIri": "https://w3id.org/fsldm/core#validUntil",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：额度生效结束时间 validUntil（语义近似）"
+  },
+  {
+    "table": "bank_credit_facility",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_credit_facility",
+    "column": "status_as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：状态/指标截至日 status_as_of 即 observationDate"
+  },
+  {
+    "table": "bank_deposit_account",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "bank_deposit_account",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "bank_deposit_account",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_disposal_event",
+    "column": "asset_id",
+    "propertyIri": "https://w3id.org/fsldm/core#assetId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：处置事件指向的资产 assetId"
+  },
+  {
+    "table": "bank_disposal_event",
+    "column": "completion_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：处置完成日 eventTimestamp（语义近似）"
+  },
+  {
+    "table": "bank_disposal_event",
+    "column": "disposal_type",
+    "propertyIri": "https://w3id.org/fsldm/event#eventSubtype",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：处置方式即事件子类型 eventSubtype（语义近似）"
+  },
+  {
+    "table": "bank_disposal_event",
+    "column": "event_id",
+    "propertyIri": "https://w3id.org/fsldm/core#eventId",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：event_id ≈ eventId"
+  },
+  {
+    "table": "bank_disposal_event",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_ews_signal",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "bank_ews_signal",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "bank_loan_account",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "bank_loan_account",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "bank_loan_account",
+    "column": "disbursed_date",
+    "propertyIri": "https://w3id.org/fsldm/core#originationDate",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：放款日即起息日 originationDate"
+  },
+  {
+    "table": "bank_loan_account",
+    "column": "first_payment_due_date",
+    "propertyIri": "https://w3id.org/fsldm/core#firstPaymentDate",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：首期应还款日 firstPaymentDate"
+  },
+  {
+    "table": "bank_loan_account",
+    "column": "maturity_date",
+    "propertyIri": "https://w3id.org/fsldm/core#maturityDate",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：maturity_date ≈ maturityDate"
+  },
+  {
+    "table": "bank_loan_account",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_loan_repayment",
+    "column": "due_date",
+    "propertyIri": "https://w3id.org/fsldm/core#dueDate",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：due_date ≈ dueDate"
+  },
+  {
+    "table": "bank_loan_repayment",
+    "column": "installment_no",
+    "propertyIri": "https://w3id.org/fsldm/finance#lineNumber",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：期次序号即分录行号 lineNumber（语义近似）"
+  },
+  {
+    "table": "bank_loan_repayment",
+    "column": "paid_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：还款/缴费发生日即事件时间 eventTimestamp（语义近似）"
+  },
+  {
+    "table": "bank_loan_repayment",
+    "column": "status_as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：状态/指标截至日 status_as_of 即 observationDate"
+  },
+  {
+    "table": "bank_npl_snapshot",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "bank_npl_snapshot",
+    "column": "asset_id",
+    "propertyIri": "https://w3id.org/fsldm/core#assetId",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：asset_id ≈ assetId"
+  },
+  {
+    "table": "bank_npl_snapshot",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "bank_provision_snapshot",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "cust_aum_snapshot",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "cust_aum_snapshot",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_behavior_snapshot",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "cust_behavior_snapshot",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_campaign_touch",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_cohort_stat",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "cust_complaint",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_master",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "cust_master",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_product_holding",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "cust_product_holding",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_transaction",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "cust_transaction",
+    "column": "txn_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：交易发生日 eventTimestamp"
+  },
+  {
+    "table": "cust_transaction",
+    "column": "txn_type",
+    "propertyIri": "https://w3id.org/fsldm/event#eventType",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：交易类型即事件类型 eventType（语义近似）"
+  },
+  {
+    "table": "ins_claim_case",
+    "column": "policy_no",
+    "propertyIri": "https://w3id.org/fsldm/core#agreementId",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：保单号按协议编号 agreementId 登记（语义近似）"
+  },
+  {
+    "table": "ins_claim_case",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "ins_claim_reserve_snapshot",
+    "column": "as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：快照观察时点 as_of 即 observationDate"
+  },
+  {
+    "table": "ins_claim_reserve_snapshot",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "ins_payment_record",
+    "column": "due_date",
+    "propertyIri": "https://w3id.org/fsldm/core#dueDate",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：due_date ≈ dueDate"
+  },
+  {
+    "table": "ins_payment_record",
+    "column": "installment_no",
+    "propertyIri": "https://w3id.org/fsldm/finance#lineNumber",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：期次序号即分录行号 lineNumber（语义近似）"
+  },
+  {
+    "table": "ins_payment_record",
+    "column": "paid_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：还款/缴费发生日即事件时间 eventTimestamp（语义近似）"
+  },
+  {
+    "table": "ins_payment_record",
+    "column": "policy_no",
+    "propertyIri": "https://w3id.org/fsldm/core#agreementId",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：保单号按协议编号 agreementId 登记（语义近似）"
+  },
+  {
+    "table": "ins_payment_record",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "ins_payment_record",
+    "column": "status_as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：状态/指标截至日 status_as_of 即 observationDate"
+  },
+  {
+    "table": "ins_persistence_stat",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "ins_policy",
+    "column": "customer_no",
+    "propertyIri": "https://w3id.org/fsldm/core#partyId",
+    "bindingMethod": "explicit",
+    "confidence": 1.0,
+    "bindingNote": "显式绑定：客户号即当事人编号 partyId"
+  },
+  {
+    "table": "ins_policy",
+    "column": "issue_date",
+    "propertyIri": "https://w3id.org/fsldm/core#originationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：保单签发日按起息日 originationDate 登记（语义近似）"
+  },
+  {
+    "table": "ins_policy",
+    "column": "policy_no",
+    "propertyIri": "https://w3id.org/fsldm/core#agreementId",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：保单号按协议编号 agreementId 登记（语义近似）"
+  },
+  {
+    "table": "ins_policy",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "ins_policy",
+    "column": "status_as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：状态/指标截至日 status_as_of 即 observationDate"
+  },
+  {
+    "table": "ins_policy_event",
+    "column": "event_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：保单事件发生日 eventTimestamp"
+  },
+  {
+    "table": "ins_policy_event",
+    "column": "event_id",
+    "propertyIri": "https://w3id.org/fsldm/core#eventId",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：event_id ≈ eventId"
+  },
+  {
+    "table": "ins_policy_event",
+    "column": "event_type",
+    "propertyIri": "https://w3id.org/fsldm/event#eventType",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：event_type ≈ eventType"
+  },
+  {
+    "table": "ins_policy_event",
+    "column": "policy_no",
+    "propertyIri": "https://w3id.org/fsldm/core#agreementId",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：保单号按协议编号 agreementId 登记（语义近似）"
+  },
+  {
+    "table": "ins_underwriting_stat",
+    "column": "period_end",
+    "propertyIri": "https://w3id.org/fsldm/core#validUntil",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：统计期间终点 validUntil（语义近似）"
+  },
+  {
+    "table": "ins_underwriting_stat",
+    "column": "period_start",
+    "propertyIri": "https://w3id.org/fsldm/core#validFrom",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：统计期间起点 validFrom（语义近似）"
+  },
+  {
+    "table": "ins_underwriting_stat",
+    "column": "product",
+    "propertyIri": "https://w3id.org/fsldm/core#productId",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：产品代码即产品编号 productId（语义近似）"
+  },
+  {
+    "table": "loan_installment_plan",
+    "column": "agreement_id",
+    "propertyIri": "https://w3id.org/fsldm/core#agreementId",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：agreement_id ≈ agreementId"
+  },
+  {
+    "table": "loan_installment_plan",
+    "column": "due_date",
+    "propertyIri": "https://w3id.org/fsldm/core#dueDate",
+    "bindingMethod": "name_match",
+    "confidence": 0.8,
+    "bindingNote": "名称归一化匹配：due_date ≈ dueDate"
+  },
+  {
+    "table": "loan_installment_plan",
+    "column": "installment_no",
+    "propertyIri": "https://w3id.org/fsldm/finance#lineNumber",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：期次序号即分录行号 lineNumber（语义近似）"
+  },
+  {
+    "table": "loan_installment_plan",
+    "column": "paid_date",
+    "propertyIri": "https://w3id.org/fsldm/event#eventTimestamp",
+    "bindingMethod": "explicit",
+    "confidence": 0.8,
+    "bindingNote": "显式绑定：还款/缴费发生日即事件时间 eventTimestamp（语义近似）"
+  },
+  {
+    "table": "loan_installment_plan",
+    "column": "status_as_of",
+    "propertyIri": "https://w3id.org/fsldm/core#observationDate",
+    "bindingMethod": "explicit",
+    "confidence": 0.9,
+    "bindingNote": "显式绑定：状态/指标截至日 status_as_of 即 observationDate"
+  }
+]
