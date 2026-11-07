@@ -1,0 +1,214 @@
+# 机器可读答复：33 题逐条（2026-11-07）
+# grade 三档：confirmed-from-material / assumed-industry / undecidable
+# 说明：本文件不改变任何 golden 期望值、验收判据、覆盖度门限；不导入、不发布本体。
+
+meta:
+  date: "2026-11-07"
+  branch: "luke"
+  source_questions: "doc/_design/knowledge-gap/03-待业务确认问题清单-2026-11-07.md"
+  human_readable: "doc/_design/knowledge-gap/04-业务代理答复-2026-11-07.md"
+  distribution:
+    confirmed-from-material: 7
+    assumed-industry: 21
+    undecidable: 5
+    total: 33
+  caveat: "confirmed-from-material 仅表示仓内材料可定位；监管数值自述未与 PDF 逐字核验，不得改写为已核实。"
+
+answers:
+  - id: Q-01
+    grade: confirmed-from-material
+    answer: "上限 10%：同一借款人贷款余额 / 商业银行资本余额 <= 10%；分母按法人机构一次取值、不含表外。>10% 判超限，=10% 不超限。"
+    basis: "doc/_fsldm/01-指标卡/FIN-BANK-025.md L8-17；doc/_fsldm/fsldm-metrics.ttl L350-356；doc/_fsldm/09-definitions-v4.seed.json L483-489；A-银行信贷监管口径.md §15 L405-410（商业银行法第三十九条）"
+    impacts: ["M-FIN-BANK-025", "指标卡 FIN-BANK-025", "无 golden 用例"]
+
+  - id: Q-02
+    grade: confirmed-from-material
+    answer: "主口径上限 15%：非同业单一客户风险暴露 / 一级资本净额 <= 15%；并列变体上限 10%：贷款余额 / 资本净额 <= 10%。两条分开登记，不得合并成一个比率。"
+    basis: "doc/_fsldm/01-指标卡/FIN-BANK-026.md L8-17；doc/_fsldm/fsldm-metrics.ttl L358-364；doc/_fsldm/09-definitions-v4.seed.json L503-509；A-银行信贷监管口径.md §15 L413-427"
+    impacts: ["M-FIN-BANK-026", "变体是否需要新增概念需 A 线确认", "无 golden 用例"]
+
+  - id: Q-03
+    grade: confirmed-from-material
+    answer: "上限 20%：一组非同业关联客户的风险暴露 / 一级资本净额 <= 20%；按关联组去重，组内成员不得重复计入。"
+    basis: "doc/_fsldm/01-指标卡/FIN-BANK-027.md L8-17；doc/_fsldm/fsldm-metrics.ttl L366-372；A-银行信贷监管口径.md §16 L436-441"
+    impacts: ["M-FIN-BANK-027", "无 golden 用例"]
+
+  - id: Q-04
+    grade: confirmed-from-material
+    answer: "上限 15%：最大一家集团客户授信总额 / 资本净额 <= 15%；分子含未提款额度，不是风险暴露。与 Q-03 的 20% 分子分母都不同。"
+    basis: "doc/_fsldm/01-指标卡/FIN-BANK-028.md L8-17；doc/_fsldm/fsldm-metrics.ttl L374-380；A-银行信贷监管口径.md §16 L444-448（风险监管核心指标第九条）"
+    impacts: ["M-FIN-BANK-028", "无 golden 用例"]
+
+  - id: Q-05
+    grade: confirmed-from-material
+    answer: "认定阈值 2.5%：单一客户或一组关联客户风险暴露 / 一级资本净额 > 2.5% 即认定为大额风险暴露。认定与限额是两个判定。"
+    basis: "doc/_fsldm/01-指标卡/FIN-BANK-030.md L8-17；doc/_fsldm/fsldm-metrics.ttl L390-396；A-银行信贷监管口径.md §15 L413-419"
+    impacts: ["M-FIN-BANK-030", "无 golden 用例"]
+
+  - id: Q-06
+    grade: confirmed-from-material
+    answer: "按各指标分母分别挂依据：025 -> 商业银行法第三十九条；026/027/030 -> 大额风险暴露管理办法（银保监会令 2018 年第 1 号）第四、七、八条；028 -> 商业银行风险监管核心指标（试行）第九条。不得只挂一个共同文号。"
+    basis: "A-银行信贷监管口径.md §15 L405-428、§16 L432-450；指标卡 FIN-BANK-025..030 §4（EVIDENCED，未与 PDF 逐字核验）"
+    impacts: ["M-FIN-BANK-025..030 的 sourceDocument 与 PROV", "不影响 R02/R01"]
+
+  - id: Q-07
+    grade: assumed-industry
+    answer: "从客户关系终止日（名下最后一个有效关系结束日；销户但保留客户号的以销户日为准）起算，不以建档日、开户日或合同到期日起算。"
+    basis: "实体有材料：doc/_freeze/v1-20261105/graph/tbox.ttl L2007-2018（attritionDate 注释含监管要求客户信息留存）；起算规则无仓内原文，按反洗钱保存惯例推定"
+    impacts: ["G05（R02）", "R01 answerable 保留类问法", "policy:retentionStartEvent"]
+
+  - id: Q-08
+    grade: assumed-industry
+    answer: "60 个月（5 年），与反洗钱客户身份资料自业务关系结束起至少保存 5 年的通行底线一致。"
+    basis: "无仓内数值（01-知识供给现状与缺口-2026-11-07.md L57、L147 实测无期限数值）；按监管通行 5 年推定"
+    impacts: ["G05（R02）", "policy:retentionPeriodMonths"]
+
+  - id: Q-09
+    grade: assumed-industry
+    answer: "是，存在延长情形；不得建无例外的简化规则。"
+    basis: "无仓内原文；按涉诉/涉查保存至程序终结的通行要求推定"
+    impacts: ["G05", "policy:retentionException"]
+
+  - id: Q-10
+    grade: assumed-industry
+    answer: "2 条：涉未了结诉讼/仲裁/其他法律程序；监管调查或监管书面要求延长。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G05", "例外实例数"]
+
+  - id: Q-11
+    grade: assumed-industry
+    answer: "涉未了结诉讼、仲裁或其他法律程序；监管调查/监管书面要求。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G05", "例外实体 label"]
+
+  - id: Q-12
+    grade: assumed-industry
+    answer: "两条例外均不给固定月数：分别延长至法律程序终结、至监管要求解除；主期限仍为 60 个月，不制造整数假精度。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G05", "例外槽位数据形态"]
+
+  - id: Q-13
+    grade: assumed-industry
+    answer: "届满处置为删除/销毁（不可逆）；仅统计分析副本可匿名化，主档不得以匿名化替代销毁；例外期内的延长后再销毁。"
+    basis: "无仓内原文；按最小必要与到期销毁的通行合规实践推定"
+    impacts: ["G05", "policy:retentionDisposition"]
+
+  - id: Q-14
+    grade: undecidable
+    answer: "给不出可核查的文号+条款号。可指文件族：反洗钱客户身份资料与交易记录保存要求（至少 5 年）、征信业管理条例（不良信息 5 年）；仓内无原文，不得引条号。"
+    basis: "01-知识供给现状与缺口-2026-11-07.md §3.2 L147；tbox.ttl L2010-2013 只有监管要求留存四字"
+    impacts: ["G05 规则只能 inferred", "policy:sourceDocument 留空"]
+
+  - id: Q-15
+    grade: assumed-industry
+    answer: "任一即触发：单个押品本次评估价值较上次评估值下跌 >=20%；或押品覆盖率（押品价值/担保债权余额）低于 100%。"
+    basis: "概念有材料：tbox.ttl L251-258（必须有定期核实痕迹）；阈值与条件无仓内原文，纯推定"
+    impacts: ["G06（R02）", "policy:triggerCondition"]
+
+  - id: Q-16
+    grade: assumed-industry
+    answer: "相对跌幅阈值 20%，比较对象为同一押品的上次评估值；绝对值不单设阈值，用覆盖率 100% 作第二触发线。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G06", "合成数据触发/未触发两档参数（本轮不改）"]
+
+  - id: Q-17
+    grade: assumed-industry
+    answer: "常规押品 365 天至少评估一次；价格波动大的押品（房地产、股权、大宗商品）90 天一次。默认取 365。"
+    basis: "概念有材料：AssetInspection 定期核实（tbox.ttl L251-258）；频率数值无仓内原文，按押品管理通行做法推定"
+    impacts: ["G06", "AssetInspection 观察频率字段（当前不存在）"]
+
+  - id: Q-18
+    grade: assumed-industry
+    answer: "5 步：触发 -> 重估 -> 敞口/分类重算 -> 追加担保或压缩 -> 处置/追偿。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G06", "ProcedureStep 实例数"]
+
+  - id: Q-19
+    grade: assumed-industry
+    answer: "重估/复核估值；重算覆盖率与风险分类；追加担保或压缩敞口；提前收回或处置押品（拍卖/变卖）；剩余部分法律追偿与核销。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G06", "步骤 label/stepAction"]
+
+  - id: Q-20
+    grade: assumed-industry
+    answer: "押品管理岗/资产评估岗；风险管理部；客户经理+有权审批人；资产保全部门；资产保全部门+法律合规部。"
+    basis: "无仓内原文（01-...md §3.2 L151 明确岗位需人工）；按通行岗位分工推定"
+    impacts: ["G06", "policy:responsibleRole"]
+
+  - id: Q-21
+    grade: assumed-industry
+    answer: "5 / 3 / 10 / 30 个工作日；核销相关 60 个工作日（核销另按核销流程时限）。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G06", "policy:stepDueDays"]
+
+  - id: Q-22
+    grade: assumed-industry
+    answer: "最终审批为总行风险管理委员会；超授权金额报董事会；分行不得终审押品处置。"
+    basis: "无仓内原文，纯推定"
+    impacts: ["G06 审批链", "无指标影响"]
+
+  - id: Q-23
+    grade: undecidable
+    answer: "给不出条款号。可指文件族：商业银行押品管理指引（银监发〔2017〕16 号）、民法典担保物权编、行内押品管理办法；仓内无原文，不得引条号。"
+    basis: "仓内无押品制度原文（检索押品管理命中 0 条制度文件）；tbox.ttl L251-258 仅有定期核实注释"
+    impacts: ["G06 规则只能 inferred", "policy:sourceDocument 留空"]
+
+  - id: Q-24
+    grade: assumed-industry
+    answer: "最长复评间隔 12 个月（至少每年一次）；高风险客户可缩短至 6 个月，12 个月为上限口径。"
+    basis: "tbox.ttl L2810-2821（PartyRiskGrade 注释有评估频率概念、无数值）；数值按内评/授信管理通行做法推定"
+    impacts: ["无 golden 用例", "R01 answerable 复评类问法"]
+
+  - id: Q-25
+    grade: confirmed-from-material
+    answer: "复评逾期未完成的评级在授信审批中判为失效，须重新评级后方可用于审批；逾期不改变等级值，只改变可用状态。"
+    basis: "doc/_freeze/v1-20261105/graph/tbox.ttl L2070-2077（riskGradeReviewDate 注释）"
+    impacts: ["无 golden 用例", "复评逾期后果类问法"]
+
+  - id: Q-26
+    grade: undecidable
+    answer: "给不出条款号。可指文件族：商业银行资本管理办法内部评级要求、行内授信/内评管理办法；仓内无原文。"
+    basis: "仓内无该制度原文；tbox.ttl L2073 只有监管要求定期复评的描述"
+    impacts: ["KG-04 规则无法进溯源链", "无 golden 用例"]
+
+  - id: Q-27
+    grade: assumed-industry
+    answer: "逾期 30 天（含）进入正式催收流程；0-29 天只做提醒与自助催收，不建催收案件。"
+    basis: "无仓内制度原文；与仓内 EWS 规则 R01 的逾期>=30 天门槛保持一致（platform/src/platform_core/sql/V21__metric_definition_v5.sql L386），但该规则是预警规则非催收依据，故仍为推定"
+    impacts: ["FIN-BANK-035 相关问法", "无 golden 用例"]
+
+  - id: Q-28
+    grade: assumed-industry
+    answer: "逾期 360 天且已认定损失类、追偿程序完成的，可提交核销申请；未满 360 天但符合其他呆账条件的按个案处理。"
+    basis: "360 天下限见 A-银行信贷监管口径.md §6 L158-159（2023 办法第十三条）；可申请核销的流程口径仓内无原文，属推定"
+    impacts: ["FIN-BANK-036 相关问法", "无 golden 用例"]
+
+  - id: Q-29
+    grade: assumed-industry
+    answer: "核销审批为总行风险管理委员会；单户超授权金额报董事会；分行无核销终审权。"
+    basis: "无仓内原文，纯推定（01-...md §3.2 L151）"
+    impacts: ["KG-05 流程", "无 golden 用例"]
+
+  - id: Q-30
+    grade: undecidable
+    answer: "给不出条款号。可指文件族：金融企业呆账核销管理办法（财金〔2017〕90 号）、2023 分类办法；仓内无原文。"
+    basis: "仓内无该制度原文；tbox.ttl L875-891 只有核销实体注释，不是流程依据"
+    impacts: ["KG-05 规则无法进溯源链"]
+
+  - id: Q-31
+    grade: assumed-industry
+    answer: "6 条，是按监管章节可枚举的硬条件数，不是行内完整清单；行内政策可能更严更多。"
+    basis: "A-银行信贷监管口径.md §10 L269-283（流贷办法第二、三章）；条数为本文归纳，非原文条数"
+    impacts: ["合规类问法", "无 golden 用例"]
+
+  - id: Q-32
+    grade: assumed-industry
+    answer: "借款用途合法可验证；主体资格与征信合规；营运资金需求测算有依据；尽调资料真实完整；风险评价与审批权限合规；支付方式（受托/自主）合规。"
+    basis: "A-银行信贷监管口径.md §10 L274-281；逐条措辞为本文归纳"
+    impacts: ["合规类问法", "无 golden 用例"]
+
+  - id: Q-33
+    grade: undecidable
+    answer: "给不出条款号。可指流动资金贷款管理办法（国家金融监督管理总局令 2024 年第 2 号）第二章受理与调查、第三章风险评价与审批；条号未取到。"
+    basis: "A-银行信贷监管口径.md §10 L271-283（只有章节结构与 URL，无条号）"
+    impacts: ["KG-07 规则无法进溯源链"]
