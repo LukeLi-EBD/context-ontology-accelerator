@@ -127,8 +127,8 @@ docker compose up -d
 docker compose ps
 ```
 
-迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V42__dict_column_comments.sql`，
-**当前最新为 V42（schema_version=42）**（以 `sql/` 目录里编号最大的文件与实际 `SUPPORTED_SCHEMA_VERSION` 为准）。
+迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V43__source_ref_stale_mark.sql`，
+**当前最新为 V43（schema_version=43）**（以 `sql/` 目录里编号最大的文件与实际 `SUPPORTED_SCHEMA_VERSION` 为准）。
 
 期望返回：
 
@@ -462,7 +462,7 @@ powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget 
 | `platform/.env` | `platform/.env`（gitignored，compose `env_file` 注入） | `POSTGRES_PASSWORD`、`ARK_API_KEY`、`PLATFORM_SMOKE_TOKEN` | 见下三行 |
 | `PLATFORM_SMOKE_TOKEN` | `.env` 或本机环境变量，经 compose 传 `PLATFORM_SMOKE_TOKEN` 给 api | 单值内部 token；轮换后 `docker compose up -d --force-recreate api` | 未配置 → fail-closed：`purpose=smoke` 发布一律 409 `E_TERM_GATE_BLOCKED`（`tokenStatus="unconfigured"`），smoke 自检探针全部被拒——这是安全默认，不是功能回归 |
 | `ARK_API_KEY` | 同上 | Ark/豆包 key | 抽取与 LLM 问答步骤失败或降级，只读本体/指标接口不受影响 |
-| 镜像 tag | 部署侧 override（见 10.2） | 指向本次发布镜像（如 `agent-platform:merged-42`） | 不带 override → 回落 `docker-compose.yml` 的默认 `agent-platform:0.1-s5`；该镜像 schema 上限低于当前迁移链（`SUPPORTED_SCHEMA_VERSION = 42`），api 就绪检查报 `E_DB_MIGRATION_MISMATCH` |
+| 镜像 tag | 部署侧 override（见 10.2） | 指向本次发布镜像（如 `agent-platform:merged-42`） | 不带 override → 回落 `docker-compose.yml` 的默认 `agent-platform:0.1-s5`；该镜像 schema 上限低于当前迁移链（`SUPPORTED_SCHEMA_VERSION = 43`），api 就绪检查报 `E_DB_MIGRATION_MISMATCH` |
 | BGE-M3 权重 | `${PLATFORM_DATA_ROOT}/models/bge-m3` | 完整模型目录 | `learn`/`embedding` profile 起不来，检索降级为 `lexicalOnly` |
 | T-Box/SHACL 种子 | `${PLATFORM_DATA_ROOT}/seed/`（自 `platform/seed/` 复制） | `bootstrap.ttl`、`shacl.ttl` 等 | 首次引导失败：`E_ONTOLOGY_TBOX_MISSING`（退出码 69），`/tbox/current` 为空 |
 | `robot/robot.jar` | `${PLATFORM_DATA_ROOT}/robot/robot.jar`（构建期也允许联网下载） | HermiT 推理所需 | reasoner 无法物化，A-Box 推理保持 deferred、`/reasoning/status` 推理计数不增长 |
@@ -470,6 +470,12 @@ powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget 
 > `datagen.allow_official_schema: true` 仅验收栈需要（允许 synthetic 写入 `platform.*` 事实表）。
 > 生产栈保持 `false`；否则 `run` 会以 `E_DATAGEN_TARGET_FORBIDDEN` 拒绝写官方 schema。这是数据
 > 安全开关，不是部署便利项。
+>
+> **权威栈配置基线**：仓库内默认值（`platform.example.yaml`、`config.py`）**仅用于开发和单测**。
+> AS-8080 权威栈必须显式加载脱敏基线 `platform/config/authoritative-8080.yaml`；按默认值起栈
+> 会得到“另一个系统”：`/browse/canvas/*` **503 `E_CANVAS_DISABLED`**、B04 归零、
+> `abox:synthetic` 缺失、合成数据被拒。启动后必须跑
+> `powershell -File scripts/stack-verify.ps1`，PASS 之前的对外数字不得引用。
 
 ### 10.1 新栈启动前最小核对
 

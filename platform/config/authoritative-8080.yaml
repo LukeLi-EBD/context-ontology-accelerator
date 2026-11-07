@@ -1,0 +1,162 @@
+# authoritative-8080.yaml - AS-8080 权威栈生效配置基线（已脱敏）
+#
+# 来源：D:\agentABC\data\platform.yaml（仓库外运行配置），采集于 2026-11-07 14:10 CST。
+# 原始文件 sha256 = 66a3b532479dcf7f2c2f39e4081b0b45c31f880f119a261d6d241b8751d407bd
+#
+# 脱敏规则：
+#   * database.url 的口令改为 CHANGE_ME。实际口令只经环境变量注入：
+#     容器内由 compose 的 PLATFORM__DATABASE__URL 覆盖（POSTGRES_PASSWORD），
+#     仓库外配置永不作为唯一入口。
+#   * LLM/OCR 等 provider 密钥不在本文件：只经 PLATFORM__LLM__API_KEY 注入。
+#   * terms.smoke_token_env 只登记“保存密钥的环境变量名”，密钥本身不入仓。
+#
+# 本文件是权威栈的可复现基线，不是开发默认值。仓库内代码默认（CanvasConfig.provider
+# = "off"、abox_graphs 只含 abox:main）仅用于开发和单测；权威栈必须显式加载本文件。
+# 详见 doc/_design/decisions/权威栈可复现-2026-11-07.md（R1）。
+#
+# 启动时用本文件替换 /data/platform.yaml（或 PLATFORM_CONFIG 指向本文件）后，
+# 先跑 `powershell -File platform/scripts/stack-verify.ps1` 校验身份五元组。
+
+mode: single
+config_version: 1
+data_dir: /data
+
+http:
+  bind: 0.0.0.0
+  port: 8080
+
+database:
+  # 口令占位，勿填真实值；由 PLATFORM__DATABASE__URL / POSTGRES_PASSWORD 覆盖。
+  url: postgresql://platform:CHANGE_ME@postgres:5432/platform
+  pool_max: 10
+
+graph:
+  provider: oxigraph-http
+  endpoint: http://oxigraph:7878
+  timeout_ms: 30000
+  max_rows: 10000
+
+storage:
+  small_object_provider: pg
+  large_object_provider: fs
+  root: /data
+  tmp_dir: /data/tmp
+  pg_blob_max_file_mb: 10
+  min_free_pct: 10
+  gc_grace_hours: 48
+
+runtime:
+  mode: learn
+
+ontology:
+  init_mode: watch
+  init_source: /data/ontology/bootstrap.ttl
+  init_semver: 0.0.0
+  watch_interval_seconds: 30
+
+log:
+  level: info
+  format: json
+
+# S2 document ingest (10 section 3). Chunk window is in characters.
+documents:
+  bucket: documents
+  max_upload_bytes: 209715200
+  chunk_max_chars: 1200
+  chunk_overlap_chars: 200
+  min_chunk_chars: 1
+  extract_tables: true
+  parser: local
+
+# Declared for later slices; S2 does not assemble these providers.
+ocr:
+  enabled: false
+
+embedding:
+  provider: local-bge
+  model: BAAI/bge-m3
+  dimensions: 1024
+  endpoint: http://embedding:80/v1
+  timeout_ms: 30000
+  # 2026-11-05 12:35 实测：TEI cpu-1.8 在单请求 batch>=4 时会 panic 退出
+  # （batch=4 14/16 失败、batch=8 7/8 失败），batch=2 稳定；batch=1 反而更快。
+  batch_size: 2
+  batch_max: 2
+  chunk_per_request_max: 32
+  # 单请求字符预算（TEI max-batch-tokens=2048；超预算会 panic 退出）。
+  request_max_chars: 1600
+  request_timeout_s: 60
+  # 保底限速，约为实测上限 2.19 chunk/s 的 60%。0 = 不限。
+  max_chunks_per_sec: 1.0
+  service_enabled: true
+
+search:
+  enabled: true
+  top_k: 10
+  candidate_k: 30
+  rrf_k: 60
+  min_similarity: 0.10
+
+# S4 extraction. Rules are plain regexes from config; no DSL, no custom algorithm.
+extraction:
+  enabled: true
+  max_candidates_per_chunk: 10
+  llm_max_chunks: 20
+  rules:
+    - name: located_in
+      pattern: "(?P<subject>[\\u4e00-\\u9fa5A-Za-z0-9]{2,20})位于(?P<object>[\\u4e00-\\u9fa5A-Za-z0-9]{2,20})"
+      predicate: "urn:platform:rel:locatedIn"
+      subject: "urn:platform:entity:{subject}"
+      object: "urn:platform:entity:{object}"
+    - name: capital_of
+      pattern: "(?P<subject>[\\u4e00-\\u9fa5A-Za-z0-9]{2,20})是(?P<object>[\\u4e00-\\u9fa5A-Za-z0-9]{2,20})的首都"
+      predicate: "urn:platform:rel:capitalOf"
+      subject: "urn:platform:entity:{subject}"
+      object: "urn:platform:entity:{object}"
+
+llm:
+  provider: ark
+  base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+  model: "deepseek-v4-1-flash-261017"
+  timeout_ms: 120000
+  max_retries: 1
+
+datagen:
+  allow_official_schema: true  # 测试环境例外：允许合成数据写入 platform 事实表
+
+# D1-2 full canvas (deployment-side switch; repo default stays "off").
+canvas:
+  provider: full
+  full_max_hops: 4
+  max_nodes: 1000
+  max_edges: 1500
+  max_paths: 50
+  timeout_ms: 5000
+
+reasoning:
+  mode: materialize
+  profile: EL
+  engine: robot
+  service_enabled: true
+  endpoint: http://reasoner:7879
+  timeout_ms: 300000
+  inferred_graph_prefix: "urn:platform:inferred:"
+  abox_graphs:
+    - "urn:platform:graph:abox:main"
+    - "urn:platform:graph:abox:synthetic"
+  shapes_dir: /data/shapes
+  consistency_first: true
+  max_violations: 200
+  # 以下三项在原文件中未显式写出，取值为代码默认；为可复现基线显式固定。
+  max_source_bytes: 52428800      # stage 1（RDFS 闭包）源输入上限 50MiB
+  max_assembly_bytes: 52428800    # stage 2（ROBOT/ELK）组装输入上限 50MiB
+  materialize_online: false       # 治理发布/回滚不触发全量 A-Box 物化；只走离线 materialize
+
+terms:
+  smoke_token_env: PLATFORM_SMOKE_TOKEN   # 只写环境变量名，密钥不入仓
+
+entity_view:
+  # 原文件未显式写出，取值为代码默认；实体详情不把元类型显示为邻居/类。
+  ignore_types:
+    - "http://www.w3.org/2002/07/owl#Thing"
+    - "http://www.w3.org/2002/07/owl#NamedIndividual"

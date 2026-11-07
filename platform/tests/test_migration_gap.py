@@ -88,6 +88,11 @@ REGISTERED = [row[0] for row in metadata_pg.MIGRATIONS]
 
 
 class MigrationGapTest(unittest.TestCase):
+    def test_registered_migration_files_exist(self) -> None:
+        sql_dir = Path(metadata_pg.__file__).resolve().parent.parent / "sql"
+        for version, filename, _description in metadata_pg.MIGRATIONS:
+            self.assertTrue((sql_dir / filename).is_file(), f"V{version}: {filename}")
+
     def test_registered_versions_are_unique_and_exclude_retired(self) -> None:
         self.assertEqual(len(REGISTERED), len(set(REGISTERED)))
         for version in RETIRED_MIGRATION_VERSIONS:
@@ -96,7 +101,7 @@ class MigrationGapTest(unittest.TestCase):
     def test_normal_ascending_upgrade_does_not_raise(self) -> None:
         meta = _meta(current=34, versions=[v for v in REGISTERED if v <= 34])
         result = meta.migrate()
-        self.assertEqual(result["applied"], ["V37", "V38", "V39", "V40", "V41", "V42"])
+        self.assertEqual(result["applied"], ["V37", "V38", "V39", "V40", "V41", "V42", "V43"])
 
     def test_lower_version_inserted_into_registry_raises_gap(self) -> None:
         # 人为向注册表插入一个低于当前版本的未退休迁移，且历史表没有它的记录。
@@ -122,9 +127,9 @@ class MigrationGapTest(unittest.TestCase):
             (35, "V35__c2_quota.sql", "withdrawn C2 branch"),
             (36, "V36__unused.sql", "never used"),
         ]
-        history = [v for v in REGISTERED if v <= 42]
+        history = [v for v in REGISTERED if v <= 43]
         with mock.patch.object(metadata_pg, "MIGRATIONS", patched):
-            meta = _meta(current=42, versions=history)
+            meta = _meta(current=43, versions=history)
             result = meta.migrate()
         self.assertEqual(result["applied"], [])
 
