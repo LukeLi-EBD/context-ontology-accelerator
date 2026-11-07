@@ -6,6 +6,8 @@
 --   2) 库级校验：distinct_count 必须有去重来源（binding 的 count_distinct 或 fact_function）；
 --   3) FIN-INS-015/016/018：denominator_agg 由 count_distinct 改为 sum
 --      （观测粒度不变，仍按 grain 预聚合；供给端必须写 COUNT(DISTINCT entity)）。
+--   4) FIN-INS-021：fact function 改为 issue_date + 13 个月锚点 + 期末保单状态，
+--      脱离 ins_payment_record（不再依赖 installment_no=13 的缴费行）。
 --
 -- aggregation_semantics 取值：
 --   sum            观测值可跨观测相加（金额、天数、件数等）；
@@ -45,7 +47,59 @@ UPDATE platform.metric_definition
        denominator_agg = 'sum'
  WHERE metric_id = 'FIN-INS-018';
 
--- 3. 库级校验：distinct_count 必须有去重来源 -------------------------------------
+-- 3. FIN-INS-021：13 个月锚点 + 期末保单状态，脱离 ins_payment_record -------------
+CREATE OR REPLACE FUNCTION platform.metric_fact_fin_ins_021(
+  p_start date,
+  p_end date,
+  p_data_source text
+)
+RETURNS TABLE (
+  entity_key text,
+  institution text,
+  product text,
+  window_start date,
+  window_end date,
+  numerator numeric,
+  denominator numeric,
+  data_source text,
+  fixture boolean
+)
+LANGUAGE sql
+STABLE
+AS $$
+  WITH cohort AS (
+    SELECT DISTINCT ON (p.policy_no)
+           p.policy_no,
+           p.product,
+           p.institution,
+           p.policy_status,
+           p.data_source,
+           p.fixture
+      FROM platform.ins_policy p
+     WHERE (p.issue_date + INTERVAL '13 months')::date >= p_start
+       AND (p.issue_date + INTERVAL '13 months')::date <= p_end
+       AND p.status_as_of <= p_end
+       AND p.data_source = p_data_source
+     ORDER BY p.policy_no, p.status_as_of DESC
+  )
+  SELECT cohort.product AS entity_key,
+         MIN(cohort.institution) AS institution,
+         cohort.product AS product,
+         p_start AS window_start,
+         p_end AS window_end,
+         COUNT(*) FILTER (WHERE cohort.policy_status = 'in_force')::numeric AS numerator,
+         COUNT(*)::numeric AS denominator,
+         MIN(cohort.data_source) AS data_source,
+         BOOL_OR(cohort.fixture) AS fixture
+    FROM cohort
+   GROUP BY cohort.product
+$$;
+
+UPDATE platform.metric_definition
+   SET aggregation_semantics = 'distinct_count'
+ WHERE metric_id = 'FIN-INS-021';
+
+-- 4. 库级校验：distinct_count 必须有去重来源 -------------------------------------
 DO $$
 DECLARE bad text;
 BEGIN
