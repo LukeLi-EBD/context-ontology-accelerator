@@ -34,8 +34,8 @@
 
 > **数字口径（2026-11-06 三分，禁止混用；原「4/79」口径保留为历史表述）**
 > - **结构可算 74 条**：公式可编译、字段绑定齐全、可执行；`GET /metrics/report/manifest` 2026-11-06 复核（`count=85`、`structurally_computable=74`、`blocked_semantics=8`、`blocked_external=3`）。
-> - **有效测数据可算 0 条**：按 `platform.metric_observation` 实际行数计算（当前 0 行）。
-> - **对外可出数 0 条**：无观测数据前，任何指标都不能返回数值（`compute=true` → `E_METRIC_NO_DATA`）。
+> - **有效测数据可算 57 条**：按 `platform.metric_observation` 实际行数计算（8080 实测 37,477 行 / 57 条指标，全部 `synthetic`）。
+> - **对外可出数 42 条**：对外资格（`publishable`）且运行时判定可执行（`executable=true`）；42 条全部依赖 `synthetic` 观测，0 条业务数据。
 > - **历史口径**：**79 条定义** = `_fsldm/09-definitions-v4.seed.json` 全集（当前库 85 行 = 79 主 + 6 变体）；**36 条可用** = 旧基准 v1/v2 的“可用”子集（对应旧总表 43 条判定）；**4 条可出数** = FIN-BANK-001/025/030、FIN-INS-021 的“对外资格 + 结构可算”组合，**不等于当前能出数**。
 > - **43**：出现于 `acceptance passed=43` 与旧指标总数，两者都与“可用指标数”不同口径，引用时必须写明所指。
 

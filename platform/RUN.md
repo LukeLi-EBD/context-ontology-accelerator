@@ -127,8 +127,8 @@ docker compose up -d
 docker compose ps
 ```
 
-迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V20__metric_entities.sql`，
-**当前最新为 V20**（以 `sql/` 目录里编号最大的文件与实际 `SUPPORTED_SCHEMA_VERSION` 为准）。
+迁移在平台启动时自动执行，脚本位于 `src/platform_core/sql/V1__s0.sql … V42__dict_column_comments.sql`，
+**当前最新为 V42（schema_version=42）**（以 `sql/` 目录里编号最大的文件与实际 `SUPPORTED_SCHEMA_VERSION` 为准）。
 
 期望返回：
 
