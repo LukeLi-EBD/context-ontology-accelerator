@@ -1,7 +1,10 @@
 -- V41 · M-02 观测聚合语义标记 + 口径修订（2026-11-07）
 --
 -- 编号约束（硬）：V35 / V36 已永久退休，任何情况下不得复用、不得改写、不得引用。
--- 本迁移包含三部分：
+-- 编号口径（2026-11-07 定）：V41 = 指标观测聚合语义（本文件）；字典列注释
+-- （feat/dict-comments，旧号 V37）改挂 V42。集成契约 §2.2 的登记行由集成线维护，
+-- 本分支不改主仓文档。
+-- 本迁移包含以下几部分：
 --   1) metric_definition.aggregation_semantics：声明观测值能否跨观测相加；
 --   2) 库级校验：distinct_count 必须有去重来源（binding 的 count_distinct 或 fact_function）；
 --   3) FIN-INS-015/016/018：denominator_agg 由 count_distinct 改为 sum
