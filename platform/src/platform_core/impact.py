@@ -66,6 +66,21 @@ def _change_items(values: Any) -> list[dict[str, Any]]:
     return items
 
 
+def _expand_iris(value: Any) -> list[str]:
+    """domain/range 的 from/to 是 IRI 列表（多值），统一展开为字符串列表。"""
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value if item]
+    return [str(value)] if value else []
+
+
+def _change_iris(items: list[dict[str, Any]]) -> list[str]:
+    iris: list[str] = []
+    for item in items:
+        iris.extend(_expand_iris(item.get("from")))
+        iris.extend(_expand_iris(item.get("to")))
+    return iris
+
+
 def _aggregate(runtime: Any, from_graph: str | None, to_graph: str) -> dict[str, Any]:
     """Count changed triples grouped by subject (class) and predicate (property)."""
     if not from_graph:
@@ -376,10 +391,10 @@ def analyze(
                 provider="platform", provider_code="E_DIFF_NO_PREVIOUS_BASELINE",
                 details={"to": to_version}, retryable=False,
             )
-        index = ids.index(to_version)
-        if index == 0:
+        baseline = healthboard._previous_version(versions, to_version)
+        if baseline is None:
             return _empty_report(to_row, None, "当前版本没有基线版本，无法做影响分析")
-        from_version = ids[index - 1]
+        from_version = baseline
     from_row = healthboard._version(runtime, from_version)
 
     diff = runtime.ontology.diff(from_version, to_version)
@@ -398,8 +413,7 @@ def analyze(
 
     class_iris = sorted(set(
         added_classes + removed_classes + aggregate_classes
-        + [item[key] for item in domain_changes + range_changes
-           for key in ("from", "to") if item.get(key)]
+        + _change_iris(domain_changes + range_changes)
     ))
     prop_iris = sorted(set(
         added_props + removed_props + aggregate_props
