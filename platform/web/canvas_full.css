@@ -1,0 +1,159 @@
+/* D1-2 full canvas panel. Loaded only by pages that include canvas_full.js;
+   existing browse/browse_path styles are untouched. */
+
+#canvas-full .cf-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: 14px;
+  margin-top: 12px;
+  align-items: start;
+}
+
+#canvas-full .cf-canvas-wrap {
+  position: relative;
+  border: 1px solid var(--line, #d7dee8);
+  border-radius: 8px;
+  background: var(--panel, #fff);
+  overflow: hidden;
+}
+
+#canvas-full canvas {
+  display: block;
+  width: 100%;
+  height: 460px;
+}
+
+#canvas-full .cf-side {
+  border: 1px solid var(--line, #d7dee8);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--panel, #fff);
+}
+
+#canvas-full .cf-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+
+#canvas-full .cf-kv dt {
+  color: var(--muted, #667);
+}
+
+#canvas-full .cf-kv dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#canvas-full .cf-warn {
+  color: var(--warn, #a15c00);
+  background: #fff7e8;
+  border: 1px solid #f0d6a8;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+#canvas-full .cf-ref {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: #eef6ff;
+  color: #245b96;
+  text-decoration: none;
+}
+
+#canvas-full .cf-ref.missing {
+  background: #f3f4f6;
+  color: #8a8f98;
+}
+
+#canvas-full .cf-badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #f0f2f5;
+  color: #4b5563;
+}
+
+#canvas-full .cf-badge.on {
+  background: #fff3d6;
+  color: #8a5b00;
+}
+
+#canvas-full .cf-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+#canvas-full .cf-filters label {
+  font-size: 12px;
+  color: var(--muted, #667);
+}
+
+#canvas-full .cf-filters input[type="text"],
+#canvas-full .cf-filters input[type="number"],
+#canvas-full .cf-filters select {
+  display: block;
+  margin-top: 2px;
+}
+
+#canvas-full .cf-checks {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  align-self: center;
+}
+
+#canvas-full .cf-tables h3 {
+  margin: 14px 0 6px;
+}
+
+#canvas-full .cf-table-wrap {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--line, #d7dee8);
+  border-radius: 6px;
+}
+
+#canvas-full .cf-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+#canvas-full .cf-table-wrap th,
+#canvas-full .cf-table-wrap td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #eef1f5;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#canvas-full .cf-table-wrap th {
+  position: sticky;
+  top: 0;
+  background: #f7f9fc;
+  z-index: 1;
+}
+
+#canvas-full .cf-truncate {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  #canvas-full .cf-grid {
+    grid-template-columns: 1fr;
+  }
+}
