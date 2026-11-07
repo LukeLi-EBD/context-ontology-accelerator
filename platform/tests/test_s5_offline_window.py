@@ -76,6 +76,14 @@ class OfflineMaterializeTest(unittest.TestCase):
         status = _service(ReasoningConfig(), row).status()
         self.assertEqual(status["inferredTriples"], 322021)
 
+    def test_status_reports_materialize_online_false_by_default(self):
+        status = _service(ReasoningConfig()).status()
+        self.assertFalse(status["materializeOnline"])
+
+    def test_status_reports_materialize_online_true_when_enabled(self):
+        status = _service(ReasoningConfig(materialize_online=True)).status()
+        self.assertTrue(status["materializeOnline"])
+
 
 if __name__ == "__main__":
     unittest.main()

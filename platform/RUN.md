@@ -475,7 +475,9 @@ powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget 
 
 1. `docker compose config` 里 `platform.image` 与预期 tag 一致（不是默认 `0.1-s5`）；
 2. `PLATFORM_SMOKE_TOKEN` 非空，且 `purpose=smoke` 探针返回 200 而非 409；
-3. `/reasoning/status` 的 `aboxGraphs` 与 `/health/dashboard` 的 `coverage.instances.graphs` 是同一非空集合；
+3. `/reasoning/status` 的 `aboxGraphs` 与 `/health/dashboard` 的 `coverage.instances.graphs` 是同一非空集合
+   （代码不强制相等：看板在 `abox:synthetic` 图存在时会自动追加它，即使它没写进 `reasoning.abox_graphs`；
+   不相等按部署配置错误处理）；
 4. `GET /tbox/current` 非空、`/readyz` 返回 200。
 
 ### 10.2 镜像 tag 与 override：属部署环境，不入仓
@@ -505,3 +507,105 @@ docker inspect agent-platform-api --format '{{.Config.Image}} {{.Image}}'   # ta
 ```
 
 不改 `SUPPORTED_SCHEMA_VERSION`：本清单只约束部署，schema 版本号等口径基准表定稿后再统一调整。
+
+## 11. 离线全量推理（A-Box materialize）
+
+全量推理是**离线按需**能力，不是发布副作用。本节是唯一入口；必须在确认无并行重活后执行。
+
+### 11.1 为什么在线不自动触发
+
+- 开关：`reasoning.materialize_online` 默认 `false`（`platform/src/platform_core/config.py`）。发布/回滚钩子
+  `ReasoningService.publish_materializer()` 只返回 deferral，不启动推理：
+  `{"jobId": null, "inferred": 0, "skipped": true, "deferred": "offline_only",
+   "reason": "reasoning.materialize_online=false"}`。发布证据 `gates.materialization` 原样记录该对象
+  （`adapters/ontology_pg.py` 的 publish 钩子）；回滚钩子里的物化失败只记 warning，不改变已提交的
+  T-Box 指针。
+- 代价：304,919 行 A-Box 全量实测 **212.6 s**，峰值 API **2.14 GiB** + reasoner **1.43 GiB** +
+  oxigraph **0.93 GiB** ≈ **4.5 GiB**，存储 **+215.9 MiB**。Docker VM 只有 11.68 GiB，embedding 还占
+  6g 限额——把发布成功率绑在一次 3 分半、4.5 GiB 的推理上不可接受。
+- 事务顺序：发布事务先提交，再调 materializer；普通报错会走 `_restore_after_failed_publish` 回补，
+  但进程被 OOM kill 时回补来不及执行，结果是"版本已发布、推断指针仍是旧的"。
+
+**误开启/窗口内内存打爆的表现**：`docker inspect agent-platform-api --format '{{.State.OOMKilled}}'`
+为 `true`，`docker compose ps` 显示重启或 ExitCode 137；客户端拿到连接重置/502 而不是 JSON；
+reasoner 也可能 137，`/reasoning/status.available=false`；`platform.reasoning_job` 停在
+`state='running'`（进程来不及写 failed）；`docker stats` 里 API RSS 冲到 2 GiB+，VM/宿主 swap 增长
+（本轮实测已动用 2.7 GiB swap）。
+
+### 11.2 跑之前
+
+1. **模式**：`reasoning.mode=materialize`。`rdfs` 只做 RDFS 闭包、`validate` 只跑 SHACL 不写图、
+   `off` 直接报 `E_REASONING_DISABLED`；`profile=EL`、`engine=robot`。
+2. **图集**：`reasoning.abox_graphs` 必须同时含 `urn:platform:graph:abox:main` 与
+   `urn:platform:graph:abox:synthetic`（与 `/reasoning/status.aboxGraphs` 一致）。
+3. **输入规模**：T-Box ~0.55 MB + A-Box 41,755,655 B（304,919 行）= **40.34 MiB**，是
+   `max_source_bytes`（默认 50 MiB）的 80.7%。再涨约 10 MiB 会在开跑前报
+   `E_REASONING_INPUT_TOO_LARGE`；不要为提高上限直接改配置。
+4. **内存**：不含 embedding 时至少留 **5 GiB** 可用；embedding 常驻时 11.68 GiB 的 VM 必然用 swap，
+   先用 `docker stats --no-stream` 看实际余量。API 容器没有 `mem_limit`，打爆的是整台 VM；
+   reasoner 是 `mem_limit=4g` + `JAVA_OPTS=-Xmx2g`，不要调低。
+5. **互斥**：同一 target 同时只允许一个 materialize，重入报 `E_REASONING_BUSY`（retryable）；
+   同时不得跑批量索引、验收或另一套栈的物化（见 §5 重型锁、§9.3）。
+6. **时间**：按 10 分钟窗口预留；reasoner 单次调用上限 300 s（`timeout_ms=300000`），超时是
+   `E_REASONER_TIMEOUT` 失败，不会无限等待。
+
+### 11.3 触发命令（原文）
+
+```powershell
+curl.exe -s -X POST http://127.0.0.1:8080/reasoning/materialize
+```
+
+- 同步请求，跑完才返回；实测端到端 **212.6 s**（内部 `ms=210904`；RDFS 43.9 s / ELK 73.1 s /
+  SHACL 64.1 s）。
+- **没有 CLI 子命令**：唯一入口是这个 POST（`api.py` 的 `/reasoning/materialize`），无鉴权，
+  空 body 合法；等价写法 `-H "Content-Type: application/json" -d '{}'`。
+- 强制重跑（输入未变时默认短路成 `skipped=true, inferred=0`）：
+
+```powershell
+curl.exe -s -X POST http://127.0.0.1:8080/reasoning/materialize `
+  -H "Content-Type: application/json" -d '{"force":true}'
+```
+
+- 只跑指定图（必须是 `urn:platform:` 前缀的非空列表，否则 `E_REASONING_ABOX_GRAPHS`；
+  不传则用配置里的全部图）：
+
+```powershell
+curl.exe -s -X POST http://127.0.0.1:8080/reasoning/materialize `
+  -H "Content-Type: application/json" `
+  -d '{"force":true,"aboxGraphs":["urn:platform:graph:abox:synthetic"]}'
+```
+
+### 11.4 跑完怎么校验
+
+```powershell
+curl.exe -s http://127.0.0.1:8080/reasoning/status
+```
+
+- `lastJob.state` = `succeeded`；失败则是 `failed` + `errorCode`/`errorMessage`。
+- `lastJob.inferred` = 本轮推断条数；`inferredTriples`（= `pointer.inferred`）应从 **1,171**
+  变为 **322,021**（本轮实测：RDFS 173,163 + OWL 148,858，重叠 0）。A-Box 变化后以本次
+  `lastJob.inferred` 为准，不要记死 322,021。
+- `materializeOnline`：直接给出现行策略（`false` = 发布/回滚只登记 `deferred=offline_only`，
+  `true` = 发布/回滚即触发推理）；确认策略不用再从发布证据的 `deferred` 反推。
+- `pointer.targetGraph` = `urn:platform:inferred:<当前 versionId>`；`pointer.ontologyVersion` 与
+  `/tbox/current` 一致；`pointer.updatedAt` 是本次时间。
+- 立刻复跑应返回 `skipped=true, inferred=0`（幂等）；要重算必须 `force=true`。
+- `/health/dashboard`：`inferenceFailures.count` 不增加；`coverage.instances.graphs` 与 status 的
+  `aboxGraphs` 同集合。注意 `coverage.instances.total` 是"有 `rdf:type` 的 DISTINCT 主体数"，
+  不是三元组数，不能拿它和 322,021 对。
+- 发布门禁侧（可选）：一致性证据应显示 `emptyAbox=false`，`aboxGraphTriples` =
+  `{"urn:platform:graph:abox:main": 0, "urn:platform:graph:abox:synthetic": 304919}`、`aboxTriples=304919`。
+
+### 11.5 失败与回退
+
+- **源图不动**：推断只写 `urn:platform:inferred:<versionId>`，从不覆盖 `abox:*` / T-Box。预检、
+  SHACL 或一致性失败时目标图完全未动；写入失败会尝试清空半写的目标图（再失败记
+  `reasoning.cleanup_failed`）。
+- **指针只在写图成功后更新**：若出现"图已换、指针没换"，下一次重跑会因
+  "`count_graph(target)` ≠ `pointer.inferred`" 自动重算（`replace_graph` 是 DROP+INSERT，可重入）。
+- **推荐回退**：修好原因后重跑同一版本，不需要回滚源数据；要回到旧推断，先完成 T-Box 回滚，
+  再 POST 一次 materialize（旧版本推断图仍在，指针会指回旧目标图）。不要手工删图或改库。
+- **OOM kill**：等容器恢复、`/readyz` 200 后直接重跑；advisory lock 随连接释放，卡住的
+  `state='running'` 记录不影响重跑。
+- **存储**：推断图按 `versionId` 累积、不自动回收（每轮实测 +215.9 MiB），按版本数预留磁盘；
+  清理不在本流程内。

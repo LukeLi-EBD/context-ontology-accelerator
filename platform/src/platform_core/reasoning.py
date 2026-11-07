@@ -625,6 +625,7 @@ class ReasoningService:
             "engine": self._config.engine,
             "profile": self._config.profile,
             "serviceEnabled": self._config.service_enabled,
+            "materializeOnline": self._config.materialize_online,
             "endpoint": self._config.endpoint,
             "available": available,
             "inferredGraphPrefix": self._config.inferred_graph_prefix,
