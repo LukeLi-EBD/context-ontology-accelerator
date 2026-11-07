@@ -42,6 +42,7 @@ class MetricFactsTest(unittest.TestCase):
         cls.loader = FactLoader(cls.meta)
         cls.projector = MetricProjector(cls.meta)
         cls.metrics = cls.runtime.metrics
+        cls._apply_v41()
         cls._clean()
 
     @classmethod
@@ -100,6 +101,17 @@ class MetricFactsTest(unittest.TestCase):
 
     # ---- migration -----------------------------------------------------
 
+    @classmethod
+    def _apply_v41(cls) -> None:
+        """Re-apply V41 (idempotent) so this suite never depends on whether
+        the shared database migrated before the file last changed."""
+        sql = files("platform_core").joinpath("sql/V41__metric_semantics.sql").read_text(
+            encoding="utf-8"
+        )
+        for statement in split_sql_statements(sql):
+            with cls.meta.tx() as tx:
+                tx.execute(statement)
+
     def test_v20_migration_is_reentrant(self) -> None:
         # V25 added the v7 fact model; later migrations may raise the ceiling.
         self.assertGreaterEqual(SUPPORTED_SCHEMA_VERSION, 25)
@@ -112,14 +124,8 @@ class MetricFactsTest(unittest.TestCase):
                 for statement in statements:
                     tx.execute(statement)
         # V20 defines the pre-V41 body of FIN-INS-021; restore the current one.
-        v41 = files("platform_core").joinpath("sql/V41__metric_semantics.sql").read_text(
-            encoding="utf-8"
-        )
-        statements = split_sql_statements(v41)
         for _ in range(2):
-            with self.meta.tx() as tx:
-                for statement in statements:
-                    tx.execute(statement)
+            self._apply_v41()
         rows = self.meta.query(
             "SELECT to_regclass('platform.ins_payment_record') AS ins, "
             "to_regclass('platform.loan_installment_plan') AS loan, "
@@ -243,7 +249,8 @@ class MetricFactsTest(unittest.TestCase):
         rows = self.meta.query(
             "SELECT metric_id, aggregation_semantics, denominator_agg, fact_function "
             "FROM platform.metric_definition "
-            "WHERE metric_id IN ('FIN-INS-015','FIN-INS-016','FIN-INS-018') "
+            "WHERE metric_id IN ('FIN-INS-015','FIN-INS-016','FIN-INS-018',"
+            "'FIN-INS-021','FIN-INS-025') "
             "ORDER BY metric_id"
         )
         for row in rows:
@@ -251,7 +258,7 @@ class MetricFactsTest(unittest.TestCase):
             self.assertEqual(row["denominator_agg"], "sum")
         self.assertEqual(
             {row["metric_id"] for row in rows},
-            {"FIN-INS-015", "FIN-INS-016", "FIN-INS-018"},
+            {"FIN-INS-015", "FIN-INS-016", "FIN-INS-018", "FIN-INS-021", "FIN-INS-025"},
         )
 
     # ---- FIN-BANK-001: instant aggregation -----------------------------
