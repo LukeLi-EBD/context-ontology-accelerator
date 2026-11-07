@@ -430,7 +430,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     metrics.add_argument(
         "--data-source", dest="data_source", required=True,
-        choices=["fixture", "business"],
+        choices=["fixture", "business", "synthetic"],
         help="provenance label written to every row (no default)",
     )
     metrics.add_argument(

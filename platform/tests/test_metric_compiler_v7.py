@@ -226,9 +226,9 @@ class MetricCompilerV7Test(unittest.TestCase):
         self.assertEqual(ctx.exception.provider_code, BINDING_MISSING)
 
     def test_13_migrations_reentrant(self) -> None:
-        # replay V23+V24+V25+V30 twice: row count, definitions and binding count
-        # must be identical. V30 closes the chain because V24 (v8) pins
-        # publishable=false and decision_owner='业务待签' for the v9 rows.
+        # replay V23+V24+V25+V30+V41 twice: row count, definitions and binding
+        # count must be identical. V30 closes the v9 chain; V41 re-applies the
+        # post-v9 observation semantics so the snapshot stays at current state.
         def snapshot() -> tuple:
             rows = self.meta.query(
                 "SELECT metric_id, metric_kind, formula_expr, window_kind, numerator_agg,"
@@ -245,7 +245,8 @@ class MetricCompilerV7Test(unittest.TestCase):
         sql = "".join(
             files("platform_core").joinpath(f"sql/{name}").read_text(encoding="utf-8")
             for name in ("V23__metric_quartet_v7.sql", "V24__metric_decisions_v8.sql",
-                         "V25__fact_model_v7.sql", "V30__metric_decisions_v9.sql")
+                         "V25__fact_model_v7.sql", "V30__metric_decisions_v9.sql",
+                         "V41__metric_semantics.sql")
         )
         statements = split_sql_statements(sql)
         before = snapshot()

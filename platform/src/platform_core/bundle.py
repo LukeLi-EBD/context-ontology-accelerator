@@ -68,7 +68,7 @@ _METRIC_DEF_COLUMNS = (
     "inference", "formula_disabled", "missing", "evidence_status", "note",
     "definition_version", "metric_kind", "formula_expr", "numerator_agg",
     "denominator_agg", "window_kind", "min_window_days", "grain", "unit",
-    "fact_function", "updated_at",
+    "fact_function", "aggregation_semantics", "updated_at",
 )
 _METRIC_DEF_UPSERT = f"""
 INSERT INTO platform.metric_definition ({", ".join(_METRIC_DEF_COLUMNS)})
@@ -240,6 +240,7 @@ def _metric_def_params(row: dict[str, Any]) -> tuple[Any, ...]:
         row.get("denominator_agg"), row.get("window_kind"),
         int(row["min_window_days"]) if row.get("min_window_days") is not None else None,
         row.get("grain"), row.get("unit"), row.get("fact_function"),
+        row.get("aggregation_semantics") or "sum",
         _as_datetime(row.get("updated_at")),
     )
 

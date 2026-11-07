@@ -66,6 +66,10 @@ class MetricFactsTest(unittest.TestCase):
             "DELETE FROM platform.loan_installment_plan WHERE agreement_id LIKE %s",
             (PREFIX + "%",),
         )
+        cls.meta.execute(
+            "DELETE FROM platform.ins_policy WHERE policy_no LIKE %s",
+            (PREFIX + "%",),
+        )
 
     def _obs_count(self, metric_id: str) -> int:
         rows = self.meta.query(
@@ -102,6 +106,15 @@ class MetricFactsTest(unittest.TestCase):
             encoding="utf-8"
         )
         statements = split_sql_statements(sql)
+        for _ in range(2):
+            with self.meta.tx() as tx:
+                for statement in statements:
+                    tx.execute(statement)
+        # V20 defines the pre-V41 body of FIN-INS-021; restore the current one.
+        v41 = files("platform_core").joinpath("sql/V41__metric_semantics.sql").read_text(
+            encoding="utf-8"
+        )
+        statements = split_sql_statements(v41)
         for _ in range(2):
             with self.meta.tx() as tx:
                 for statement in statements:
@@ -188,6 +201,21 @@ class MetricFactsTest(unittest.TestCase):
         self.assertFalse(rejected["ok"])
         self.assertEqual(rejected["errorCode"], "E_METRIC_WINDOW_INSUFFICIENT")
         self.assertEqual(self._obs_count(INS), before)
+
+    def test_distinct_count_semantics_are_declared(self) -> None:
+        rows = self.meta.query(
+            "SELECT metric_id, aggregation_semantics, denominator_agg, fact_function "
+            "FROM platform.metric_definition "
+            "WHERE metric_id IN ('FIN-INS-015','FIN-INS-016','FIN-INS-018') "
+            "ORDER BY metric_id"
+        )
+        for row in rows:
+            self.assertEqual(row["aggregation_semantics"], "distinct_count")
+            self.assertEqual(row["denominator_agg"], "sum")
+        self.assertEqual(
+            {row["metric_id"] for row in rows},
+            {"FIN-INS-015", "FIN-INS-016", "FIN-INS-018"},
+        )
 
     # ---- FIN-BANK-001: instant aggregation -----------------------------
 
