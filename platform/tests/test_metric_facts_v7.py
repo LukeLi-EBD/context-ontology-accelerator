@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
-from datetime import date
+from datetime import date, datetime, timezone
 
 sys.path.insert(0, "/app/src")
 
@@ -38,6 +38,7 @@ class MetricFactsV7Test(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.runtime = assemble(load_config(CONFIG, None))
         cls.runtime.metadata.open(retry_seconds=10.0)
+        cls.started_at = datetime.now(timezone.utc)
         cls.runtime.metadata.migrate()
         cls.meta = cls.runtime.metadata
         cls.compiler = MetricCompiler(cls.meta)
@@ -379,8 +380,14 @@ class MetricFactsV7Test(unittest.TestCase):
         self.assertAlmostEqual(daily["CU1"], 200, places=6)
 
     def test_09_no_metric_observation_written(self) -> None:
-        rows = self.meta.query("SELECT COUNT(*) AS n FROM platform.metric_observation")
-        self.assertEqual(rows[0]["n"], 0)
+        # Not "the table is empty": other suites write observations into the
+        # same database. Only this run's writes are in scope.
+        rows = self.meta.query(
+            "SELECT COUNT(*) AS n FROM platform.metric_observation "
+            "WHERE computed_at >= %s",
+            (self.started_at,),
+        )
+        self.assertEqual(int(rows[0]["n"]), 0)
 
 
 if __name__ == "__main__":
