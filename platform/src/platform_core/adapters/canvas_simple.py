@@ -154,12 +154,14 @@ class SimpleCanvas:
         self._require_iri(start, "start")
         hops = self._clamp_hops(hops)
         allowed = self._allowed_graphs(graphs)
+        nodes_cap = max(1, min(int(max_nodes), self.max_nodes))
+        edges_cap = max(1, min(int(max_edges), self.max_edges))
         walk = self._walk(
             start,
             hops=hops,
             graphs=allowed,
-            max_nodes=max(1, min(int(max_nodes), self.max_nodes)),
-            max_edges=max(1, min(int(max_edges), self.max_edges)),
+            max_nodes=nodes_cap,
+            max_edges=edges_cap,
             started=started,
         )
         return self._result(
@@ -175,6 +177,8 @@ class SimpleCanvas:
             include_source=include_source,
             hops=hops,
             started=started,
+            nodes_cap=nodes_cap,
+            edges_cap=edges_cap,
         )
 
     def path(
@@ -195,11 +199,12 @@ class SimpleCanvas:
         hops = self._clamp_hops(max_hops)
         paths_cap = max(1, min(int(max_paths), self.max_paths))
         allowed = self._allowed_graphs(graphs)
+        nodes_cap = max(1, min(int(max_nodes), self.max_nodes))
         walk = self._walk(
             source,
             hops=hops,
             graphs=allowed,
-            max_nodes=max(1, min(int(max_nodes), self.max_nodes)),
+            max_nodes=nodes_cap,
             max_edges=self.max_edges,
             started=started,
             target=target,
@@ -236,6 +241,8 @@ class SimpleCanvas:
             started=started,
             paths_cap=paths_cap,
             empty_reason=empty_reason,
+            nodes_cap=nodes_cap,
+            edges_cap=self.max_edges,
         )
 
     def expand(
@@ -327,13 +334,16 @@ class SimpleCanvas:
             return frozenset()
         if self._whitelist_cache and self._whitelist_cache[0] == tbox:
             return self._whitelist_cache[1]
-        kinds = " ".join(f"<{kind}>" for kind in PROPERTY_KINDS)
+        # Oxigraph requires commas inside IN(...); without them the whole
+        # whitelist query 400s. Also bound the T-Box read.
+        kinds = ", ".join(f"<{kind}>" for kind in PROPERTY_KINDS)
         result = self._query(
             f"""
             SELECT DISTINCT ?p WHERE {{
               GRAPH <{tbox}> {{ ?p a ?k }}
               FILTER(?k IN ({kinds}))
             }}
+            LIMIT 20000
             """,
             started,
             "whitelist",
@@ -601,6 +611,8 @@ class SimpleCanvas:
         started: float,
         paths_cap: int | None = None,
         empty_reason: str | None = None,
+        nodes_cap: int | None = None,
+        edges_cap: int | None = None,
     ) -> dict[str, Any]:
         if path_nodes is not None:
             node_iris = path_nodes or [start]
@@ -618,6 +630,8 @@ class SimpleCanvas:
             for edge in edges:
                 edge["source"] = {"graph": None}
         elapsed_ms = int(round((time.monotonic() - started) * 1000))
+        nodes_cap = self.max_nodes if nodes_cap is None else nodes_cap
+        edges_cap = self.max_edges if edges_cap is None else edges_cap
         return {
             "provider": "simple",
             "mode": mode,
@@ -631,8 +645,8 @@ class SimpleCanvas:
             "truncated": bool(walk["truncated"]),
             "limits": {
                 "hops": hops,
-                "maxNodes": self.max_nodes,
-                "maxEdges": self.max_edges,
+                "maxNodes": nodes_cap,
+                "maxEdges": edges_cap,
                 "maxPaths": paths_cap or self.max_paths,
             },
             "stats": {
@@ -652,35 +666,45 @@ class SimpleCanvas:
         include_types: bool,
         started: float,
     ) -> None:
-        """One batch query for labels (+ types) instead of N+1 lookups."""
+        """One batched query per readable graph for labels (+ types).
+
+        No ``OPTIONAL`` and no variable graph: Oxigraph never finishes
+        ``GRAPH ?g { OPTIONAL ... }`` (measured 35s timeout on 50 subjects),
+        while ``GRAPH <g> { VALUES ?s {..} .. }`` answers in ~3ms. Every query
+        carries a ``LIMIT``.
+        """
         if not graphs:
             return
-        graph_values = " ".join(f"<{graph}>" for graph in graphs)
         for batch in _batches(list(nodes.keys())):
             point_values = " ".join(f"<{iri}>" for iri in batch)
-            result = self._query(
-                f"""
-                SELECT ?s ?label ?type WHERE {{
-                  VALUES ?g {{ {graph_values} }}
-                  VALUES ?s {{ {point_values} }}
-                  GRAPH ?g {{
-                    OPTIONAL {{ ?s <{RDFS_LABEL}> ?label }}
-                    OPTIONAL {{ ?s <{RDF_TYPE}> ?type }}
-                  }}
-                }}
-                """,
-                started,
-                "enrich",
-            )
-            for row in result.get("bindings", []):
-                subject = _binding(row, "s")
-                entry = nodes.get(subject or "")
-                if entry is None:
-                    continue
-                label = _literal(row, "label")
-                if label:
-                    entry["label"] = label
-                if include_types:
-                    type_iri = _binding(row, "type")
-                    if type_iri and type_iri not in entry["types"]:
-                        entry["types"].append(type_iri)
+            limit = len(batch) * 3
+            lookups = [("label", RDFS_LABEL)]
+            if include_types:
+                lookups.append(("type", RDF_TYPE))
+            for key, predicate in lookups:
+                for graph in graphs:
+                    result = self._query(
+                        f"""
+                        SELECT ?s ?value WHERE {{
+                          VALUES ?s {{ {point_values} }}
+                          GRAPH <{graph}> {{ ?s <{predicate}> ?value }}
+                        }}
+                        LIMIT {limit}
+                        """,
+                        started,
+                        "enrich",
+                    )
+                    for row in result.get("bindings", []):
+                        subject = _binding(row, "s")
+                        entry = nodes.get(subject or "")
+                        if entry is None:
+                            continue
+                        value = _literal(row, "value")
+                        if not value:
+                            continue
+                        if key == "label":
+                            entry["label"] = value
+                        else:
+                            type_iri = _binding(row, "value")
+                            if type_iri and type_iri not in entry["types"]:
+                                entry["types"].append(type_iri)

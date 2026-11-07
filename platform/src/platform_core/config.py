@@ -622,9 +622,10 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
         raise _config_error("E_CONFIG_REQUIRED", "graph.endpoint is required", key="graph.endpoint")
 
     # Q8-a (design 53 §5.2): canvas opens every known provider name and rejects
-    # only the unknown ones; `full` is known but has no assembled adapter yet.
+    # only the unknown ones. D1-2 assembles `full`; the switch now covers all
+    # three values.
     canvas_known = ("off", "simple", "full")
-    canvas_implemented = ("off", "simple")
+    canvas_implemented = ("off", "simple", "full")
     if model.canvas.provider not in canvas_known:
         raise _config_error(
             "E_PROVIDER_INVALID",
@@ -640,10 +641,10 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
             "E_PROVIDER_NOT_IMPLEMENTED",
             (
                 f"canvas.provider={model.canvas.provider} is a known provider but no adapter "
-                "is assembled (D1-2 full stays behind this switch)"
+                "is assembled"
             ),
             key="canvas.provider",
-            hint="use canvas.provider=simple, or canvas.provider=off to disable the endpoint",
+            hint="use canvas.provider=simple or full, or canvas.provider=off to disable",
         )
     if model.canvas.provider == "simple" and model.canvas.simple_max_hops > 3:
         warnings.append(

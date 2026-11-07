@@ -97,16 +97,15 @@ class FakeGraph:
         self.calls.append(sparql)
         if "?p a ?k" in sparql:
             return self._rows([{"p": predicate} for predicate in sorted(self.whitelist)])
-        if "OPTIONAL" in sparql:
+        if "?value" in sparql and "GRAPH <" in sparql:
+            # Enrich shape: GRAPH <g> { VALUES ?s {..} ?s <label|type> ?value }
+            is_label = "rdf-schema#label" in sparql
             rows = []
             for node in _values(sparql, "s"):
-                row = {"s": node}
-                if node in self.labels:
-                    row["label"] = self.labels[node]
-                if node in self.types:
-                    row["type"] = self.types[node]
-                rows.append(row)
-            return self._rows(rows, literals=("label",))
+                value = self.labels.get(node) if is_label else self.types.get(node)
+                if value:
+                    rows.append({"s": node, "value": value})
+            return self._rows(rows, literals=("value",) if is_label else ())
         limit = int((re.search(r"LIMIT (\d+)", sparql) or [None, "1000"])[1])
         rows = []
         if "VALUES ?o {" in sparql:
@@ -234,7 +233,11 @@ class SimplePathTests(unittest.TestCase):
         self.assertIn(ABOX_GRAPH, result["graphs"])
         for query in graph.calls:
             self.assertNotIn("UNION", query.upper())
-        layer_queries = [q for q in graph.calls if "VALUES ?s" in q or "VALUES ?o" in q]
+        layer_queries = [
+            q
+            for q in graph.calls
+            if "VALUES ?g" in q and ("VALUES ?s" in q or "VALUES ?o" in q)
+        ]
         self.assertTrue(layer_queries)
         for query in layer_queries:
             self.assertIn("VALUES ?g", query)
@@ -305,16 +308,20 @@ class SimplePathTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "PermissionDenied")
 
 
-class SkeletonTests(unittest.TestCase):
-    def test_8_full_skeleton_fails_explicitly(self):
-        full = FullCanvas()
-        self.assertEqual(full.manifest().notes["status"], "not_implemented")
-        with self.assertRaises(PortError) as ctx:
-            full.path(A, C)
-        self.assertEqual(ctx.exception.provider_code, "E_PROVIDER_NOT_IMPLEMENTED")
-        with self.assertRaises(PortError) as ctx:
-            full.subgraph(A)
-        self.assertEqual(ctx.exception.code, "Unsupported")
+class FullAssemblyTests(unittest.TestCase):
+    def test_8_full_provider_is_assembled(self):
+        # D1-2: full is no longer a skeleton. Detailed behaviour lives in
+        # test_d1_canvas_full.py; here we only assert the switch is wired.
+        cfg = SimpleNamespace(
+            canvas=canvas_config(provider="full"),
+            reasoning=SimpleNamespace(abox_graphs=[ABOX_GRAPH]),
+        )
+        full = FullCanvas(cfg, FakeGraph([]), FakeOntology(), FakeReasoning())
+        manifest = full.manifest()
+        self.assertEqual(manifest.provider, "full")
+        self.assertIn("canvas.multipath", manifest.capabilities)
+        self.assertEqual(manifest.limits["hops"], 4)
+        self.assertNotIn("not_implemented", manifest.notes.get("status", ""))
 
     def test_9_disabled_canvas_is_a_structured_503(self):
         canvas = DisabledCanvas("canvas.provider=off")
@@ -336,9 +343,8 @@ class CanvasConfigTests(unittest.TestCase):
         self._assert_error(
             {"canvas": {"provider": "nope"}}, "E_PROVIDER_INVALID", "canvas.provider"
         )
-        self._assert_error(
-            {"canvas": {"provider": "full"}}, "E_PROVIDER_NOT_IMPLEMENTED", "canvas.provider"
-        )
+        full = load({"canvas": {"provider": "full"}})
+        self.assertEqual(full.config.canvas.provider, "full")
 
     def test_11_off_and_simple_are_accepted(self):
         default = load({})
@@ -396,19 +402,19 @@ class CanvasApiTests(unittest.TestCase):
         self.assertEqual(disabled.json()["error"]["providerCode"], "E_CANVAS_DISABLED")
         self.assertEqual(triples.status_code, 200)
 
-    def test_15_unimplemented_provider_is_explicit_over_http(self):
-        graph = FakeGraph([])
+    def test_15_full_provider_answers_over_http(self):
+        graph = FakeGraph(CHAIN)
         cfg = SimpleNamespace(
             canvas=canvas_config(provider="full"),
             reasoning=SimpleNamespace(abox_graphs=[ABOX_GRAPH]),
         )
-        runtime = make_runtime(FullCanvas(), cfg, graph)
+        full = FullCanvas(cfg, graph, FakeOntology(), FakeReasoning())
+        runtime = make_runtime(full, cfg, graph)
         with TestClient(api_module.create_app(runtime, [])) as client:
             response = client.get("/browse/path", params={"from": A, "to": C})
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()["error"]["providerCode"], "E_PROVIDER_NOT_IMPLEMENTED"
-        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["provider"], "full")
+        self.assertEqual(response.json()["mode"], "path")
 
 
 if __name__ == "__main__":

@@ -170,7 +170,9 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     if cfg.canvas.provider == "simple":
         canvas: Any = SimpleCanvas(cfg, graph, ontology, reasoning)
     elif cfg.canvas.provider == "full":
-        canvas = FullCanvas()
+        # D1-2: metadata is optional for the port itself but enables the real
+        # hasRef lookup (approved extraction candidates -> document chunks).
+        canvas = FullCanvas(cfg, graph, ontology, reasoning, metadata=metadata)
     else:
         canvas = DisabledCanvas("canvas.provider=off")
 
