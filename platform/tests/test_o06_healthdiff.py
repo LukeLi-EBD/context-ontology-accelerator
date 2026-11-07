@@ -93,6 +93,12 @@ class FakeOntology:
         }
 
 
+def _version(vid, *, published=None, created=None, status="published", triples=100):
+    return {"id": vid, "versionId": vid, "semver": "1.0.0", "status": status,
+            "contentHash": f"h-{vid}", "tripleCount": triples,
+            "graph": f"urn:g:{vid}", "createdAt": created, "publishedAt": published}
+
+
 def _runtime(*, changes=True, abox=True):
     graph = FakeGraph(changes=changes, abox=abox)
     runtime = SimpleNamespace(
@@ -169,6 +175,70 @@ class SnapshotTests(unittest.TestCase):
         self.assertTrue(block["empty"])
         self.assertIn("指针不存在", block["emptyReason"])
         self.assertEqual(block["delta"], {})
+
+
+class DefaultBaselineTests(unittest.TestCase):
+    """O-06: 默认基线按发布时间取“严格早于当前指针版本的最新一版”。"""
+
+    def _runtime_with(self, versions, pointer):
+        runtime, _ = _runtime()
+        runtime.ontology = FakeOntology()
+        runtime.ontology.versions = versions
+        runtime.ontology.current = lambda: {"versionId": pointer}
+        return runtime
+
+    def test_pointer_first_in_list_uses_latest_earlier_published(self):
+        versions = [
+            _version("ont-new", published="2026-11-07T10:00:00+08:00",
+                     created="2026-11-07T07:00:00+08:00", triples=104),
+            _version("ont-mid", published="2026-11-07T09:00:00+08:00",
+                     created="2026-11-07T08:00:00+08:00"),
+            _version("ont-old", published="2026-11-07T08:00:00+08:00",
+                     created="2026-11-07T08:30:00+08:00"),
+        ]
+        runtime = self._runtime_with(versions, "ont-new")
+        client = TestClient(api_module.create_app(runtime, []))
+        with client:
+            response = client.get("/health/ontology-diff")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["from"], "ont-mid")
+            self.assertEqual(response.json()["to"], "ont-new")
+
+            snapshot = client.get("/health/ontology-snapshot")
+            self.assertEqual(snapshot.status_code, 200)
+            self.assertEqual(snapshot.json()["from"]["versionId"], "ont-mid")
+
+    def test_tied_publish_time_breaks_tie_by_sequence(self):
+        versions = [
+            _version("ont-old", published="2026-11-07T09:00:00+08:00",
+                     created="2026-11-07T08:00:00+08:00"),
+            _version("ont-tie", published="2026-11-07T10:00:00+08:00",
+                     created="2026-11-07T08:10:00+08:00"),
+            _version("ont-new", published="2026-11-07T10:00:00+08:00",
+                     created="2026-11-07T08:20:00+08:00"),
+        ]
+        runtime = self._runtime_with(versions, "ont-new")
+        client = TestClient(api_module.create_app(runtime, []))
+        with client:
+            response = client.get("/health/ontology-diff")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["from"], "ont-tie")
+
+    def test_single_version_has_no_baseline(self):
+        versions = [_version("ont-new", published="2026-11-07T10:00:00+08:00",
+                             created="2026-11-07T07:00:00+08:00")]
+        runtime = self._runtime_with(versions, "ont-new")
+        client = TestClient(api_module.create_app(runtime, []))
+        with client:
+            response = client.get("/health/ontology-diff")
+            self.assertEqual(response.status_code, 409)
+            self.assertEqual(response.json()["error"]["providerCode"],
+                             "E_DIFF_NO_PREVIOUS_BASELINE")
+
+            snapshot = client.get("/health/ontology-snapshot")
+            self.assertEqual(snapshot.status_code, 200)
+            self.assertTrue(snapshot.json()["empty"])
+            self.assertIn("没有基线版本", snapshot.json()["emptyReason"])
 
 
 class DiffPayloadTests(unittest.TestCase):

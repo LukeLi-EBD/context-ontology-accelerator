@@ -418,6 +418,34 @@ def _version(runtime: Any, version_id: str) -> dict[str, Any]:
     return row
 
 
+def _version_key(item: dict[str, Any], index: int) -> tuple[str, int]:
+    """版本顺序键：发布时间（缺省用创建时间），并列时以列表序号裁决。"""
+    stamp = item.get("publishedAt") or item.get("createdAt") or ""
+    return (str(stamp), index)
+
+
+def _previous_version(versions: list[dict[str, Any]], to_version: str) -> str | None:
+    """严格早于 ``to_version`` 的最新一版（按发布时间，而非列表下标）。
+
+    版本列表按 created_at 排序，bootstrap/回滚版本的创建时间可能早于其发布时间，
+    于是指针版本会排在下标 0；按下标减一会误报“没有基线”。这里仅在时间键严格
+    小于指针版本时才算候选，时间并列时用序号（列表位置）作为次级键。
+    """
+    ids = [str(item.get("id")) for item in versions]
+    if to_version not in ids:
+        return None
+    index = ids.index(to_version)
+    target = _version_key(versions[index], index)
+    earlier = [
+        _version_key(item, position)
+        for position, item in enumerate(versions)
+        if position != index and _version_key(item, position) < target
+    ]
+    if not earlier:
+        return None
+    return ids[max(earlier)[1]]
+
+
 def _triple_examples(
     runtime: Any, from_graph: str | None, to_graph: str
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -486,8 +514,8 @@ def ontology_diff(
                 details={"to": to_version},
                 retryable=False,
             )
-        index = ids.index(to_version)
-        if index == 0:
+        baseline = _previous_version(versions, to_version)
+        if baseline is None:
             raise PortError(
                 code="Conflict",
                 message="current version has no previous baseline",
@@ -496,7 +524,7 @@ def ontology_diff(
                 details={"to": to_version},
                 retryable=False,
             )
-        from_version = ids[index - 1]
+        from_version = baseline
 
     from_row = _version(runtime, from_version)
 
@@ -685,24 +713,23 @@ def snapshot_compare(runtime: Any, from_version: str | None = None,
         versions = [item for item in runtime.ontology.list_versions()
                     if item.get("status") != "deprecated"]
         ids = [str(item.get("id")) for item in versions]
-        if to_version in ids:
-            index = ids.index(to_version)
-            if index == 0:
-                return {
-                    "from": None, "to": snapshot(runtime, to_version), "delta": {},
-                    "empty": True,
-                    "emptyReason": "当前版本没有基线版本，无法做快照对比",
-                    "source": "各版本类/属性/实例计数 + 内容指纹三元组数",
-                    "readOnly": True,
-                }
-            from_version = ids[index - 1]
-        else:
+        if to_version not in ids:
             return {
                 "from": None, "to": snapshot(runtime, to_version), "delta": {},
                 "empty": True,
                 "emptyReason": "当前版本不在版本列表中，无法确定基线",
                 "readOnly": True,
             }
+        baseline = _previous_version(versions, to_version)
+        if baseline is None:
+            return {
+                "from": None, "to": snapshot(runtime, to_version), "delta": {},
+                "empty": True,
+                "emptyReason": "当前版本没有基线版本，无法做快照对比",
+                "source": "各版本类/属性/实例计数 + 内容指纹三元组数",
+                "readOnly": True,
+            }
+        from_version = baseline
     before = snapshot(runtime, from_version)
     after = snapshot(runtime, to_version)
     block = {

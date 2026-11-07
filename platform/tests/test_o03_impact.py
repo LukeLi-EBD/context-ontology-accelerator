@@ -26,6 +26,23 @@ CLASS_A = "urn:onto#LoanAccount"
 CLASS_B = "urn:onto#Collateral"
 PROP_1 = "urn:onto#principalAmount"
 PROP_2 = "urn:onto#collateralType"
+CLASS_DOMAIN_TARGET = "urn:onto#Guarantee"
+CLASS_RANGE_ONE = "urn:onto#Valuation"
+CLASS_RANGE_TWO = "urn:onto#CollateralValuation"
+
+# ontology_pg.diff_graphs 产出的 domain/range 变更是 IRI 列表（多值）；这里复刻真实形状。
+MULTI_VALUE_DIFF = {
+    "summary": {
+        "addedTriples": 4, "removedTriples": 2,
+        "addedClasses": [CLASS_B], "removedClasses": [],
+        "addedProperties": [PROP_2], "removedProperties": [],
+        "domainChanges": [{"property": PROP_1, "from": [CLASS_A], "to": [CLASS_DOMAIN_TARGET]}],
+        "rangeChanges": [{"property": PROP_2, "from": [CLASS_RANGE_ONE, CLASS_RANGE_TWO],
+                          "to": []}],
+    },
+    "breaking": False,
+    "breakingItems": [],
+}
 
 
 def _row(**values):
@@ -222,6 +239,38 @@ class ImpactAnalysisTests(unittest.TestCase):
         self.assertTrue(report["empty"])
         self.assertIn("基线", report["emptyReason"])
 
+    def test_multi_valued_domain_range_changes_are_expanded(self):
+        """from/to 为列表时必须展开去重，不能直接进 set()（会 TypeError）。"""
+        runtime, _, ontology = _runtime()
+        ontology.diff_result = MULTI_VALUE_DIFF
+        report = impact.analyze(runtime, "ont-old", "ont-new")
+        classes = {item["iri"] for item in report["affected"]["classes"]}
+        self.assertIn(CLASS_DOMAIN_TARGET, classes)
+        self.assertIn(CLASS_RANGE_ONE, classes)
+        self.assertIn(CLASS_RANGE_TWO, classes)
+        props = {item["iri"]: item for item in report["affected"]["properties"]}
+        self.assertIn(PROP_1, props)
+        self.assertEqual(props[PROP_1]["domainChanges"][0]["to"], [CLASS_DOMAIN_TARGET])
+
+    def test_default_baseline_uses_publish_time_not_list_index(self):
+        runtime, _, ontology = _runtime()
+        ontology.versions = [
+            {"id": "ont-new", "semver": "2.0.0", "status": "approved",
+             "contentHash": "hash-new", "tripleCount": 104, "graph": "urn:g:new",
+             "createdAt": "2026-11-07T07:00:00+08:00",
+             "publishedAt": "2026-11-07T10:00:00+08:00"},
+            {"id": "ont-mid", "semver": "1.1.0", "status": "superseded",
+             "contentHash": "hash-mid", "tripleCount": 102, "graph": "urn:g:mid",
+             "createdAt": "2026-11-07T08:00:00+08:00",
+             "publishedAt": "2026-11-07T09:00:00+08:00"},
+            {"id": "ont-old", "semver": "1.0.0", "status": "superseded",
+             "contentHash": "hash-old", "tripleCount": 100, "graph": "urn:g:old",
+             "createdAt": "2026-11-07T08:30:00+08:00",
+             "publishedAt": "2026-11-07T08:00:00+08:00"},
+        ]
+        report = impact.analyze(runtime, None, "ont-new")
+        self.assertEqual(report["from"], "ont-mid")
+
 
 class ExportTests(unittest.TestCase):
     def test_markdown_csv_and_json_exports(self):
@@ -263,6 +312,24 @@ class ImpactRouteTests(unittest.TestCase):
                                           "format": "markdown"})
             self.assertEqual(response.status_code, 200)
             self.assertIn("attachment; filename=", response.headers["content-disposition"])
+            self.assertIn("受影响类", response.text)
+
+    def test_multi_valued_change_set_routes_return_200(self):
+        runtime, _, ontology = _runtime()
+        ontology.diff_result = MULTI_VALUE_DIFF
+        client = TestClient(api_module.create_app(runtime, []))
+        params = {"from": "ont-old", "to": "ont-new", "sample": 1}
+        with client:
+            response = client.get("/ontology/impact", params=params)
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(payload["from"], "ont-old")
+            self.assertIn(CLASS_DOMAIN_TARGET,
+                          {item["iri"] for item in payload["affected"]["classes"]})
+
+            response = client.get("/ontology/impact/export",
+                                  params={**params, "format": "markdown"})
+            self.assertEqual(response.status_code, 200)
             self.assertIn("受影响类", response.text)
 
 
