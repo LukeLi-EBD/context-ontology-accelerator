@@ -5,6 +5,7 @@ Run inside the platform container:
     python /tmp/hosttests/test_q8_slots.py
 """
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
