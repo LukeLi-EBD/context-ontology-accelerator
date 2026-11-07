@@ -1,3 +1,0 @@
-id	response_codes	evidence_status	verdict	evidence_file
-q_P01	200/200/OK/OK	COMPLETE	PASS	q_P01__8080P01.txt
-q_S09	200/OK	COMPLETE	PASS	q_S09__8080P01.txt

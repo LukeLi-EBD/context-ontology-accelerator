@@ -1,9 +1,0 @@
-case	label	status	ms	declaredBytes	capturedBytes	truncated
-q_O03	GET /ontology/impact?from=ont-a1be48db060c	500	49	21	21	False
-q_O03	GET /ontology/impact/export?from=ont-a1be48db060c	500	130	21	21	False
-q_O06	GET /health/ontology-diff?from=ont-a1be48db060c&to=ont-6e81732555e5	200	84	56312	56312	False
-q_O06	GET /health/ontology-diff/flow	200	26	13635	13635	False
-q_O06	GET /health/ontology-snapshot?from=ont-a1be48db060c&to=ont-6e81732555e5	200	18	1458	1458	False
-q_S12	GET /ontology/impact?from=ont-a1be48db060c	500	51	21	21	False
-q_S12	GET /ontology/impact/export?from=ont-a1be48db060c	500	73	21	21	False
-q_S12	GET /ontology/evidence	200	30	15354	15354	False

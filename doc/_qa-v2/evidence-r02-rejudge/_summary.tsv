@@ -1,2 +1,0 @@
-id	case	response_codes	passed	cases	passRate	citationResolvableRate	brokenLinkRate	provDelta	evidence_status	verdict	evidence_file
-q_R02	R-02 golden 10 例	200/400	8	10	0.8	1.0	0.0	0	COMPLETE	FAIL	q_R02__R02REJUDGE.txt

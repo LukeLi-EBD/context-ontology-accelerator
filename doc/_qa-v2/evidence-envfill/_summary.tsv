@@ -1,8 +1,0 @@
-id	endpoint_codes	evidence_status	verdict	adjudicable	basis_evidence	evidence_file
-q_S08	200/200/OK	COMPLETE	PASS	yes	/facts state=active items=3；/facts/conflicts count=1 pending=1；DB fact_assertion=3 fact_event=3	q_S08__ENVFILL.txt
-q_S13	200/200/OK	COMPLETE	PASS	yes	batch b19c1fc8 status=completed 4/4 indexed；/imports/items=4；DB import_item=4；续跑 alreadyDone=3 processed=1	q_S13__ENVFILL.txt
-q_O01	200/200/200/200/OK/OK/OK	COMPLETE	PASS	yes	data_dictionary=375；28 tables/375 columns；all=375；unbound=296；mappable_unbound=2；explicit=69+name_match=10=79/81	q_O01__ENVFILL.txt
-q_M04	200/200/200	COMPLETE	PARTIAL	yes	cardExists=true cardState=built；provenance fields=2 但 withSourceRef=0；/prov/decisions count=0	q_M04__ENVFILL.txt
-q_B03	200/200	COMPLETE	PASS_LIMITED	yes	实体页 200/53ms label/classes/fields 齐全，原「15s 超时」未复现；neighbors 200 但 edges=[]（只读 abox:main，克隆栈实体在 abox:synthetic）	q_B03__ENVFILL.txt
-q_R03	200/200/400	COMPLETE	INSUFFICIENT	no	src://doc/4981174b... 未注册，E_SOURCE_REF_NOT_FOUND；未使用替身引用（按约定保留：证据完整但不足以下判）	q_R03__ENVFILL.txt
-q_P01	OK/200/200	COMPLETE	FAIL	yes	reasoning.aboxGraphs=[urn:platform:graph:abox:main]；dashboard.coverage.instances.graphs=[abox:main,abox:synthetic]；推理输入图与看板图集不一致	q_P01__ENVFILL.txt

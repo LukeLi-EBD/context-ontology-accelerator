@@ -1,0 +1,40 @@
+#!/bin/sh
+# pre-commit: 阻止证据/审计目录与密钥类文件入库。
+# 安装: git config core.hooksPath .githooks
+# 依据: 2026-11-07 QA 安全清单第 2 项（915daf1 误将证据目录入库）。
+
+blocked_dirs='doc/_qa/ doc/_qa-v2/ doc/_evidence-audit/ doc/_review/ doc/_qa-audit/'
+
+tmp=$(mktemp)
+git diff --cached --name-only --diff-filter=ACMR > "$tmp"
+bad=""
+blocked=""
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    for d in $blocked_dirs; do
+        case "$f" in
+            "$d"*) bad="$bad
+  - $f (证据/审计目录)";;
+        esac
+    done
+    base=$(basename "$f")
+    case "$base" in
+        .env|.env.*|*.pem|*.key|id_rsa|id_ed25519|credentials|credentials.json)
+            case "$base" in
+                *.env.example|*.env.sample|*.env.template) ;;
+                *) bad="$bad
+  - $f (密钥类文件)";;
+            esac
+            ;;
+    esac
+done < "$tmp"
+rm -f "$tmp"
+
+if [ -n "$bad" ]; then
+    echo "pre-commit 拒绝提交：$bad" >&2
+    echo "" >&2
+    echo "证据快照、审计报告与密钥不得入库。" >&2
+    echo "如确有必要，请与仓库管理员确认后使用 --no-verify（不建议）。" >&2
+    exit 1
+fi
+exit 0

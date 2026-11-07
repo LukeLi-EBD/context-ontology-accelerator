@@ -261,3 +261,11 @@ platform/.env
 platform/platform.yaml
 platform/**/*.log
 platform/**/*.jsonl
+
+# --- Evidence / audit snapshots: never tracked (added 2026-11-07) ---
+# 915daf1 误将这些本地证据目录入库；现退回未跟踪，历史提交不改写。
+doc/_qa/
+doc/_qa-v2/
+doc/_evidence-audit/
+doc/_review/
+doc/_qa-audit/

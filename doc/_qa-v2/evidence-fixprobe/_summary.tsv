@@ -1,4 +1,0 @@
-id	response_codes	evidence_status	verdict	adjudicable	basis_evidence	evidence_file
-q_S12	200/200	COMPLETE	PASS（端点行为）	yes	/ontology/impact 200、56ms：counts +0/-2、breaking=true、verification.consistent=true、inputsFingerprint 有值；/ontology/impact/export 200：828B markdown，受影响类/属性与抽样重算齐全	q_S12__FIXPROBE.txt
-q_O03	200/200	COMPLETE	PASS（端点行为）	yes	同一对端点均为 200（29ms/28ms）：impact 2813B、export 828B；导出含输入指纹、破坏性标记、抽样重算一致	q_O03__FIXPROBE.txt
-q_O06	200/200	COMPLETE	PASS（默认路径可用）	yes	无参 /health/ontology-diff 200：from=ont-6fd83aa720b9（semver 12.0.2、status=superseded）、to=ont-6e81732555e5、counts addedTriples=3340 removedTriples=3；无参 /health/ontology-snapshot 200	q_O06__FIXPROBE.txt

@@ -1,4 +1,0 @@
-id	response_codes	evidence_status	verdict	evidence_file
-q_S12	200/200	COMPLETE	PASS（限端点行为，合并版确认）	q_S12__MERGED42.txt
-q_O03	200/200	COMPLETE	PASS（限端点行为，合并版确认）	q_O03__MERGED42.txt
-q_O06	200/200	COMPLETE	PASS（默认路径已可用，合并版确认）	q_O06__MERGED42.txt
