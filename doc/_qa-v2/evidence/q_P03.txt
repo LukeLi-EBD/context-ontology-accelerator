@@ -1,0 +1,25 @@
+# evidence_status=COMPLETE truncated=false
+# q_P03 本体原理·溯源引用完整性与失效检测
+# collected 2026-11-07 08:06:47 +0800
+# READ-ONLY | limitBytes=20000000
+# 说明：首行 truncated 标记为真表示响应体被显式截断，该条证据不完整，判定记 EVIDENCE_INSUFFICIENT。
+
+$ SQL select (select count(*) from platform.metric_observation) as obs_rows, (select count(*) fr ...(截断)
+-> OK  104ms  declared=9B  captured=9B  truncated=false
+37471|252
+
+$ GET /source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3FasOf%3D2025-12-31%26fixture%3DTrue
+-> 200  7ms  declared=1385B  captured=1385B  truncated=false
+{"type":"metric_observation_set","ref":"src://obs-set/FIN-BANK-001@v3.0?asOf=2025-12-31&fixture=True","targetTable":"platform.metric_observation","locator":{"metricId":"FIN-BANK-001","definitionVersion":"v3.0","asOf":"2025-12-31"},"resolveUrl":"/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3FasOf%3D2025-12-31%26fixture%3DTrue","found":true,"issued":true,"issuedAt":"2026-11-07T07:48:17.576605+08:00","state":"live","rows":[{"observation_id":34404,"metric_id":"FIN-BANK-001","definition_version":"v3.0","entity_key":"LN-SYN-00000","as_of":"2025-12-31","window_start":"2025-12-31","window_end":"2025-12-31","numerator":0.0,"denominator":null,"data_source":"synthetic","fixture":false,"computed_at":"2026-11-07T07:44:27.166807+08:00"},{"observation_id":33859,"metric_id":"FIN-BANK-001","definition_version":"v3.0","entity_key":"LN-SYN-00001","as_of":"2025-12-31","window_start":"2025-12-31","window_end":"2025-12-31","numerator":0.0,"denominator":null,"data_source":"synthetic","fixture":false,"computed_at":"2026-11-07T07:44:27.166807+08:00"},{"observation_id":35814,"metric_id":"FIN-BANK-001","definition_version":"v3.0","entity_key":"LN-SYN-00002","as_of":"2025-12-31","window_start":"2025-12-31","window_end":"2025-12-31","numerator":0.0,"denominator":null,"data_source":"synthetic","fixture":false,"computed_at":"2026-11-07T07:44:27.166807+08:00"}],"rowCount":5000}
+
+$ GET /source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154
+-> 400  2ms  declared=256B  captured=256B  truncated=false
+{"error":{"code":"InvalidArgument","provider":"platform","providerCode":"E_SOURCE_REF_NOT_FOUND","message":"source_ref does not resolve","retryable":false,"details":{"ref":"src://doc/4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb#c154"}}}
+
+$ GET /source/resolve?ref=src%3A%2F%2Fdoc%2F0000000000000000000000000000000000000000000000000000000000000000%23c0
+-> 400  2ms  declared=254B  captured=254B  truncated=false
+{"error":{"code":"InvalidArgument","provider":"platform","providerCode":"E_SOURCE_REF_NOT_FOUND","message":"source_ref does not resolve","retryable":false,"details":{"ref":"src://doc/0000000000000000000000000000000000000000000000000000000000000000#c0"}}}
+
+$ GET /prov/verify
+-> 200  21ms  declared=348B  captured=348B  truncated=false
+{"ok":true,"checked":48,"error":null,"lastHash":"7a019d46f7ccdcd97213a174e799488d84fe8769ccd032313b4b111e484f762a","graph":"urn:platform:prov","separation":{"ok":true,"provGraph":"urn:platform:prov","tboxGraph":"urn:platform:graph:tbox:ont-6e81732555e5","provTriples":916,"tboxProvTriples":0,"provTboxTriples":0,"tboxLegacyProvPredicateTriples":0}}

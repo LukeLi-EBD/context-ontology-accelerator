@@ -1,0 +1,27 @@
+{
+  "case": "q_B03",
+  "name": "B-03 实体页（上一轮缺陷复测）",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /ui/api/entity?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175",
+      "status": 404,
+      "ms": 27,
+      "declaredBytes": 323,
+      "capturedBytes": 323,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ui/api/neighbors?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175&limit=3",
+      "status": 200,
+      "ms": 24,
+      "declaredBytes": 333,
+      "capturedBytes": 333,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

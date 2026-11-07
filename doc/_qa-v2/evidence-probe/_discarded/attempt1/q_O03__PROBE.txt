@@ -1,0 +1,14 @@
+# evidence_status=COMPLETE truncated=false
+# q_O03 变更影响分析
+# collected 2026-11-07 08:39:30 +0800
+# READ-ONLY | limitBytes=20000000
+# phase=read-only-probe | stack=8082 agent-platform:0.1-s5
+# scope=只读补充探针：在原用例命令上附加 from=ont-a1be48db060c；不替代原用例判定
+# safety=仅 GET；无写入、无指针变更、无容器重启
+$ GET /ontology/impact?from=ont-a1be48db060c
+-> 404  2ms  declared=248B  captured=248B  truncated=false
+{"error":{"code":"NotFound","provider":"platform","providerCode":"E_DIFF_VERSION_NOT_FOUND","message":"ontology version not found: ont-a1be48db060c","retryable":false,"details":{"version":"ont-a1be48db060c","cause":"E_ONTOLOGY_VERSION_NOT_FOUND"}}}
+
+$ GET /ontology/impact/export?from=ont-a1be48db060c
+-> 404  3ms  declared=248B  captured=248B  truncated=false
+{"error":{"code":"NotFound","provider":"platform","providerCode":"E_DIFF_VERSION_NOT_FOUND","message":"ontology version not found: ont-a1be48db060c","retryable":false,"details":{"version":"ont-a1be48db060c","cause":"E_ONTOLOGY_VERSION_NOT_FOUND"}}}

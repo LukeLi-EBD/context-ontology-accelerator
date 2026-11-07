@@ -1,0 +1,36 @@
+{
+  "case": "q_O02",
+  "name": "O-02 T-Box 提案/审批/supersede 状态机",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /health/ontology-diff/flow",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 13635,
+      "capturedBytes": 13635,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /governance/events",
+      "status": 200,
+      "ms": 20,
+      "declaredBytes": 225177,
+      "capturedBytes": 225177,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select count(*) from platform.ontology_event",
+      "status": "OK",
+      "ms": 108,
+      "declaredBytes": 3,
+      "capturedBytes": 3,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

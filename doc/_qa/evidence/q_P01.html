@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#0f1419;color:#d8dee9;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px;margin:0}
+.hd{border-bottom:1px solid #333;padding-bottom:9px;margin-bottom:9px;display:flex;justify-content:space-between}
+.t{color:#88c0d0;font-weight:bold}.ts{color:#7a869a;font-size:12px;margin-bottom:10px}
+pre{white-space:pre-wrap;margin:0}.ft{color:#6b7688;font-size:12px;margin-top:12px;border-top:1px solid #333;padding-top:8px}
+.ok{color:#a3be8c}.warn{color:#ebcb8b}.bad{color:#bf616a}.off{color:#b48ead}
+.badge{padding:2px 10px;border:1px solid currentColor;border-radius:3px;font-weight:bold}
+</style></head><body>
+<div class="hd"><span class="t">q_P01 · 本体原理·T-Box/A-Box 命名图分布与推理输入一致性</span><span class="badge bad">FAIL</span></div>
+<div class="ts">COA 本体平台 · R2 第 2 轮逐特性复评 · 2026-11-07 07:56:21 +0800 · 双栈同题 8080 / 8082</div>
+<pre style="margin-top:12px">
+$ 轮次 R2  ·  2026-11-07 07:56:21 +0800  ·  q_P01 本体原理·T-Box/A-Box 命名图分布与推理输入一致性
+$ 判据栈 双栈  ·  T0 2026-11-06 23:52  →  T1 2026-11-07 06:08  →  T2 本轮
+
+── 数据栈 127.0.0.1:8080 ──────────────────────────────
+$ SPARQL SELECT ?g (COUNT(*) AS ?n) WHERE { GRAPH ?g { ?s ?p ?o } } GROUP BY ?g ...(截断)
+  -&gt; OK  516ms  1383 chars | FULL_LENGTH=1383 chars  SHA256=36b2611d346e5cb9  PARSE=non-json  head=[{&quot;g&quot;: {&quot;type&quot;: &quot;uri&quot;, &quot;value&quot;: &quot;urn:platform:graph:abox:synthetic&quot;}, &quot;n&quot;: {&quot;type&quot;: &quot;literal&quot;, &quot;value&quot;: &quot;304919&quot;, &quot;datat ...(截断)
+  [{&quot;g&quot;: {&quot;type&quot;: &quot;uri&quot;, &quot;value&quot;: &quot;urn:platform:graph:abox:synthetic&quot;}, &quot;n&quot;: {&quot;type&quot;: &quot;literal&quot;, &quot;value&quot;: &quot;304919&quot;, &quot;datatype&quot;: &quot;http://www.w3.org/2001/ ...(截断)
+$ GET /reasoning/status
+  -&gt; 200  7ms  1014 chars | FULL_LENGTH=1014 chars  SHA256=9460f7a82cf0f837  PARSE=dict  KEYS=mode,provider,engine,profile,serviceEnabled,endpoint,available,inferredGraphPrefix,aboxGraphs,shapesDir,pointer,lastJob
+  mode = materialize
+  provider = robot/EL
+  engine = robot
+  profile = EL
+  serviceEnabled = true
+  endpoint = http://reasoner:7879
+$ GET /health/dashboard
+  -&gt; 200  1082ms  3000 chars | FULL_LENGTH=3000 chars  SHA256=5e827c70e966b273  PARSE=dict  KEYS=sampledAt,coverage,orphanInstances,shaclViolations,inferenceFailures,migration,readyz,tbox,pointerStatus,ontologyDiff,dataSource,readOnly
+  sampledAt = 2026-11-06T23:56:51.293508+00:00
+
+── 验收栈 127.0.0.1:8082 ──────────────────────────────
+$ SPARQL SELECT ?g (COUNT(*) AS ?n) WHERE { GRAPH ?g { ?s ?p ?o } } GROUP BY ?g ...(截断)
+  -&gt; SKIP  0ms  41 chars | FULL_LENGTH=41 chars  SHA256=68bc3d107364f634  PARSE=non-json  head=验收栈 A-Box 为空且图库未纳管，本栈不执行 SPARQL（数据栈结果见同页）
+  验收栈 A-Box 为空且图库未纳管，本栈不执行 SPARQL（数据栈结果见同页）
+$ GET /reasoning/status
+  -&gt; 200  24ms  1123 chars | FULL_LENGTH=1123 chars  SHA256=7455177dc66e6ba2  PARSE=dict  KEYS=mode,provider,engine,profile,serviceEnabled,endpoint,available,inferredGraphPrefix,aboxGraphs,shapesDir,pointer,lastJob
+  mode = materialize
+  provider = robot/EL
+  engine = robot
+  profile = EL
+  serviceEnabled = true
+  endpoint = http://reasoner:7879
+$ GET /health/dashboard
+  -&gt; 200  20ms  5834 chars | FULL_LENGTH=5834 chars  SHA256=ea4cb7f788484912  PARSE=dict  KEYS=sampledAt,coverage,orphanInstances,shaclViolations,inferenceFailures,migration,readyz,tbox,pointerStatus,ontologyDiff,termsGate,dataSource
+  sampledAt = 2026-11-06T23:56:52.401238+00:00
+
+VERDICT = FAIL</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径 · 完整原始输出 evidence/q_P01.txt</div>
+</body></html>

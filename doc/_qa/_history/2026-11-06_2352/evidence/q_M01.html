@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#f48771;border:1px solid #f48771;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_M01 · M-01 可算性补齐第一批（8 条高价值指标）</span><span class="badge">FAIL</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-013/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-014/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-015/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-016/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-026/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-INS-002/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-INS-018/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 200  rowCount=0 noData=True rows=[] code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31&amp;dataSource=synthetic</span>
+<span class="meta">  HTTP 200  rowCount=20 noData=False rows=[{&quot;entityKey&quot;: &quot;INST-SYN-01&quot;, &quot;numerator&quot;: 0.0, &quot;denominator&quot;: 30000000.0, &quot;value&quot;: 0.0}, {&quot;entityKey&quot;: &quot;INST- ...(截断) code=None</span>
+<span class="cmd">$ GET /metrics/FIN-BANK-001/compute?asOf=2025-12-31</span>
+<span class="meta">  HTTP 400  rowCount=None noData=None rows=null code=E_METRIC_BINDING_MISSING</span>
+<span class="cmd">$ SQL select data_source,count(*) from platform.bank_loan_account group by 1</span>
+synthetic|5020</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_M01.txt</div>
+</body></html>

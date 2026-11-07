@@ -1,0 +1,27 @@
+{
+  "case": "q_R02",
+  "name": "R-02 引用与拒答质量闭环（10 例 golden set）",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /answer/quality",
+      "status": 200,
+      "ms": 444,
+      "declaredBytes": 19306,
+      "capturedBytes": 19306,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /prov/refusals",
+      "status": 400,
+      "ms": 2,
+      "declaredBytes": 214,
+      "capturedBytes": 214,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

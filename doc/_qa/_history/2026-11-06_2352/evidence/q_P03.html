@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#4ec9b0;border:1px solid #4ec9b0;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_P03 · 本体原理·溯源引用完整性与失效检测</span><span class="badge">PASS</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ SQL select (select count(*) from platform.metric_observation) as obs_rows, (select count(*) fr ...(截断)</span>
+  obs_rows | obs_refs = 37471|316
+<span class="cmd">$ GET /source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3FasOf%3D2025-12-31%26fixture%3DTrue  [obs 引用]</span>
+<span class="meta">  HTTP 200  type=metric_observation_set targetTable=platform.metric_observation rowCount=5000</span>
+  code=None {&quot;type&quot;:&quot;metric_observation_set&quot;,&quot;ref&quot;:&quot;src://obs-set/FIN-BANK-001@v3.0?asOf=2025-12-31&amp;fixture=True&quot;,&quot;targetTable&quot;:&quot;platform.metric_observation&quot;,&quot;locator&quot;:{&quot;metricId&quot;:&quot;FIN-BANK-00 ...(截断)
+<span class="cmd">$ GET /source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154  [doc 引用]</span>
+<span class="meta">  HTTP 200  type=document_chunk targetTable=platform.document_chunk</span>
+<span class="cmd">$ GET /source/resolve?ref=src%3A%2F%2Fdoc%2F0000000000000000000000000000000000000000000000000000000000000000%23c0  [负向用例]</span>
+<span class="meta">  HTTP 400  code=E_SOURCE_REF_NOT_FOUND message=source_ref does not resolve</span>
+<span class="cmd">$ GET /prov/verify</span>
+<span class="meta">  HTTP 200  ok=True checked=382</span></pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_P03.txt</div>
+</body></html>

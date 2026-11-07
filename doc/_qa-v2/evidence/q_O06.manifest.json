@@ -1,0 +1,36 @@
+{
+  "case": "q_O06",
+  "name": "O-06 健康与 diff 类/属性级汇总",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /health/ontology-diff",
+      "status": 409,
+      "ms": 3,
+      "declaredBytes": 203,
+      "capturedBytes": 203,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /health/ontology-diff/flow",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 13635,
+      "capturedBytes": 13635,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /health/ontology-snapshot",
+      "status": 200,
+      "ms": 13,
+      "declaredBytes": 830,
+      "capturedBytes": 830,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

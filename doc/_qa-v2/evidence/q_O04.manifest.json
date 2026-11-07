@@ -1,0 +1,27 @@
+{
+  "case": "q_O04",
+  "name": "O-04 发布门禁证据包",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /ontology/evidence",
+      "status": 200,
+      "ms": 2,
+      "declaredBytes": 15354,
+      "capturedBytes": 15354,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /governance/bundle/inspect?path=__qa_probe__",
+      "status": 400,
+      "ms": 2,
+      "declaredBytes": 179,
+      "capturedBytes": 179,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

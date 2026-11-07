@@ -1,0 +1,11 @@
+# q_S10 可逆裁决与事件链重放校验
+# collected 2026-11-06 23:52:21 +0800
+# READ-ONLY
+
+$ GET /prov/verify
+-> 503  8057ms  235bytes
+{"error":{"code":"Unavailable","provider":"oxigraph-http","providerCode":"E_GRAPH_UNAVAILABLE","message":"oxigraph is unreachable at http://oxigraph:7878: [Errno -3] Temporary failure in name resolution","retryable":true,"details":{}}}
+
+$ GET /ontology/verify
+-> 200  3600ms  179bytes
+{"ok":true,"checked":10020,"prov":{"ok":true,"checked":373,"error":null,"lastHash":"a895fc825a6bcab943e0219e0cfe4aa4a541c79481c9a8d28feea9ecbe7aadfd","graph":"urn:platform:prov"}}

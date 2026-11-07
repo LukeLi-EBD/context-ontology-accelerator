@@ -1,0 +1,36 @@
+{
+  "case": "q_S08",
+  "name": "A-Box 事实治理与撤回",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /facts",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 54,
+      "capturedBytes": 54,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /facts/conflicts",
+      "status": 200,
+      "ms": 2,
+      "declaredBytes": 62,
+      "capturedBytes": 62,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select 'fact_assertion',count(*) from platform.fact_assertion union all select 'fact_event ...(截断)",
+      "status": "OK",
+      "ms": 103,
+      "declaredBytes": 30,
+      "capturedBytes": 30,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

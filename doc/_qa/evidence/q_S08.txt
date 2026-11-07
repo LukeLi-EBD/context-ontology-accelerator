@@ -1,0 +1,37 @@
+# q_S08 A-Box 事实治理与撤回
+# R2 collected 2026-11-07 07:56:21 +0800
+# READ-ONLY · 双栈同题 · 超大正文显式标记 BODY OMITTED
+
+######## STACK data · 数据栈 8080 · 镜像 715d59e8 (11-07 00:53 +08) · 全量数据 / 旧代码 ########
+$ GET /facts
+-> 200  4ms  54 chars
+[STRUCT] FULL_LENGTH=54 chars  SHA256=30251b98cf87515f  PARSE=dict  KEYS=state,items,count,conflicts  count=0  items=0  count=0  state=active
+{"state":"active","items":[],"count":0,"conflicts":[]}
+
+$ GET /facts/conflicts
+-> 200  2ms  62 chars
+[STRUCT] FULL_LENGTH=62 chars  SHA256=7c4e717202cae7a9  PARSE=dict  KEYS=conflicts,count,pending,includeAccepted  count=0  count=0
+{"conflicts":[],"count":0,"pending":0,"includeAccepted":false}
+
+$ SQL select 'fact_assertion',count(*) from platform.fact_assertion union all select 'fact_event ...(截断)
+-> OK  189ms  33 chars
+[STRUCT] FULL_LENGTH=33 chars  SHA256=2cc3e65d3bd29406  PARSE=non-json  head=fact_assertion|0 fact_event|10146
+fact_assertion|0
+fact_event|10146
+
+######## STACK accept · 验收栈 8082 · 镜像 80cb274f / agent-platform:0.1-s5 (11-07 05:45 +08) · 代码基线 8b3f36f / 小库 ########
+$ GET /facts
+-> 200  4ms  54 chars
+[STRUCT] FULL_LENGTH=54 chars  SHA256=30251b98cf87515f  PARSE=dict  KEYS=state,items,count,conflicts  count=0  items=0  count=0  state=active
+{"state":"active","items":[],"count":0,"conflicts":[]}
+
+$ GET /facts/conflicts
+-> 200  2ms  62 chars
+[STRUCT] FULL_LENGTH=62 chars  SHA256=7c4e717202cae7a9  PARSE=dict  KEYS=conflicts,count,pending,includeAccepted  count=0  count=0
+{"conflicts":[],"count":0,"pending":0,"includeAccepted":false}
+
+$ SQL select 'fact_assertion',count(*) from platform.fact_assertion union all select 'fact_event ...(截断)
+-> OK  112ms  30 chars
+[STRUCT] FULL_LENGTH=30 chars  SHA256=b02968a3d6215b9c  PARSE=non-json  head=fact_assertion|0 fact_event|97
+fact_assertion|0
+fact_event|97

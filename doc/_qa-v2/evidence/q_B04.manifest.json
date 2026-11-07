@@ -1,0 +1,18 @@
+{
+  "case": "q_B04",
+  "name": "B-04 健康看板（上一轮缺陷复测）",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /health/dashboard",
+      "status": 200,
+      "ms": 41,
+      "declaredBytes": 6164,
+      "capturedBytes": 6164,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

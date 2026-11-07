@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#dcdcaa;border:1px solid #dcdcaa;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_R01 · R-01 /answerable 分层覆盖度面板</span><span class="badge">PARTIAL</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /answerable/panel</span>
+<span class="meta">  HTTP 200  readOnly=True querySet={&quot;id&quot;: &quot;r01-24&quot;, &quot;count&quot;: 24, &quot;evaluated&quot;: 24, &quot;groups&quot;: [&quot;A&quot;, &quot;B&quot;, &quot;C&quot;], &quot;source&quot;: &quot;doc/_design/24 §5.2 + platform/test ...(截断)</span>
+  layer ontology: evaluated=24 covered=1 missing=18 coverageRate=0.0417
+  layer terms: evaluated=24 covered=16 missing=8 coverageRate=0.6667
+  layer metrics: evaluated=24 covered=6 missing=7 coverageRate=0.25
+  layer facts: evaluated=24 covered=5 missing=1 coverageRate=0.2083
+<span class="cmd">$ GET /answerable?q=%E9%9D%92%E5%B2%9B</span>
+<span class="meta">  HTTP 200  answerable=False coverage=0.0 threshold=0.6</span>
+  {&quot;query&quot;:&quot;青岛&quot;,&quot;answerable&quot;:false,&quot;coverage&quot;:0.0,&quot;threshold&quot;:0.6,&quot;coverageChars&quot;:{&quot;covered&quot;:0,&quot;total&quot;:2},&quot;ontologyVersion&quot;:&quot;ont-11f92ebb3326&quot;,&quot;ontologyGraph&quot;:&quot;urn:platform:graph:tbox:ont-11f92ebb3326&quot;,&quot;termSource&quot;:&quot;skos+rdfs:label&quot;,&quot;termCount&quot;:524,&quot;matchedTerms&quot;:[],&quot;missing&quot;:[{&quot;text&quot;:&quot;青岛&quot;,&quot;span&quot;:[0,2],&quot;reason&quot;:&quot;no_ontol ...(截断)</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_R01.txt</div>
+</body></html>

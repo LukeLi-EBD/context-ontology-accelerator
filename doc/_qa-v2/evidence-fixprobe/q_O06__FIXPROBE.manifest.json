@@ -1,0 +1,77 @@
+{
+  "case": "q_O06",
+  "name": "默认基线选择（修复版重采）",
+  "collected": "2026-11-07 09:13:07 +0800",
+  "phase": "fix-probe",
+  "stack": "http://127.0.0.1:8082",
+  "sourceImage": "agent-platform:fix-o03-o06",
+  "sourceImageId": "sha256:417d076d843c47ce75fe1d45d043d1f546d11bd607336fa308d3cc260921e9a6",
+  "containerStartedAt": "2026-11-07T01:09:32.469732669Z",
+  "revertAnchor": "D:\\agentABC\\_tmp\\anchor-8082.txt",
+  "endpoints": [
+    [
+      "G",
+      "/health/ontology-diff"
+    ],
+    [
+      "G",
+      "/health/ontology-snapshot"
+    ]
+  ],
+  "note": "无参默认路径；显式 from 路径由 S12/O03 的两端点覆盖，二者都要覆盖，缺一不可。",
+  "readyz": {
+    "http": "200",
+    "bodyRaw": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.55}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T07:53:51.514262+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "versionReadings": {
+    "supportedSchemaVersion": 40,
+    "supportedSchemaVersionSource": "platform_core.adapters.metadata_pg:19 SUPPORTED_SCHEMA_VERSION",
+    "dbMaxVersion": "40",
+    "migrationRowCount": "38",
+    "schemaVersionRows": "1\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n2\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n3\n30\n31\n32\n33\n34\n37\n38\n39\n4\n40\n5\n6\n7\n8\n9",
+    "pointerVersion": "ont-6e81732555e5"
+  },
+  "snapshotBefore": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "pointer": "tbox/current|ont-6e81732555e5|2026-11-07 07:53:51.514262+08",
+    "readyzHttp": "200",
+    "readyzBody": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.55}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T07:53:51.514262+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "snapshotAfter": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "pointer": "tbox/current|ont-6e81732555e5|2026-11-07 07:53:51.514262+08",
+    "readyzHttp": "200",
+    "readyzBody": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.55}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T07:53:51.514262+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "snapshotIdentical": true,
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /health/ontology-diff",
+      "status": 200,
+      "ms": 70,
+      "declaredBytes": 55398,
+      "capturedBytes": 55398,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /health/ontology-snapshot",
+      "status": 200,
+      "ms": 38,
+      "declaredBytes": 1458,
+      "capturedBytes": 1458,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

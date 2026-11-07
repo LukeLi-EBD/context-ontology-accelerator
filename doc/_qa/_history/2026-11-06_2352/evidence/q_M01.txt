@@ -1,0 +1,47 @@
+# q_M01 M-01 可算性补齐第一批（8 条高价值指标）
+# collected 2026-11-06 23:52:21 +0800
+# READ-ONLY
+
+$ GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31
+-> 200  5ms  186bytes
+{"metricId":"FIN-BANK-008","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.679507+00:00"}
+
+$ GET /metrics/FIN-BANK-013/compute?asOf=2025-12-31
+-> 200  4ms  186bytes
+{"metricId":"FIN-BANK-013","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.684757+00:00"}
+
+$ GET /metrics/FIN-BANK-014/compute?asOf=2025-12-31
+-> 200  5ms  186bytes
+{"metricId":"FIN-BANK-014","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.690477+00:00"}
+
+$ GET /metrics/FIN-BANK-015/compute?asOf=2025-12-31
+-> 200  5ms  186bytes
+{"metricId":"FIN-BANK-015","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.696057+00:00"}
+
+$ GET /metrics/FIN-BANK-016/compute?asOf=2025-12-31
+-> 200  5ms  186bytes
+{"metricId":"FIN-BANK-016","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.701507+00:00"}
+
+$ GET /metrics/FIN-BANK-026/compute?asOf=2025-12-31
+-> 200  4ms  186bytes
+{"metricId":"FIN-BANK-026","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.706086+00:00"}
+
+$ GET /metrics/FIN-INS-002/compute?asOf=2025-12-31
+-> 200  4ms  185bytes
+{"metricId":"FIN-INS-002","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.710880+00:00"}
+
+$ GET /metrics/FIN-INS-018/compute?asOf=2025-12-31
+-> 200  5ms  185bytes
+{"metricId":"FIN-INS-018","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"fixture","rows":[],"noData":true,"rowCount":0,"computedAt":"2026-11-06T15:52:51.716316+00:00"}
+
+$ GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31&dataSource=synthetic
+-> 200  7ms  1917bytes
+{"metricId":"FIN-BANK-008","window":{"start":"2025-12-31","end":"2025-12-31"},"dataSource":"synthetic","rows":[{"entityKey":"INST-SYN-01","numerator":0.0,"denominator":30000000.0,"value":0.0},{"entityKey":"INST-SYN-02","numerator":0.0,"denominator":37607250.0,"value":0.0},{"entityKey":"INST-SYN-03","numerator":37787000.0,"denominator":37787000.0,"value":100.0},{"entityKey":"INST-SYN-04","numerator":37666750.0,"denominator":37666750.0,"value":100.0},{"entityKey":"INST-SYN-05","numerator":37846500.0,"denominator":37846500.0,"value":100.0},{"entityKey":"INST-SYN-06","numerator":0.0,"denominator":37726250.0,"value":0.0},{"entityKey":"INST-SYN-07","numerator":0.0,"denominator":37906000.0,"value":0.0},{"entityKey":"INST-SYN-08","numerator":37785750.0,"denominator":37785750.0,"value":100.0},{"entityKey":"INST-SYN-09","numerator":37965500.0,"denominator":37965500.0,"value":100.0},{"entityKey":"INST-SYN-10","numerator":37845250.0,"denominator":37845250.0,"value":100.0},{"entityKey":"INST-SYN-11","numerator":0.0,"denominator":30000000.0,"value":0.0},{"entityKey":"INST-SYN-12","numerator":0.0,"denominator":37904750.0,"value":0.0},{"entityKey":"INST-SYN-13","numerator":37784500.0,"denominator":37784500.0,"value":100.0},{"entityKey":"INST-SYN-14","numerator":37964250.0,"denominator":37964250.0,"value":100.0},{"entityKey":"INST-SYN-15","numerator":37544000.0,"denominator":37544000.0,"value":100.0},{"entityKey":"INST-SYN-16","numerator":0.0,"denominator":37723750.0,"value":0.0},{"entityKey":"INST-SYN-17","numerator":0.0,"denominator":37603500.0,"value":0.0},{"entityKey":"INST-SYN-18","numerator":37783250.0,"denominator":37783250.0,"value":100.0},{"entityKey":"INST-SYN-19","numerator":37363000.0,"denominator":37363000.0,"value":100.0},{"entityKey":"INST-SYN-20","numerator":37542750.0,"denominator":37542750.0,"value":100.0}],"noData":false,"rowCount":20,"computedAt":"2026-11-06T15:52:51.723764+00:00"}
+
+$ GET /metrics/FIN-BANK-001/compute?asOf=2025-12-31
+-> 400  3ms  200bytes
+{"error":{"code":"InvalidArgument","provider":"platform","providerCode":"E_METRIC_BINDING_MISSING","message":"numerator field binding missing","retryable":false,"details":{"metricId":"FIN-BANK-001"}}}
+
+$ SQL select data_source,count(*) from platform.bank_loan_account group by 1
+-> OK  187ms  14bytes
+synthetic|5020

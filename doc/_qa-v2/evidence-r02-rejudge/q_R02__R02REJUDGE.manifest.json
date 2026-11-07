@@ -1,0 +1,88 @@
+{
+  "case": "q_R02",
+  "name": "R-02 引用与拒答质量闭环（10 例 golden set）· 改判重采",
+  "collected": "2026-11-07 10:50:35 +0800",
+  "phase": "r02-rejudge",
+  "stack": "http://127.0.0.1:8082",
+  "sourceImage": "agent-platform:merged-r02",
+  "sourceImageId": "sha256:adf44d206356a83d28c8e2ab5673acd62e22a8418ebb56705f6e79cd90e4fc49",
+  "containerStartedAt": "2026-11-07T02:46:33.682456489Z",
+  "criterion": "10 例通过；拒答必带缺层；citation 覆盖按类型统计；断链率不退化",
+  "criterionSource": "doc/_design/52-后续路线图-v1.md R-02 行；doc/_qa/q_R02_R-02 引用与拒答质量闭环（10 例 golden set）.md:48；doc/_qa/run_qa.py:706 exp 字段",
+  "endpoints": [
+    "GET /answer/quality (strategy=lexical, limit=10)",
+    "GET /prov/refusals"
+  ],
+  "persist": "persist=False；golden 评估不写 PROV",
+  "readyz": {
+    "http": "200",
+    "bodyRaw": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.48}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T09:49:40.978005+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "versionReadings": {
+    "supportedSchemaVersion": "42",
+    "dbMaxVersion": "42"
+  },
+  "snapshotBefore": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "prov_event": "79",
+    "pointer": "tbox/current|ont-6e81732555e5|2026-11-07 09:49:40.978005+08",
+    "readyzHttp": "200",
+    "readyzBody": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.48}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T09:49:40.978005+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "snapshotAfter": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "prov_event": "79",
+    "pointer": "tbox/current|ont-6e81732555e5|2026-11-07 09:49:40.978005+08",
+    "readyzHttp": "200",
+    "readyzBody": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.48}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T09:49:40.978005+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "snapshotIdentical": true,
+  "snapshotNorm": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "prov_event": "79",
+    "pointerName": "tbox/current",
+    "pointerVersion": "ont-6e81732555e5"
+  },
+  "provDelta": {
+    "table": "platform.prov_event",
+    "before": 79,
+    "after": 79,
+    "delta": 0,
+    "writesNothing": true,
+    "endpointPersist": "persist=False（api.py:1445 注释与 _g4_answer_quality_data 调用点）"
+  },
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /answer/quality",
+      "status": 200,
+      "ms": 441,
+      "declaredBytes": 19254,
+      "capturedBytes": 19254,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /prov/refusals",
+      "status": 400,
+      "ms": 27,
+      "declaredBytes": 214,
+      "capturedBytes": 214,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

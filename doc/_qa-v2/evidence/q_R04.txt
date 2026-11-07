@@ -1,0 +1,9 @@
+# evidence_status=COMPLETE truncated=false
+# q_R04 R-04 /browse 六 tab 交叉跳转
+# collected 2026-11-07 08:06:47 +0800
+# READ-ONLY | limitBytes=20000000
+# 说明：首行 truncated 标记为真表示响应体被显式截断，该条证据不完整，判定记 EVIDENCE_INSUFFICIENT。
+
+$ GET /browse/links
+-> 200  24ms  declared=1204B  captured=1204B  truncated=false
+{"paths":[{"id":"triples-to-entity","label":"三元组 → 实体页","from":"/browse/triples","to":"entity.html","template":"/ui/entity.html?iri={iri}","method":"GET","href":null},{"id":"metrics-to-definition","label":"口径卡 → 口径定义","from":"/browse/metrics","to":"/browse/metrics/{metricId} + browse metrics tab","template":"/ui/browse.html?tab=metrics&metricId={metricId}","method":"GET","href":null},{"id":"tree-to-entity","label":"类树 → 实体页","from":"/browse/ontology/tree","to":"entity.html","template":"/ui/entity.html?iri={iri}","method":"GET","href":null},{"id":"entity-to-tab","label":"实体页 → 浏览 tab","from":"/ui/entity.html","to":"browse.html","template":"/ui/browse.html?tab={tab}&entity={iri}","method":"GET","href":null}],"templates":{"triples-to-entity":"/ui/entity.html?iri={iri}","metrics-to-definition":"/ui/browse.html?tab=metrics&metricId={metricId}","tree-to-entity":"/ui/entity.html?iri={iri}","entity-to-tab":"/ui/browse.html?tab={tab}&entity={iri}"},"artifacts":{"triples":"/browse/triples?limit=20","metrics":"/browse/metrics","tree":"/browse/ontology/tree","entity":"/ui/api/entity?iri={iri}"},"stable":true,"readOnly":true,"writeOperations":0}

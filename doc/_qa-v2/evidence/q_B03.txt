@@ -1,0 +1,13 @@
+# evidence_status=COMPLETE truncated=false
+# q_B03 B-03 实体页（上一轮缺陷复测）
+# collected 2026-11-07 08:06:47 +0800
+# READ-ONLY | limitBytes=20000000
+# 说明：首行 truncated 标记为真表示响应体被显式截断，该条证据不完整，判定记 EVIDENCE_INSUFFICIENT。
+
+$ GET /ui/api/entity?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175
+-> 404  27ms  declared=323B  captured=323B  truncated=false
+{"error":{"code":"NotFound","provider":"platform","providerCode":"E_ENTITY_NOT_FOUND","message":"entity not found in any configured graph","retryable":false,"details":{"iri":"urn:platform:synthetic/investment_InvestmentObjective-00175","graphs":["urn:platform:graph:tbox:ont-6e81732555e5","urn:platform:graph:abox:main"]}}}
+
+$ GET /ui/api/neighbors?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175&limit=3
+-> 200  24ms  declared=333B  captured=333B  truncated=false
+{"iri":"urn:platform:synthetic/investment_InvestmentObjective-00175","graphs":["urn:platform:graph:tbox:ont-6e81732555e5","urn:platform:inferred:ont-6e81732555e5","urn:platform:graph:abox:main"],"edges":[],"nodes":[{"iri":"urn:platform:synthetic/investment_InvestmentObjective-00175","label":"investment_InvestmentObjective-00175"}]}

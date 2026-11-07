@@ -1,0 +1,21 @@
+# evidence_status=COMPLETE truncated=false
+# q_O05 O-05 术语核对与 SKOS 导入 diff
+# collected 2026-11-07 08:06:47 +0800
+# READ-ONLY | limitBytes=20000000
+# 说明：首行 truncated 标记为真表示响应体被显式截断，该条证据不完整，判定记 EVIDENCE_INSUFFICIENT。
+
+$ GET /ontology/terms/coverage
+-> 200  17ms  declared=2283B  captured=2283B  truncated=false
+{"source":"graph","expected":{"concepts":85,"aliases":18,"baselineSource":"doc/_design/50-指标 SKOS 词表-v1.md（85 概念）+ doc/_design/52-后续路线图-v1.md（18 别名）","note":"基线来自设计文档；可用 expectConcepts/expectAliases 覆盖，不是推算值"},"actual":{"concepts":85,"conceptsWithPrefLabel":85,"conceptsWithDefinition":85,"conceptsWithNotation":85,"conceptsInMetricScheme":85,"conceptPrefCoverage":1.0,"conceptDefinitionCoverage":1.0,"conceptNotationCoverage":1.0,"aliases":0,"aliasesWithTarget":0,"aliasTargetCoverage":null},"coverage":{"conceptRatio":1.0,"aliasRatio":0.0,"missingConcepts":0,"missingAliases":18},"complete":false,"conflicts":[{"code":"SURFACE_SHARED_BY_MULTIPLE_CONCEPTS","severity":"blocking","blocking":true,"surface":"AUM","lang":"zh","owners":["https://w3id.org/fsldm/terms#M-CUST-012","https://w3id.org/fsldm/terms#M-CUST-013"],"message":"surface 'AUM' points to 2 concepts"},{"code":"SURFACE_SHARED_BY_MULTIPLE_CONCEPTS","severity":"blocking","blocking":true,"surface":"RFM-R","lang":"zh","owners":["https://w3id.org/fsldm/terms#M-CUST-001","https://w3id.org/fsldm/terms#M-CUST-005"],"message":"surface 'RFM-R' points to 2 concepts"},{"code":"SURFACE_SHARED_BY_MULTIPLE_CONCEPTS","severity":"blocking","blocking":true,"surface":"综合赔付率","lang":"zh","owners":["https://w3id.org/fsldm/terms#M-FIN-INS-008","https://w3id.org/fsldm/terms#M-FIN-INS-009","https://w3id.org/fsldm/terms#M-FIN-INS-010"],"message":"surface '综合赔付率' points to 3 concepts"},{"code":"SURFACE_SHARED_BY_MULTIPLE_CONCEPTS","severity":"blocking","blocking":true,"surface":"迁徙率","lang":"zh","owners":["https://w3id.org/fsldm/terms#M-FIN-BANK-020","https://w3id.org/fsldm/terms#M-FIN-BANK-021"],"message":"surface '迁徙率' points to 2 concepts"},{"code":"SURFACE_SHARED_BY_MULTIPLE_CONCEPTS","severity":"blocking","blocking":true,"surface":"重组贷款","lang":"zh","owners":["https://w3id.org/fsldm/terms#M-FIN-BANK-010","https://w3id.org/fsldm/terms#M-FIN-BANK-011"],"message":"surface '重组贷款' points to 2 concepts"}],"counts":{"blocking":5,"warnings":0},"generatedAt":"2026-11-07T00:06:49.249599+00:00","readOnly":true,"graph":"urn:platform:graph:tbox:ont-6e81732555e5","empty":false,"versionId":"ont-6e81732555e5"}
+
+$ GET /ontology/terms/checks
+-> 200  18ms  declared=92B  captured=92B  truncated=false
+{"items":[],"count":0,"empty":true,"emptyReason":"尚无术语核对记录","readOnly":true}
+
+$ GET /browse/terms
+-> 200  4ms  declared=358B  captured=358B  truncated=false
+{"pointer":{"name":"tbox/current","versionId":"ont-6e81732555e5","semver":"0.0.0","contentHash":"9417debca40282e5503d73f1446b98374a14508c7380807f548db54d65751303","graph":"urn:platform:graph:tbox:ont-6e81732555e5","updatedAt":"2026-11-07T07:53:51.514262+08:00"},"entries":[],"classes":[],"counts":{"anchorClasses":0,"altLabels":0,"evidenced":0,"inferred":0}}
+
+$ SPARQL SELECT ?g (COUNT(DISTINCT ?c) AS ?n) WHERE { GRAPH ?g { ?c a <http://www.w3.org/ ...(截断)
+-> OK  314ms  declared=175B  captured=175B  truncated=false
+[{"g": {"type": "uri", "value": "urn:platform:graph:tbox:ont-6e81732555e5"}, "n": {"type": "literal", "value": "180", "datatype": "http://www.w3.org/2001/XMLSchema#integer"}}]

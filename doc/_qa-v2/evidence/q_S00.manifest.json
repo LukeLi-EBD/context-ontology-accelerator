@@ -1,0 +1,36 @@
+{
+  "case": "q_S00",
+  "name": "平台就绪与运行时契约",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /readyz",
+      "status": 200,
+      "ms": 29,
+      "declaredBytes": 599,
+      "capturedBytes": 599,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /status",
+      "status": 200,
+      "ms": 50,
+      "declaredBytes": 11360,
+      "capturedBytes": 11360,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /healthz",
+      "status": 200,
+      "ms": 2,
+      "declaredBytes": 33,
+      "capturedBytes": 33,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

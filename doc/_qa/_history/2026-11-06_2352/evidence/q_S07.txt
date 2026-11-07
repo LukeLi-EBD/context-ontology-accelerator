@@ -1,0 +1,475 @@
+# q_S07 最小 Web UI 页面
+# collected 2026-11-06 23:52:21 +0800
+# READ-ONLY
+
+$ GET /ui/index.html
+-> 200  4ms  1373bytes
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本体平台 · 概览</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="overview">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="health.html" data-nav="health">健康看板</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+      <a href="governance.html" data-nav="governance">治理控制台</a>
+    </nav>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>系统概览 <span class="sub">版本指针 / 容器状态 / 命名图</span>
+        <button id="refresh" style="margin-left:auto">刷新</button>
+      </h2>
+      <div id="overview" class="empty">加载中…</div>
+    </section>
+    <section class="panel">
+      <h2>下一步</h2>
+      <p class="hint">首次使用运行 <code>scripts/seed.ps1</code> 灌入示例本体与文档；然后用“文档库”上传，依次解析、抽取，最后在“审批队列”通过候选并物化。</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+  <script src="browse_answer.js"></script>
+  <script src="browse_path.js"></script>
+</body>
+</html>
+
+
+$ GET /ui/browse.html
+-> 200  2ms  11387bytes
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>只读浏览 · 本体平台</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="browse.css">
+</head>
+<body data-page="browse">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse" class="active">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="health.html" data-nav="health">健康看板</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>只读浏览 <span class="sub">本体类 / 口径卡 / 术语别名 · 不触发推理与重建</span></h2>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-view="ontology" role="tab">本体</button>
+        <button class="tab" data-view="metrics" role="tab">口径卡</button>
+        <button class="tab" data-view="terms" role="tab">术语别名</button>
+        <button class="tab" data-view="dictionaries" role="tab">数据字典</button>
+        <button class="tab" data-view="triples" role="tab">三元组</button>
+        <button class="tab" data-view="sparql" role="tab">SPARQL</button>
+        <button class="tab" data-view="answer" role="tab">问答</button>
+      </div>
+
+      <div id="view-ontology" class="view">
+        <div class="split">
+          <div>
+            <h3>类树 <span id="tree-count" class="sub"></span></h3>
+            <div id="ontology-tree" class="empty">加载中…</div>
+            <h3>属性 <span id="prop-count" class="sub"></span></h3>
+            <div id="ontology-properties" class="empty">加载中…</div>
+          </div>
+          <div>
+            <h3>类下实例 <span id="instance-total" class="sub"></span></h3>
+            <div id="instance-head" class="hint">点击左侧任一类型查看实例</div>
+            <div id="instance-list" class="empty">尚未选择类型</div>
+            <div class="pager">
+              <button id="instance-prev" disabled>上一页</button>
+              <span id="instance-page" class="sub"></span>
+              <button id="instance-next" disabled>下一页</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-metrics" class="view" hidden>
+        <div class="filters">
+          <label>域
+            <select id="filter-domain">
+              <option value="">全部</option>
+              <option value="bank">bank</option>
+              <option value="insurance">insurance</option>
+              <option value="customer">customer</option>
+            </select>
+          </label>
+          <label>evidenceBasis
+            <select id="filter-basis">
+              <option value="">全部</option>
+              <option value="regulatory">regulatory</option>
+              <option value="industry">industry</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <label>publishable
+            <select id="filter-publishable">
+              <option value="">全部</option>
+              <option value="true">true</option>
+              <option value="false">false</option>
+            </select>
+          </label>
+          <button id="metrics-refresh">刷新</button>
+          <span id="metrics-count" class="sub"></span>
+        </div>
+        <div id="metrics-empty" class="empty" hidden>当前过滤条件下没有口径卡（接口返回 0 条）。</div>
+        <table id="metrics-table" class="data-table" hidden>
+          <thead>
+            <tr>
+              <th>指标ID</th><th>名称</th><th>域</th><th>依据</th>
+              <th>publishable</th><th>推理</th><th>公式禁用</th><th>版本</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="metric-detail" class="detail empty">点击任一指标查看口径详情</div>
+      </div>
+
+      <div id="view-terms" class="view" hidden>
+        <div id="terms-counts" class="hint">加载中…</div>
+        <div class="split">
+          <div>
+            <h3>锚点类 <span id="terms-class-count" class="sub"></span></h3>
+            <div id="terms-classes" class="empty">加载中…</div>
+          </div>
+          <div>
+            <h3>别名条目</h3>
+            <div id="terms-empty" class="empty" hidden>当前 T-Box 没有术语别名条目。</div>
+            <table id="terms-table" class="data-table" hidden>
+              <thead>
+                <tr>
+                  <th>锚点类</th><th>别名</th><th>档位</th><th>confidence</th>
+                  <th>guardRegex</th><th>canonicalFor</th><th>suppressedSurface</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-dictionaries" class="view" hidden>
+        <div class="filters">
+          <label>表名
+            <input type="text" id="dict-table" placeholder="留空为全部，如 bank_loan_account">
+          </label>
+          <label>列名
+            <input type="text" id="dict-column" placeholder="留空为全部">
+          </label>
+          <label>来源
+            <select id="dict-source">
+              <option value="">全部</option>
+              <option value="pg">pg</option>
+              <option value="mysql">mysql</option>
+              <option value="glue">glue</option>
+            </select>
+          </label>
+          <label>绑定档位
+            <select id="dict-binding">
+              <option value="">全部</option>
+              <option value="explicit">explicit</option>
+              <option value="name_match">name_match</option>
+              <option value="manual">manual</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <button id="dict-query">查询</button>
+          <button id="dict-refresh">刷新字典</button>
+          <span id="dict-status" class="sub"></span>
+        </div>
+        <div class="hint">只读浏览：GET /catalog/dictionaries。刷新按钮调用 POST /catalog/dictionaries/refresh（只读内省，重放不产生重复行）；
+          绑定只作字典用途，不参与发布门禁。</div>
+        <div id="dict-empty" class="empty" hidden>当前条件下没有字典行（接口返回 0 条）。</div>
+        <table id="dict-table-view" class="data-table" hidden>
+          <thead>
+            <tr>
+              <th>表</th><th>列</th><th>类型</th><th>可空</th><th>注释</th>
+              <th>来源</th><th>绑定方法</th><th>绑定属性</th><th>confidence</th><th>说明</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="pager">
+          <button id="dict-prev" disabled>上一页</button>
+          <span id="dict-page" class="sub"></span>
+          <button id="dict-next" disabled>下一页</button>
+        </div>
+      </div>
+
+      <div id="view-triples" class="view" hidden>
+        <div class="filters">
+          <label>subject（IRI）
+            <input type="text" id="triple-subject" placeholder="留空为任意，如 https://… 或 urn:…">
+          </label>
+          <label>predicate（IRI）
+            <input type="text" id="triple-predicate" placeholder="留空为任意">
+          </label>
+          <label>object（IRI 或字面量）
+            <input type="text" id="triple-object" placeholder="留空为任意；非 IRI 按字面量匹配">
+          </label>
+          <label>graph（IRI）
+            <input type="text" id="triple-graph" placeholder="留空为全部命名图">
+          </label>
+          <label>limit
+            <select id="triple-limit">
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <button id="triples-query">查询</button>
+          <button id="triples-reset">清空条件</button>
+          <span id="triples-status" class="sub"></span>
+        </div>
+        <div class="hint">只读：GET /browse/triples。留空条件时默认遍历全部命名图（平台默认图为空，需带 GRAPH 或指定 graph）。</div>
+        <div id="triples-empty" class="empty" hidden>当前条件下没有三元组（接口返回 0 条）。</div>
+        <table id="triples-table" class="data-table" hidden>
+          <thead>
+            <tr><th>命名图</th><th>subject</th><th>predicate</th><th>object</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="pager">
+          <button id="triples-prev" disabled>上一页</button>
+          <span id="triples-page" class="sub"></span>
+          <button id="triples-next" disabled>下一页</button>
+        </div>
+      </div>
+
+      <div id="view-sparql" class="view" hidden>
+        <div class="warnbox">只读端点：仅接受 SELECT / ASK。写查询与 SERVICE 不做前端拦截，由后端返回
+          400 错误，本页原样展示 HTTP 状态、providerCode、message 与原始 JSON。</div>
+        <textarea id="sparql-query" class="sparql-input" rows="7" spellcheck="false"
+          placeholder="SELECT ?s ?p ?o WHERE { GRAPH ?g { ?s ?p ?o } } LIMIT 20"></textarea>
+        <div class="toolbar">
+          <button id="sparql-run" class="primary">运行查询</button>
+          <span id="sparql-status" class="sub"></span>
+        </div>
+        <div id="sparql-error" class="error" hidden></div>
+        <div id="sparql-result" class="empty">尚未运行查询</div>
+      </div>
+
+      <div id="view-answer" class="view" hidden>
+        <div class="filters qa-filters">
+          <label class="qa-question-label">问题
+            <input type="text" id="qa-question" maxlength="2000"
+              placeholder="例如：13个月继续率是多少 / 逾期分档（M0–M6）是什么">
+          </label>
+          <label>策略
+            <select id="qa-strategy">
+              <option value="lexical" selected>lexical</option>
+              <option value="hybrid">hybrid</option>
+              <option value="vector">vector</option>
+            </select>
+          </label>
+          <label>topK
+            <select id="qa-topk">
+              <option value="3">3</option>
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+            </select>
+          </label>
+          <button id="qa-ask" class="primary">提问</button>
+          <button id="qa-example">填入示例</button>
+          <span id="qa-status" class="sub"></span>
+        </div>
+        <div class="hint">只读：POST /answerable + POST /answer。覆盖度四层为真实命中；引用 chip 全部来自运行时对象。</div>
+
+        <section class="qa-coverage">
+          <h3>覆盖度 <span class="sub">/answerable · ontology / terms / metrics / facts</span></h3>
+          <div id="qa-coverage-bars" class="qa-bars empty">尚未校验</div>
+        </section>
+
+        <div class="split qa-result">
+          <div>
+            <h3>回答 <span id="qa-refusal" class="sub"></span></h3>
+            <div id="qa-answer" class="qa-answer empty">尚未提问</div>
+            <h3>引用 <span id="qa-citation-count" class="sub"></span></h3>
+            <div id="qa-citations" class="qa-chips empty">尚无引用</div>
+            <h3>缺口与补法</h3>
+            <div id="qa-missing" class="qa-missing empty">无</div>
+          </div>
+          <div>
+            <h3>步骤时间线 <span id="qa-step-count" class="sub"></span></h3>
+            <div id="qa-steps" class="qa-steps empty">尚未提问</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="browse.js"></script>
+  <script src="browse_urls.js"></script><script src="browse_metrics.js" defer></script>
+  <script src="browse_answer.js"></script>
+  <script src="browse_dict.js"></script>
+</body>
+</html>
+
+
+$ GET /ui/entity.html
+-> 200  2ms  2628bytes
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实体详情 · 本体平台</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="entity">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="entity.html" data-nav="entity" class="active">实体详情</a>
+      <a href="health.html" data-nav="health">健康看板</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+      <a href="governance.html" data-nav="governance">治理控制台</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>实体详情 <span class="sub">只读 · GET /ui/api/entity · 徽标由后端判定</span></h2>
+      <form id="entity-form" class="toolbar">
+        <input type="text" id="entity-iri" placeholder="urn:platform:... 或 http://..." style="flex:1;min-width:320px" maxlength="2048">
+        <button class="primary" type="submit">查看</button>
+        <span id="entity-state" class="sub"></span>
+      </form>
+      <div id="entity-summary" class="empty">输入 IRI 后查询，或从“只读浏览 / 本体浏览”的实例列表点击进入。</div>
+    </section>
+
+    <section class="panel">
+      <h2>类归属与父类链 <span id="class-count" class="sub"></span></h2>
+      <div id="entity-classes" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>必需属性与取值 <span id="required-count" class="sub"></span></h2>
+      <div id="entity-required" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>属性取值</h2>
+      <div id="entity-properties" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>邻居子图 <span id="neighbor-count" class="sub"></span></h2>
+      <div id="entity-neighbors" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>相关指标 <span class="sub">按 metric_field_binding 反查 · 弱匹配失败显式标记</span></h2>
+      <div id="entity-metrics" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>来源与溯源 <span class="sub">sourceRef 可点击</span></h2>
+      <div id="entity-sources" class="empty">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>数据来源</h2>
+      <div id="entity-source-note" class="hint">—</div>
+    </section>
+  </main>
+  <script src="entity.js"></script>
+  <script src="browse_answer.js"></script>
+</body>
+</html>
+
+
+$ GET /ui/health.html
+-> 200  22ms  2439bytes
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>健康看板 · 本体平台</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="health">
+  <header class="top">
+    <h1>本体平台</h1>
+    <nav>
+      <a href="index.html" data-nav="overview">概览</a>
+      <a href="browse.html" data-nav="browse">只读浏览</a>
+      <a href="ontology.html" data-nav="ontology">本体浏览</a>
+      <a href="entity.html" data-nav="entity">实体详情</a>
+      <a href="health.html" data-nav="health" class="active">健康看板</a>
+      <a href="documents.html" data-nav="documents">文档库</a>
+      <a href="search.html" data-nav="search">检索与问答</a>
+      <a href="approvals.html" data-nav="approvals">审批队列</a>
+      <a href="governance.html" data-nav="governance">治理控制台</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>系统状态 <span class="sub">只读聚合 · GET /health/dashboard</span>
+        <button id="refresh" style="margin-left:auto">刷新</button>
+      </h2>
+      <div id="health-summary" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>覆盖率 <span class="sub">T-Box 声明 vs A-Box 实际使用</span></h2>
+      <div id="health-coverage" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>质量与推理 <span class="sub">孤实例 / 无标签类 / SHACL / 推理失败</span></h2>
+      <div id="health-quality" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>迁移与 schema 一致性 <span class="sub">platform.schema_version vs 代码版本</span></h2>
+      <div id="health-migration" class="empty">加载中…</div>
+    </section>
+
+    <section class="panel">
+      <h2>本体 diff <span class="sub">GET /health/ontology-diff · 只读</span></h2>
+      <form id="diff-form" class="toolbar">
+        <label for="diff-from">from</label>
+        <input type="text" id="diff-from" placeholder="留空 = 上一版" maxlength="120">
+        <label for="diff-to">to</label>
+        <input type="text" id="diff-to" placeholder="留空 = tbox/current" maxlength="120">
+        <button class="primary" type="submit">对比</button>
+        <span id="diff-state" class="sub"></span>
+      </form>
+      <div id="diff-result" class="empty">留空 from/to 可比较 tbox/current 与上一版。</div>
+    </section>
+
+    <section class="panel">
+      <h2>数据来源</h2>
+      <div id="health-source" class="hint">—</div>
+    </section>
+  </main>
+  <script src="health.js"></script>
+</body>
+</html>

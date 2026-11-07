@@ -1,0 +1,63 @@
+{
+  "case": "q_S14",
+  "name": "平台验证·指标可发布出数",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /metrics",
+      "status": 200,
+      "ms": 5,
+      "declaredBytes": 56212,
+      "capturedBytes": 56212,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-008/output?asOf=2025-12-31",
+      "status": 200,
+      "ms": 2,
+      "declaredBytes": 855,
+      "capturedBytes": 855,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-008/output?asOf=2025-12-31&compute=true",
+      "status": 400,
+      "ms": 2,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 1,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31&dataSource=synthetic",
+      "status": 200,
+      "ms": 10,
+      "declaredBytes": 2911,
+      "capturedBytes": 2911,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select count(*) from platform.metric_observation",
+      "status": "OK",
+      "ms": 112,
+      "declaredBytes": 5,
+      "capturedBytes": 5,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

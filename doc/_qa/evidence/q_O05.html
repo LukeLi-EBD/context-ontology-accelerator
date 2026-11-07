@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#0f1419;color:#d8dee9;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px;margin:0}
+.hd{border-bottom:1px solid #333;padding-bottom:9px;margin-bottom:9px;display:flex;justify-content:space-between}
+.t{color:#88c0d0;font-weight:bold}.ts{color:#7a869a;font-size:12px;margin-bottom:10px}
+pre{white-space:pre-wrap;margin:0}.ft{color:#6b7688;font-size:12px;margin-top:12px;border-top:1px solid #333;padding-top:8px}
+.ok{color:#a3be8c}.warn{color:#ebcb8b}.bad{color:#bf616a}.off{color:#b48ead}
+.badge{padding:2px 10px;border:1px solid currentColor;border-radius:3px;font-weight:bold}
+</style></head><body>
+<div class="hd"><span class="t">q_O05 · O-05 术语核对与 SKOS 导入 diff</span><span class="badge warn">PARTIAL</span></div>
+<div class="ts">COA 本体平台 · R2 第 2 轮逐特性复评 · 2026-11-07 07:56:21 +0800 · 双栈同题 8080 / 8082</div>
+<pre style="margin-top:12px">
+$ 轮次 R2  ·  2026-11-07 07:56:21 +0800  ·  q_O05 O-05 术语核对与 SKOS 导入 diff
+$ 判据栈 按栈分别判定  ·  T0 2026-11-06 23:52  →  T1 2026-11-07 06:08  →  T2 本轮
+
+── 数据栈 127.0.0.1:8080 ──────────────────────────────
+$ GET /ontology/terms/coverage
+  -&gt; 200  24ms  2131 chars | FULL_LENGTH=2131 chars  SHA256=f135d8dbedccee62  PARSE=dict  KEYS=source,expected,actual,coverage,complete,conflicts,counts,generatedAt,readOnly,graph,empty  complete=true
+  source = graph
+  expected = {&quot;concepts&quot;: 85, &quot;aliases&quot;: 18, &quot;baselineSource&quot;: &quot;doc/_design/50-指标 SKOS 词表-v1.md（85 概念）+ doc/_design/52-后续路线图-v1.md（18 别名）&quot;, &quot;no ...(截断)
+  actual = {&quot;concepts&quot;: 85, &quot;conceptsWithPrefLabel&quot;: 85, &quot;conceptsWithDefinition&quot;: 85, &quot;conceptsWithNotation&quot;: 85, &quot;conceptsInMetricScheme&quot;:  ...(截断)
+  coverage = {&quot;conceptRatio&quot;: 1.0, &quot;aliasRatio&quot;: 1.0, &quot;missingConcepts&quot;: 0, &quot;missingAliases&quot;: 0}
+  complete = true
+  conflicts = [{&quot;code&quot;: &quot;SURFACE_SHARED_BY_MULTIPLE_CONCEPTS&quot;, &quot;severity&quot;: &quot;blocking&quot;, &quot;blocking&quot;: true, &quot;surface&quot;: &quot;AUM&quot;, &quot;lang&quot;: &quot;zh&quot;, &quot;owners ...(截断)
+$ GET /ontology/terms/checks
+  -&gt; 200  19ms  280 chars | FULL_LENGTH=280 chars  SHA256=69933d48a436969c  PARSE=dict  KEYS=items,count,empty,emptyReason,readOnly  count=1  items=1  count=1
+  items = [{&quot;checkId&quot;: &quot;tc-e6cf0c0f8004&quot;, &quot;sourceKind&quot;: &quot;import&quot;, &quot;versionId&quot;: null, &quot;status&quot;: &quot;pass&quot;, &quot;diffHash&quot;: &quot;3ebc0fea92c744f77eb0dba4 ...(截断)
+  count = 1
+  empty = false
+  emptyReason = null
+
+── 验收栈 127.0.0.1:8082 ──────────────────────────────
+$ GET /ontology/terms/coverage
+  -&gt; 200  17ms  2163 chars | FULL_LENGTH=2163 chars  SHA256=78d28d69dc3f1134  PARSE=dict  KEYS=source,expected,actual,coverage,complete,conflicts,counts,generatedAt,readOnly,graph,empty,versionId  complete=false
+  source = graph
+  expected = {&quot;concepts&quot;: 85, &quot;aliases&quot;: 18, &quot;baselineSource&quot;: &quot;doc/_design/50-指标 SKOS 词表-v1.md（85 概念）+ doc/_design/52-后续路线图-v1.md（18 别名）&quot;, &quot;no ...(截断)
+  actual = {&quot;concepts&quot;: 85, &quot;conceptsWithPrefLabel&quot;: 85, &quot;conceptsWithDefinition&quot;: 85, &quot;conceptsWithNotation&quot;: 85, &quot;conceptsInMetricScheme&quot;:  ...(截断)
+  coverage = {&quot;conceptRatio&quot;: 1.0, &quot;aliasRatio&quot;: 0.0, &quot;missingConcepts&quot;: 0, &quot;missingAliases&quot;: 18}
+  complete = false
+  conflicts = [{&quot;code&quot;: &quot;SURFACE_SHARED_BY_MULTIPLE_CONCEPTS&quot;, &quot;severity&quot;: &quot;blocking&quot;, &quot;blocking&quot;: true, &quot;surface&quot;: &quot;AUM&quot;, &quot;lang&quot;: &quot;zh&quot;, &quot;owners ...(截断)
+$ GET /ontology/terms/checks
+  -&gt; 200  2ms  76 chars | FULL_LENGTH=76 chars  SHA256=37ba92ae30c378e8  PARSE=dict  KEYS=items,count,empty,emptyReason,readOnly  count=0  items=0  count=0
+  items = []
+  count = 0
+  empty = true
+  emptyReason = 尚无术语核对记录
+
+VERDICT = PARTIAL</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径 · 完整原始输出 evidence/q_O05.txt</div>
+</body></html>

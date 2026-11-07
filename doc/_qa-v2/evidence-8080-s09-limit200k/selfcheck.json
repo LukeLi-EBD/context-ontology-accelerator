@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-11-07 08:33:54 +0800",
+  "evidence_dir": "D:\\agentABC\\coa\\doc\\_qa-v2\\evidence-8080-s09-limit200k",
+  "files_scanned": 1,
+  "truncated_cases": [
+    "q_S09"
+  ],
+  "unmarked_cases": [],
+  "complete_cases": [],
+  "any_truncated": true,
+  "overall": "INADMISSIBLE",
+  "rule": "任一产出 truncated=true（或缺少 truncated 标记）→ 整体结论不可采信；该条目既不给 PASS 也不给 FAIL，记 EVIDENCE_INSUFFICIENT。"
+}

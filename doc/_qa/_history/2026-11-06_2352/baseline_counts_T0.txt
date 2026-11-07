@@ -1,0 +1,13 @@
+chunk_embedding|15042
+data_dictionary|375
+document|2958
+document_chunk|15110
+extraction_candidate|918
+fact_assertion|0
+fact_event|9758
+import_item|484
+metric_definition|85
+metric_observation|0
+ontology_version|1844
+prov_event|313
+source_ref_registry|76

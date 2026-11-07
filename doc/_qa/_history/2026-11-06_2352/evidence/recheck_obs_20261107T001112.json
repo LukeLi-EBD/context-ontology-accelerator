@@ -1,0 +1,5805 @@
+{
+ "measuredAt": "2026-11-07 00:11:12 +0800",
+ "base": "http://127.0.0.1:8080",
+ "env": {
+  "provEventBefore": "417",
+  "metricObservation": "37471|55|37471|0",
+  "readyz": {
+   "status": 200,
+   "obj": {
+    "status": "ok",
+    "checks": {
+     "database": {
+      "status": "ok"
+     },
+     "graph": {
+      "status": "ok"
+     },
+     "storage": {
+      "status": "ok",
+      "disk_free_pct": 32.89
+     }
+    }
+   }
+  },
+  "status": {
+   "status": 200,
+   "obj": {
+    "status": "ok",
+    "version": "0.1.0",
+    "slice": "S13",
+    "mode": "single",
+    "runtime_mode": "learn",
+    "config_version": 1,
+    "config_file": "/data/platform.yaml",
+    "providers": {
+     "metadata": {
+      "provider": "postgres",
+      "port": "MetadataStore",
+      "capabilities": [
+       "db.tx",
+       "db.query",
+       "db.advisory_lock",
+       "db.migrate"
+      ],
+      "port_version": "v1",
+      "provider_version": "pg18",
+      "limits": {},
+      "notes": {
+       "client": "psycopg3"
+      }
+     },
+     "graph": {
+      "provider": "oxigraph-http",
+      "port": "GraphStore",
+      "capabilities": [
+       "graph.sparql",
+       "graph.ask",
+       "graph.update",
+       "graph.named_graphs",
+       "graph.clear",
+       "graph.load",
+       "graph.gsp.get",
+       "graph.gsp.put",
+       "graph.gsp.post",
+       "graph.gsp.delete",
+       "graph.property_path",
+       "graph.from_named"
+      ],
+      "port_version": "v1",
+      "provider_version": "0.5.7",
+      "limits": {
+       "timeout_ms": 30000,
+       "max_rows": 10000
+      },
+      "notes": {
+       "backend": "oxigraph",
+       "gsp_support": "none",
+       "gsp_platform": {
+        "read": "unavailable (GET /store -> 405)",
+        "write": "forbidden (POST /store -> 403 E_GSP_GOVERNANCE_REQUIRED)"
+       },
+       "gsp_backend_support": "full",
+       "gsp_named_graph_style": "query",
+       "gsp_default_style": "?default",
+       "gsp_whole_store": "dataset",
+       "content_negotiation": true,
+       "text_index": false,
+       "federation_service": false,
+       "service_probe": "malformed-json",
+       "property_path": {
+        "sequence": true,
+        "plus": true,
+        "inverse": true
+       },
+       "from_clause": true,
+       "from_named": true,
+       "graph_whitelist": {
+        "prefixes": [
+         "urn:platform:"
+        ],
+        "graphs": [],
+        "error": "E_GRAPH_GRAPH_NOT_ALLOWED"
+       },
+       "update": {
+        "insert_data": true,
+        "clear_graph": true,
+        "drop_graph": true
+       }
+      }
+     },
+     "object": {
+      "provider": "layered(pg+fs)",
+      "port": "ObjectStore",
+      "capabilities": [
+       "object.put",
+       "object.get",
+       "object.head",
+       "object.delete",
+       "object.list",
+       "object.range_read"
+      ],
+      "port_version": "v1",
+      "provider_version": "0.1.0",
+      "limits": {},
+      "notes": {
+       "presign": false,
+       "multipart": false,
+       "versioning": "content_hash",
+       "small_object_provider": "pg",
+       "large_object_provider": "fs",
+       "small_object_max_bytes": 10485760,
+       "range_read": {
+        "fs": "native",
+        "pg": false
+       }
+      }
+     },
+     "ontology": {
+      "provider": "pg+oxigraph",
+      "port": "OntologyRegistry",
+      "capabilities": [
+       "ontology.import",
+       "ontology.publish",
+       "ontology.rollback",
+       "ontology.get",
+       "ontology.list",
+       "ontology.pointer",
+       "ontology.propose",
+       "ontology.approve",
+       "ontology.diff",
+       "ontology.publish.governed",
+       "ontology.rollbackTo",
+       "ontology.export",
+       "ontology.audit"
+      ],
+      "port_version": "v1",
+      "provider_version": "0.1.0",
+      "limits": {},
+      "notes": {
+       "slice": "S12",
+       "gates": [
+        "shacl",
+        "consistency",
+        "breaking-acknowledge"
+       ],
+       "publish": "no direct path: omitted proposalId becomes an implicit gated proposal",
+       "rollback": "rollbackTo switches the pointer; both graphs are kept",
+       "pointer": "tbox/current"
+      }
+     },
+     "parser": {
+      "provider": "local",
+      "port": "DocumentParser",
+      "capabilities": [
+       "parse.pdf",
+       "parse.office",
+       "parse.text",
+       "parse.tables",
+       "parse.page_locator"
+      ],
+      "port_version": "v1",
+      "provider_version": "s2.1",
+      "limits": {
+       "ocr": false,
+       "tables": true,
+       "min_chars_per_page": 20
+      },
+      "notes": {
+       "engines": [
+        "pypdfium2==5.14.0",
+        "pdfplumber==0.11.10",
+        "markitdown==0.1.9"
+       ],
+       "ocr": false,
+       "async": false
+      }
+     },
+     "documents": {
+      "provider": "pg+layered",
+      "port": "DocumentService",
+      "capabilities": [
+       "document.ingest",
+       "document.get",
+       "document.list",
+       "document.chunks",
+       "document.source"
+      ],
+      "port_version": "v1",
+      "provider_version": "s2.1",
+      "limits": {},
+      "notes": {
+       "slice": "S2",
+       "idempotency": "document_id = sha256(content)",
+       "pages": "PDF pages; office/text/HTML recorded as page 1",
+       "ocr": false,
+       "not_implemented": [
+        "delete",
+        "reparse",
+        "async",
+        "ocr",
+        "table_semantics"
+       ]
+      }
+     },
+     "embedding": {
+      "provider": "local-bge",
+      "port": "EmbeddingClient",
+      "capabilities": [
+       "embedding.embed"
+      ],
+      "port_version": "v1",
+      "provider_version": "s3.1",
+      "limits": {
+       "dimensions": 1024,
+       "batch_size": 2,
+       "batch_max": 2,
+       "chunk_per_request_max": 32,
+       "request_max_chars": 1600,
+       "request_timeout_s": 60,
+       "max_chunks_per_sec": 1.0,
+       "max_in_flight": 1
+      },
+      "notes": {
+       "slice": "S3",
+       "model": "BAAI/bge-m3",
+       "endpoint": "http://embedding:80/v1",
+       "fake": false,
+       "service_enabled": true
+      }
+     },
+     "vectors": {
+      "provider": "pgvector",
+      "port": "VectorStore",
+      "capabilities": [
+       "vector.upsert",
+       "vector.search",
+       "vector.delete"
+      ],
+      "port_version": "v1",
+      "provider_version": "s3.2",
+      "limits": {
+       "dimensions": 1024,
+       "index": "hnsw-per-dimension"
+      },
+      "notes": {
+       "slice": "S3",
+       "metric": "cosine",
+       "model_isolation": "(chunk_id, model) primary key",
+       "partition": "local-bge:BAAI/bge-m3@1024"
+      }
+     },
+     "search_index": {
+      "provider": "postgres-fts",
+      "port": "SearchIndex",
+      "capabilities": [
+       "search.lexical"
+      ],
+      "port_version": "v1",
+      "provider_version": "s3.1",
+      "limits": {
+       "parser": "simple",
+       "trgm": "word_similarity",
+       "min_similarity": 0.1
+      },
+      "notes": {
+       "slice": "S3",
+       "chinese": "`simple` has no word segmentation; pg_trgm covers substring match"
+      }
+     },
+     "search": {
+      "provider": "pg+embedding",
+      "port": "SearchService",
+      "capabilities": [
+       "search.hybrid",
+       "search.vector",
+       "search.lexical",
+       "index.document"
+      ],
+      "port_version": "v1",
+      "provider_version": "s3.1",
+      "limits": {
+       "top_k": 10,
+       "candidate_k": 30,
+       "rrf_k": 60,
+       "dimensions": 1024
+      },
+      "notes": {
+       "slice": "S3",
+       "model": "BAAI/bge-m3",
+       "fusion": "rrf",
+       "degrade": "embedding unavailable -> lexical only + degraded"
+      }
+     },
+     "llm": {
+      "provider": "ark",
+      "port": "LLMClient",
+      "capabilities": [
+       "llm.json"
+      ],
+      "port_version": "v1",
+      "provider_version": "s4.1",
+      "limits": {
+       "timeout_ms": 120000,
+       "max_retries": 1
+      },
+      "notes": {
+       "slice": "S4",
+       "configured": true,
+       "model": "deepseek-v4-1-flash-261017",
+       "base_url": "https://ark.cn-beijing.volces.com/api/coding/v3"
+      }
+     },
+     "extraction": {
+      "provider": "rules+llm",
+      "port": "ExtractionPipeline",
+      "capabilities": [
+       "extract.rules",
+       "extract.llm",
+       "candidate.approve"
+      ],
+      "port_version": "v1",
+      "provider_version": "s4.1",
+      "limits": {
+       "rules": 2,
+       "llm_max_chunks": 20,
+       "llm_max_chunks_override": null,
+       "llm_batch_rule": "max(llm_max_chunks, min(200, ceil(chunks/10)))",
+       "abox_graph": "urn:platform:graph:abox:main"
+      },
+      "notes": {
+       "slice": "S4",
+       "llm_configured": true,
+       "write_policy": "approval-gated, pending -> graph"
+      }
+     },
+     "reasoner": {
+      "provider": "robot/EL",
+      "port": "ReasoningService",
+      "capabilities": [
+       "reason.materialize",
+       "reason.consistent",
+       "reason.rdfs"
+      ],
+      "port_version": "v1",
+      "provider_version": "robot",
+      "limits": {
+       "timeout_ms": 300000,
+       "max_input_bytes": 52428800
+      },
+      "notes": {
+       "slice": "S5",
+       "endpoint": "http://reasoner:7879",
+       "engine": "robot",
+       "profile": "EL",
+       "inferred_graph_prefix": "urn:platform:inferred:"
+      }
+     },
+     "consistency_reasoner": null,
+     "validation": {},
+     "reasoning": {
+      "provider": "robot/EL",
+      "port": "ReasoningService",
+      "capabilities": [
+       "reason.materialize",
+       "reason.rdfs",
+       "shacl.validate"
+      ],
+      "port_version": "v1",
+      "provider_version": "s5.1",
+      "limits": {
+       "timeout_ms": 300000
+      },
+      "notes": {
+       "slice": "S5",
+       "mode": "materialize",
+       "profile": "EL",
+       "engine": "robot",
+       "shapesDir": "/data/shapes",
+       "inferredGraphPrefix": "urn:platform:inferred:",
+       "chain": "rdfs(jena riot) -> owl(robot/elk) -> shacl gate; one target graph",
+       "not_implemented": [
+        "query_rewriting",
+        "incremental",
+        "owl2dl"
+       ]
+      }
+     },
+     "context": {
+      "provider": "platform",
+      "port": "ContextResolver",
+      "capabilities": [
+       "context.resolve"
+      ],
+      "port_version": "v1",
+      "provider_version": "s6.1",
+      "limits": {
+       "defaultTokenBudget": 2048,
+       "maxTokenBudget": 8192,
+       "topK": 10,
+       "graphLimit": 50
+      },
+      "notes": {
+       "slice": "S6",
+       "fusion": "rrf-k60 (delegated to SearchService)",
+       "degrade": "graph down -> chunks only; search down -> facts only"
+      }
+     },
+     "answerability": {
+      "provider": "platform",
+      "port": "Answerability",
+      "capabilities": [
+       "answerability.check"
+      ],
+      "port_version": "v1",
+      "provider_version": "q4.1",
+      "limits": {
+       "minCoverage": 0.6,
+       "maxQueryChars": 2000
+      },
+      "notes": {
+       "slice": "Q4",
+       "termSource": "skos(prefLabel/altLabel) when present + rdfs:label baseline",
+       "negative": "coverage < minCoverage -> answerable=false + missing fragments"
+      }
+     },
+     "facts": {
+      "provider": "platform",
+      "port": "FactLedger",
+      "capabilities": [
+       "fact.record",
+       "fact.retract",
+       "fact.retract_by_source",
+       "fact.restore",
+       "fact.list",
+       "fact.conflicts",
+       "fact.conflict_resolve",
+       "fact.conflict_undo",
+       "fact.conflict_batch",
+       "fact.audit_export",
+       "fact.audit_verify",
+       "fact.audit_replay"
+      ],
+      "port_version": "v1",
+      "provider_version": "s10.1",
+      "limits": {
+       "maxLimit": 500
+      },
+      "notes": {
+       "slice": "S10",
+       "retraction": "explicit state, never an overwrite",
+       "audit": "append-only fact_event with prev_event/hash chain",
+       "conflicts": "operator adjudication only: keep/keep both/merge",
+       "undo": "adjudication is reversible via unmerged/resolution_undo events"
+      }
+     },
+     "secrets": {
+      "provider": "env",
+      "port": "SecretProvider",
+      "capabilities": [
+       "secret.get"
+      ],
+      "port_version": "v1",
+      "provider_version": "0.1.0",
+      "limits": {},
+      "notes": {
+       "source": "environment"
+      }
+     }
+    },
+    "not_implemented": {
+     "Cache": {
+      "status": "not_implemented",
+      "slice": "S3"
+     }
+    },
+    "degraded": [
+     "ocr:disabled"
+    ],
+    "storage": {
+     "disk": {
+      "free_pct": 32.89,
+      "free_bytes": 105933025280,
+      "total_bytes": 322122543104
+     },
+     "counts": {
+      "blobs": 4708,
+      "refs": 4711
+     }
+    },
+    "graph": {
+     "triples": 380565
+    },
+    "documents": {
+     "documents": 3066,
+     "degraded": 35,
+     "chunks": 15218
+    },
+    "search": {
+     "chunks": 15218,
+     "embeddings": 15146,
+     "models": {
+      "BAAI/bge-m3": 15138,
+      "fake-hash-1024": 8
+     },
+     "activeModel": "BAAI/bge-m3",
+     "activeDimensions": 1024,
+     "activeProvider": "local-bge",
+     "partitions": [
+      {
+       "model": "BAAI/bge-m3",
+       "dimensions": 1024,
+       "chunks": 15138
+      },
+      {
+       "model": "fake-hash-1024",
+       "dimensions": 1024,
+       "chunks": 8
+      }
+     ],
+     "available": true,
+     "queryCache": {
+      "hits": 0,
+      "misses": 0,
+      "entries": 0,
+      "hitRate": 0.0,
+      "capacity": 256
+     }
+    },
+    "extraction": {
+     "pending": 506,
+     "approved": 334,
+     "rejected": 110,
+     "total": 950,
+     "rules": 2,
+     "llmConfigured": true,
+     "aboxTriples": 0
+    },
+    "reasoning": {
+     "mode": "materialize",
+     "provider": "robot/EL",
+     "engine": "robot",
+     "profile": "EL",
+     "serviceEnabled": true,
+     "endpoint": "http://reasoner:7879",
+     "available": true,
+     "inferredGraphPrefix": "urn:platform:inferred:",
+     "aboxGraphs": [
+      "urn:platform:graph:abox:main"
+     ],
+     "shapesDir": "/data/shapes",
+     "pointer": {
+      "name": "default",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "targetGraph": "urn:platform:inferred:ont-11f92ebb3326",
+      "inputHash": "927a80f2d932ec74f36c95c8f9544d2f77cbc07650938049a0bc17bc1612d8fd",
+      "inferred": 1171,
+      "jobId": "rsn-b0dbf674542d",
+      "updatedAt": "2026-11-07T00:03:19.482046+08:00"
+     },
+     "lastJob": {
+      "jobId": "rsn-b0dbf674542d",
+      "kind": "materialize",
+      "state": "succeeded",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "profile": "EL",
+      "targetGraph": "urn:platform:inferred:ont-11f92ebb3326",
+      "inputHash": "927a80f2d932ec74f36c95c8f9544d2f77cbc07650938049a0bc17bc1612d8fd",
+      "inferred": 1171,
+      "consistent": true,
+      "errorCode": null,
+      "errorMessage": null,
+      "startedAt": "2026-11-07T00:03:16.324212+08:00",
+      "finishedAt": "2026-11-07T00:03:19.483729+08:00"
+     },
+     "inferredTriples": 1171
+    },
+    "self_check": [
+     {
+      "stage": "config",
+      "status": "ok",
+      "detail": "config_version=1 file=/data/platform.yaml",
+      "code": null
+     },
+     {
+      "stage": "io",
+      "status": "ok",
+      "detail": "root=/data tmp=/data/tmp same_volume=true free_pct=32.9",
+      "code": null
+     },
+     {
+      "stage": "db",
+      "status": "ok",
+      "detail": "postgres ok schema_version=34",
+      "code": null
+     },
+     {
+      "stage": "graph",
+      "status": "ok",
+      "detail": "sparql ask+write+read+drop ok",
+      "code": null
+     },
+     {
+      "stage": "storage",
+      "status": "ok",
+      "detail": "small_tier=pg large_tier=fs sha256=ok",
+      "code": null
+     },
+     {
+      "stage": "parser",
+      "status": "ok",
+      "detail": "pypdfium2=5.14.0 pdfplumber=0.11.10 markitdown=0.1.9 ocr=false tables=True",
+      "code": null
+     },
+     {
+      "stage": "embedding",
+      "status": "ok",
+      "detail": "model=/data/models/bge-m3 dimensions=1024",
+      "code": null
+     },
+     {
+      "stage": "capability",
+      "status": "ok",
+      "detail": "5 requirements satisfied",
+      "code": null
+     }
+    ],
+    "notes": [
+     "no auth, no metrics/tracing, no job queue or event bus",
+     "OCR is disabled; scanned PDFs are returned as degraded with NO_OCR_ENABLED",
+     "embedding unavailable -> hybrid search returns lexical results with degraded=true",
+     "extraction candidates are approval-gated: nothing is written to the graph before approval",
+     "llm is OpenAI-compatible and optional: auto mode degrades to rules when unconfigured",
+     "reasoning materializes into a separate graph; source graphs are never overwritten",
+     "SHACL without shapes is an explicit Unsupported error, never a silent pass"
+    ]
+   }
+  },
+  "provEventAfter": "441"
+ },
+ "answerablePanel": {
+  "status": 200,
+  "obj": {
+   "generatedAt": "2026-11-06T16:11:13.653751+00:00",
+   "readOnly": true,
+   "querySet": {
+    "id": "r01-24",
+    "count": 24,
+    "evaluated": 24,
+    "groups": [
+     "A",
+     "B",
+     "C"
+    ],
+    "source": "doc/_design/24 §5.2 + platform/tests/term_eval.py"
+   },
+   "filters": {
+    "intent": "all",
+    "group": "all",
+    "layer": "all",
+    "limit": 24,
+    "queryId": null
+   },
+   "layers": [
+    {
+     "layer": "ontology",
+     "evaluated": 24,
+     "covered": 1,
+     "partial": 5,
+     "missing": 18,
+     "unavailable": 0,
+     "not_applicable": 0,
+     "coverageRate": 0.0417
+    },
+    {
+     "layer": "terms",
+     "evaluated": 24,
+     "covered": 16,
+     "partial": 0,
+     "missing": 8,
+     "unavailable": 0,
+     "not_applicable": 0,
+     "coverageRate": 0.6667
+    },
+    {
+     "layer": "metrics",
+     "evaluated": 24,
+     "covered": 6,
+     "partial": 0,
+     "missing": 7,
+     "unavailable": 0,
+     "not_applicable": 11,
+     "coverageRate": 0.25
+    },
+    {
+     "layer": "facts",
+     "evaluated": 24,
+     "covered": 5,
+     "partial": 0,
+     "missing": 1,
+     "unavailable": 0,
+     "not_applicable": 18,
+     "coverageRate": 0.2083
+    }
+   ],
+   "missing": {
+    "total": 55,
+    "byLayer": [
+     {
+      "layer": "ontology",
+      "count": 43
+     },
+     {
+      "layer": "metrics",
+      "count": 7
+     },
+     {
+      "layer": "terms",
+      "count": 4
+     },
+     {
+      "layer": "facts",
+      "count": 1
+     }
+    ],
+    "byCode": [
+     {
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "count": 43
+     },
+     {
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "count": 7
+     },
+     {
+      "layer": "terms",
+      "code": "E_LAYER_TERMS_GAP",
+      "count": 4
+     },
+     {
+      "layer": "facts",
+      "code": "E_FACTS_NOT_SCALAR",
+      "count": 1
+     }
+    ],
+    "items": [
+     {
+      "queryId": "A1",
+      "group": "A",
+      "query": "她名下的存款帐户是怎么自动还房贷的？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「她名下」"
+     },
+     {
+      "queryId": "A1",
+      "group": "A",
+      "query": "她名下的存款帐户是怎么自动还房贷的？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「存款」"
+     },
+     {
+      "queryId": "A1",
+      "group": "A",
+      "query": "她名下的存款帐户是怎么自动还房贷的？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「自动」"
+     },
+     {
+      "queryId": "A1",
+      "group": "A",
+      "query": "她名下的存款帐户是怎么自动还房贷的？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「房贷」"
+     },
+     {
+      "queryId": "A2",
+      "group": "A",
+      "query": "授信合同里对个人贷款和企业贷款分别怎么约定？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「里对」"
+     },
+     {
+      "queryId": "A2",
+      "group": "A",
+      "query": "授信合同里对个人贷款和企业贷款分别怎么约定？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「贷款」"
+     },
+     {
+      "queryId": "A2",
+      "group": "A",
+      "query": "授信合同里对个人贷款和企业贷款分别怎么约定？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「企业贷款分别」"
+     },
+     {
+      "queryId": "A2",
+      "group": "A",
+      "query": "授信合同里对个人贷款和企业贷款分别怎么约定？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「约定」"
+     },
+     {
+      "queryId": "A3",
+      "group": "A",
+      "query": "个贷系统自然人基本信息表包含哪些字段？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「个贷系统」"
+     },
+     {
+      "queryId": "A3",
+      "group": "A",
+      "query": "个贷系统自然人基本信息表包含哪些字段？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「基本信息表包含」"
+     },
+     {
+      "queryId": "A3",
+      "group": "A",
+      "query": "个贷系统自然人基本信息表包含哪些字段？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「字段」"
+     },
+     {
+      "queryId": "A4",
+      "group": "A",
+      "query": "当事人关系历史记录保留多久？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「历史记录保留多久」"
+     },
+     {
+      "queryId": "A5",
+      "group": "A",
+      "query": "抵押物价值发生巨大变化时银行如何处理？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「价值发生巨大变化时银行」"
+     },
+     {
+      "queryId": "A5",
+      "group": "A",
+      "query": "抵押物价值发生巨大变化时银行如何处理？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「处理」"
+     },
+     {
+      "queryId": "A6",
+      "group": "A",
+      "query": "抵押合同的合同号数据质量是怎么控制的？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「合同号数据质量」"
+     },
+     {
+      "queryId": "A6",
+      "group": "A",
+      "query": "抵押合同的合同号数据质量是怎么控制的？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「控制」"
+     },
+     {
+      "queryId": "A7",
+      "group": "A",
+      "query": "客户的基本信息从哪些系统采集？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「客户」"
+     },
+     {
+      "queryId": "A7",
+      "group": "A",
+      "query": "客户的基本信息从哪些系统采集？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「基本信息从」"
+     },
+     {
+      "queryId": "A7",
+      "group": "A",
+      "query": "客户的基本信息从哪些系统采集？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「系统采集」"
+     },
+     {
+      "queryId": "A8",
+      "group": "A",
+      "query": "不良率是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「不良率」"
+     },
+     {
+      "queryId": "A8",
+      "group": "A",
+      "query": "不良率是多少？",
+      "layer": "terms",
+      "code": "E_LAYER_TERMS_GAP",
+      "what": "问题中的概念没有 SKOS 术语/别名命中"
+     },
+     {
+      "queryId": "A8",
+      "group": "A",
+      "query": "不良率是多少？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "A9",
+      "group": "A",
+      "query": "集团客户的授信集中度如何计算？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「集团客户」"
+     },
+     {
+      "queryId": "A9",
+      "group": "A",
+      "query": "集团客户的授信集中度如何计算？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「授信集中度」"
+     },
+     {
+      "queryId": "A9",
+      "group": "A",
+      "query": "集团客户的授信集中度如何计算？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「计算」"
+     },
+     {
+      "queryId": "A9",
+      "group": "A",
+      "query": "集团客户的授信集中度如何计算？",
+      "layer": "terms",
+      "code": "E_LAYER_TERMS_GAP",
+      "what": "问题中的概念没有 SKOS 术语/别名命中"
+     },
+     {
+      "queryId": "A9",
+      "group": "A",
+      "query": "集团客户的授信集中度如何计算？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "A10",
+      "group": "A",
+      "query": "关联客户之间的风险传染怎么识别？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「关联客户之间」"
+     },
+     {
+      "queryId": "A10",
+      "group": "A",
+      "query": "关联客户之间的风险传染怎么识别？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「风险传染」"
+     },
+     {
+      "queryId": "A10",
+      "group": "A",
+      "query": "关联客户之间的风险传染怎么识别？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「识别」"
+     },
+     {
+      "queryId": "A11",
+      "group": "A",
+      "query": "这个险种对应哪些保险产品？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「这个险种对应」"
+     },
+     {
+      "queryId": "A12",
+      "group": "A",
+      "query": "报案之后多久立案？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「报案之后多久立案」"
+     },
+     {
+      "queryId": "B1",
+      "group": "B",
+      "query": "这家客户在你们这有几个账户？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「这家客户」"
+     },
+     {
+      "queryId": "B1",
+      "group": "B",
+      "query": "这家客户在你们这有几个账户？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「们这」"
+     },
+     {
+      "queryId": "B1",
+      "group": "B",
+      "query": "这家客户在你们这有几个账户？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "B3",
+      "group": "B",
+      "query": "今年报案立案率、案均已决金额多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「今年」"
+     },
+     {
+      "queryId": "B4",
+      "group": "B",
+      "query": "不良率 / NPL ratio 是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「不良率」"
+     },
+     {
+      "queryId": "B4",
+      "group": "B",
+      "query": "不良率 / NPL ratio 是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「nplratio」"
+     },
+     {
+      "queryId": "B4",
+      "group": "B",
+      "query": "不良率 / NPL ratio 是多少？",
+      "layer": "terms",
+      "code": "E_LAYER_TERMS_GAP",
+      "what": "问题中的概念没有 SKOS 术语/别名命中"
+     },
+     {
+      "queryId": "B4",
+      "group": "B",
+      "query": "不良率 / NPL ratio 是多少？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "B5",
+      "group": "B",
+      "query": "查一下这张保单的保障项",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「查」"
+     },
+     {
+      "queryId": "B5",
+      "group": "B",
+      "query": "查一下这张保单的保障项",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「这张」"
+     },
+     {
+      "queryId": "C1",
+      "group": "C",
+      "query": "逾期贷款余额占比是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「逾期」"
+     },
+     {
+      "queryId": "C1",
+      "group": "C",
+      "query": "逾期贷款余额占比是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「占比」"
+     },
+     {
+      "queryId": "C1",
+      "group": "C",
+      "query": "逾期贷款余额占比是多少？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "C3",
+      "group": "C",
+      "query": "今年报案立案率是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「今年」"
+     },
+     {
+      "queryId": "C4",
+      "group": "C",
+      "query": "今年案均赔款是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「今年案均赔款」"
+     },
+     {
+      "queryId": "C4",
+      "group": "C",
+      "query": "今年案均赔款是多少？",
+      "layer": "terms",
+      "code": "E_LAYER_TERMS_GAP",
+      "what": "问题中的概念没有 SKOS 术语/别名命中"
+     },
+     {
+      "queryId": "C4",
+      "group": "C",
+      "query": "今年案均赔款是多少？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "C5",
+      "group": "C",
+      "query": "今年保单继续率是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「今年」"
+     },
+     {
+      "queryId": "C5",
+      "group": "C",
+      "query": "今年保单继续率是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「继续率」"
+     },
+     {
+      "queryId": "C5",
+      "group": "C",
+      "query": "今年保单继续率是多少？",
+      "layer": "metrics",
+      "code": "E_LAYER_METRICS_GAP",
+      "what": "未匹配到可求值口径指标"
+     },
+     {
+      "queryId": "C6",
+      "group": "C",
+      "query": "今年退保率是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「今年」"
+     },
+     {
+      "queryId": "C7",
+      "group": "C",
+      "query": "本年客户AUM是多少？",
+      "layer": "ontology",
+      "code": "E_LAYER_ONTOLOGY_GAP",
+      "what": "本体未声明「本年客户」"
+     },
+     {
+      "queryId": "C7",
+      "group": "C",
+      "query": "本年客户AUM是多少？",
+      "layer": "facts",
+      "code": "E_FACTS_NOT_SCALAR",
+      "what": "CUST-012 的 metricKind=amount 不是标量可计算类型"
+     }
+    ]
+   },
+   "candidates": {
+    "total": 28,
+    "items": [
+     {
+      "layer": "metrics",
+      "id": "FIN-BANK-028",
+      "label": "单一集团客户授信集中度",
+      "reason": "fuzzy_name",
+      "score": 0.4846,
+      "count": 2,
+      "queries": [
+       "集团客户的授信集中度如何计算？",
+       "单一集团客户授信集中度是多少？"
+      ]
+     },
+     {
+      "layer": "metrics",
+      "id": "FIN-INS-018",
+      "label": "报案立案率",
+      "reason": "exact_name",
+      "score": 0.98,
+      "count": 2,
+      "queries": [
+       "今年报案立案率、案均已决金额多少？",
+       "今年报案立案率是多少？"
+      ]
+     },
+     {
+      "layer": "ontology",
+      "id": "https://w3id.org/fsldm/agreement#Policy",
+      "label": "保单",
+      "reason": "rdfs_label_match",
+      "score": 1.0,
+      "count": 2,
+      "queries": [
+       "查一下这张保单的保障项",
+       "今年保单继续率是多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/agreement#Account",
+      "label": "帐户",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 2,
+      "queries": [
+       "她名下的存款帐户是怎么自动还房贷的？",
+       "这家客户在你们这有几个账户？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/agreement#Policy",
+      "label": "保单",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 2,
+      "queries": [
+       "查一下这张保单的保障项",
+       "今年保单继续率是多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/party#Individual",
+      "label": "个人",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 2,
+      "queries": [
+       "授信合同里对个人贷款和企业贷款分别怎么约定？",
+       "个贷系统自然人基本信息表包含哪些字段？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/terms#M-FIN-INS-018",
+      "label": "报案立案率",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 2,
+      "queries": [
+       "今年报案立案率、案均已决金额多少？",
+       "今年报案立案率是多少？"
+      ]
+     },
+     {
+      "layer": "metrics",
+      "id": "CUST-012",
+      "label": "AUM（时点）",
+      "reason": "name_substring",
+      "score": 0.95,
+      "count": 1,
+      "queries": [
+       "本年客户AUM是多少？"
+      ]
+     },
+     {
+      "layer": "metrics",
+      "id": "CUST-013",
+      "label": "AUM（日均）",
+      "reason": "name_substring",
+      "score": 0.95,
+      "count": 1,
+      "queries": [
+       "本年客户AUM是多少？"
+      ]
+     },
+     {
+      "layer": "metrics",
+      "id": "FIN-BANK-025",
+      "label": "单一客户贷款集中度",
+      "reason": "exact_name",
+      "score": 0.98,
+      "count": 1,
+      "queries": [
+       "单一客户贷款集中度是多少？"
+      ]
+     },
+     {
+      "layer": "metrics",
+      "id": "FIN-INS-015",
+      "label": "案均已决金额",
+      "reason": "exact_name",
+      "score": 0.98,
+      "count": 1,
+      "queries": [
+       "今年报案立案率、案均已决金额多少？"
+      ]
+     },
+     {
+      "layer": "metrics",
+      "id": "FIN-INS-020",
+      "label": "退保率（2003 公式）",
+      "reason": "name_substring",
+      "score": 0.95,
+      "count": 1,
+      "queries": [
+       "今年退保率是多少？"
+      ]
+     },
+     {
+      "layer": "ontology",
+      "id": "https://w3id.org/fsldm/agreement#Account",
+      "label": "账户",
+      "reason": "rdfs_label_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "这家客户在你们这有几个账户？"
+      ]
+     },
+     {
+      "layer": "ontology",
+      "id": "https://w3id.org/fsldm/core#Party",
+      "label": "当事人",
+      "reason": "rdfs_label_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "当事人关系历史记录保留多久？"
+      ]
+     },
+     {
+      "layer": "ontology",
+      "id": "https://w3id.org/fsldm/insurance#Coverage",
+      "label": "保障项",
+      "reason": "rdfs_label_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "查一下这张保单的保障项"
+      ]
+     },
+     {
+      "layer": "ontology",
+      "id": "https://w3id.org/fsldm/insurance#InsuranceProduct",
+      "label": "保险产品",
+      "reason": "rdfs_label_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "这个险种对应哪些保险产品？"
+      ]
+     },
+     {
+      "layer": "ontology",
+      "id": "https://w3id.org/fsldm/party#Individual",
+      "label": "个人",
+      "reason": "rdfs_label_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "授信合同里对个人贷款和企业贷款分别怎么约定？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/agreement#CreditAgreement",
+      "label": "授信合同",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "授信合同里对个人贷款和企业贷款分别怎么约定？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/asset#CollateralItem",
+      "label": "抵押物",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "抵押物价值发生巨大变化时银行如何处理？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/banking#CollateralAgreement",
+      "label": "抵押合同",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "抵押合同的合同号数据质量是怎么控制的？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/codes#MetricLoanBalance",
+      "label": "贷款余额",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "逾期贷款余额占比是多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/insurance#Coverage",
+      "label": "保障项",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "查一下这张保单的保障项"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/party#PartyRelationship",
+      "label": "当事人关系",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "当事人关系历史记录保留多久？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/terms#M-CUST-012",
+      "label": "AUM",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "本年客户AUM是多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/terms#M-FIN-BANK-025",
+      "label": "单一客户贷款集中度",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "单一客户贷款集中度是多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/terms#M-FIN-BANK-028",
+      "label": "单一集团客户授信集中度",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "单一集团客户授信集中度是多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/terms#M-FIN-INS-015",
+      "label": "案均已决金额",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "今年报案立案率、案均已决金额多少？"
+      ]
+     },
+     {
+      "layer": "terms",
+      "id": "https://w3id.org/fsldm/terms#M-FIN-INS-020",
+      "label": "退保率",
+      "reason": "skos_alias_match",
+      "score": 1.0,
+      "count": 1,
+      "queries": [
+       "今年退保率是多少？"
+      ]
+     }
+    ]
+   },
+   "trend": {
+    "basis": "query-set groups / intent",
+    "byGroup": [
+     {
+      "bucket": "A",
+      "evaluated": 12,
+      "answerable": 0,
+      "layers": {
+       "ontology": {
+        "covered": 0,
+        "denominator": 12,
+        "rate": 0.0
+       },
+       "terms": {
+        "covered": 6,
+        "denominator": 12,
+        "rate": 0.5
+       },
+       "metrics": {
+        "covered": 0,
+        "denominator": 2,
+        "rate": 0.0
+       },
+       "facts": {
+        "covered": 0,
+        "denominator": 0,
+        "rate": 0.0
+       }
+      }
+     },
+     {
+      "bucket": "B",
+      "evaluated": 5,
+      "answerable": 3,
+      "layers": {
+       "ontology": {
+        "covered": 1,
+        "denominator": 5,
+        "rate": 0.2
+       },
+       "terms": {
+        "covered": 4,
+        "denominator": 5,
+        "rate": 0.8
+       },
+       "metrics": {
+        "covered": 2,
+        "denominator": 4,
+        "rate": 0.5
+       },
+       "facts": {
+        "covered": 2,
+        "denominator": 2,
+        "rate": 1.0
+       }
+      }
+     },
+     {
+      "bucket": "C",
+      "evaluated": 7,
+      "answerable": 3,
+      "layers": {
+       "ontology": {
+        "covered": 0,
+        "denominator": 7,
+        "rate": 0.0
+       },
+       "terms": {
+        "covered": 6,
+        "denominator": 7,
+        "rate": 0.8571
+       },
+       "metrics": {
+        "covered": 4,
+        "denominator": 7,
+        "rate": 0.5714
+       },
+       "facts": {
+        "covered": 3,
+        "denominator": 4,
+        "rate": 0.75
+       }
+      }
+     }
+    ],
+    "byIntent": [
+     {
+      "bucket": "definition",
+      "evaluated": 11,
+      "answerable": 1,
+      "layers": {
+       "ontology": {
+        "covered": 1,
+        "denominator": 11,
+        "rate": 0.0909
+       },
+       "terms": {
+        "covered": 7,
+        "denominator": 11,
+        "rate": 0.6364
+       },
+       "metrics": {
+        "covered": 0,
+        "denominator": 0,
+        "rate": 0.0
+       },
+       "facts": {
+        "covered": 0,
+        "denominator": 0,
+        "rate": 0.0
+       }
+      }
+     },
+     {
+      "bucket": "value",
+      "evaluated": 13,
+      "answerable": 5,
+      "layers": {
+       "ontology": {
+        "covered": 0,
+        "denominator": 13,
+        "rate": 0.0
+       },
+       "terms": {
+        "covered": 9,
+        "denominator": 13,
+        "rate": 0.6923
+       },
+       "metrics": {
+        "covered": 6,
+        "denominator": 13,
+        "rate": 0.4615
+       },
+       "facts": {
+        "covered": 5,
+        "denominator": 6,
+        "rate": 0.8333
+       }
+      }
+     }
+    ]
+   },
+   "misjudgments": {
+    "evaluated": 24,
+    "count": 6,
+    "rate": 0.25,
+    "items": [
+     {
+      "id": "B2",
+      "group": "B",
+      "query": "单一集团客户授信集中度是多少？",
+      "verdict": "overclaim",
+      "answerable": true,
+      "reasonCode": null,
+      "layerStatuses": {
+       "ontology": "missing",
+       "terms": "covered",
+       "metrics": "covered",
+       "facts": "covered"
+      },
+      "missingCodes": [],
+      "drillDownUrl": "/answerable/panel?queryId=B2"
+     },
+     {
+      "id": "B3",
+      "group": "B",
+      "query": "今年报案立案率、案均已决金额多少？",
+      "verdict": "overclaim",
+      "answerable": true,
+      "reasonCode": null,
+      "layerStatuses": {
+       "ontology": "missing",
+       "terms": "covered",
+       "metrics": "covered",
+       "facts": "covered"
+      },
+      "missingCodes": [
+       "E_LAYER_ONTOLOGY_GAP"
+      ],
+      "drillDownUrl": "/answerable/panel?queryId=B3"
+     },
+     {
+      "id": "B5",
+      "group": "B",
+      "query": "查一下这张保单的保障项",
+      "verdict": "overclaim",
+      "answerable": true,
+      "reasonCode": null,
+      "layerStatuses": {
+       "ontology": "covered",
+       "terms": "covered",
+       "metrics": "not_applicable",
+       "facts": "not_applicable"
+      },
+      "missingCodes": [
+       "E_LAYER_ONTOLOGY_GAP",
+       "E_LAYER_ONTOLOGY_GAP"
+      ],
+      "drillDownUrl": "/answerable/panel?queryId=B5"
+     },
+     {
+      "id": "C2",
+      "group": "C",
+      "query": "单一客户贷款集中度是多少？",
+      "verdict": "overclaim",
+      "answerable": true,
+      "reasonCode": null,
+      "layerStatuses": {
+       "ontology": "missing",
+       "terms": "covered",
+       "metrics": "covered",
+       "facts": "covered"
+      },
+      "missingCodes": [],
+      "drillDownUrl": "/answerable/panel?queryId=C2"
+     },
+     {
+      "id": "C3",
+      "group": "C",
+      "query": "今年报案立案率是多少？",
+      "verdict": "overclaim",
+      "answerable": true,
+      "reasonCode": null,
+      "layerStatuses": {
+       "ontology": "missing",
+       "terms": "covered",
+       "metrics": "covered",
+       "facts": "covered"
+      },
+      "missingCodes": [
+       "E_LAYER_ONTOLOGY_GAP"
+      ],
+      "drillDownUrl": "/answerable/panel?queryId=C3"
+     },
+     {
+      "id": "C6",
+      "group": "C",
+      "query": "今年退保率是多少？",
+      "verdict": "overclaim",
+      "answerable": true,
+      "reasonCode": null,
+      "layerStatuses": {
+       "ontology": "missing",
+       "terms": "covered",
+       "metrics": "covered",
+       "facts": "covered"
+      },
+      "missingCodes": [
+       "E_LAYER_ONTOLOGY_GAP"
+      ],
+      "drillDownUrl": "/answerable/panel?queryId=C6"
+     }
+    ]
+   },
+   "termExpansion": {
+    "status": "ok",
+    "reason": null,
+    "evaluated": 18,
+    "misjudged": 8,
+    "rate": 0.4444,
+    "items": [
+     {
+      "id": "A2",
+      "group": "A",
+      "query": "授信合同里对个人贷款和企业贷款分别怎么约定？",
+      "expanded": [
+       "https://w3id.org/fsldm/agreement#CreditAgreement",
+       "https://w3id.org/fsldm/party#Individual"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/agreement#CreditAgreement"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/party#Individual"
+      ]
+     },
+     {
+      "id": "B2",
+      "group": "B",
+      "query": "单一集团客户授信集中度是多少？",
+      "expanded": [
+       "https://w3id.org/fsldm/terms#M-FIN-BANK-028"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/party#PartyGroup",
+       "https://w3id.org/fsldm/agreement#CreditAgreement"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/terms#M-FIN-BANK-028"
+      ]
+     },
+     {
+      "id": "B3",
+      "group": "B",
+      "query": "今年报案立案率、案均已决金额多少？",
+      "expanded": [
+       "https://w3id.org/fsldm/terms#M-FIN-INS-018",
+       "https://w3id.org/fsldm/terms#M-FIN-INS-015"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/event#ClaimEvent",
+       "https://w3id.org/fsldm/agreement#Claim"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/terms#M-FIN-INS-018",
+       "https://w3id.org/fsldm/terms#M-FIN-INS-015"
+      ]
+     },
+     {
+      "id": "C2",
+      "group": "C",
+      "query": "单一客户贷款集中度是多少？",
+      "expanded": [
+       "https://w3id.org/fsldm/terms#M-FIN-BANK-025"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/core#Party",
+       "https://w3id.org/fsldm/core#Metric"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/terms#M-FIN-BANK-025"
+      ]
+     },
+     {
+      "id": "C3",
+      "group": "C",
+      "query": "今年报案立案率是多少？",
+      "expanded": [
+       "https://w3id.org/fsldm/terms#M-FIN-INS-018"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/event#ClaimEvent",
+       "https://w3id.org/fsldm/agreement#Claim"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/terms#M-FIN-INS-018"
+      ]
+     },
+     {
+      "id": "C6",
+      "group": "C",
+      "query": "今年退保率是多少？",
+      "expanded": [
+       "https://w3id.org/fsldm/terms#M-FIN-INS-020"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/agreement#Policy",
+       "https://w3id.org/fsldm/core#Metric"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/terms#M-FIN-INS-020"
+      ]
+     },
+     {
+      "id": "C7",
+      "group": "C",
+      "query": "本年客户AUM是多少？",
+      "expanded": [
+       "https://w3id.org/fsldm/terms#M-CUST-013"
+      ],
+      "expected": [
+       "https://w3id.org/fsldm/core#Party",
+       "https://w3id.org/fsldm/core#Metric"
+      ],
+      "wrong": [
+       "https://w3id.org/fsldm/terms#M-CUST-013"
+      ]
+     }
+    ],
+    "source": "termlex.match",
+    "note": "24 条查询集的术语扩展误判率；当前基线 9.09% (1/11)"
+   },
+   "errors": [],
+   "empty": false,
+   "emptyReason": null,
+   "notes": [
+    "四层计数与 missing 分布来自 /answerable 的分层结果（只读）",
+    "24 条查询集误判可下钻到单条 query 的 layerStatuses / missingCodes",
+    "termExpansion 复现 term_eval 的术语扩展误判率（当前基线 9.09%）"
+   ]
+  }
+ },
+ "answerQuality": {
+  "status": 200,
+  "obj": {
+   "strategy": "lexical",
+   "goldenSet": {
+    "id": "r02-golden-10",
+    "count": 10,
+    "evaluated": 10,
+    "caseId": null
+   },
+   "summary": {
+    "cases": 10,
+    "passed": 6,
+    "failed": 4,
+    "passRate": 0.6,
+    "casesWithCitations": 10,
+    "citationCoverageRate": 1.0,
+    "citations": 53,
+    "resolvableCitations": 33,
+    "citationResolvableRate": 0.6226,
+    "brokenLinkRate": 0.3774,
+    "baselineBrokenLinkRate": 0.0,
+    "regression": true
+   },
+   "citationCoverageByType": [
+    {
+     "type": "definition",
+     "cases": 5,
+     "refused": 2,
+     "withCitations": 5,
+     "citations": 35,
+     "resolvable": 20,
+     "citationCoverageRate": 1.0,
+     "resolvableRate": 0.5714
+    },
+    {
+     "type": "rule_set",
+     "cases": 1,
+     "refused": 0,
+     "withCitations": 1,
+     "citations": 10,
+     "resolvable": 5,
+     "citationCoverageRate": 1.0,
+     "resolvableRate": 0.5
+    },
+    {
+     "type": "value",
+     "cases": 4,
+     "refused": 4,
+     "withCitations": 4,
+     "citations": 8,
+     "resolvable": 8,
+     "citationCoverageRate": 1.0,
+     "resolvableRate": 1.0
+    }
+   ],
+   "refusalsByReason": [
+    {
+     "type": "definition",
+     "reasonCode": "E_ANSWER_NOT_COVERED",
+     "count": 2
+    },
+    {
+     "type": "value",
+     "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+     "count": 4
+    }
+   ],
+   "refusalsByType": [
+    {
+     "type": "definition",
+     "cases": 5,
+     "refused": 2,
+     "refusalRate": 0.4
+    },
+    {
+     "type": "rule_set",
+     "cases": 1,
+     "refused": 0,
+     "refusalRate": 0.0
+    },
+    {
+     "type": "value",
+     "cases": 4,
+     "refused": 4,
+     "refusalRate": 1.0
+    }
+   ],
+   "refusalsWithoutLayers": [],
+   "brokenLinks": [
+    {
+     "id": "G02",
+     "query": "13个月继续率（有效保单件数）的口径是什么",
+     "citation": {
+      "id": "triple:21adae0418d373cd1aa887dcc2d54246680093e8",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#altLabel \"13 个月继续率\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G02",
+     "query": "13个月继续率（有效保单件数）的口径是什么",
+     "citation": {
+      "id": "triple:5e4e8218414585ebd1d2060c48469ef8dbd99db4",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#NamedIndividual",
+      "graph": "urn:platform:inferred:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G02",
+     "query": "13个月继续率（有效保单件数）的口径是什么",
+     "citation": {
+      "id": "triple:600d62677f771df29511e26569a85ea61bdf60b0",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#inScheme https://w3id.org/fsldm/terms#MetricScheme",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G02",
+     "query": "13个月继续率（有效保单件数）的口径是什么",
+     "citation": {
+      "id": "triple:614181e18187cca4985a81bdd46045b224c7b64e",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#definition \"上年可比季度末的长期寿险有效保单在本季度末仍有效的比例（13 个月继续率，件数口径）。\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G02",
+     "query": "13个月继续率（有效保单件数）的口径是什么",
+     "citation": {
+      "id": "triple:61f9bc1bf0c64796bea2ba1023d6f7b8bc4cf535",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#notation \"FIN-INS-021\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G03",
+     "query": "逾期分档（M0–M6）是什么",
+     "citation": {
+      "id": "triple:5bc50f5446bebf09ab3f9c4efd8af26c65d3d525",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://purl.org/dc/terms/source \"platform.metric_definition\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G03",
+     "query": "逾期分档（M0–M6）是什么",
+     "citation": {
+      "id": "triple:8f8bf4f6d47372950b9e6c105b7ad60a59cd506b",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/2004/02/skos/core#inScheme https://w3id.org/fsldm/terms#MetricScheme",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G03",
+     "query": "逾期分档（M0–M6）是什么",
+     "citation": {
+      "id": "triple:a6a0c6b6cc67be79560ec67826cac89a9e5f24c9",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#Thing",
+      "graph": "urn:platform:inferred:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G03",
+     "query": "逾期分档（M0–M6）是什么",
+     "citation": {
+      "id": "triple:a9130d9320b3cc01862b4b04b78b70c302cf66aa",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#NamedIndividual",
+      "graph": "urn:platform:inferred:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G03",
+     "query": "逾期分档（M0–M6）是什么",
+     "citation": {
+      "id": "triple:aaf0106f328a08637a61ac5846e2248812c8ffdf",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/2004/02/skos/core#altLabel \"逾期分档\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G05",
+     "query": "当事人关系历史记录保留多久",
+     "citation": {
+      "id": "triple:03a7f4e8ad81003c99c1980c04340176517a44df",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2002/07/owl#hasKey _:c4ef833a8d10b50e09c20c45aab761fc",
+      "graph": "urn:platform:inferred:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G05",
+     "query": "当事人关系历史记录保留多久",
+     "citation": {
+      "id": "triple:11853a4a7f9c0d06870f5700733abf3f39d90ced",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2004/02/skos/core#altLabel \"PARTY RELATED\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G05",
+     "query": "当事人关系历史记录保留多久",
+     "citation": {
+      "id": "triple:16490563289d803be0429879d05edfd984211bde",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2002/07/owl#hasKey _:a9cbf80209824e0773f1d772b91ab79b",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G05",
+     "query": "当事人关系历史记录保留多久",
+     "citation": {
+      "id": "triple:18f6bc5b0bb79abccec7d659bef60fc954788dbe",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2002/07/owl#hasKey _:fb577b979ddd407dfcdf517d63f226ca",
+      "graph": "urn:platform:inferred:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G05",
+     "query": "当事人关系历史记录保留多久",
+     "citation": {
+      "id": "triple:1d830072ea1139d242575e9fa3c7cad5f2410561",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2004/02/skos/core#altLabel \"当事人关系\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G06",
+     "query": "抵押物价值发生巨大变化时银行如何处理",
+     "citation": {
+      "id": "triple:05ecf11ad06ab3e0fca463c12258efa20bfab26b",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/2000/01/rdf-schema#label \"抵押物项\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G06",
+     "query": "抵押物价值发生巨大变化时银行如何处理",
+     "citation": {
+      "id": "triple:10cd2048e45dce64f503566ae9f231ef5b6e7cd0",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/2004/02/skos/core#prefLabel \"抵押物项\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G06",
+     "query": "抵押物价值发生巨大变化时银行如何处理",
+     "citation": {
+      "id": "triple:19b9fc4cdcec0858ff4d569fbc265c391a4f80ae",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#Class",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G06",
+     "query": "抵押物价值发生巨大变化时银行如何处理",
+     "citation": {
+      "id": "triple:5289e14762e882ef3dd7d1e250a8598a72be1357",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/asset#CollateralItem https://w3id.org/fsldm/terms#termBatch \"1\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    },
+    {
+     "id": "G06",
+     "query": "抵押物价值发生巨大变化时银行如何处理",
+     "citation": {
+      "id": "triple:6800359675a967e9e7a0134fb3abee670da9fe6b",
+      "kind": "triple",
+      "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/2004/02/skos/core#prefLabel \"Collateral Item\"",
+      "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+      "ontologyVersion": "ont-11f92ebb3326",
+      "resolveUrl": null,
+      "resolvable": false
+     }
+    }
+   ],
+   "cases": [
+    {
+     "id": "G01",
+     "query": "产品包的产品特性有哪些",
+     "type": "definition",
+     "expectRefused": false,
+     "actual": {
+      "refused": false,
+      "answerType": "ontology",
+      "answerMode": "definition",
+      "reasonCode": null,
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/product#ProductFeature",
+        "kind": "rdfs-term",
+        "ref": "产品特性",
+        "label": "产品特性",
+        "layer": "ontology",
+        "span": [
+         4,
+         8
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fproduct%23ProductFeature",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/product#ProductPackage",
+        "kind": "rdfs-term",
+        "ref": "产品包",
+        "label": "产品包",
+        "layer": "ontology",
+        "span": [
+         0,
+         3
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fproduct%23ProductPackage",
+        "resolvable": true
+       }
+      ],
+      "citationKinds": [
+       "ontology-version",
+       "rdfs-term"
+      ],
+      "missingLayers": []
+     },
+     "pass": true,
+     "failures": [],
+     "drillDownUrl": "/answer/quality?caseId=G01&strategy=lexical"
+    },
+    {
+     "id": "G02",
+     "query": "13个月继续率（有效保单件数）的口径是什么",
+     "type": "definition",
+     "expectRefused": false,
+     "actual": {
+      "refused": false,
+      "answerType": "definition",
+      "answerMode": "definition",
+      "reasonCode": null,
+      "degraded": true,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/agreement#Policy",
+        "kind": "rdfs-term",
+        "ref": "保单",
+        "label": "保单",
+        "layer": "ontology",
+        "span": [
+         10,
+         12
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fagreement%23Policy",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/terms#M-FIN-INS-021",
+        "kind": "skos-term",
+        "ref": "13个月继续率（有效保单件数）",
+        "label": "13个月继续率（有效保单件数）",
+        "layer": "terms",
+        "span": [
+         0,
+         15
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fterms%23M-FIN-INS-021",
+        "resolvable": true
+       },
+       {
+        "id": "metric:FIN-INS-021@v3.0",
+        "kind": "metric-definition",
+        "ref": "FIN-INS-021@v3.0",
+        "metricId": "FIN-INS-021",
+        "definitionVersion": "v3.0",
+        "name": "13 个月继续率（有效保单件数）",
+        "fields": {
+         "formula": "numerator / denominator * 100",
+         "windowKind": "period",
+         "minWindowDays": 365,
+         "evidenceBasis": "regulatory",
+         "publishable": true,
+         "unit": "%"
+        },
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-INS-021",
+        "resolvable": true
+       },
+       {
+        "id": "formula:FIN-INS-021@v3.0",
+        "kind": "formula",
+        "ref": "numerator / denominator * 100",
+        "metricId": "FIN-INS-021",
+        "definitionVersion": "v3.0",
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-INS-021",
+        "resolvable": true
+       },
+       {
+        "id": "factfn:platform.metric_fact_fin_ins_021",
+        "kind": "fact-projection",
+        "ref": "platform.metric_fact_fin_ins_021",
+        "metricId": "FIN-INS-021",
+        "observationRows": 0,
+        "resolveUrl": "/ui/browse.html?tab=metrics",
+        "resolvable": true
+       },
+       {
+        "id": "triple:21adae0418d373cd1aa887dcc2d54246680093e8",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#altLabel \"13 个月继续率\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:5e4e8218414585ebd1d2060c48469ef8dbd99db4",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#NamedIndividual",
+        "graph": "urn:platform:inferred:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:600d62677f771df29511e26569a85ea61bdf60b0",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#inScheme https://w3id.org/fsldm/terms#MetricScheme",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:614181e18187cca4985a81bdd46045b224c7b64e",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#definition \"上年可比季度末的长期寿险有效保单在本季度末仍有效的比例（13 个月继续率，件数口径）。\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:61f9bc1bf0c64796bea2ba1023d6f7b8bc4cf535",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-INS-021 http://www.w3.org/2004/02/skos/core#notation \"FIN-INS-021\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       }
+      ],
+      "citationKinds": [
+       "fact-projection",
+       "formula",
+       "metric-definition",
+       "ontology-version",
+       "rdfs-term",
+       "skos-term",
+       "triple"
+      ],
+      "missingLayers": [
+       "facts",
+       "ontology"
+      ]
+     },
+     "pass": false,
+     "failures": [
+      "unexpected degraded=true",
+      "unresolvable citations: 5"
+     ],
+     "drillDownUrl": "/answer/quality?caseId=G02&strategy=lexical"
+    },
+    {
+     "id": "G03",
+     "query": "逾期分档（M0–M6）是什么",
+     "type": "rule_set",
+     "expectRefused": false,
+     "actual": {
+      "refused": false,
+      "answerType": "rule_set",
+      "answerMode": "definition",
+      "reasonCode": null,
+      "degraded": true,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/terms#M-FIN-BANK-002",
+        "kind": "skos-term",
+        "ref": "逾期分档（M0–M6）",
+        "label": "逾期分档（M0–M6）",
+        "layer": "terms",
+        "span": [
+         0,
+         11
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fterms%23M-FIN-BANK-002",
+        "resolvable": true
+       },
+       {
+        "id": "metric:FIN-BANK-002@v3.0",
+        "kind": "metric-definition",
+        "ref": "FIN-BANK-002@v3.0",
+        "metricId": "FIN-BANK-002",
+        "definitionVersion": "v3.0",
+        "name": "逾期分档（M0–M6）",
+        "fields": {
+         "formula": "band(dpd, 30, 6)",
+         "windowKind": "instant",
+         "minWindowDays": null,
+         "evidenceBasis": "industry",
+         "publishable": true,
+         "unit": "档（M0–M6）"
+        },
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-BANK-002",
+        "resolvable": true
+       },
+       {
+        "id": "formula:FIN-BANK-002@v3.0",
+        "kind": "formula",
+        "ref": "band(dpd, 30, 6)",
+        "metricId": "FIN-BANK-002",
+        "definitionVersion": "v3.0",
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-BANK-002",
+        "resolvable": true
+       },
+       {
+        "id": "rules:FIN-BANK-002@v3.0",
+        "kind": "rule-set",
+        "ref": "FIN-BANK-002@v3.0",
+        "metricId": "FIN-BANK-002",
+        "definitionVersion": "v3.0",
+        "ruleCount": 6,
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-BANK-002",
+        "resolvable": true
+       },
+       {
+        "id": "triple:5bc50f5446bebf09ab3f9c4efd8af26c65d3d525",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://purl.org/dc/terms/source \"platform.metric_definition\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:8f8bf4f6d47372950b9e6c105b7ad60a59cd506b",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/2004/02/skos/core#inScheme https://w3id.org/fsldm/terms#MetricScheme",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:a6a0c6b6cc67be79560ec67826cac89a9e5f24c9",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#Thing",
+        "graph": "urn:platform:inferred:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:a9130d9320b3cc01862b4b04b78b70c302cf66aa",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#NamedIndividual",
+        "graph": "urn:platform:inferred:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:aaf0106f328a08637a61ac5846e2248812c8ffdf",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/terms#M-FIN-BANK-002 http://www.w3.org/2004/02/skos/core#altLabel \"逾期分档\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       }
+      ],
+      "citationKinds": [
+       "formula",
+       "metric-definition",
+       "ontology-version",
+       "rule-set",
+       "skos-term",
+       "triple"
+      ],
+      "missingLayers": [
+       "facts"
+      ]
+     },
+     "pass": false,
+     "failures": [
+      "unexpected degraded=true",
+      "unresolvable citations: 5"
+     ],
+     "drillDownUrl": "/answer/quality?caseId=G03&strategy=lexical"
+    },
+    {
+     "id": "G04",
+     "query": "13个月继续率是多少",
+     "type": "definition",
+     "expectRefused": false,
+     "actual": {
+      "refused": false,
+      "answerType": "definition",
+      "answerMode": "definition",
+      "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+      "degraded": true,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/terms#M-FIN-INS-021",
+        "kind": "skos-term",
+        "ref": "13 个月继续率",
+        "label": "13 个月继续率",
+        "layer": "terms",
+        "span": [
+         0,
+         7
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fterms%23M-FIN-INS-021",
+        "resolvable": true
+       },
+       {
+        "id": "metric:FIN-INS-021@v3.0",
+        "kind": "metric-definition",
+        "ref": "FIN-INS-021@v3.0",
+        "metricId": "FIN-INS-021",
+        "definitionVersion": "v3.0",
+        "name": "13 个月继续率（有效保单件数）",
+        "fields": {
+         "formula": "numerator / denominator * 100",
+         "windowKind": "period",
+         "minWindowDays": 365,
+         "evidenceBasis": "regulatory",
+         "publishable": true,
+         "unit": "%"
+        },
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-INS-021",
+        "resolvable": true
+       },
+       {
+        "id": "formula:FIN-INS-021@v3.0",
+        "kind": "formula",
+        "ref": "numerator / denominator * 100",
+        "metricId": "FIN-INS-021",
+        "definitionVersion": "v3.0",
+        "resolveUrl": "/ui/browse.html?tab=metrics&metricId=FIN-INS-021",
+        "resolvable": true
+       },
+       {
+        "id": "factfn:platform.metric_fact_fin_ins_021",
+        "kind": "fact-projection",
+        "ref": "platform.metric_fact_fin_ins_021",
+        "metricId": "FIN-INS-021",
+        "observationRows": 0,
+        "resolveUrl": "/ui/browse.html?tab=metrics",
+        "resolvable": true
+       },
+       {
+        "id": "doc:28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9#28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9:0001",
+        "kind": "chunk",
+        "ref": "28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9:0001",
+        "documentId": "28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9",
+        "locator": "p2-2",
+        "sourceRef": {
+         "type": "document_chunk",
+         "ref": "src://doc/28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9#c1",
+         "targetTable": "platform.document_chunk",
+         "locator": {
+          "documentId": "28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9",
+          "chunkNo": 1,
+          "chunkId": "28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9:0001"
+         },
+         "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9%23c1"
+        },
+        "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F28d3cfd960e3096cf3e4006372e0790237cb91d85805e439a56e7328badcebd9%23c1",
+        "resolvable": true
+       }
+      ],
+      "citationKinds": [
+       "chunk",
+       "fact-projection",
+       "formula",
+       "metric-definition",
+       "ontology-version",
+       "skos-term"
+      ],
+      "missingLayers": [
+       "facts"
+      ]
+     },
+     "pass": true,
+     "failures": [],
+     "drillDownUrl": "/answer/quality?caseId=G04&strategy=lexical"
+    },
+    {
+     "id": "G05",
+     "query": "当事人关系历史记录保留多久",
+     "type": "definition",
+     "expectRefused": false,
+     "actual": {
+      "refused": true,
+      "answerType": "none",
+      "answerMode": "none",
+      "reasonCode": "E_ANSWER_NOT_COVERED",
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/core#Party",
+        "kind": "rdfs-term",
+        "ref": "当事人",
+        "label": "当事人",
+        "layer": "ontology",
+        "span": [
+         0,
+         3
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fcore%23Party",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/party#PartyRelationship",
+        "kind": "skos-term",
+        "ref": "当事人关系",
+        "label": "当事人关系",
+        "layer": "terms",
+        "span": [
+         0,
+         5
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fparty%23PartyRelationship",
+        "resolvable": true
+       },
+       {
+        "id": "triple:03a7f4e8ad81003c99c1980c04340176517a44df",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2002/07/owl#hasKey _:c4ef833a8d10b50e09c20c45aab761fc",
+        "graph": "urn:platform:inferred:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:11853a4a7f9c0d06870f5700733abf3f39d90ced",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2004/02/skos/core#altLabel \"PARTY RELATED\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:16490563289d803be0429879d05edfd984211bde",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2002/07/owl#hasKey _:a9cbf80209824e0773f1d772b91ab79b",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:18f6bc5b0bb79abccec7d659bef60fc954788dbe",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2002/07/owl#hasKey _:fb577b979ddd407dfcdf517d63f226ca",
+        "graph": "urn:platform:inferred:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:1d830072ea1139d242575e9fa3c7cad5f2410561",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/party#PartyRelationship http://www.w3.org/2004/02/skos/core#altLabel \"当事人关系\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       }
+      ],
+      "citationKinds": [
+       "ontology-version",
+       "rdfs-term",
+       "skos-term",
+       "triple"
+      ],
+      "missingLayers": [
+       "ontology"
+      ]
+     },
+     "pass": false,
+     "failures": [
+      "expected refused=false, got true",
+      "unresolvable citations: 5"
+     ],
+     "drillDownUrl": "/answer/quality?caseId=G05&strategy=lexical"
+    },
+    {
+     "id": "G06",
+     "query": "抵押物价值发生巨大变化时银行如何处理",
+     "type": "definition",
+     "expectRefused": false,
+     "actual": {
+      "refused": true,
+      "answerType": "none",
+      "answerMode": "none",
+      "reasonCode": "E_ANSWER_NOT_COVERED",
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "https://w3id.org/fsldm/asset#CollateralItem",
+        "kind": "skos-term",
+        "ref": "抵押物",
+        "label": "抵押物",
+        "layer": "terms",
+        "span": [
+         0,
+         3
+        ],
+        "resolveUrl": "/ui/entity.html?iri=https%3A%2F%2Fw3id.org%2Ffsldm%2Fasset%23CollateralItem",
+        "resolvable": true
+       },
+       {
+        "id": "triple:05ecf11ad06ab3e0fca463c12258efa20bfab26b",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/2000/01/rdf-schema#label \"抵押物项\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:10cd2048e45dce64f503566ae9f231ef5b6e7cd0",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/2004/02/skos/core#prefLabel \"抵押物项\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:19b9fc4cdcec0858ff4d569fbc265c391a4f80ae",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/1999/02/22-rdf-syntax-ns#type http://www.w3.org/2002/07/owl#Class",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:5289e14762e882ef3dd7d1e250a8598a72be1357",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/asset#CollateralItem https://w3id.org/fsldm/terms#termBatch \"1\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       },
+       {
+        "id": "triple:6800359675a967e9e7a0134fb3abee670da9fe6b",
+        "kind": "triple",
+        "ref": "https://w3id.org/fsldm/asset#CollateralItem http://www.w3.org/2004/02/skos/core#prefLabel \"Collateral Item\"",
+        "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "ontologyVersion": "ont-11f92ebb3326",
+        "resolveUrl": null,
+        "resolvable": false
+       }
+      ],
+      "citationKinds": [
+       "ontology-version",
+       "skos-term",
+       "triple"
+      ],
+      "missingLayers": [
+       "ontology"
+      ]
+     },
+     "pass": false,
+     "failures": [
+      "expected refused=false, got true",
+      "unresolvable citations: 5"
+     ],
+     "drillDownUrl": "/answer/quality?caseId=G06&strategy=lexical"
+    },
+    {
+     "id": "G07",
+     "query": "量子计算机的制冷功率是多少",
+     "type": "value",
+     "expectRefused": true,
+     "actual": {
+      "refused": true,
+      "answerType": "none",
+      "answerMode": "none",
+      "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "doc:14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9#14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9:0000",
+        "kind": "chunk",
+        "ref": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9:0000",
+        "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9",
+        "locator": "p1-1",
+        "sourceRef": {
+         "type": "document_chunk",
+         "ref": "src://doc/14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9#c0",
+         "targetTable": "platform.document_chunk",
+         "locator": {
+          "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9",
+          "chunkNo": 0,
+          "chunkId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9:0000"
+         },
+         "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9%23c0"
+        },
+        "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9%23c0",
+        "resolvable": true
+       }
+      ],
+      "citationKinds": [
+       "chunk",
+       "ontology-version"
+      ],
+      "missingLayers": [
+       "metrics",
+       "ontology",
+       "terms"
+      ]
+     },
+     "pass": true,
+     "failures": [],
+     "drillDownUrl": "/answer/quality?caseId=G07&strategy=lexical"
+    },
+    {
+     "id": "G08",
+     "query": "火星探测器电池功率是多少",
+     "type": "value",
+     "expectRefused": true,
+     "actual": {
+      "refused": true,
+      "answerType": "none",
+      "answerMode": "none",
+      "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "doc:4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb#4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb:0154",
+        "kind": "chunk",
+        "ref": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb:0154",
+        "documentId": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb",
+        "locator": "p130-130",
+        "sourceRef": {
+         "type": "document_chunk",
+         "ref": "src://doc/4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb#c154",
+         "targetTable": "platform.document_chunk",
+         "locator": {
+          "documentId": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb",
+          "chunkNo": 154,
+          "chunkId": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb:0154"
+         },
+         "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154"
+        },
+        "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154",
+        "resolvable": true
+       }
+      ],
+      "citationKinds": [
+       "chunk",
+       "ontology-version"
+      ],
+      "missingLayers": [
+       "metrics",
+       "ontology",
+       "terms"
+      ]
+     },
+     "pass": true,
+     "failures": [],
+     "drillDownUrl": "/answer/quality?caseId=G08&strategy=lexical"
+    },
+    {
+     "id": "G09",
+     "query": "量子退火机的能耗是多少",
+     "type": "value",
+     "expectRefused": true,
+     "actual": {
+      "refused": true,
+      "answerType": "none",
+      "answerMode": "none",
+      "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "doc:14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9#14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9:0000",
+        "kind": "chunk",
+        "ref": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9:0000",
+        "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9",
+        "locator": "p1-1",
+        "sourceRef": {
+         "type": "document_chunk",
+         "ref": "src://doc/14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9#c0",
+         "targetTable": "platform.document_chunk",
+         "locator": {
+          "documentId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9",
+          "chunkNo": 0,
+          "chunkId": "14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9:0000"
+         },
+         "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9%23c0"
+        },
+        "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F14c7b3c4051d2e65e352d8638f8f74a326c3a53eb682096efeeb2b565b3734b9%23c0",
+        "resolvable": true
+       }
+      ],
+      "citationKinds": [
+       "chunk",
+       "ontology-version"
+      ],
+      "missingLayers": [
+       "metrics",
+       "ontology",
+       "terms"
+      ]
+     },
+     "pass": true,
+     "failures": [],
+     "drillDownUrl": "/answer/quality?caseId=G09&strategy=lexical"
+    },
+    {
+     "id": "G10",
+     "query": "超导磁悬浮列车的时速是多少",
+     "type": "value",
+     "expectRefused": true,
+     "actual": {
+      "refused": true,
+      "answerType": "none",
+      "answerMode": "none",
+      "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+      "degraded": false,
+      "citations": [
+       {
+        "id": "ont-11f92ebb3326",
+        "kind": "ontology-version",
+        "ref": "urn:platform:graph:tbox:ont-11f92ebb3326",
+        "versionId": "ont-11f92ebb3326",
+        "resolveUrl": "/ui/ontology.html",
+        "resolvable": true
+       },
+       {
+        "id": "doc:4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb#4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb:0154",
+        "kind": "chunk",
+        "ref": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb:0154",
+        "documentId": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb",
+        "locator": "p130-130",
+        "sourceRef": {
+         "type": "document_chunk",
+         "ref": "src://doc/4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb#c154",
+         "targetTable": "platform.document_chunk",
+         "locator": {
+          "documentId": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb",
+          "chunkNo": 154,
+          "chunkId": "4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb:0154"
+         },
+         "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154"
+        },
+        "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154",
+        "resolvable": true
+       }
+      ],
+      "citationKinds": [
+       "chunk",
+       "ontology-version"
+      ],
+      "missingLayers": [
+       "metrics",
+       "ontology",
+       "terms"
+      ]
+     },
+     "pass": true,
+     "failures": [],
+     "drillDownUrl": "/answer/quality?caseId=G10&strategy=lexical"
+    }
+   ],
+   "empty": false,
+   "emptyReason": null,
+   "readOnly": true
+  }
+ },
+ "provRefusals": {
+  "status": 400,
+  "obj": {
+   "error": {
+    "code": "InvalidArgument",
+    "provider": "platform",
+    "providerCode": "E_PROV_LOOKUP_REQUIRED",
+    "message": "refusal lookup requires requestId or query",
+    "retryable": false,
+    "details": {
+     "fields": [
+      "requestId",
+      "query"
+     ]
+    }
+   }
+  }
+ },
+ "queries": [
+  {
+   "id": "V01",
+   "query": "逾期天数（DPD）是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「逾期天数（DPD）」（FIN-BANK-001@v3.0）口径：numerator = max(观察日 − 应还款日, 0)；观察期 instant；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-001",
+    "name": "逾期天数（DPD）",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "duration",
+    "formula": "numerator",
+    "formulaText": "numerator = max(观察日 − 应还款日, 0)",
+    "definition": "贷款合同到期（含批准展期后到期）未归还时，自到期日次日起至观察日累计的自然日天数。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "天",
+    "grain": "agreement",
+    "factFunction": "platform.metric_fact_fin_bank_001",
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 5000,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 5000,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-001@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-001",
+    "definitionVersion": "v3.0",
+    "rows": 5000,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-001@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-001",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 5000
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-projection",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "5000",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-001@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-001",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:08:11.047568+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 69484,
+       "metric_id": "FIN-BANK-001",
+       "definition_version": "v3.0",
+       "entity_key": "LN-SYN-00000",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.577863+08:00"
+      },
+      {
+       "observation_id": 68939,
+       "metric_id": "FIN-BANK-001",
+       "definition_version": "v3.0",
+       "entity_key": "LN-SYN-00001",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.577863+08:00"
+      },
+      {
+       "observation_id": 70894,
+       "metric_id": "FIN-BANK-001",
+       "definition_version": "v3.0",
+       "entity_key": "LN-SYN-00002",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.577863+08:00"
+      }
+     ],
+     "rowCount": 5000
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V02",
+   "query": "逾期迁徙率 30→60 是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「逾期迁徙率 30→60」（FIN-BANK-017@v3.0）口径：numerator/denominator*100；观察期 period；证据 industry。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-017",
+    "name": "逾期迁徙率 30→60",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator/denominator*100",
+    "definition": "期初逾期 30–59 天的账户在观察期末迁徙到 60 天及以上的比例",
+    "windowKind": "period",
+    "minWindowDays": 0,
+    "evidenceBasis": "industry",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 15,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 15,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-017@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-017",
+    "definitionVersion": "v3.0",
+    "rows": 15,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-017@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-017",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-017%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 15
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "15",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-017@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-017",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-017%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-06T23:46:37.150344+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34657,
+       "metric_id": "FIN-BANK-017",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": 84.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.815649+08:00"
+      },
+      {
+       "observation_id": 34658,
+       "metric_id": "FIN-BANK-017",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.815649+08:00"
+      },
+      {
+       "observation_id": 34659,
+       "metric_id": "FIN-BANK-017",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-04",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.815649+08:00"
+      }
+     ],
+     "rowCount": 15
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V03",
+   "query": "报案立案率是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「报案立案率」（FIN-INS-018@v3.0）口径：numerator / denominator * 100；观察期 period；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-INS-018",
+    "name": "报案立案率",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "立案数量占有效报案数量的比例（有效报案剔除注销报案）。",
+    "windowKind": "period",
+    "minWindowDays": 1,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "product",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 4,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 4,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-INS-018@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-INS-018",
+    "definitionVersion": "v3.0",
+    "rows": 4,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-INS-018@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-INS-018",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-018%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+     "rowCount": 4
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "4",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-INS-018@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-INS-018",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-018%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-06T23:46:38.054077+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 35028,
+       "metric_id": "FIN-INS-018",
+       "definition_version": "v3.0",
+       "entity_key": "critical_illness",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.513943+08:00"
+      },
+      {
+       "observation_id": 35029,
+       "metric_id": "FIN-INS-018",
+       "definition_version": "v3.0",
+       "entity_key": "health",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.513943+08:00"
+      },
+      {
+       "observation_id": 35030,
+       "metric_id": "FIN-INS-018",
+       "definition_version": "v3.0",
+       "entity_key": "life_term",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.513943+08:00"
+      }
+     ],
+     "rowCount": 4
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V04",
+   "query": "不良贷款率是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「不良贷款率」（FIN-BANK-008@v3.0）口径：numerator / denominator * 100；观察期 instant；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-008",
+    "name": "不良贷款率",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "不良贷款余额占各项贷款余额的比重，衡量信贷资产质量。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 20,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 20,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-008@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-008",
+    "definitionVersion": "v3.0",
+    "rows": 20,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-008@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-008",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-008%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 20
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "20",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-008@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-008",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-008%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:11:05.089757+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34605,
+       "metric_id": "FIN-BANK-008",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-01",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": 30000000.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.376357+08:00"
+      },
+      {
+       "observation_id": 34606,
+       "metric_id": "FIN-BANK-008",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": 37607250.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.376357+08:00"
+      },
+      {
+       "observation_id": 34607,
+       "metric_id": "FIN-BANK-008",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 37787000.0,
+       "denominator": 37787000.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.376357+08:00"
+      }
+     ],
+     "rowCount": 20
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V05",
+   "query": "不良率是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": true,
+   "answerType": "none",
+   "answerMode": "none",
+   "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+   "value": null,
+   "answer": "证据不足，拒绝作答。缺口：本体未声明「不良率」；问题中的概念没有 SKOS 术语/别名命中；未匹配到可求值口径指标",
+   "selectedMetric": null,
+   "factsStep": {
+    "status": "not_applicable",
+    "observationRows": 0,
+    "dataSource": null,
+    "code": null
+   },
+   "computeStep": {
+    "status": "skipped",
+    "output": {
+     "reason": "no_metric",
+     "value": null
+    }
+   },
+   "obsCitation": null,
+   "valueCitation": null,
+   "citationKinds": [
+    "ontology-version"
+   ],
+   "missing": [
+    {
+     "text": "不良率",
+     "span": [
+      0,
+      3
+     ],
+     "reason": "no_ontology_term",
+     "nearbyTerms": [
+      {
+       "term": "https://w3id.org/fsldm/terms#M-FIN-BANK-008",
+       "label": "不良贷款率",
+       "similarity": 0.75
+      },
+      {
+       "term": "https://w3id.org/fsldm/terms#M-FIN-BANK-036-v1",
+       "label": "不良处置率",
+       "similarity": 0.75
+      },
+      {
+       "term": "https://w3id.org/fsldm/terms#M-FIN-BANK-036",
+       "label": "不良处置率/处置回收率",
+       "similarity": 0.4286
+      }
+     ],
+     "layer": "ontology",
+     "code": "E_LAYER_ONTOLOGY_GAP",
+     "what": "本体未声明「不良率」",
+     "howToFix": "补充 rdfs:label / skos:prefLabel，或收窄问题范围"
+    },
+    {
+     "layer": "terms",
+     "code": "E_LAYER_TERMS_GAP",
+     "text": "",
+     "what": "问题中的概念没有 SKOS 术语/别名命中",
+     "howToFix": "在术语层补充 skos:altLabel 或 term:TermEntry"
+    },
+    {
+     "layer": "metrics",
+     "code": "E_LAYER_METRICS_GAP",
+     "text": "",
+     "what": "未匹配到可求值口径指标",
+     "howToFix": "指定 metricId，或补充指标名称/别名",
+     "candidates": []
+    }
+   ]
+  },
+  {
+   "id": "V06",
+   "query": "拨备覆盖率是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「拨备覆盖率」（FIN-BANK-022@v3.0）口径：numerator / denominator * 100；观察期 instant；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-022",
+    "name": "拨备覆盖率",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "贷款损失准备余额对不良贷款余额的覆盖程度，监管基本标准 150%。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 20,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 20,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-022@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-022",
+    "definitionVersion": "v3.0",
+    "rows": 20,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-022@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-022",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-022%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 20
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "20",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-022@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-022",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-022%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:11:20.106361+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34677,
+       "metric_id": "FIN-BANK-022",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-01",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 9447.3,
+       "denominator": 10497.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.838491+08:00"
+      },
+      {
+       "observation_id": 34678,
+       "metric_id": "FIN-BANK-022",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 9475.2,
+       "denominator": 10528.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.838491+08:00"
+      },
+      {
+       "observation_id": 34679,
+       "metric_id": "FIN-BANK-022",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 9503.1,
+       "denominator": 10559.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.838491+08:00"
+      }
+     ],
+     "rowCount": 20
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V07",
+   "query": "单一客户贷款集中度是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「单一客户贷款集中度」（FIN-BANK-025@v3.0）口径：numerator / denominator * 100；观察期 instant；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-025",
+    "name": "单一客户贷款集中度",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "对同一借款人的贷款余额占商业银行资本余额的比重，监管上限 10%。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 20,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 20,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-025@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-025",
+    "definitionVersion": "v3.0",
+    "rows": 20,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-025@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-025",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-025%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 20
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "20",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-025@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-025",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-025%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:11:20.372672+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34717,
+       "metric_id": "FIN-BANK-025",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-01",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 100262.7,
+       "denominator": 10026270.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.954660+08:00"
+      },
+      {
+       "observation_id": 34718,
+       "metric_id": "FIN-BANK-025",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 100362.7,
+       "denominator": 10036270.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.954660+08:00"
+      },
+      {
+       "observation_id": 34719,
+       "metric_id": "FIN-BANK-025",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 100462.7,
+       "denominator": 10046270.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.954660+08:00"
+      }
+     ],
+     "rowCount": 20
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V08",
+   "query": "今年案均赔款是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": true,
+   "answerType": "none",
+   "answerMode": "none",
+   "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+   "value": null,
+   "answer": "证据不足，拒绝作答。缺口：本体未声明「今年案均赔款」；问题中的概念没有 SKOS 术语/别名命中；未匹配到可求值口径指标",
+   "selectedMetric": null,
+   "factsStep": {
+    "status": "not_applicable",
+    "observationRows": 0,
+    "dataSource": null,
+    "code": null
+   },
+   "computeStep": {
+    "status": "skipped",
+    "output": {
+     "reason": "no_metric",
+     "value": null
+    }
+   },
+   "obsCitation": null,
+   "valueCitation": null,
+   "citationKinds": [
+    "chunk",
+    "ontology-version"
+   ],
+   "missing": [
+    {
+     "text": "今年案均赔款",
+     "span": [
+      0,
+      6
+     ],
+     "reason": "no_ontology_term",
+     "nearbyTerms": [
+      {
+       "term": "https://w3id.org/fsldm/terms#M-FIN-INS-013",
+       "label": "两年赔付率",
+       "similarity": 0.3636
+      }
+     ],
+     "layer": "ontology",
+     "code": "E_LAYER_ONTOLOGY_GAP",
+     "what": "本体未声明「今年案均赔款」",
+     "howToFix": "补充 rdfs:label / skos:prefLabel，或收窄问题范围"
+    },
+    {
+     "layer": "terms",
+     "code": "E_LAYER_TERMS_GAP",
+     "text": "",
+     "what": "问题中的概念没有 SKOS 术语/别名命中",
+     "howToFix": "在术语层补充 skos:altLabel 或 term:TermEntry"
+    },
+    {
+     "layer": "metrics",
+     "code": "E_LAYER_METRICS_GAP",
+     "text": "",
+     "what": "未匹配到可求值口径指标",
+     "howToFix": "指定 metricId，或补充指标名称/别名",
+     "candidates": []
+    }
+   ]
+  },
+  {
+   "id": "V09",
+   "query": "综合赔付率是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「综合赔付率（财产险·规则18）」（FIN-INS-008@v3.0）口径：numerator / denominator * 100；观察期 period；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-INS-008",
+    "name": "综合赔付率（财产险·规则18）",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "财产险口径下，赔付支出（含未决赔款准备金变动、扣摊回）占自留保费（扣未到期责任准备金变动）的比重。",
+    "windowKind": "period",
+    "minWindowDays": 1,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.95,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 20,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 20,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-INS-008@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-INS-008",
+    "definitionVersion": "v3.0",
+    "rows": 20,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-INS-008@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-INS-008",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-008%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+     "rowCount": 20
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "chunk",
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "20",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-INS-008@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-INS-008",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-008%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-06T23:46:37.903546+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34912,
+       "metric_id": "FIN-INS-008",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-01",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 8138736.98,
+       "denominator": 28115636.84,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.377311+08:00"
+      },
+      {
+       "observation_id": 34913,
+       "metric_id": "FIN-INS-008",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 8267941.44,
+       "denominator": 28561979.52,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.377311+08:00"
+      },
+      {
+       "observation_id": 34914,
+       "metric_id": "FIN-INS-008",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 7212651.82,
+       "denominator": 24916433.56,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.377311+08:00"
+      }
+     ],
+     "rowCount": 20
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V10",
+   "query": "正常类贷款迁徙率是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「正常类贷款迁徙率」（FIN-BANK-013@v3.0）口径：numerator / denominator * 100；观察期 period；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-013",
+    "name": "正常类贷款迁徙率",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "期初正常类贷款中在报告期内迁徙到后四类的金额，占期初正常类余额扣期间减少后的比重。",
+    "windowKind": "period",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 20,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 20,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-013@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-013",
+    "definitionVersion": "v3.0",
+    "rows": 20,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-013@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-013",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-013%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 20
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "20",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-013@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-013",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-013%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-06T23:46:37.090746+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34625,
+       "metric_id": "FIN-BANK-013",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-01",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 4171400.0,
+       "denominator": 30000000.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.762811+08:00"
+      },
+      {
+       "observation_id": 34626,
+       "metric_id": "FIN-BANK-013",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 5478564.0,
+       "denominator": 5478564.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.762811+08:00"
+      },
+      {
+       "observation_id": 34627,
+       "metric_id": "FIN-BANK-013",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 5465328.0,
+       "denominator": 5465328.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.762811+08:00"
+      }
+     ],
+     "rowCount": 20
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V11",
+   "query": "单一集团客户授信集中度是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「单一集团客户授信集中度」（FIN-BANK-028@v3.0）口径：numerator / denominator * 100；观察期 instant；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-028",
+    "name": "单一集团客户授信集中度",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "最大一家集团客户的授信总额占资本净额的比重，监管上限 15%。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.98,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 20,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 20,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-028@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-028",
+    "definitionVersion": "v3.0",
+    "rows": 20,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-028@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-028",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-028%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 20
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "20",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-028@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-028",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-028%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:11:21.429745+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34777,
+       "metric_id": "FIN-BANK-028",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-01",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 180472.86,
+       "denominator": 10026270.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.989977+08:00"
+      },
+      {
+       "observation_id": 34778,
+       "metric_id": "FIN-BANK-028",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 180652.86,
+       "denominator": 10036270.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.989977+08:00"
+      },
+      {
+       "observation_id": 34779,
+       "metric_id": "FIN-BANK-028",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 180832.86,
+       "denominator": 10046270.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.989977+08:00"
+      }
+     ],
+     "rowCount": 20
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "V12",
+   "query": "本年客户AUM是多少？",
+   "pinnedMetricId": null,
+   "http": 200,
+   "refused": true,
+   "answerType": "none",
+   "answerMode": "none",
+   "reasonCode": "E_ANSWER_FACTS_MISSING",
+   "value": null,
+   "answer": "证据不足，拒绝作答。缺口：本体未声明「本年客户」；CUST-012 的 metricKind=amount 不是标量可计算类型",
+   "selectedMetric": {
+    "metricId": "CUST-012",
+    "name": "AUM（时点）",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "amount",
+    "formula": "numerator",
+    "formulaText": "numerator = Σ客户可计入资产市值 at 观察时点（按账户去重，避免双计）",
+    "definition": "客户在观察时点在本行/集团持有的可计入资产市值合计（存款、理财、基金、保险、国债等）。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "industry",
+    "publishable": false,
+    "unit": "元",
+    "grain": "customer",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 0.95,
+    "factsStatus": "missing",
+    "factsCode": "E_FACTS_NOT_SCALAR",
+    "observationRows": 5000,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "missing",
+    "observationRows": 5000,
+    "dataSource": "business",
+    "code": "E_FACTS_NOT_SCALAR"
+   },
+   "computeStep": {
+    "status": "skipped",
+    "output": {
+     "reason": "no_metric",
+     "value": null
+    }
+   },
+   "obsCitation": {
+    "id": "obs:CUST-012@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "CUST-012",
+    "definitionVersion": "v3.0",
+    "rows": 5000,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/CUST-012@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "CUST-012",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FCUST-012%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 5000
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "chunk",
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [
+    {
+     "text": "本年客户",
+     "span": [
+      0,
+      4
+     ],
+     "reason": "no_ontology_term",
+     "nearbyTerms": [
+      {
+       "term": "https://w3id.org/fsldm/terms#M-CUST-006",
+       "label": "客户留存率",
+       "similarity": 0.4444
+      },
+      {
+       "term": "https://w3id.org/fsldm/terms#M-CUST-007",
+       "label": "客户流失率",
+       "similarity": 0.4444
+      }
+     ],
+     "layer": "ontology",
+     "code": "E_LAYER_ONTOLOGY_GAP",
+     "what": "本体未声明「本年客户」",
+     "howToFix": "补充 rdfs:label / skos:prefLabel，或收窄问题范围"
+    },
+    {
+     "layer": "facts",
+     "code": "E_FACTS_NOT_SCALAR",
+     "metricId": "CUST-012",
+     "text": "CUST-012 的 metricKind=amount 不是标量可计算类型",
+     "what": "CUST-012 的 metricKind=amount 不是标量可计算类型",
+     "howToFix": "按口径卡/规则集读取，或选择可标量计算的变体"
+    }
+   ],
+   "obsDbRows": "5000",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/CUST-012@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "CUST-012",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FCUST-012%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:11:25.539083+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 24605,
+       "metric_id": "CUST-012",
+       "definition_version": "v3.0",
+       "entity_key": "CUST-SYN-00000",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 1310.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.072490+08:00"
+      },
+      {
+       "observation_id": 24606,
+       "metric_id": "CUST-012",
+       "definition_version": "v3.0",
+       "entity_key": "CUST-SYN-00001",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 1345.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.072490+08:00"
+      },
+      {
+       "observation_id": 24607,
+       "metric_id": "CUST-012",
+       "definition_version": "v3.0",
+       "entity_key": "CUST-SYN-00002",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 1380.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.072490+08:00"
+      }
+     ],
+     "rowCount": 5000
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "P01",
+   "query": "逾期天数（DPD）是多少？",
+   "pinnedMetricId": "FIN-BANK-001",
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「逾期天数（DPD）」（FIN-BANK-001@v3.0）口径：numerator = max(观察日 − 应还款日, 0)；观察期 instant；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-001",
+    "name": "逾期天数（DPD）",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "duration",
+    "formula": "numerator",
+    "formulaText": "numerator = max(观察日 − 应还款日, 0)",
+    "definition": "贷款合同到期（含批准展期后到期）未归还时，自到期日次日起至观察日累计的自然日天数。",
+    "windowKind": "instant",
+    "minWindowDays": 0,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "天",
+    "grain": "agreement",
+    "factFunction": "platform.metric_fact_fin_bank_001",
+    "ruleCount": 0,
+    "score": 1.0,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 5000,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 5000,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-001@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-001",
+    "definitionVersion": "v3.0",
+    "rows": 5000,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-001@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-001",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 5000
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-projection",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "5000",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-001@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-001",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-07T00:08:11.047568+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 69484,
+       "metric_id": "FIN-BANK-001",
+       "definition_version": "v3.0",
+       "entity_key": "LN-SYN-00000",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.577863+08:00"
+      },
+      {
+       "observation_id": 68939,
+       "metric_id": "FIN-BANK-001",
+       "definition_version": "v3.0",
+       "entity_key": "LN-SYN-00001",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.577863+08:00"
+      },
+      {
+       "observation_id": 70894,
+       "metric_id": "FIN-BANK-001",
+       "definition_version": "v3.0",
+       "entity_key": "LN-SYN-00002",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": null,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:20.577863+08:00"
+      }
+     ],
+     "rowCount": 5000
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "P02",
+   "query": "逾期迁徙率 30→60 是多少？",
+   "pinnedMetricId": "FIN-BANK-017",
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「逾期迁徙率 30→60」（FIN-BANK-017@v3.0）口径：numerator/denominator*100；观察期 period；证据 industry。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-BANK-017",
+    "name": "逾期迁徙率 30→60",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator/denominator*100",
+    "definition": "期初逾期 30–59 天的账户在观察期末迁徙到 60 天及以上的比例",
+    "windowKind": "period",
+    "minWindowDays": 0,
+    "evidenceBasis": "industry",
+    "publishable": true,
+    "unit": "%",
+    "grain": "institution",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 1.0,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 15,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 15,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-BANK-017@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-BANK-017",
+    "definitionVersion": "v3.0",
+    "rows": 15,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-017@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-017",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-017%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "rowCount": 15
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "15",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-BANK-017@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-BANK-017",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-12-31",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-017%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-06T23:46:37.150344+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 34657,
+       "metric_id": "FIN-BANK-017",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-02",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 0.0,
+       "denominator": 84.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.815649+08:00"
+      },
+      {
+       "observation_id": 34658,
+       "metric_id": "FIN-BANK-017",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-03",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.815649+08:00"
+      },
+      {
+       "observation_id": 34659,
+       "metric_id": "FIN-BANK-017",
+       "definition_version": "v3.0",
+       "entity_key": "INST-SYN-04",
+       "as_of": "2025-12-31",
+       "window_start": "2025-12-31",
+       "window_end": "2025-12-31",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:21.815649+08:00"
+      }
+     ],
+     "rowCount": 15
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  },
+  {
+   "id": "P03",
+   "query": "报案立案率是多少？",
+   "pinnedMetricId": "FIN-INS-018",
+   "http": 200,
+   "refused": false,
+   "answerType": "definition",
+   "answerMode": "definition",
+   "reasonCode": "E_ANSWER_VALUE_DEGRADED",
+   "value": null,
+   "answer": "「报案立案率」（FIN-INS-018@v3.0）口径：numerator / denominator * 100；观察期 period；证据 regulatory。事实层 covered，不给出数值。",
+   "selectedMetric": {
+    "metricId": "FIN-INS-018",
+    "name": "报案立案率",
+    "definitionVersion": "v3.0",
+    "outputMode": null,
+    "metricKind": "ratio",
+    "formula": "numerator / denominator * 100",
+    "formulaText": "numerator / denominator * 100",
+    "definition": "立案数量占有效报案数量的比例（有效报案剔除注销报案）。",
+    "windowKind": "period",
+    "minWindowDays": 1,
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "unit": "%",
+    "grain": "product",
+    "factFunction": null,
+    "ruleCount": 0,
+    "score": 1.0,
+    "factsStatus": "covered",
+    "factsCode": "E_FACTS_OBSERVED",
+    "observationRows": 4,
+    "dataSource": "business"
+   },
+   "factsStep": {
+    "status": "covered",
+    "observationRows": 4,
+    "dataSource": "business",
+    "code": "E_FACTS_OBSERVED"
+   },
+   "computeStep": {
+    "status": "failed",
+    "output": {
+     "value": null,
+     "error": "E_METRIC_WINDOW_INSUFFICIENT"
+    }
+   },
+   "obsCitation": {
+    "id": "obs:FIN-INS-018@v3.0",
+    "kind": "fact-observation",
+    "ref": "platform.metric_observation",
+    "metricId": "FIN-INS-018",
+    "definitionVersion": "v3.0",
+    "rows": 4,
+    "dataSource": "business",
+    "sourceRef": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-INS-018@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-INS-018",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-018%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+     "rowCount": 4
+    }
+   },
+   "valueCitation": null,
+   "citationKinds": [
+    "fact-observation",
+    "fact-table",
+    "fact-table-field",
+    "formula",
+    "metric-definition",
+    "ontology-version",
+    "skos-term",
+    "triple"
+   ],
+   "missing": [],
+   "obsDbRows": "4",
+   "obsResolve": {
+    "status": 200,
+    "obj": {
+     "type": "metric_observation_set",
+     "ref": "src://obs-set/FIN-INS-018@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+     "targetTable": "platform.metric_observation",
+     "locator": {
+      "metricId": "FIN-INS-018",
+      "definitionVersion": "v3.0",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "fixture": false
+     },
+     "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-018%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+     "found": true,
+     "issued": true,
+     "issuedAt": "2026-11-06T23:46:38.054077+08:00",
+     "state": "live",
+     "rows": [
+      {
+       "observation_id": 35028,
+       "metric_id": "FIN-INS-018",
+       "definition_version": "v3.0",
+       "entity_key": "critical_illness",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.513943+08:00"
+      },
+      {
+       "observation_id": 35029,
+       "metric_id": "FIN-INS-018",
+       "definition_version": "v3.0",
+       "entity_key": "health",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.513943+08:00"
+      },
+      {
+       "observation_id": 35030,
+       "metric_id": "FIN-INS-018",
+       "definition_version": "v3.0",
+       "entity_key": "life_term",
+       "as_of": null,
+       "window_start": "2025-01-01",
+       "window_end": "2025-12-31",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "data_source": "synthetic",
+       "fixture": false,
+       "computed_at": "2026-11-06T23:49:22.513943+08:00"
+      }
+     ],
+     "rowCount": 4
+    }
+   },
+   "directOutputAttempt": {
+    "window": {
+     "asOf": "2025-12-31"
+    },
+    "status": "ERR",
+    "obj": null
+   }
+  }
+ ],
+ "compare": [
+  {
+   "metricId": "FIN-BANK-001",
+   "window": {
+    "asOf": "2025-12-31"
+   },
+   "outputCompute": {
+    "status": 200,
+    "obj": {
+     "metricId": "FIN-BANK-001",
+     "value": 333.0,
+     "unit": "天",
+     "definitionVersion": "v3.0",
+     "formula": "numerator",
+     "window": {
+      "kind": "instant",
+      "asOf": "2025-12-31",
+      "start": "2025-12-31",
+      "end": "2025-12-31"
+     },
+     "observedWindow": {
+      "start": "2025-12-31",
+      "end": "2025-12-31"
+     },
+     "grain": "agreement",
+     "evidenceBasis": "regulatory",
+     "source": "REGULATORY",
+     "inference": false,
+     "publishable": true,
+     "dataSource": "synthetic",
+     "fixture": false,
+     "sampleCount": 5000,
+     "computedAt": "2026-11-06T23:49:20.577863+08:00",
+     "outputType": "observation",
+     "sourceRef": {
+      "type": "metric_observation_set",
+      "ref": "src://obs-set/FIN-BANK-001@v3.0?asOf=2025-12-31&fixture=false",
+      "targetTable": "platform.metric_observation",
+      "locator": {
+       "metricId": "FIN-BANK-001",
+       "definitionVersion": "v3.0",
+       "asOf": "2025-12-31",
+       "fixture": false
+      },
+      "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-001%40v3.0%3FasOf%3D2025-12-31%26fixture%3Dfalse",
+      "rowCount": 5000
+     },
+     "sourceRefs": [
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-BANK-001@v3.0?entity=LN-SYN-00000&we=2025-12-31&ws=2025-12-31",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-BANK-001",
+        "definitionVersion": "v3.0",
+        "entityKey": "LN-SYN-00000",
+        "windowStart": "2025-12-31",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-BANK-001%40v3.0%3Fentity%3DLN-SYN-00000%26we%3D2025-12-31%26ws%3D2025-12-31"
+      },
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-BANK-001@v3.0?entity=LN-SYN-00001&we=2025-12-31&ws=2025-12-31",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-BANK-001",
+        "definitionVersion": "v3.0",
+        "entityKey": "LN-SYN-00001",
+        "windowStart": "2025-12-31",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-BANK-001%40v3.0%3Fentity%3DLN-SYN-00001%26we%3D2025-12-31%26ws%3D2025-12-31"
+      },
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-BANK-001@v3.0?entity=LN-SYN-00002&we=2025-12-31&ws=2025-12-31",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-BANK-001",
+        "definitionVersion": "v3.0",
+        "entityKey": "LN-SYN-00002",
+        "windowStart": "2025-12-31",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-BANK-001%40v3.0%3Fentity%3DLN-SYN-00002%26we%3D2025-12-31%26ws%3D2025-12-31"
+      }
+     ]
+    }
+   },
+   "g2Compute": {
+    "status": 400,
+    "obj": {
+     "error": {
+      "code": "InvalidArgument",
+      "provider": "platform",
+      "providerCode": "E_METRIC_BINDING_MISSING",
+      "message": "numerator field binding missing",
+      "retryable": false,
+      "details": {
+       "metricId": "FIN-BANK-001"
+      }
+     }
+    }
+   },
+   "obsRowsRaw": "ERROR:  column \"numerator_value\" does not exist\nLINE 1: SELECT count(*), coalesce(sum(numerator_value),0), coalesce(...\n                                      ^"
+  },
+  {
+   "metricId": "FIN-BANK-017",
+   "window": {
+    "periodStart": "2025-12-31",
+    "periodEnd": "2025-12-31"
+   },
+   "outputCompute": {
+    "status": 200,
+    "obj": {
+     "metricId": "FIN-BANK-017",
+     "value": 40.0384061449832,
+     "unit": "%",
+     "definitionVersion": "v3.0",
+     "formula": "numerator / denominator * 100",
+     "window": {
+      "kind": "period",
+      "start": "2025-12-31",
+      "end": "2025-12-31"
+     },
+     "observedWindow": {
+      "start": "2025-12-31",
+      "end": "2025-12-31"
+     },
+     "grain": "institution",
+     "evidenceBasis": "industry",
+     "source": "INDUSTRY",
+     "inference": false,
+     "publishable": true,
+     "dataSource": "synthetic",
+     "fixture": false,
+     "sampleCount": 15,
+     "computedAt": "2026-11-06T23:49:21.815649+08:00",
+     "outputType": "observation",
+     "sourceRef": {
+      "type": "metric_observation_set",
+      "ref": "src://obs-set/FIN-BANK-017@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-12-31",
+      "targetTable": "platform.metric_observation",
+      "locator": {
+       "metricId": "FIN-BANK-017",
+       "definitionVersion": "v3.0",
+       "periodStart": "2025-12-31",
+       "periodEnd": "2025-12-31",
+       "fixture": false
+      },
+      "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-BANK-017%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-12-31",
+      "rowCount": 15
+     },
+     "sourceRefs": [
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-BANK-017@v3.0?entity=INST-SYN-02&we=2025-12-31&ws=2025-12-31",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-BANK-017",
+        "definitionVersion": "v3.0",
+        "entityKey": "INST-SYN-02",
+        "windowStart": "2025-12-31",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-BANK-017%40v3.0%3Fentity%3DINST-SYN-02%26we%3D2025-12-31%26ws%3D2025-12-31"
+      },
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-BANK-017@v3.0?entity=INST-SYN-03&we=2025-12-31&ws=2025-12-31",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-BANK-017",
+        "definitionVersion": "v3.0",
+        "entityKey": "INST-SYN-03",
+        "windowStart": "2025-12-31",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-BANK-017%40v3.0%3Fentity%3DINST-SYN-03%26we%3D2025-12-31%26ws%3D2025-12-31"
+      },
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-BANK-017@v3.0?entity=INST-SYN-04&we=2025-12-31&ws=2025-12-31",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-BANK-017",
+        "definitionVersion": "v3.0",
+        "entityKey": "INST-SYN-04",
+        "windowStart": "2025-12-31",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-BANK-017%40v3.0%3Fentity%3DINST-SYN-04%26we%3D2025-12-31%26ws%3D2025-12-31"
+      }
+     ]
+    }
+   },
+   "g2Compute": {
+    "status": 200,
+    "obj": {
+     "metricId": "FIN-BANK-017",
+     "window": {
+      "start": "2025-12-31",
+      "end": "2025-12-31"
+     },
+     "dataSource": "synthetic",
+     "rows": [
+      {
+       "entityKey": "INST-SYN-02",
+       "numerator": 0.0,
+       "denominator": 84.0,
+       "value": 0.0
+      },
+      {
+       "entityKey": "INST-SYN-03",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "value": 50.29940119760479
+      },
+      {
+       "entityKey": "INST-SYN-04",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "value": 50.29940119760479
+      },
+      {
+       "entityKey": "INST-SYN-06",
+       "numerator": 0.0,
+       "denominator": 83.0,
+       "value": 0.0
+      },
+      {
+       "entityKey": "INST-SYN-07",
+       "numerator": 83.0,
+       "denominator": 166.0,
+       "value": 50.0
+      },
+      {
+       "entityKey": "INST-SYN-08",
+       "numerator": 83.0,
+       "denominator": 166.0,
+       "value": 50.0
+      },
+      {
+       "entityKey": "INST-SYN-10",
+       "numerator": 0.0,
+       "denominator": 83.0,
+       "value": 0.0
+      },
+      {
+       "entityKey": "INST-SYN-11",
+       "numerator": 83.0,
+       "denominator": 167.0,
+       "value": 49.70059880239521
+      },
+      {
+       "entityKey": "INST-SYN-12",
+       "numerator": 83.0,
+       "denominator": 167.0,
+       "value": 49.70059880239521
+      },
+      {
+       "entityKey": "INST-SYN-14",
+       "numerator": 0.0,
+       "denominator": 84.0,
+       "value": 0.0
+      },
+      {
+       "entityKey": "INST-SYN-15",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "value": 50.29940119760479
+      },
+      {
+       "entityKey": "INST-SYN-16",
+       "numerator": 84.0,
+       "denominator": 167.0,
+       "value": 50.29940119760479
+      },
+      {
+       "entityKey": "INST-SYN-18",
+       "numerator": 0.0,
+       "denominator": 83.0,
+       "value": 0.0
+      },
+      {
+       "entityKey": "INST-SYN-19",
+       "numerator": 83.0,
+       "denominator": 166.0,
+       "value": 50.0
+      },
+      {
+       "entityKey": "INST-SYN-20",
+       "numerator": 83.0,
+       "denominator": 166.0,
+       "value": 50.0
+      }
+     ],
+     "noData": false,
+     "rowCount": 15,
+     "computedAt": "2026-11-06T16:11:28.451121+00:00"
+    }
+   },
+   "obsRowsRaw": "ERROR:  column \"numerator_value\" does not exist\nLINE 1: SELECT count(*), coalesce(sum(numerator_value),0), coalesce(...\n                                      ^"
+  },
+  {
+   "metricId": "FIN-INS-018",
+   "window": {
+    "periodStart": "2025-01-01",
+    "periodEnd": "2025-12-31"
+   },
+   "outputCompute": {
+    "status": 200,
+    "obj": {
+     "metricId": "FIN-INS-018",
+     "value": 100.0,
+     "unit": "%",
+     "definitionVersion": "v3.0",
+     "formula": "numerator / denominator * 100",
+     "window": {
+      "kind": "period",
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+     },
+     "observedWindow": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+     },
+     "grain": "product",
+     "evidenceBasis": "regulatory",
+     "source": "REGULATORY",
+     "inference": false,
+     "publishable": true,
+     "dataSource": "synthetic",
+     "fixture": false,
+     "sampleCount": 4,
+     "computedAt": "2026-11-06T23:49:22.513943+08:00",
+     "outputType": "observation",
+     "sourceRef": {
+      "type": "metric_observation_set",
+      "ref": "src://obs-set/FIN-INS-018@v3.0?fixture=false&periodEnd=2025-12-31&periodStart=2025-01-01",
+      "targetTable": "platform.metric_observation",
+      "locator": {
+       "metricId": "FIN-INS-018",
+       "definitionVersion": "v3.0",
+       "periodStart": "2025-01-01",
+       "periodEnd": "2025-12-31",
+       "fixture": false
+      },
+      "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs-set%2FFIN-INS-018%40v3.0%3Ffixture%3Dfalse%26periodEnd%3D2025-12-31%26periodStart%3D2025-01-01",
+      "rowCount": 4
+     },
+     "sourceRefs": [
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-INS-018@v3.0?entity=critical_illness&we=2025-12-31&ws=2025-01-01",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-INS-018",
+        "definitionVersion": "v3.0",
+        "entityKey": "critical_illness",
+        "windowStart": "2025-01-01",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-INS-018%40v3.0%3Fentity%3Dcritical_illness%26we%3D2025-12-31%26ws%3D2025-01-01"
+      },
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-INS-018@v3.0?entity=health&we=2025-12-31&ws=2025-01-01",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-INS-018",
+        "definitionVersion": "v3.0",
+        "entityKey": "health",
+        "windowStart": "2025-01-01",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-INS-018%40v3.0%3Fentity%3Dhealth%26we%3D2025-12-31%26ws%3D2025-01-01"
+      },
+      {
+       "type": "metric_observation_row",
+       "ref": "src://obs/FIN-INS-018@v3.0?entity=life_term&we=2025-12-31&ws=2025-01-01",
+       "targetTable": "platform.metric_observation",
+       "locator": {
+        "metricId": "FIN-INS-018",
+        "definitionVersion": "v3.0",
+        "entityKey": "life_term",
+        "windowStart": "2025-01-01",
+        "windowEnd": "2025-12-31"
+       },
+       "resolveUrl": "/source/resolve?ref=src%3A%2F%2Fobs%2FFIN-INS-018%40v3.0%3Fentity%3Dlife_term%26we%3D2025-12-31%26ws%3D2025-01-01"
+      }
+     ]
+    }
+   },
+   "g2Compute": {
+    "status": 200,
+    "obj": {
+     "metricId": "FIN-INS-018",
+     "window": {
+      "start": "2025-01-01",
+      "end": "2025-12-31"
+     },
+     "dataSource": "synthetic",
+     "rows": [
+      {
+       "entityKey": "critical_illness",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "value": 100.0
+      },
+      {
+       "entityKey": "health",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "value": 100.0
+      },
+      {
+       "entityKey": "life_term",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "value": 100.0
+      },
+      {
+       "entityKey": "property",
+       "numerator": 400.0,
+       "denominator": 400.0,
+       "value": 100.0
+      }
+     ],
+     "noData": false,
+     "rowCount": 4,
+     "computedAt": "2026-11-06T16:11:28.649830+00:00"
+    }
+   },
+   "obsRowsRaw": "ERROR:  column \"numerator_value\" does not exist\nLINE 1: SELECT count(*), coalesce(sum(numerator_value),0), coalesce(...\n                                      ^"
+  }
+ ]
+}

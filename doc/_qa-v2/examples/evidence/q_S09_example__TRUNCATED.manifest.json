@@ -1,0 +1,38 @@
+{
+  "case": "q_S09_example",
+  "name": "截断留痕演示（合成数据，非真实采集）",
+  "collected": "2026-11-07 07:53:34 +0800",
+  "truncated": true,
+  "evidence_status": "INCOMPLETE",
+  "responses": [
+    {
+      "label": "GET /facts/events/export",
+      "status": 200,
+      "ms": 123,
+      "declaredBytes": 15234529,
+      "capturedBytes": 200000,
+      "truncated": true,
+      "cut": {
+        "limitBytes": 200000,
+        "cutChars": 200000,
+        "arrayKey": "events",
+        "recordsSeen": 385,
+        "lastIdField": "eventId",
+        "lastIdValue": "385",
+        "lastCompleteRecordIndex": 384,
+        "declaredTotal": 10049,
+        "totalSource": "same-case SQL",
+        "tailPartial": true
+      }
+    },
+    {
+      "label": "SQL select count(*) from platform.fact_event",
+      "status": "OK",
+      "ms": 5,
+      "declaredBytes": 5,
+      "capturedBytes": 5,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

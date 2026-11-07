@@ -1,0 +1,45 @@
+{
+  "case": "q_O05",
+  "name": "O-05 术语核对与 SKOS 导入 diff",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /ontology/terms/coverage",
+      "status": 200,
+      "ms": 17,
+      "declaredBytes": 2283,
+      "capturedBytes": 2283,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ontology/terms/checks",
+      "status": 200,
+      "ms": 18,
+      "declaredBytes": 92,
+      "capturedBytes": 92,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /browse/terms",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 358,
+      "capturedBytes": 358,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SPARQL SELECT ?g (COUNT(DISTINCT ?c) AS ?n) WHERE { GRAPH ?g { ?c a <http://www.w3.org/ ...(截断)",
+      "status": "OK",
+      "ms": 314,
+      "declaredBytes": 175,
+      "capturedBytes": 175,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#4ec9b0;border:1px solid #4ec9b0;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_R04 · R-04 /browse 六 tab 交叉跳转</span><span class="badge">PASS</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /browse/links</span>
+<span class="meta">  HTTP 200  stable=True readOnly=True</span>
+  paths=[{&quot;id&quot;: &quot;triples-to-entity&quot;, &quot;label&quot;: &quot;三元组 → 实体页&quot;, &quot;from&quot;: &quot;/browse/triples&quot;, &quot;to&quot;: &quot;entity.html&quot;, &quot;template&quot;: &quot;/ui/entity.html?iri={iri}&quot;, &quot;method&quot;: &quot;GET&quot;, &quot;href&quot;: null}, {&quot;id&quot;: &quot;metrics-to-definition&quot;, &quot;label&quot;: &quot;口径卡 → 口径定义&quot;, &quot;from&quot;: &quot;/browse/metrics&quot;, &quot;to&quot;: &quot;/browse/metrics/{metricId} + browse met ...(截断)
+  templates={&quot;triples-to-entity&quot;: &quot;/ui/entity.html?iri={iri}&quot;, &quot;metrics-to-definition&quot;: &quot;/ui/browse.html?tab=metrics&amp;metricId={metricId}&quot;, &quot;tree-to-entity&quot;: &quot;/ui/entity.html?iri={iri}&quot;, &quot;entity-to-tab&quot;: &quot;/ui/browse.html?tab={tab}&amp;entity={iri}&quot;} writeOperations=0</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_R04.txt</div>
+</body></html>

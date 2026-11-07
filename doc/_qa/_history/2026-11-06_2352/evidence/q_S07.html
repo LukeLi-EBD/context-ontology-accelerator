@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#4ec9b0;border:1px solid #4ec9b0;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_S07 · 最小 Web UI 页面</span><span class="badge">PASS</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /ui/index.html</span>
+<span class="meta">  HTTP 200  1373 bytes  head=&lt;!doctype html&gt;</span>
+ &lt;html lang=&quot;zh-CN&quot;&gt;
+ &lt;head&gt;
+   &lt;meta charset=&quot;utf-8&quot;&gt;
+   &lt;meta name=&quot;viewport&quot; content=&quot;width ...(截断)
+<span class="cmd">$ GET /ui/browse.html</span>
+<span class="meta">  HTTP 200  11387 bytes  head=&lt;!doctype html&gt;</span>
+ &lt;html lang=&quot;zh-CN&quot;&gt;
+ &lt;head&gt;
+   &lt;meta charset=&quot;utf-8&quot;&gt;
+   &lt;meta name=&quot;viewport&quot; content=&quot;width ...(截断)
+<span class="cmd">$ GET /ui/entity.html</span>
+<span class="meta">  HTTP 200  2628 bytes  head=&lt;!doctype html&gt;</span>
+ &lt;html lang=&quot;zh-CN&quot;&gt;
+ &lt;head&gt;
+   &lt;meta charset=&quot;utf-8&quot;&gt;
+   &lt;meta name=&quot;viewport&quot; content=&quot;width ...(截断)
+<span class="cmd">$ GET /ui/health.html</span>
+<span class="meta">  HTTP 200  2439 bytes  head=&lt;!doctype html&gt; &lt;html lang=&quot;zh-CN&quot;&gt; &lt;head&gt;   &lt;meta charset=&quot;utf-8&quot;&gt;   &lt;meta name=&quot;viewport&quot; content=&quot;width=dev ...(截断)</span></pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_S07.txt</div>
+</body></html>

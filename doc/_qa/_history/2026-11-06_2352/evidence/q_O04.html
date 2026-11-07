@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#dcdcaa;border:1px solid #dcdcaa;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_O04 · O-04 发布门禁证据包</span><span class="badge">PARTIAL</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /ontology/evidence</span>
+<span class="meta">  HTTP 200  count=50 empty=False emptyReason=None  first={&quot;evidenceId&quot;: &quot;ev-7ca526c1e249&quot;, &quot;versionId&quot;: &quot;ont-5797a1d3bb6e&quot;, &quot;proposalId&quot;: null, &quot;verdict&quot;: &quot;pass&quot;, &quot;sha256&quot;: &quot;d5cc0e9ce2fb2627ec20d3d49d038801f7ca3aa8a90f930aff7fc3f995237b5f&quot;, &quot;path&quot;: null, &quot;downloadUrl&quot;: &quot;/ontol ...(截断)</span>
+<span class="cmd">$ GET /governance/bundle/inspect?path=__qa_probe__</span>
+<span class="meta">  HTTP 400  {&quot;error&quot;:{&quot;code&quot;:&quot;InvalidArgument&quot;,&quot;provider&quot;:&quot;platform&quot;,&quot;providerCode&quot;:&quot;E_BUNDLE_MANIFEST&quot;,&quot;message&quot;:&quot;MANIFEST.json not found under __qa_probe__&quot;,&quot;retryable&quot;:false,&quot;details&quot;:{}}}</span></pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_O04.txt</div>
+</body></html>

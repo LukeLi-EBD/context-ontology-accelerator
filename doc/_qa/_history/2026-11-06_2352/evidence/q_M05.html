@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#4ec9b0;border:1px solid #4ec9b0;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_M05 · M-05 行业公式监管原文标注</span><span class="badge">PASS</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /metrics/report/manifest</span>
+<span class="meta">  HTTP 200  items=85</span>
+  industry 总数 = 46
+  industry 且带 internalNotice = 46
+  industry 且 publishable=true = 24
+  其中 externalEligible 分布 = {&quot;False&quot;: 24}
+  样例 = {&quot;metricId&quot;: &quot;CUST-001&quot;, &quot;nameZh&quot;: &quot;RFM-R（最近一次行为）&quot;, &quot;displayName&quot;: &quot;RFM-R（最近一次行为）〔行业〕&quot;, &quot;domain&quot;: &quot;customer&quot;, &quot;publishable&quot;: false, &quot;evidenceBasis&quot;: &quot;industry&quot;, &quot;evidenceBasisLabel&quot;: &quot;行业通行（未获监管原文）&quot;, &quot;evidenceSource&quot;: &quot;行业通行&quot;, &quot;hasRegulatoryText&quot;: false, &quot;industryBaseline&quot;: true, &quot;internalNotice&quot;: &quot;内部基线、不外报&quot;, &quot;e1Baseline ...(截断)</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_M05.txt</div>
+</body></html>

@@ -1,0 +1,36 @@
+{
+  "phase": "env-fill",
+  "batch": "第二批（S08/S13/O01/M04/B03/R03/P01）",
+  "clone": {
+    "project": "platform-qa-fill",
+    "dataRoot": "D:/agentABC/data-qa-fill",
+    "api": {"container": "platform-qa-fill-api", "hostPort": 8085, "image": "agent-platform:0.1-s5", "imageId": "sha256:80cb274fda31be8f691d2b1614b94e512ea4ef13a56af134f31bfc943c605677", "startedAt": "2026-11-07T00:50:31.936676547Z"},
+    "postgres": {"container": "platform-qa-fill-postgres", "hostPort": 5435, "volume": "platform-qa-fill_pgdata"},
+    "reasoner": {"container": "platform-qa-fill-reasoner", "hostPort": 7885, "image": "agent-reasoner:0.1-s5"},
+    "embedding": {"container": "platform-qa-fill-embedding", "hostPort": 8086, "image": "ghcr.io/huggingface/text-embeddings-inference:cpu-1.8"},
+    "oxigraph": {"container": "platform-qa-fill-oxigraph", "hostPort": null, "volume": "platform-qa-fill_oxigraph-data"},
+    "network": "platform-qa-fill_default"
+  },
+  "untouched": {
+    "8080": {"container": "agent-platform-api", "imageId": "sha256:715d59e8f2863e3d4037ba0831d35f8d59291b2ff7962911e7589a1b040f1b8f", "startedAt": "2026-11-06T16:53:20.953775912Z", "note": "等镜像替换；本轮未重启、未改配置"},
+    "8082": {"container": "platform-acceptance-api", "hostPort": 8082, "imageId": "sha256:80cb274fda31be8f691d2b1614b94e512ea4ef13a56af134f31bfc943c605677", "startedAt": "2026-11-06T21:45:36.587317725Z"}
+  },
+  "untouched_8082_check_after": {
+    "document": 39,
+    "metric_definition": 85,
+    "metric_observation": 37471,
+    "fact_event": 97,
+    "import_item": 0,
+    "graph_pointer_tbox_current": "ont-6e81732555e5",
+    "readyz": "ok",
+    "pointerUpdatedAt": "2026-11-07T07:53:51.514262+08:00"
+  },
+  "env_fill_setup": [
+    "A-Box：docker exec platform-qa-fill-api python -c \"from platform_core.cli import load_config, assemble; from platform_core.datagen_abox import generate_abox; b=load_config('/data/platform.yaml'); r=assemble(b); r.metadata.open(retry_seconds=10.0); v=(r.ontology.status().get('pointer') or {}).get('versionId'); ttl=r.ontology.export_version(v,'turtle')['content']; print(generate_abox(r.graph, ttl, seed=42)); r.close()\" → urn:platform:graph:abox:synthetic 304919 triples / 60420 instances",
+    "说明：platform datagen --schema synthetic --abox 在官方事实表为空时会在 validate_all 的 rule 评估阶段抛 E_METRIC_NO_DATA（exit 78），故只调用 generate_abox，不生成 28 张 synthetic 表",
+    "S08：POST /facts ×3（qa_S08 partyId=QA-S08-001、partyId=QA-S08-002 同 s/p 冲突、productId=PRD-QA-001）",
+    "S13：写 4 个样本文档到 data-qa-fill/qa-import-src；platform import ... --batch-size 3 跑两次（首轮 3/4，续跑 1/4）",
+    "O01：POST /catalog/dictionaries/refresh {\"sources\":[\"pg\"]}（只读内省，幂等）processed=375 inserted=296 unchanged=79"
+  ],
+  "revert": "powershell -File coa/platform/scripts/acceptance-stack.ps1 down -ComposeProject platform-qa-fill -DataRoot D:/agentABC/data-qa-fill -RemoveDataRoot"
+}

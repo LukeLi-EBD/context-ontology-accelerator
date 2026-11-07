@@ -1,0 +1,36 @@
+{
+  "case": "q_P01",
+  "name": "本体原理·T-Box/A-Box 命名图分布与推理输入一致性",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "SPARQL SELECT ?g (COUNT(*) AS ?n) WHERE { GRAPH ?g { ?s ?p ?o } } GROUP BY ?g ORDER BY  ...(截断)",
+      "status": "OK",
+      "ms": 278,
+      "declaredBytes": 1365,
+      "capturedBytes": 1365,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /reasoning/status",
+      "status": 200,
+      "ms": 6,
+      "declaredBytes": 1123,
+      "capturedBytes": 1123,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /health/dashboard",
+      "status": 200,
+      "ms": 17,
+      "declaredBytes": 6164,
+      "capturedBytes": 6164,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

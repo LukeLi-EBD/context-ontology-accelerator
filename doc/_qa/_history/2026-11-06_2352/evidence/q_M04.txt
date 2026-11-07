@@ -1,0 +1,15 @@
+# q_M04 M-04 口径卡与判定溯源进浏览台
+# collected 2026-11-06 23:52:21 +0800
+# READ-ONLY
+
+$ GET /browse/metrics/FIN-BANK-008/card
+-> 200  3ms  1623bytes
+{"metricId":"FIN-BANK-008","cardExists":true,"cardState":"built","cardStateLabel":"已建卡","cardSource":"platform.metric_definition","docPath":"doc/_fsldm/01-指标卡/FIN-BANK-008.md","card":{"metricId":"FIN-BANK-008","nameZh":"不良贷款率","displayName":"不良贷款率","domain":"bank","metricKind":"ratio","unit":"%","definitionVersion":"v3.0","effectiveDate":null,"variantOf":null,"outputMode":null,"note":"Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）"},"badges":[{"key":"evidence","label":"监管原文","tone":"ok"},{"key":"publishable","label":"可发布（内部）","tone":"ok"},{"key":"external","label":"对外可出数候选（需事实与观测）","tone":"ok"},{"key":"computability","label":"结构性可算（需事实与观测）","tone":"ok"},{"key":"prov","label":"PROV 判定：无记录","tone":"muted"}],"sections":[{"key":"definition","title":"定义","text":"不良贷款余额占各项贷款余额的比重，衡量信贷资产质量。"},{"key":"formula","title":"公式","text":"numerator / denominator * 100"},{"key":"denominator","title":"分母","text":"各项贷款余额（同一报告期末、同一并表范围；按贷款账户汇总，不去重客户）；单位 元"},{"key":"window","title":"观察期","text":"point-in-time（报告期末）"},{"key":"grain","title":"粒度","text":"institution（机构），可下钻 product/customer"},{"key":"evidence","title":"证据","text":"监管原文｜原文｜EVIDENCED"},{"key":"pipeline","title":"可算性","text":"结构性可算（需事实与观测）"},{"key":"gap","title":"缺口","text":"—"}],"prov":{"graph":"urn:platform:prov","decisionsUrl":"/prov/decisions?metricId=FIN-BANK-008&limit=20","verifyUrl":"/prov/verify","decisionCount":0,"decisionLabel":"PROV 判定：无记录"},"links":{"detailApi":"/browse/metrics/FIN-BANK-008","output":"/metrics/FIN-BANK-008/output","manifest":"/metrics/report/manifest","families":"/metrics/report/families"},"source":"metric_definition + doc/_fsldm/01-指标卡"}
+
+$ GET /entity/provenance?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175
+-> 200  38ms  1116bytes
+{"iri":"urn:platform:synthetic/investment_InvestmentObjective-00175","label":"InvestmentObjective-00175","fields":[{"property":"http://www.w3.org/2000/01/rdf-schema#label","label":"label","values":[{"kind":"literal","value":"InvestmentObjective-00175"}],"valueText":"InvestmentObjective-00175","asserted":true,"inferredOnly":false,"badge":{"state":"none","label":"无","basis":"无 sourceRef / PROV 溯源"},"hasSourceRef":false,"hasProv":false,"links":[]},{"property":"https://w3id.org/fsldm/core#inScheme","label":"所属方案","values":[{"kind":"iri","value":"urn:platform:synthetic/conceptscheme/fsldm"}],"valueText":null,"asserted":true,"inferredOnly":false,"badge":{"state":"none","label":"无","basis":"无 sourceRef / PROV 溯源"},"hasSourceRef":false,"hasProv":false,"links":[]}],"summary":{"total":2,"evidenced":0,"inferred":0,"none":2,"withSourceRef":0,"withProv":0,"coverageRate":0.0},"entitySources":[],"evidenceBadge":{"state":"no-source","label":"无依据","basis":"存在断言三元组，但未找到 sourceRef / PROV 溯源链接","judge":null},"empty":false,"emptyReason":null,"note":"每个字段都有徽标；无溯源显式显示「无」","readOnly":true,"source":"GET /entity/provenance"}
+
+$ GET /prov/decisions?metricId=FIN-BANK-008
+-> 200  3ms  76bytes
+{"metricId":"FIN-BANK-008","items":[],"count":0,"graph":"urn:platform:prov"}

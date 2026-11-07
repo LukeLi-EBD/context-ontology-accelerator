@@ -1,0 +1,54 @@
+{
+  "case": "q_O01",
+  "name": "O-01 数据字典收尾（列内省与列↔属性绑定）",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /catalog/dictionaries",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 8179,
+      "capturedBytes": 8179,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /catalog/dictionaries/views/all",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 8171,
+      "capturedBytes": 8171,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /catalog/dictionaries/views/unbound",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 208,
+      "capturedBytes": 208,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /catalog/dictionaries/views/mappable_unbound",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 225,
+      "capturedBytes": 225,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select count(*) from platform.data_dictionary",
+      "status": "OK",
+      "ms": 102,
+      "declaredBytes": 2,
+      "capturedBytes": 2,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

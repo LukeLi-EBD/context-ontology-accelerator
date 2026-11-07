@@ -1,0 +1,41 @@
+{
+  "case": "q_S12",
+  "name": "完整性收口·影响分析与门禁证据",
+  "collected": "2026-11-07 08:39:30 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "phase": "read-only-probe",
+  "stack": "http://127.0.0.1:8082",
+  "sourceImage": "agent-platform:0.1-s5",
+  "revert": "none-required (no writes)",
+  "responses": [
+    {
+      "label": "GET /ontology/impact?from=ont-a1be48db060c",
+      "status": 404,
+      "ms": 5,
+      "declaredBytes": 248,
+      "capturedBytes": 248,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ontology/impact/export?from=ont-a1be48db060c",
+      "status": 404,
+      "ms": 3,
+      "declaredBytes": 248,
+      "capturedBytes": 248,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ontology/evidence",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 15354,
+      "capturedBytes": 15354,
+      "truncated": false,
+      "cut": null
+    }
+  ],
+  "addedParam": "from=ont-a1be48db060c"
+}

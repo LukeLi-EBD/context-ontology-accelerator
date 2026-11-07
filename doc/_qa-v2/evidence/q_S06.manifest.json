@@ -1,0 +1,18 @@
+{
+  "case": "q_S06",
+  "name": "Context 组装 API",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "POST /context/resolve",
+      "status": 200,
+      "ms": 11,
+      "declaredBytes": 11114,
+      "capturedBytes": 11114,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

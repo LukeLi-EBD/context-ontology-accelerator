@@ -1,0 +1,27 @@
+{
+  "case": "q_R05",
+  "name": "R-05 D1-1 轻量多跳 /browse/path",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /browse/path?from=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175&to=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00149&maxHops=3",
+      "status": 503,
+      "ms": 15,
+      "declaredBytes": 223,
+      "capturedBytes": 223,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /browse/path?from=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175&to=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00149&maxHops=4",
+      "status": 503,
+      "ms": 14,
+      "declaredBytes": 223,
+      "capturedBytes": 223,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

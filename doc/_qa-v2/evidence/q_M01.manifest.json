@@ -1,0 +1,108 @@
+{
+  "case": "q_M01",
+  "name": "M-01 可算性补齐第一批（8 条高价值指标）",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 1,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-013/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 1,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-014/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 1,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-015/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 1,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-016/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 22,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-026/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 2,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-INS-002/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 1,
+      "declaredBytes": 311,
+      "capturedBytes": 311,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-INS-018/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 2,
+      "declaredBytes": 311,
+      "capturedBytes": 311,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-008/compute?asOf=2025-12-31&dataSource=synthetic",
+      "status": 200,
+      "ms": 33,
+      "declaredBytes": 2911,
+      "capturedBytes": 2911,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics/FIN-BANK-001/compute?asOf=2025-12-31",
+      "status": 400,
+      "ms": 2,
+      "declaredBytes": 312,
+      "capturedBytes": 312,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select data_source,count(*) from platform.bank_loan_account group by 1",
+      "status": "OK",
+      "ms": 105,
+      "declaredBytes": 14,
+      "capturedBytes": 14,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

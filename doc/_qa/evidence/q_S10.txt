@@ -1,0 +1,25 @@
+# q_S10 可逆裁决与事件链重放校验
+# R2 collected 2026-11-07 07:56:21 +0800
+# READ-ONLY · 双栈同题 · 超大正文显式标记 BODY OMITTED
+
+######## STACK data · 数据栈 8080 · 镜像 715d59e8 (11-07 00:53 +08) · 全量数据 / 旧代码 ########
+$ GET /prov/verify
+-> 200  112ms  352 chars
+[STRUCT] FULL_LENGTH=352 chars  SHA256=9a9e050fdcc9ba15  PARSE=dict  KEYS=ok,checked,error,lastHash,graph,separation  ok=true  checked=578
+{"ok":true,"checked":578,"error":null,"lastHash":"d4fcb15ad9abc1264983003c17b98c1d946458bdfc65b1e8db6494df7a0c986a","graph":"urn:platform:prov","separation":{"ok":true,"provGraph":"urn:platform:prov","tboxGraph":"urn:platform:graph:tbox:ont-11f92ebb3326","provTriples":10774,"tboxProvTriples":0,"provTboxTriples":0,"tboxLegacyProvPredicateTriples":20}}
+
+$ GET /ontology/verify
+-> 200  854ms  179 chars
+[STRUCT] FULL_LENGTH=179 chars  SHA256=ec96b2e2b5545211  PARSE=dict  KEYS=ok,checked,prov  ok=true  checked=10133
+{"ok":true,"checked":10133,"prov":{"ok":true,"checked":578,"error":null,"lastHash":"d4fcb15ad9abc1264983003c17b98c1d946458bdfc65b1e8db6494df7a0c986a","graph":"urn:platform:prov"}}
+
+######## STACK accept · 验收栈 8082 · 镜像 80cb274f / agent-platform:0.1-s5 (11-07 05:45 +08) · 代码基线 8b3f36f / 小库 ########
+$ GET /prov/verify
+-> 200  23ms  348 chars
+[STRUCT] FULL_LENGTH=348 chars  SHA256=f52b75fad1ad64c4  PARSE=dict  KEYS=ok,checked,error,lastHash,graph,separation  ok=true  checked=48
+{"ok":true,"checked":48,"error":null,"lastHash":"7a019d46f7ccdcd97213a174e799488d84fe8769ccd032313b4b111e484f762a","graph":"urn:platform:prov","separation":{"ok":true,"provGraph":"urn:platform:prov","tboxGraph":"urn:platform:graph:tbox:ont-6e81732555e5","provTriples":916,"tboxProvTriples":0,"provTboxTriples":0,"tboxLegacyProvPredicateTriples":0}}
+
+$ GET /ontology/verify
+-> 200  35ms  176 chars
+[STRUCT] FULL_LENGTH=176 chars  SHA256=ae6c3f2cd78a1bc2  PARSE=dict  KEYS=ok,checked,prov  ok=true  checked=104
+{"ok":true,"checked":104,"prov":{"ok":true,"checked":48,"error":null,"lastHash":"7a019d46f7ccdcd97213a174e799488d84fe8769ccd032313b4b111e484f762a","graph":"urn:platform:prov"}}

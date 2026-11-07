@@ -1,0 +1,41 @@
+{
+  "attempt": 3,
+  "discarded_attempts": [
+    "08:39 首次探针未设置 qa.BASE，实际打到 8080（旧镜像），结果不可采信；已移入 _discarded/attempt1",
+    "08:42 第二次探针同样未设置 qa.BASE，仍打到 8080；已移入 _discarded/attempt2"
+  ],
+  "pre_run3": {
+    "label": "pre-run3",
+    "at": "2026-11-07 08:43:09 +0800",
+    "five_table_counts": [
+      "document|39",
+      "metric_definition|85",
+      "metric_observation|37471",
+      "fact_event|97",
+      "import_item|0"
+    ],
+    "graph_pointer": "tbox/current|ont-6e81732555e5|2026-11-07 07:53:51.514262+08|9417debca40282e5503d73f1446b98374a14508c7380807f548db54d65751303",
+    "readyz_status": 200,
+    "readyz_body_sha256": "a978593dcd6e6b042be6138c5f571226a47bff41518535dae9c1f4f2ec3f92b5"
+  },
+  "post_run3": {
+    "label": "post-run3",
+    "at": "2026-11-07 08:43:10 +0800",
+    "five_table_counts": [
+      "document|39",
+      "metric_definition|85",
+      "metric_observation|37471",
+      "fact_event|97",
+      "import_item|0"
+    ],
+    "graph_pointer": "tbox/current|ont-6e81732555e5|2026-11-07 07:53:51.514262+08|9417debca40282e5503d73f1446b98374a14508c7380807f548db54d65751303",
+    "readyz_status": 200,
+    "readyz_body_sha256": "a978593dcd6e6b042be6138c5f571226a47bff41518535dae9c1f4f2ec3f92b5"
+  },
+  "identical_in_run3": true,
+  "identical_counts_and_pointer_since_0839": null,
+  "first_snapshot_at": null,
+  "cross_run_note": "08:39/08:42 两次快照记录已被第三次覆盖，无法逐字段比对；可取证的只有本次 08:43:09 与 08:43:10 两次读数完全相同（五表计数与指针哈希一致）。不下“自 08:39 未变”的结论。",
+  "rule": "本次比较五表计数、graph_pointer(version_id/content_hash/updated_at)、readyz 状态与正文哈希；跨批次只比较五表计数与指针（前两次 readyz 误打 8080）",
+  "note": "三次探针均为只读 GET；8082 未发生写入或指针变更"
+}

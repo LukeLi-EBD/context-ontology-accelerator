@@ -1,0 +1,42 @@
+{
+  "case": "q_B03",
+  "name": "B-03 实体页（环境补齐）",
+  "collected": "2026-11-07 08:58:16 +0800",
+  "phase": "env-fill",
+  "stack": "http://127.0.0.1:8085",
+  "project": "platform-qa-fill",
+  "ports": {
+    "api": 8085,
+    "pg": 5435,
+    "reasoner": 7885,
+    "embedding": 8086
+  },
+  "sourceImage": "agent-platform:0.1-s5",
+  "sourceImageId": "sha256:80cb274fda31be8f691d2b1614b94e512ea4ef13a56af134f31bfc943c605677",
+  "revert": "powershell -File coa/platform/scripts/acceptance-stack.ps1 down -ComposeProject platform-qa-fill -DataRoot D:/agentABC/data-qa-fill -RemoveDataRoot（或只 down 保卷）；8080/8082 全程未触碰",
+  "envFillActions": [
+    "同上 A-Box"
+  ],
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /ui/api/entity?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175",
+      "status": 200,
+      "ms": 52,
+      "declaredBytes": 2450,
+      "capturedBytes": 2450,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ui/api/neighbors?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175&limit=3",
+      "status": 200,
+      "ms": 29,
+      "declaredBytes": 333,
+      "capturedBytes": 333,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

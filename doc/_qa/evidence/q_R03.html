@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#0f1419;color:#d8dee9;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px;margin:0}
+.hd{border-bottom:1px solid #333;padding-bottom:9px;margin-bottom:9px;display:flex;justify-content:space-between}
+.t{color:#88c0d0;font-weight:bold}.ts{color:#7a869a;font-size:12px;margin-bottom:10px}
+pre{white-space:pre-wrap;margin:0}.ft{color:#6b7688;font-size:12px;margin-top:12px;border-top:1px solid #333;padding-top:8px}
+.ok{color:#a3be8c}.warn{color:#ebcb8b}.bad{color:#bf616a}.off{color:#b48ead}
+.badge{padding:2px 10px;border:1px solid currentColor;border-radius:3px;font-weight:bold}
+</style></head><body>
+<div class="hd"><span class="t">q_R03 · R-03 实体页溯源徽标</span><span class="badge warn">PARTIAL</span></div>
+<div class="ts">COA 本体平台 · R2 第 2 轮逐特性复评 · 2026-11-07 07:56:21 +0800 · 双栈同题 8080 / 8082</div>
+<pre style="margin-top:12px">
+$ 轮次 R2  ·  2026-11-07 07:56:21 +0800  ·  q_R03 R-03 实体页溯源徽标
+$ 判据栈 数据栈  ·  T0 2026-11-06 23:52  →  T1 2026-11-07 06:08  →  T2 本轮
+
+── 数据栈 127.0.0.1:8080 ──────────────────────────────
+$ GET /ui/api/entity?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175
+  -&gt; 200  32ms  2352 chars | FULL_LENGTH=2352 chars  SHA256=52a9755ce3f41e37  PARSE=dict  KEYS=iri,label,classes,requiredProperties,requiredStatus,properties,neighbors,instanceCount,relatedMetrics,sources,evidenceBadge,tbox
+  iri = urn:platform:synthetic/investment_InvestmentObjective-00175
+  label = InvestmentObjective-00175
+  classes = [{&quot;iri&quot;: &quot;https://w3id.org/fsldm/investment#InvestmentObjective&quot;, &quot;label&quot;: &quot;投资目标&quot;, &quot;labeled&quot;: true, &quot;chain&quot;: [{&quot;iri&quot;: &quot;https://w3i ...(截断)
+  requiredProperties = []
+  requiredStatus = no-restrictions
+  properties = [{&quot;property&quot;: &quot;http://www.w3.org/2000/01/rdf-schema#label&quot;, &quot;label&quot;: &quot;label&quot;, &quot;values&quot;: [{&quot;kind&quot;: &quot;literal&quot;, &quot;value&quot;: &quot;InvestmentO ...(截断)
+$ GET /entity/provenance?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175
+  -&gt; 200  56ms  1116 chars | FULL_LENGTH=1116 chars  SHA256=1f1c1fbc779d892f  PARSE=dict  KEYS=iri,label,fields,summary,entitySources,evidenceBadge,empty,emptyReason,note,readOnly,source
+  iri = urn:platform:synthetic/investment_InvestmentObjective-00175
+  label = InvestmentObjective-00175
+  fields = [{&quot;property&quot;: &quot;http://www.w3.org/2000/01/rdf-schema#label&quot;, &quot;label&quot;: &quot;label&quot;, &quot;values&quot;: [{&quot;kind&quot;: &quot;literal&quot;, &quot;value&quot;: &quot;InvestmentO ...(截断)
+  summary = {&quot;total&quot;: 2, &quot;evidenced&quot;: 0, &quot;inferred&quot;: 0, &quot;none&quot;: 2, &quot;withSourceRef&quot;: 0, &quot;withProv&quot;: 0, &quot;coverageRate&quot;: 0.0}
+
+── 验收栈 127.0.0.1:8082 ──────────────────────────────
+$ GET /ui/api/entity?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175
+  -&gt; 404  13ms  323 chars | FULL_LENGTH=323 chars  SHA256=6bc14f5c7183bc71  PARSE=dict  KEYS=error
+  error = {&quot;code&quot;: &quot;NotFound&quot;, &quot;provider&quot;: &quot;platform&quot;, &quot;providerCode&quot;: &quot;E_ENTITY_NOT_FOUND&quot;, &quot;message&quot;: &quot;entity not found in any configured  ...(截断)
+$ GET /entity/provenance?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175
+  -&gt; 404  14ms  323 chars | FULL_LENGTH=323 chars  SHA256=6bc14f5c7183bc71  PARSE=dict  KEYS=error
+  error = {&quot;code&quot;: &quot;NotFound&quot;, &quot;provider&quot;: &quot;platform&quot;, &quot;providerCode&quot;: &quot;E_ENTITY_NOT_FOUND&quot;, &quot;message&quot;: &quot;entity not found in any configured  ...(截断)
+$ GET /source/resolve?ref=src%3A%2F%2Fdoc%2F4981174b6a7ef6c3ee04d2ec0083e330ee293533ab46f9521d13d63cb527d4eb%23c154
+  -&gt; 400  2ms  256 chars | FULL_LENGTH=256 chars  SHA256=7ddfcee323f34fef  PARSE=dict  KEYS=error
+  error = {&quot;code&quot;: &quot;InvalidArgument&quot;, &quot;provider&quot;: &quot;platform&quot;, &quot;providerCode&quot;: &quot;E_SOURCE_REF_NOT_FOUND&quot;, &quot;message&quot;: &quot;source_ref does not reso ...(截断)
+$ GET /readyz
+  -&gt; 200  6ms  537 chars | FULL_LENGTH=537 chars  SHA256=014659d11612174f  PARSE=dict  KEYS=status,checks,pointerStatus,warnings,note
+  status = ok
+  checks = {&quot;database&quot;: {&quot;status&quot;: &quot;ok&quot;}, &quot;graph&quot;: {&quot;status&quot;: &quot;ok&quot;}, &quot;storage&quot;: {&quot;status&quot;: &quot;ok&quot;, &quot;disk_free_pct&quot;: 32.64}}
+  pointerStatus = {&quot;name&quot;: &quot;tbox/current&quot;, &quot;ok&quot;: true, &quot;level&quot;: &quot;ok&quot;, &quot;status&quot;: &quot;published&quot;, &quot;versionId&quot;: &quot;ont-6e81732555e5&quot;, &quot;semver&quot;: &quot;0.0.0&quot;, &quot;tr ...(截断)
+
+VERDICT = PARTIAL</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径 · 完整原始输出 evidence/q_R03.txt</div>
+</body></html>

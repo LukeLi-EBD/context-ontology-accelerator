@@ -1,0 +1,18 @@
+{
+  "case": "q_S09",
+  "name": "冲突裁决与审计导出",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /facts/events/export",
+      "status": 200,
+      "ms": 14,
+      "declaredBytes": 145278,
+      "capturedBytes": 145278,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

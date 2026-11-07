@@ -1,0 +1,45 @@
+{
+  "case": "q_S01",
+  "name": "T-Box 本体存储与版本治理",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /ontology/versions",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 7778,
+      "capturedBytes": 7778,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ontology/verify",
+      "status": 200,
+      "ms": 21,
+      "declaredBytes": 176,
+      "capturedBytes": 176,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select * from platform.graph_pointer",
+      "status": "OK",
+      "ms": 107,
+      "declaredBytes": 73,
+      "capturedBytes": 73,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select max(version) from platform.schema_version",
+      "status": "OK",
+      "ms": 105,
+      "declaredBytes": 2,
+      "capturedBytes": 2,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

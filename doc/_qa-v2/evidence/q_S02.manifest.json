@@ -1,0 +1,27 @@
+{
+  "case": "q_S02",
+  "name": "文档入库与切块",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /documents",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 18716,
+      "capturedBytes": 18716,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select 'document',count(*) from platform.document union all select 'document_chunk',count( ...(截断)",
+      "status": "OK",
+      "ms": 103,
+      "declaredBytes": 48,
+      "capturedBytes": 48,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

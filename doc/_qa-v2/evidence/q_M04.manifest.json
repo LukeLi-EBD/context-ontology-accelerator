@@ -1,0 +1,36 @@
+{
+  "case": "q_M04",
+  "name": "M-04 口径卡与判定溯源进浏览台",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /browse/metrics/FIN-BANK-008/card",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 2043,
+      "capturedBytes": 2043,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /entity/provenance?iri=urn%3Aplatform%3Asynthetic%2Finvestment_InvestmentObjective-00175",
+      "status": 404,
+      "ms": 15,
+      "declaredBytes": 323,
+      "capturedBytes": 323,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /prov/decisions?metricId=FIN-BANK-008",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 76,
+      "capturedBytes": 76,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

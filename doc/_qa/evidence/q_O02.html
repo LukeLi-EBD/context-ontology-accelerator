@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#0f1419;color:#d8dee9;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px;margin:0}
+.hd{border-bottom:1px solid #333;padding-bottom:9px;margin-bottom:9px;display:flex;justify-content:space-between}
+.t{color:#88c0d0;font-weight:bold}.ts{color:#7a869a;font-size:12px;margin-bottom:10px}
+pre{white-space:pre-wrap;margin:0}.ft{color:#6b7688;font-size:12px;margin-top:12px;border-top:1px solid #333;padding-top:8px}
+.ok{color:#a3be8c}.warn{color:#ebcb8b}.bad{color:#bf616a}.off{color:#b48ead}
+.badge{padding:2px 10px;border:1px solid currentColor;border-radius:3px;font-weight:bold}
+</style></head><body>
+<div class="hd"><span class="t">q_O02 · O-02 T-Box 提案/审批/supersede 状态机</span><span class="badge warn">PARTIAL</span></div>
+<div class="ts">COA 本体平台 · R2 第 2 轮逐特性复评 · 2026-11-07 07:56:21 +0800 · 双栈同题 8080 / 8082</div>
+<pre style="margin-top:12px">
+$ 轮次 R2  ·  2026-11-07 07:56:21 +0800  ·  q_O02 O-02 T-Box 提案/审批/supersede 状态机
+$ 判据栈 双栈  ·  T0 2026-11-06 23:52  →  T1 2026-11-07 06:08  →  T2 本轮
+
+── 数据栈 127.0.0.1:8080 ──────────────────────────────
+$ GET /health/ontology-diff/flow
+  -&gt; 200  7ms  37187 chars | FULL_LENGTH=37187 chars  SHA256=3389b8f224c0a2fa  PARSE=dict  KEYS=versionId,items,count,states,empty,emptyReason,source,sampledAt,readOnly,filter  count=123  items=123  count=123
+  versionId = ont-11f92ebb3326
+  items = [{&quot;seq&quot;: 124, &quot;entityKind&quot;: &quot;version&quot;, &quot;entityId&quot;: &quot;ont-11f92ebb3326&quot;, &quot;versionId&quot;: &quot;ont-11f92ebb3326&quot;, &quot;proposalId&quot;: null, &quot;from&quot; ...(截断)
+  count = 123
+  states = [&quot;published&quot;, &quot;superseded&quot;]
+  empty = false
+  emptyReason = null
+$ GET /governance/events
+  -&gt; 200  471ms  659437 chars | FULL_LENGTH=659437 chars  SHA256=f93876ba5322c163  PARSE=dict  KEYS=items,count,categories,filter,current  count=200  items=200  count=200
+  items = [{&quot;eventId&quot;: 18450, &quot;versionId&quot;: &quot;ont-11f92ebb3326&quot;, &quot;proposalId&quot;: null, &quot;action&quot;: &quot;superseded&quot;, &quot;actor&quot;: &quot;smoke-selftest&quot;, &quot;reaso ...(截断)
+  count = 200
+  categories = {&quot;published&quot;: 24, &quot;rolled_back&quot;: 11, &quot;superseded&quot;: 47, &quot;other&quot;: 118}
+  filter = {&quot;versionId&quot;: null, &quot;action&quot;: null}
+
+── 验收栈 127.0.0.1:8082 ──────────────────────────────
+$ GET /health/ontology-diff/flow
+  -&gt; 200  4ms  13631 chars | FULL_LENGTH=13631 chars  SHA256=0ef548c206f6f4c2  PARSE=dict  KEYS=versionId,items,count,states,empty,emptyReason,source,sampledAt,readOnly,filter  count=39  items=39  count=39
+  versionId = ont-6e81732555e5
+  items = [{&quot;seq&quot;: 1, &quot;entityKind&quot;: &quot;proposal&quot;, &quot;entityId&quot;: &quot;prop-ef6999a18f7e&quot;, &quot;versionId&quot;: &quot;ont-6e81732555e5&quot;, &quot;proposalId&quot;: &quot;prop-ef6999 ...(截断)
+  count = 39
+  states = [&quot;proposed&quot;, &quot;review&quot;, &quot;approved&quot;, &quot;published&quot;, &quot;draft&quot;, &quot;superseded&quot;]
+  empty = false
+  emptyReason = null
+$ GET /governance/events
+  -&gt; 200  20ms  223185 chars | FULL_LENGTH=223185 chars  SHA256=c408cb855a2d5605  PARSE=dict  KEYS=items,count,categories,filter,current  count=104  items=104  count=104
+  items = [{&quot;eventId&quot;: 450, &quot;versionId&quot;: &quot;ont-6e81732555e5&quot;, &quot;proposalId&quot;: null, &quot;action&quot;: &quot;superseded&quot;, &quot;actor&quot;: &quot;smoke-selftest&quot;, &quot;reason&quot; ...(截断)
+  count = 104
+  categories = {&quot;published&quot;: 14, &quot;rolled_back&quot;: 3, &quot;superseded&quot;: 18, &quot;other&quot;: 69}
+  filter = {&quot;versionId&quot;: null, &quot;action&quot;: null}
+
+VERDICT = PARTIAL</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径 · 完整原始输出 evidence/q_O02.txt</div>
+</body></html>

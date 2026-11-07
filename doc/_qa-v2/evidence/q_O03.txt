@@ -1,0 +1,42 @@
+# evidence_status=COMPLETE truncated=false
+# q_O03 O-03 变更影响分析
+# collected 2026-11-07 08:06:47 +0800
+# READ-ONLY | limitBytes=20000000
+# 说明：首行 truncated 标记为真表示响应体被显式截断，该条证据不完整，判定记 EVIDENCE_INSUFFICIENT。
+
+$ GET /ontology/impact
+-> 200  5ms  declared=1059B  captured=1059B  truncated=false
+{"from":null,"to":"ont-6e81732555e5","changeSet":{"counts":{},"addedClasses":[],"removedClasses":[],"addedProperties":[],"removedProperties":[],"domainChanges":[],"rangeChanges":[],"breaking":false,"breakingItems":[]},"affected":{"classes":[],"properties":[],"instances":{"total":null,"byClass":[],"note":"当前版本没有基线版本，无法做影响分析"}},"aggregations":{"byClass":[],"byProperty":[],"unclassified":{"addedTriples":0,"removedTriples":0},"empty":true,"emptyReason":"当前版本没有基线版本，无法做影响分析"},"dependencies":{"metrics":[],"rules":[],"terms":[],"empty":true,"emptyReason":"当前版本没有基线版本，无法做影响分析","notes":[]},"verification":{"sampled":[],"consistent":null,"reason":"当前版本没有基线版本，无法做影响分析"},"inputs":{},"inputsFingerprint":null,"empty":true,"emptyReason":"当前版本没有基线版本，无法做影响分析","computedAt":"2026-11-07T00:06:49.223172+00:00","source":"runtime.ontology.diff + SPARQL + metric/term 注册表","readOnly":true}
+
+$ GET /ontology/impact/export
+-> 200  3ms  declared=689B  captured=689B  truncated=false
+# T-Box 变更影响清单 None -> ont-6e81732555e5
+
+- 输入指纹：`None`
+- 差异：+0 / -0 三元组
+- 破坏性变更：否
+
+## 受影响类
+| 类 | 变更 | 新增三元组 | 删除三元组 | 实例数 |
+| --- | --- | --- | --- | --- |
+| （无） | - | - | - | - |
+
+## 受影响属性
+| 属性 | 变更 | 新增三元组 | 删除三元组 |
+| --- | --- | --- | --- |
+| （无） | - | - | - |
+
+## 依赖指标与规则
+| 指标 | 命中依据 | 规则 |
+| --- | --- | --- |
+| （无） | - | - |
+
+## 术语
+| 术语 | 归属类 | 语言 |
+| --- | --- | --- |
+| （无） | - | - |
+
+## 抽样重算
+- 一致：None
+- 说明：当前版本没有基线版本，无法做影响分析
+

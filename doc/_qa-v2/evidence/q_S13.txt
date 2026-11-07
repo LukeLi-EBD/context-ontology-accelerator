@@ -1,0 +1,17 @@
+# evidence_status=COMPLETE truncated=false
+# q_S13 批量入库与断点续跑证据
+# collected 2026-11-07 08:06:47 +0800
+# READ-ONLY | limitBytes=20000000
+# 说明：首行 truncated 标记为真表示响应体被显式截断，该条证据不完整，判定记 EVIDENCE_INSUFFICIENT。
+
+$ GET /imports/batches
+-> 200  3ms  declared=28B  captured=28B  truncated=false
+{"batches":[],"failures":[]}
+
+$ GET /imports/items
+-> 200  2ms  declared=12B  captured=12B  truncated=false
+{"items":[]}
+
+$ SQL select count(*) from platform.import_item
+-> OK  110ms  declared=1B  captured=1B  truncated=false
+0

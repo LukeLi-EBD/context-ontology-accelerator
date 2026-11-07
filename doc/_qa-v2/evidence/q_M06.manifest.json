@@ -1,0 +1,45 @@
+{
+  "case": "q_M06",
+  "name": "M-06 partial 判定与规则登记/可执行核对",
+  "collected": "2026-11-07 08:06:47 +0800",
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /metrics-readiness",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 6849,
+      "capturedBytes": 6849,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics-readiness?status=registered_only",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 635,
+      "capturedBytes": 635,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics-readiness?kind=rule",
+      "status": 200,
+      "ms": 4,
+      "declaredBytes": 3436,
+      "capturedBytes": 3436,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /metrics-readiness?status=registered_only&format=csv",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 343,
+      "capturedBytes": 343,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

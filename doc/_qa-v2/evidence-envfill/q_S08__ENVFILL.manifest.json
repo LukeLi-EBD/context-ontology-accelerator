@@ -1,0 +1,51 @@
+{
+  "case": "q_S08",
+  "name": "A-Box 事实治理与撤回（环境补齐）",
+  "collected": "2026-11-07 08:58:16 +0800",
+  "phase": "env-fill",
+  "stack": "http://127.0.0.1:8085",
+  "project": "platform-qa-fill",
+  "ports": {
+    "api": 8085,
+    "pg": 5435,
+    "reasoner": 7885,
+    "embedding": 8086
+  },
+  "sourceImage": "agent-platform:0.1-s5",
+  "sourceImageId": "sha256:80cb274fda31be8f691d2b1614b94e512ea4ef13a56af134f31bfc943c605677",
+  "revert": "powershell -File coa/platform/scripts/acceptance-stack.ps1 down -ComposeProject platform-qa-fill -DataRoot D:/agentABC/data-qa-fill -RemoveDataRoot（或只 down 保卷）；8080/8082 全程未触碰",
+  "envFillActions": [
+    "POST /facts ×3：qa_S08 partyId=QA-S08-001、partyId=QA-S08-002（同 s/p 冲突）、productId=PRD-QA-001"
+  ],
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /facts",
+      "status": 200,
+      "ms": 28,
+      "declaredBytes": 2281,
+      "capturedBytes": 2281,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /facts/conflicts",
+      "status": 200,
+      "ms": 3,
+      "declaredBytes": 636,
+      "capturedBytes": 636,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "SQL select 'fact_assertion',count(*) from platform.fact_assertion union all select 'fact_event ...(截断)",
+      "status": "OK",
+      "ms": 100,
+      "declaredBytes": 29,
+      "capturedBytes": 29,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

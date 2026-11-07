@@ -1,0 +1,51 @@
+{
+  "case": "q_P01",
+  "name": "本体原理·T-Box/A-Box 命名图分布与推理输入一致性（环境补齐）",
+  "collected": "2026-11-07 08:58:16 +0800",
+  "phase": "env-fill",
+  "stack": "http://127.0.0.1:8085",
+  "project": "platform-qa-fill",
+  "ports": {
+    "api": 8085,
+    "pg": 5435,
+    "reasoner": 7885,
+    "embedding": 8086
+  },
+  "sourceImage": "agent-platform:0.1-s5",
+  "sourceImageId": "sha256:80cb274fda31be8f691d2b1614b94e512ea4ef13a56af134f31bfc943c605677",
+  "revert": "powershell -File coa/platform/scripts/acceptance-stack.ps1 down -ComposeProject platform-qa-fill -DataRoot D:/agentABC/data-qa-fill -RemoveDataRoot（或只 down 保卷）；8080/8082 全程未触碰",
+  "envFillActions": [
+    "同上 A-Box（只写 urn:platform:graph:abox:synthetic）"
+  ],
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "SPARQL SELECT ?g (COUNT(*) AS ?n) WHERE { GRAPH ?g { ?s ?p ?o } } GROUP BY ?g ORDER BY  ...(截断)",
+      "status": "OK",
+      "ms": 381,
+      "declaredBytes": 681,
+      "capturedBytes": 681,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /reasoning/status",
+      "status": 200,
+      "ms": 6,
+      "declaredBytes": 1011,
+      "capturedBytes": 1011,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /health/dashboard",
+      "status": 200,
+      "ms": 542,
+      "declaredBytes": 6416,
+      "capturedBytes": 6416,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}

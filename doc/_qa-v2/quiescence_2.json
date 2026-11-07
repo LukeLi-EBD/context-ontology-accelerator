@@ -1,0 +1,69 @@
+{
+  "at": "2026-11-07T08:04:25+08:00",
+  "counts": {
+    "document": 39,
+    "fact_event": 97,
+    "import_item": 0,
+    "metric_definition": 85,
+    "metric_observation": 37471
+  },
+  "graph_pointer_raw": "tbox/current|ont-6e81732555e5|2026-11-07 07:53:51.514262+08|smoke-restore",
+  "sql_rc": [
+    0,
+    0
+  ],
+  "readyz": {
+    "status": 200,
+    "body": {
+      "status": "ok",
+      "checks": {
+        "database": {
+          "status": "ok"
+        },
+        "graph": {
+          "status": "ok"
+        },
+        "storage": {
+          "status": "ok",
+          "disk_free_pct": 32.64
+        }
+      },
+      "pointerStatus": {
+        "name": "tbox/current",
+        "ok": true,
+        "level": "ok",
+        "status": "published",
+        "versionId": "ont-6e81732555e5",
+        "semver": "0.0.0",
+        "tripleCount": 3340,
+        "updatedBy": "smoke-restore",
+        "updatedAt": "2026-11-07T07:53:51.514262+08:00",
+        "subject": "tbox/current 指针（版本状态不变量）",
+        "source": "platform.graph_pointer + platform.ontology_version",
+        "warning": null,
+        "impact": null
+      },
+      "warnings": [],
+      "note": "pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）"
+    }
+  },
+  "prov_verify": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "checked": 48,
+      "error": null,
+      "lastHash": "7a019d46f7ccdcd97213a174e799488d84fe8769ccd032313b4b111e484f762a",
+      "graph": "urn:platform:prov",
+      "separation": {
+        "ok": true,
+        "provGraph": "urn:platform:prov",
+        "tboxGraph": "urn:platform:graph:tbox:ont-6e81732555e5",
+        "provTriples": 916,
+        "tboxProvTriples": 0,
+        "provTboxTriples": 0,
+        "tboxLegacyProvPredicateTriples": 0
+      }
+    }
+  }
+}

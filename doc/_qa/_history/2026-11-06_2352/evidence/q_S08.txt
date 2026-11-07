@@ -1,0 +1,16 @@
+# q_S08 A-Box 事实治理与撤回
+# collected 2026-11-06 23:52:21 +0800
+# READ-ONLY
+
+$ GET /facts
+-> 200  6ms  54bytes
+{"state":"active","items":[],"count":0,"conflicts":[]}
+
+$ GET /facts/conflicts
+-> 200  3ms  62bytes
+{"conflicts":[],"count":0,"pending":0,"includeAccepted":false}
+
+$ SQL select 'fact_assertion',count(*) from platform.fact_assertion union all select 'fact_event ...(截断)
+-> OK  214ms  33bytes
+fact_assertion|0
+fact_event|10049

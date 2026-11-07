@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#4ec9b0;border:1px solid #4ec9b0;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_M06 · M-06 partial 判定与规则登记/可执行核对</span><span class="badge">PASS</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /metrics-readiness</span>
+<span class="meta">  HTTP 200  count=20 counts={&#x27;executed&#x27;: 16, &#x27;registered_only&#x27;: 1, &#x27;not_executable&#x27;: 3}</span>
+<span class="cmd">$ .../status=registered_only</span>
+<span class="meta">  HTTP 200  count=1 first={&quot;itemKind&quot;: &quot;partial&quot;, &quot;metricId&quot;: &quot;CUST-005&quot;, &quot;status&quot;: &quot;registered_only&quot;, &quot;reason&quot;: &quot;代理事件优先级仅登记在 decision_recommendation；当前绑定使用预计算 days_since_proxy_event，未按裁决的 COALESCE 优先级执行，且不支持按 asOf 求天数差&quot;, &quot;detail&quot;: {&quot;binding&quot;: &quot;precomputed days_since_proxy_event&quot;, &quot;mis ...(截断)</span>
+<span class="cmd">$ .../kind=rule</span>
+<span class="meta">  HTTP 200  count=11</span>
+<span class="cmd">$ .../registered_only&amp;format=csv</span>
+<span class="meta">  HTTP 200  244 bytes  item_kind,metric_id,status,reason,evidence_ref,checked_at</span>
+ partial,CUST-005,registered_only,代理事件优先级仅登记在 decision_recommendation；当前绑定使用预计算 days_since_proxy_event，未按裁决的 COALESCE 优先级执 ...(截断)</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_M06.txt</div>
+</body></html>

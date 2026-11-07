@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#0f1419;color:#d8dee9;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px;margin:0}
+.hd{border-bottom:1px solid #333;padding-bottom:9px;margin-bottom:9px;display:flex;justify-content:space-between}
+.t{color:#88c0d0;font-weight:bold}.ts{color:#7a869a;font-size:12px;margin-bottom:10px}
+pre{white-space:pre-wrap;margin:0}.ft{color:#6b7688;font-size:12px;margin-top:12px;border-top:1px solid #333;padding-top:8px}
+.ok{color:#a3be8c}.warn{color:#ebcb8b}.bad{color:#bf616a}.off{color:#b48ead}
+.badge{padding:2px 10px;border:1px solid currentColor;border-radius:3px;font-weight:bold}
+</style></head><body>
+<div class="hd"><span class="t">q_M03 · M-03 多口径并列与族索引</span><span class="badge ok">PASS</span></div>
+<div class="ts">COA 本体平台 · R2 第 2 轮逐特性复评 · 2026-11-07 07:56:21 +0800 · 双栈同题 8080 / 8082</div>
+<pre style="margin-top:12px">
+$ 轮次 R2  ·  2026-11-07 07:56:21 +0800  ·  q_M03 M-03 多口径并列与族索引
+$ 判据栈 双栈  ·  T0 2026-11-06 23:52  →  T1 2026-11-07 06:08  →  T2 本轮
+
+── 数据栈 127.0.0.1:8080 ──────────────────────────────
+$ GET /metrics/report/families
+  -&gt; 200  3ms  7103 chars | FULL_LENGTH=7103 chars  SHA256=8caea85bba0f6ff1  PARSE=dict  KEYS=families,count,guidance,source  count=3  count=3
+  families = [{&quot;familyId&quot;: &quot;FIN-BANK-036&quot;, &quot;indexMetricId&quot;: &quot;FIN-BANK-036&quot;, &quot;nameZh&quot;: &quot;不良处置率/处置回收率&quot;, &quot;selectionRequired&quot;: true, &quot;guidance&quot;: {&quot;c ...(截断)
+  count = 3
+  guidance = {&quot;code&quot;: &quot;E_METRIC_VARIANT_REQUIRED&quot;, &quot;message&quot;: &quot;该指标是口径族索引，不直接出数；请先选择变体并回填 metric_id。&quot;, &quot;howTo&quot;: [&quot;在族索引详情中选择一个变体（窗口/分母/粒度会并排展示）&quot;, ...(截断)
+  source = platform.metric_definition
+$ GET /browse/metrics
+  -&gt; 200  4ms  33864 chars | FULL_LENGTH=33864 chars  SHA256=77dd5b78799ec62e  PARSE=dict  KEYS=items,count,source,filters  count=85  items=85  count=85
+  items = [{&quot;metricId&quot;: &quot;CUST-001&quot;, &quot;nameZh&quot;: &quot;RFM-R（最近一次行为）&quot;, &quot;domain&quot;: &quot;customer&quot;, &quot;evidenceBasis&quot;: &quot;industry&quot;, &quot;publishable&quot;: false, &quot;inf ...(截断)
+  count = 85
+  source = metric_definition
+  filters = {&quot;domain&quot;: null, &quot;evidenceBasis&quot;: null, &quot;publishable&quot;: null}
+$ GET /readyz
+  -&gt; 200  28ms  537 chars | FULL_LENGTH=537 chars  SHA256=0fb8ec1aa53f054c  PARSE=dict  KEYS=status,checks,pointerStatus,warnings,note
+
+── 验收栈 127.0.0.1:8082 ──────────────────────────────
+$ GET /metrics/report/families
+  -&gt; 200  2ms  7103 chars | FULL_LENGTH=7103 chars  SHA256=8caea85bba0f6ff1  PARSE=dict  KEYS=families,count,guidance,source  count=3  count=3
+  families = [{&quot;familyId&quot;: &quot;FIN-BANK-036&quot;, &quot;indexMetricId&quot;: &quot;FIN-BANK-036&quot;, &quot;nameZh&quot;: &quot;不良处置率/处置回收率&quot;, &quot;selectionRequired&quot;: true, &quot;guidance&quot;: {&quot;c ...(截断)
+  count = 3
+  guidance = {&quot;code&quot;: &quot;E_METRIC_VARIANT_REQUIRED&quot;, &quot;message&quot;: &quot;该指标是口径族索引，不直接出数；请先选择变体并回填 metric_id。&quot;, &quot;howTo&quot;: [&quot;在族索引详情中选择一个变体（窗口/分母/粒度会并排展示）&quot;, ...(截断)
+  source = platform.metric_definition
+$ GET /browse/metrics
+  -&gt; 200  29ms  33864 chars | FULL_LENGTH=33864 chars  SHA256=77dd5b78799ec62e  PARSE=dict  KEYS=items,count,source,filters  count=85  items=85  count=85
+  items = [{&quot;metricId&quot;: &quot;CUST-001&quot;, &quot;nameZh&quot;: &quot;RFM-R（最近一次行为）&quot;, &quot;domain&quot;: &quot;customer&quot;, &quot;evidenceBasis&quot;: &quot;industry&quot;, &quot;publishable&quot;: false, &quot;inf ...(截断)
+  count = 85
+  source = metric_definition
+  filters = {&quot;domain&quot;: null, &quot;evidenceBasis&quot;: null, &quot;publishable&quot;: null}
+$ GET /readyz
+  -&gt; 200  6ms  537 chars | FULL_LENGTH=537 chars  SHA256=014659d11612174f  PARSE=dict  KEYS=status,checks,pointerStatus,warnings,note
+
+VERDICT = PASS</pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径 · 完整原始输出 evidence/q_M03.txt</div>
+</body></html>

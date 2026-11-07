@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#1e1e1e;color:#d4d4d4;font:13px/1.55 Consolas,'Microsoft YaHei',monospace;padding:16px 20px}
+.hd{border-bottom:1px solid #3c3c3c;padding-bottom:9px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:baseline}
+.t{color:#fff;font-size:15px;font-weight:600} .ts{color:#858585;font-size:11px}
+.badge{color:#4ec9b0;border:1px solid #4ec9b0;border-radius:3px;padding:1px 9px;font-size:12px}
+pre{white-space:pre-wrap;word-break:break-all;margin:0}
+.cmd{color:#569cd6} .meta{color:#9cdcfe}
+.ft{margin-top:12px;border-top:1px solid #3c3c3c;padding-top:8px;color:#858585;font-size:11px}
+</style></head><body>
+<div class="hd"><span class="t">q_O03 · O-03 变更影响分析</span><span class="badge">PASS</span></div>
+<div class="ts">COA 本体平台 · 只读验收证据 · 2026-11-06 23:52:21 +0800 · 127.0.0.1:8080</div>
+<pre style="margin-top:12px">
+<span class="cmd">$ GET /ontology/impact</span>
+<span class="meta">  HTTP 200</span>
+  from = ont-8975b54f4e48
+  to = ont-11f92ebb3326
+  affected = {&quot;classes&quot;: [{&quot;iri&quot;: &quot;https://w3id.org/fsldm/agreement#Account&quot;, &quot;label&quot;: &quot;Account&quot;, &quot;change&quot;: &quot;modified&quot;, &quot;addedTriples&quot;: 1, &quot;removedTriples&quot;: 1}, {&quot;iri&quot;: &quot;https://w3id.org/fsldm/agreement#AgreementA ...(截断)
+  aggregations = {&quot;byClass&quot;: [{&quot;iri&quot;: &quot;https://w3id.org/fsldm/agreement#Account&quot;, &quot;label&quot;: &quot;Account&quot;, &quot;addedTriples&quot;: 1, &quot;removedTriples&quot;: 1}, {&quot;iri&quot;: &quot;https://w3id.org/fsldm/agreement#AgreementAssetRole&quot;, &quot;label&quot;: &quot;A ...(截断)
+  dependencies = {&quot;metrics&quot;: [{&quot;metricId&quot;: &quot;FIN-BANK-007&quot;, &quot;name&quot;: &quot;五级分类结果&quot;, &quot;matchedBy&quot;: [&quot;text:classification&quot;], &quot;source&quot;: &quot;metric_definition + metric_field_binding + data_dictionary&quot;}], &quot;rules&quot;: [{&quot;metricId&quot;: &quot;FIN- ...(截断)
+  verification = {&quot;sampled&quot;: [{&quot;iri&quot;: &quot;https://w3id.org/fsldm/agreement#Account&quot;, &quot;listed&quot;: 0, &quot;recounted&quot;: 0, &quot;consistent&quot;: true}, {&quot;iri&quot;: &quot;https://w3id.org/fsldm/agreement#AgreementAssetRole&quot;, &quot;listed&quot;: 0, &quot;recounte ...(截断)
+  inputsFingerprint = b0d0f10fa796d1a569044d065ca3960d685d5506a029b52a991c4f3a59f6599a
+<span class="cmd">$ GET /ontology/impact/export</span>
+<span class="meta">  HTTP 200  2078 bytes  head=# T-Box 变更影响清单 ont-8975b54f4e48 -&gt; ont-11f92ebb3326  - 输入指纹：`b0d0f10fa796d1a569044d065ca3960d685d5506a029b52a991c4f3a59f6599a` - 差异：+284 / -253 三元组 - 破坏性变更：否  ## 受影响类 | 类 | 变更 | 新增 ...(截断)</span></pre>
+<div class="ft">只读采集：GET / SELECT / 纯读 POST；未执行任何写入路径。完整原始输出 evidence/q_O03.txt</div>
+</body></html>

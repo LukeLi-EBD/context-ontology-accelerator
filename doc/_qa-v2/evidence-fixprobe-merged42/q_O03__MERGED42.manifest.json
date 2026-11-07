@@ -1,0 +1,88 @@
+{
+  "case": "q_O03",
+  "name": "影响面导出（合并版确认重采）",
+  "collected": "2026-11-07 10:03:26 +0800",
+  "phase": "merged42-probe",
+  "stack": "http://127.0.0.1:8082",
+  "sourceImage": "agent-platform:merged-42",
+  "sourceImageId": "sha256:731a4226c9ede963d6553327d9534d4cde9c5210fbb8f6bbd8a16e6dff5d31a5",
+  "containerStartedAt": "2026-11-07T02:00:27.984306752Z",
+  "revertAnchor": "D:\\agentABC\\_tmp\\anchor-8082.txt",
+  "endpoints": [
+    [
+      "G",
+      "/ontology/impact?from=ont-d79b97cba193&to=ont-6fd83aa720b9&sample=1"
+    ],
+    [
+      "G",
+      "/ontology/impact/export?from=ont-d79b97cba193&to=ont-6fd83aa720b9&sample=1&format=markdown"
+    ]
+  ],
+  "note": "同 S12 的两端点；本份独立留痕，不复用 S12 文件。",
+  "readyz": {
+    "http": "200",
+    "bodyRaw": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.51}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T09:49:40.978005+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "versionReadings": {
+    "supportedSchemaVersion": "42",
+    "supportedSchemaVersionSource": "platform_core.adapters.metadata_pg SUPPORTED_SCHEMA_VERSION（读自运行容器）",
+    "dbMaxVersion": "42",
+    "migrationRowCount": "40",
+    "schemaVersionRows": "1\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n2\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n3\n30\n31\n32\n33\n34\n37\n38\n39\n4\n40\n41\n42\n5\n6\n7\n8\n9",
+    "pointerVersion": "ont-6e81732555e5",
+    "pointerUpdatedAt": "2026-11-07 09:49:40.978005+08"
+  },
+  "snapshotBefore": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "pointer": "tbox/current|ont-6e81732555e5|2026-11-07 09:49:40.978005+08",
+    "readyzHttp": "200",
+    "readyzBody": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.51}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T09:49:40.978005+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "snapshotAfter": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "pointer": "tbox/current|ont-6e81732555e5|2026-11-07 09:49:40.978005+08",
+    "readyzHttp": "200",
+    "readyzBody": "{\"status\":\"ok\",\"checks\":{\"database\":{\"status\":\"ok\"},\"graph\":{\"status\":\"ok\"},\"storage\":{\"status\":\"ok\",\"disk_free_pct\":32.51}},\"pointerStatus\":{\"name\":\"tbox/current\",\"ok\":true,\"level\":\"ok\",\"status\":\"published\",\"versionId\":\"ont-6e81732555e5\",\"semver\":\"0.0.0\",\"tripleCount\":3340,\"updatedBy\":\"smoke-restore\",\"updatedAt\":\"2026-11-07T09:49:40.978005+08:00\",\"subject\":\"tbox/current 指针（版本状态不变量）\",\"source\":\"platform.graph_pointer + platform.ontology_version\",\"warning\":null,\"impact\":null},\"warnings\":[],\"note\":\"pointerStatus 仅告警，不参与就绪状态码（避免启动即崩）\"}"
+  },
+  "snapshotIdentical": true,
+  "snapshotMatchesExpected": true,
+  "expectedSnapshot": {
+    "document": "39",
+    "metric_definition": "85",
+    "metric_observation": "37471",
+    "fact_event": "97",
+    "import_item": "0",
+    "pointer": "tbox/current|ont-6e81732555e5",
+    "readyzHttp": "200"
+  },
+  "truncated": false,
+  "evidence_status": "COMPLETE",
+  "responses": [
+    {
+      "label": "GET /ontology/impact?from=ont-d79b97cba193&to=ont-6fd83aa720b9&sample=1",
+      "status": 200,
+      "ms": 28,
+      "declaredBytes": 2813,
+      "capturedBytes": 2813,
+      "truncated": false,
+      "cut": null
+    },
+    {
+      "label": "GET /ontology/impact/export?from=ont-d79b97cba193&to=ont-6fd83aa720b9&sample=1&format=markdown",
+      "status": 200,
+      "ms": 50,
+      "declaredBytes": 828,
+      "capturedBytes": 828,
+      "truncated": false,
+      "cut": null
+    }
+  ]
+}
