@@ -179,6 +179,14 @@ def _inferred_graph(runtime: Any) -> str | None:
     return str(graph) if graph else None
 
 
+def _ignored_types(runtime: Any) -> set[str]:
+    """Meta-level types hidden by the entity view (config entity_view.ignore_types)."""
+    config = getattr(runtime, "config", None)
+    view = getattr(config, "entity_view", None)
+    values = getattr(view, "ignore_types", None) or ()
+    return {str(value) for value in values}
+
+
 def _outgoing_triples_query(graphs: list[str], iri: str) -> str:
     values = " ".join(f"<{g}>" for g in graphs)
     return (
@@ -585,7 +593,16 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
         )
 
     all_edges = asserted_edges + inferred_edges
-    type_edges = [edge for edge in all_edges if edge["p"] == RDF_TYPE and edge["s"] == iri]
+    # Presentation filter: meta-level type edges (owl:Thing / owl:NamedIndividual
+    # by default) carry no business meaning. This only trims the read-only
+    # payload; the graphs, the inferred graph and /browse/sparql keep every triple.
+    ignored_types = _ignored_types(runtime)
+    display_edges = [
+        edge
+        for edge in all_edges
+        if not (edge["p"] == RDF_TYPE and edge["o"].get("value") in ignored_types)
+    ]
+    type_edges = [edge for edge in display_edges if edge["p"] == RDF_TYPE and edge["s"] == iri]
     class_iris: list[str] = []
     for edge in type_edges:
         obj = edge["o"]
@@ -638,7 +655,7 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
                     record["declaredOn"].append(item["iri"])
 
     values_by_prop: dict[str, list[dict[str, Any]]] = {}
-    for edge in all_edges:
+    for edge in display_edges:
         if edge["s"] != iri:
             continue
         values_by_prop.setdefault(edge["p"], []).append(edge["o"])
@@ -690,7 +707,7 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
         }
     }
     edge_rows: list[dict[str, Any]] = []
-    for edge in all_edges[:limit]:
+    for edge in display_edges[:limit]:
         for term in (edge["s"], edge["o"].get("value")):
             if term and term.startswith(("http://", "https://", "urn:")):
                 nodes.setdefault(
@@ -710,7 +727,7 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
                 "inferred": edge["graph"] == inferred_graph,
             }
         )
-    for edge in all_edges:
+    for edge in display_edges:
         if edge["p"] == RDFS_LABEL and edge["s"] in nodes and edge["o"].get("kind") == "literal":
             nodes[edge["s"]]["label"] = str(edge["o"]["value"])
 
@@ -729,7 +746,7 @@ def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
         "neighbors": {
             "nodes": list(nodes.values()),
             "edges": edge_rows,
-            "truncated": len(all_edges) > len(edge_rows),
+            "truncated": len(display_edges) > len(edge_rows),
         },
         "instanceCount": classes_payload[0]["instanceCount"] if classes_payload else 0,
         "relatedMetrics": _related_metrics(runtime, classes_payload),
