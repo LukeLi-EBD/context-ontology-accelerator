@@ -142,6 +142,33 @@ AGG_EQUIVALENT_WHITELIST: dict[tuple[str, str], tuple[str, str, str]] = {
         "同 FIN-INS-024 分子：due_vehicle_count 列注释=按车辆/VIN 去重（含脱保车辆）；"
         "cohort 行分区不重叠，Σ=明细去重 VIN 数。",
     ),
+    # V41 观测聚合语义分层：definition_agg 是"观测行跨实体合成"口径，binding.agg 是
+    # "实体内明细聚合"口径。两者不同层，不是同一聚合被改坏。
+    ("FIN-INS-015", "denominator"): (
+        "sum", "count_distinct",
+        "V41：分母供给端按保单号去重（COUNT(DISTINCT policy_no)）写成预聚合观测值，"
+        "观测层跨实体用 SUM；binding 的 count_distinct 是实体内去重，两层组合正确。",
+    ),
+    ("FIN-INS-016", "denominator"): (
+        "sum", "count_distinct",
+        "同 FIN-INS-015：分母为保单号去重件数，V41 后观测层声明 sum，"
+        "binding 保留实体内 count_distinct；两层组合正确。",
+    ),
+    ("FIN-INS-018", "numerator"): (
+        "sum", "count_distinct",
+        "V41：分子为到期车辆/保单去重件数；实体内 count_distinct、观测层跨实体 sum，"
+        "两层组合正确。",
+    ),
+    ("FIN-INS-018", "denominator"): (
+        "sum", "count_distinct",
+        "同 FIN-INS-018 分子：分母按去重件数采集，V41 观测层声明 sum，"
+        "binding 保留实体内 count_distinct；两层组合正确。",
+    ),
+    ("FIN-INS-025", "denominator"): (
+        "sum", "count_distinct",
+        "V41 新增 fact function：分母在函数内写 COUNT(DISTINCT policy_no)，"
+        "观测层跨渠道用 sum；binding 的 count_distinct 描述函数内的去重，两层组合正确。",
+    ),
 }
 
 # Divergences judged NOT equivalent. These are definition defects (or missing
@@ -568,8 +595,8 @@ class G2MetricsCoreTest(unittest.TestCase):
         defects = {k: (v[0], v[1]) for k, v in AGG_DEFINITION_DEFECTS.items()}
         self.assertEqual(observed, {**allowed, **defects},
                          f"definition/binding agg divergence changed: {sorted(observed)}")
-        self.assertEqual(len(observed), 20)
-        self.assertEqual(len({m for m, _ in observed}), 12)
+        self.assertEqual(len(observed), 25)
+        self.assertEqual(len({m for m, _ in observed}), 16)
         self.assertTrue(set(allowed).isdisjoint(defects),
                         "whitelist and defect list must be disjoint")
         for key, (def_agg, bind_agg, evidence) in AGG_EQUIVALENT_WHITELIST.items():

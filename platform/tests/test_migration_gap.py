@@ -96,7 +96,7 @@ class MigrationGapTest(unittest.TestCase):
     def test_normal_ascending_upgrade_does_not_raise(self) -> None:
         meta = _meta(current=34, versions=[v for v in REGISTERED if v <= 34])
         result = meta.migrate()
-        self.assertEqual(result["applied"], ["V37", "V38", "V39", "V40"])
+        self.assertEqual(result["applied"], ["V37", "V38", "V39", "V40", "V41"])
 
     def test_lower_version_inserted_into_registry_raises_gap(self) -> None:
         # 人为向注册表插入一个低于当前版本的未退休迁移，且历史表没有它的记录。
@@ -122,9 +122,9 @@ class MigrationGapTest(unittest.TestCase):
             (35, "V35__c2_quota.sql", "withdrawn C2 branch"),
             (36, "V36__unused.sql", "never used"),
         ]
-        history = [v for v in REGISTERED if v <= 34] + [37, 38, 39, 40]
+        history = [v for v in REGISTERED if v <= 34] + [37, 38, 39, 40, 41]
         with mock.patch.object(metadata_pg, "MIGRATIONS", patched):
-            meta = _meta(current=40, versions=history)
+            meta = _meta(current=41, versions=history)
             result = meta.migrate()
         self.assertEqual(result["applied"], [])
 
