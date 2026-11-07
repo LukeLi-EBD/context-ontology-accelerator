@@ -46,6 +46,13 @@ BANK_PRODUCTS = ["mortgage", "consumer", "sme", "auto", "credit_card"]
 INS_PRODUCTS = ["life_term", "critical_illness", "health", "property", "motor"]
 CUST_PRODUCTS = ["deposit", "loan", "insurance", "wealth", "card"]
 CHANNELS = ["branch", "app", "web", "partner", "agent"]
+# 保单渠道：绑定与指标口径使用 individual_agent（个人营销渠道），
+# 生成侧把原 agent 值按业务词表规范为 individual_agent（其余渠道不变）。
+POLICY_CHANNELS = ["branch", "app", "web", "partner", "individual_agent"]
+# 期初/季初/期末快照点：period 型窗口（如 FIN-BANK-035/036-v1）需要
+# status_as_of/as_of = p_start 的真实快照，单点 2025-12-31 会被窗口过滤成 0 行。
+SNAPSHOT_DATES = (date(2024, 12, 31), date(2025, 1, 1), date(2025, 4, 1),
+                  date(2025, 7, 1), date(2025, 10, 1), AS_OF)
 SEGMENTS = ["mass", "mass_affluent", "affluent", "private", "small_business"]
 REGIONS = ["east", "south", "north", "central", "west", "northeast"]
 INDUSTRIES = ["manufacturing", "retail", "services", "real_estate", "agriculture", "tmt", "energy", "logistics"]
@@ -347,7 +354,7 @@ class SyntheticFactory:
                 {
                     "policy_no": f"POL-SYN-{i:05d}",
                     "product": INS_PRODUCTS[i % len(INS_PRODUCTS)],
-                    "channel": CHANNELS[i % len(CHANNELS)],
+                    "channel": POLICY_CHANNELS[i % len(POLICY_CHANNELS)],
                     "institution": customer["institution"],
                     "customer_no": customer["customer_no"],
                     "issue_date": issue_date,
@@ -667,30 +674,50 @@ class SyntheticFactory:
             }
 
     def _t_bank_collection_case(self) -> Iterable[dict[str, Any]]:
-        for i in range(max(self.rows_per_table, 1500)):
-            account = self.accounts[i % self.n_accounts]
-            yield {
-                "case_id": f"COL-SYN-{i:05d}",
-                "account_id": account["account_id"],
-                "customer_no": account["customer_no"],
-                "product": account["product"],
-                "institution": account["institution"],
-                "outstanding_principal": _money(account["principal_balance"] * Decimal("0.60")),
-                "case_status": CASE_STATUS[i % len(CASE_STATUS)],
-                "status_as_of": AS_OF,
-            }
+        # 多时点快照：period 型催收回收率需要 status_as_of = p_start 的期初队列。
+        # 同一案件在各时点保持同一 case_status，余额按季递减，保证期初/期末可比。
+        for snap_idx, snapshot in enumerate(SNAPSHOT_DATES):
+            decay = Decimal("1") - Decimal("0.03") * snap_idx
+            for i in range(max(self.rows_per_table, 1500)):
+                account = self.accounts[i % self.n_accounts]
+                outstanding = _money(
+                    account["principal_balance"] * Decimal("0.60") * decay
+                )
+                yield {
+                    "case_id": f"COL-SYN-{i:05d}",
+                    "account_id": account["account_id"],
+                    "customer_no": account["customer_no"],
+                    "product": account["product"],
+                    "institution": account["institution"],
+                    "outstanding_principal": outstanding,
+                    "case_status": CASE_STATUS[i % len(CASE_STATUS)],
+                    "status_as_of": snapshot,
+                }
 
     def _t_bank_collection_recovery(self) -> Iterable[dict[str, Any]]:
+        quarter_dates = (
+            date(2025, 2, 15), date(2025, 5, 15),
+            date(2025, 8, 15), date(2025, 11, 15),
+        )
         for i in range(max(self.rows_per_table, 1500)):
             account = self.accounts[i % self.n_accounts]
             outstanding = _money(account["principal_balance"] * Decimal("0.60"))
-            principal = _money(outstanding * Decimal("0.40"))
+            # 回收比例按案件分层（25%..50%），避免所有案件都恰好 40% 的单一分布。
+            principal = _money(outstanding * (Decimal("0.25") + Decimal("0.05") * (i % 6)))
             interest = _money(outstanding * Decimal("0.05"))
             fee = _money(outstanding * Decimal("0.01"))
+            # 回款分散到四个季度（原来只有 2025-11-30，季度窗口内恒为 0），
+            # 且必须晚于首次应还日，满足 collection_after_overdue 校验。
+            recovery_date = quarter_dates[i % len(quarter_dates)] + timedelta(days=(i // 4) % 10)
+            recovery_date = max(
+                recovery_date,
+                account["first_payment_due_date"] + timedelta(days=31),
+            )
+            recovery_date = min(recovery_date, AS_OF)
             yield {
                 "recovery_id": 40_000_000 + i,
                 "case_id": f"COL-SYN-{i:05d}",
-                "recovery_date": date(2025, 11, 30),
+                "recovery_date": recovery_date,
                 "principal_recovered": principal,
                 "interest_recovered": interest,
                 "fee_recovered": fee,
@@ -698,28 +725,43 @@ class SyntheticFactory:
             }
 
     def _t_bank_npl_snapshot(self) -> Iterable[dict[str, Any]]:
-        for i in range(max(self.rows_per_table, 1000)):
-            account = self.accounts[i % self.n_accounts]
-            yield {
-                "asset_id": account["account_id"],
-                "institution": account["institution"],
-                "product": account["product"],
-                "risk_class": RISK_CLASSES[2 + i % 3],
-                "npl_balance": _money(account["principal_balance"] * Decimal("0.50")),
-                "as_of": AS_OF,
-            }
+        # 不良处置率的分母是期初不良余额，必须有多时点 as_of 快照。
+        for snap_idx, snapshot in enumerate(SNAPSHOT_DATES):
+            decay = Decimal("1") - Decimal("0.03") * snap_idx
+            for i in range(max(self.rows_per_table, 1000)):
+                account = self.accounts[i % self.n_accounts]
+                yield {
+                    "asset_id": account["account_id"],
+                    "institution": account["institution"],
+                    "product": account["product"],
+                    "risk_class": RISK_CLASSES[2 + i % 3],
+                    "npl_balance": _money(
+                        account["principal_balance"] * Decimal("0.50") * decay
+                    ),
+                    "as_of": snapshot,
+                }
 
     def _t_bank_disposal_event(self) -> Iterable[dict[str, Any]]:
+        quarter_dates = (
+            date(2025, 2, 10), date(2025, 5, 10),
+            date(2025, 8, 10), date(2025, 11, 10),
+        )
         for i in range(max(self.rows_per_table, 1000)):
             account = self.accounts[i % self.n_accounts]
-            gross = _money(account["principal_balance"] * Decimal("0.50"))
+            # 处置规模按资产分层（账面不良的 55%..80%），避免处置率恒为 100%。
+            gross = _money(
+                account["principal_balance"] * Decimal("0.50")
+                * (Decimal("0.55") + Decimal("0.05") * (i % 6))
+            )
+            # 处置完成日分散到四个季度，使任意季度/全年窗口都能取到期内处置。
+            completion_date = quarter_dates[i % len(quarter_dates)] + timedelta(days=(i // 4) % 10)
             yield {
                 "event_id": f"EVT-SYN-{i:05d}",
                 "asset_id": account["account_id"],
                 "institution": account["institution"],
                 "product": account["product"],
                 "disposal_type": DISPOSAL_TYPES[i % len(DISPOSAL_TYPES)],
-                "completion_date": date(2025, 11, 30),
+                "completion_date": completion_date,
                 "gross_amount": gross,
                 "recovery_cash": _money(gross * Decimal("0.30")),
                 "recovery_noncash_fv": _money(gross * Decimal("0.10")),
@@ -861,42 +903,55 @@ class SyntheticFactory:
             }
 
     def _t_ins_payment_record(self) -> Iterable[dict[str, Any]]:
+        # 多期缴费：按保单年度生成 1..policy_year 期年缴记录。续期保费
+        # （FIN-INS-004）需要 policy_year>=2 且 due_date 落在观察窗内，
+        # 只有单期 installment_no=1 时 2025 窗口恒为 0 行。
         for i, policy in enumerate(self.policies):
-            due = policy["issue_date"] + timedelta(days=30)
-            if due > AS_OF:
-                due = AS_OF
+            years = max(1, int(policy["policy_year"]))
             bucket = i % 10
-            if bucket < 8:
-                payment_status = "paid"
-                paid_date = min(due + timedelta(days=i % 5), AS_OF)
-                paid_amount = policy["premium_amount"]
-            elif bucket == 8:
-                payment_status = "unpaid"
+            for inst in range(1, years + 1):
+                if inst == 1:
+                    due = policy["issue_date"] + timedelta(days=30)
+                else:
+                    due = policy["issue_date"] + timedelta(days=365 * (inst - 1))
+                if due > AS_OF:
+                    due = AS_OF
+                last = inst == years
+                if bucket == 8 and last:
+                    payment_status = "unpaid"
+                elif bucket == 9 and last:
+                    payment_status = "waived"
+                else:
+                    payment_status = "paid"
                 paid_date = None
                 paid_amount = Decimal("0.00")
-            else:
-                payment_status = "waived"
-                paid_date = None
-                paid_amount = Decimal("0.00")
-            payment_type = "reinstatement" if i % 15 == 0 else ("arrears" if bucket == 8 else "current")
-            yield {
-                "payment_id": 20_000_000 + i,
-                "policy_no": policy["policy_no"],
-                "product": policy["product"],
-                "installment_no": 1,
-                "due_date": due,
-                "due_amount": policy["premium_amount"],
-                "paid_amount": paid_amount,
-                "paid_date": paid_date,
-                "payment_status": payment_status,
-                "policy_status": policy["policy_status"],
-                "status_as_of": AS_OF,
-                "institution": policy["institution"],
-                "grace_end_date": due + timedelta(days=60),
-                "payment_type": payment_type,
-                "policy_year": policy["policy_year"],
-                "reinstatement_flag": payment_type == "reinstatement",
-            }
+                if payment_status == "paid":
+                    paid_date = min(due + timedelta(days=i % 5), AS_OF)
+                    paid_amount = policy["premium_amount"]
+                if payment_status == "unpaid":
+                    payment_type = "arrears"
+                elif inst == 1 and i % 15 == 0:
+                    payment_type = "reinstatement"
+                else:
+                    payment_type = "current"
+                yield {
+                    "payment_id": 20_000_000 + i * 10 + (inst - 1),
+                    "policy_no": policy["policy_no"],
+                    "product": policy["product"],
+                    "installment_no": inst,
+                    "due_date": due,
+                    "due_amount": policy["premium_amount"],
+                    "paid_amount": paid_amount,
+                    "paid_date": paid_date,
+                    "payment_status": payment_status,
+                    "policy_status": policy["policy_status"],
+                    "status_as_of": AS_OF,
+                    "institution": policy["institution"],
+                    "grace_end_date": due + timedelta(days=60),
+                    "payment_type": payment_type,
+                    "policy_year": inst,
+                    "reinstatement_flag": payment_type == "reinstatement",
+                }
 
     def _t_ins_policy_event(self) -> Iterable[dict[str, Any]]:
         for i in range(max(self.rows_per_table, 1500)):
@@ -960,15 +1015,25 @@ class SyntheticFactory:
 
     def _t_ins_persistence_stat(self) -> Iterable[dict[str, Any]]:
         months = list(_iter_months(2025, 1, 12))
-        bases = ["grace", "vehicle_renewal"]
+        # natural（自然月口径）是 022-v2/023-v2 绑定要求的枚举值；
+        # 生成侧按口径给出业务上略有差异的续保率，而不是只造一个能过筛选的常数。
+        basis_ratios = {
+            "grace": Decimal("0.60"),
+            "natural": Decimal("0.52"),
+            "vehicle_renewal": Decimal("0.58"),
+        }
         for institution in INSTITUTIONS:
             for product in INS_PRODUCTS:
                 for channel in CHANNELS[:3]:
                     for month_idx, cohort in enumerate(months):
-                        for basis in bases:
+                        for basis in basis_ratios:
                             for year in (2, 3):
                                 first = _money(1000 + (month_idx * 13 + year * 7) % 20000)
-                                renewed = _money(first * Decimal("0.60"))
+                                # 同口径内按月/年小幅波动（±2pct），避免全量同一个值。
+                                ratio = basis_ratios[basis] + Decimal(
+                                    (month_idx + year) % 5 - 2
+                                ) * Decimal("0.01")
+                                renewed = _money(first * ratio)
                                 due = 10 + (month_idx + year) % 20
                                 renewed_count = max(1, due - (month_idx % 4))
                                 yield {
