@@ -515,6 +515,41 @@ def column_coverage(
     }
 
 
+def comment_coverage(introspected: Iterable[dict[str, Any]]) -> dict[str, Any]:
+    """Read-only pg_description coverage for the introspected fact tables."""
+    counts: dict[str, list[int]] = {}
+    for item in introspected:
+        bucket = counts.setdefault(item["table"], [0, 0])
+        bucket[0] += 1
+        if (item.get("comment") or "").strip():
+            bucket[1] += 1
+    items = [
+        {
+            "table": table,
+            "columns": total,
+            "commented": commented,
+            "missing": total - commented,
+            "rate": round(commented / total, 4) if total else 0.0,
+        }
+        for table, (total, commented) in sorted(counts.items())
+    ]
+    columns = sum(item["columns"] for item in items)
+    commented = sum(item["commented"] for item in items)
+    rate = round(commented / columns, 4) if columns else 0.0
+    return {
+        "items": items,
+        "totals": {
+            "tables": len(items),
+            "columns": columns,
+            "commented": commented,
+            "missing": columns - commented,
+            "rate": rate,
+            "ratePercent": round(rate * 100, 2),
+        },
+        "complete": columns > 0 and commented == columns,
+    }
+
+
 def encode_manual_note(
     operator: str,
     basis: str,
@@ -978,6 +1013,7 @@ class CatalogService:
         rows = list(self._repo.existing(catalog, schema, FACT_TABLES).values())
         report = column_coverage(introspected, rows)
         report["binding"] = binding_coverage(rows)
+        report["commentCoverage"] = comment_coverage(introspected)
         report["catalog"] = catalog
         report["schema"] = schema
         report["source"] = "data_dictionary"

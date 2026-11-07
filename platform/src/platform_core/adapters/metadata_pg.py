@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 41
+SUPPORTED_SCHEMA_VERSION = 42
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -60,6 +60,7 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (39, "V39__dict_bindings.sql", "persist 79 dictionary bindings (69 explicit + 10 name_match)"),
     (40, "V40__term_high_water.sql", "O-05 vocab guard: effective term-set high-water mark"),
     (41, "V41__metric_semantics.sql", "M-02 observation aggregation semantics + 015/016/018/021/025 alignment"),
+    (42, "V42__dict_column_comments.sql", "O-01b dictionary column comments: 283 Chinese business meaning comments (bindings already at V39)"),
 ]
 
 # Retired migration numbers, kept permanently empty.

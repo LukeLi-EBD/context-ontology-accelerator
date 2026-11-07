@@ -6087,6 +6087,19 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         result["view"] = view
         return result
 
+    @app.get("/catalog/dictionaries/comment-coverage")
+    def catalog_dictionary_comment_coverage(
+        catalog: str | None = None,
+        schema: str | None = None,
+    ) -> dict[str, Any]:
+        """Read-only pg_description coverage; never writes the dictionary."""
+        report = _catalog_service().coverage(catalog or "platform", schema or "platform")
+        payload = dict(report.get("commentCoverage") or {})
+        payload["catalog"] = report.get("catalog")
+        payload["schema"] = report.get("schema")
+        payload["source"] = "pg_description"
+        return payload
+
     @app.post("/catalog/dictionaries/bind")
     def catalog_dictionary_bind(
         body: dict[str, Any] | None = Body(default=None),
