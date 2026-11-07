@@ -40,6 +40,7 @@ class MetricFactsV7Test(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.runtime = assemble(load_config(CONFIG, None))
         cls.runtime.metadata.open(retry_seconds=10.0)
+        cls.started_at = datetime.now(timezone.utc)
         cls.runtime.metadata.migrate()
         cls.meta = cls.runtime.metadata
         cls.compiler = MetricCompiler(cls.meta)

@@ -41,6 +41,7 @@ FORMULA_DISABLED = "E_METRIC_FORMULA_DISABLED"
 FACT_MISSING = "E_METRIC_FACT_SOURCE_MISSING"
 FACT_INVALID = "E_METRIC_FACT_SOURCE_INVALID"
 WINDOW_INSUFFICIENT = "E_METRIC_WINDOW_INSUFFICIENT"
+SEMANTICS_INVALID = "E_METRIC_SEMANTICS_INVALID"
 
 MAX_REPORTED_ERRORS = 100
 _FACT_FN = re.compile(r"^platform\.metric_fact_[a-z0-9_]+$")
@@ -327,6 +328,43 @@ def _parse_int(value: Any, column: str, minimum: int = 0) -> int:
     return number
 
 
+def _validate_distinct_semantics(metric_id: str, rows: list[dict[str, Any]]) -> None:
+    """Reject fact rows whose denominator is not a de-duplicated count.
+
+    ``aggregation_semantics='distinct_count'`` promises that each observation's
+    denominator is a COUNT(DISTINCT entity) taken inside its own partition.
+    Writing COUNT(*) (or a repeated entity_key) silently inflates the ratio, so
+    the projector refuses it before any write.
+    """
+    seen: set[str] = set()
+    for row in rows:
+        key = _text(row.get("entity_key"))
+        if key in seen:
+            raise _Reject(
+                SEMANTICS_INVALID,
+                f"{metric_id}: duplicate entity_key {key!r} under distinct_count semantics",
+            )
+        seen.add(key)
+        value = row.get("denominator")
+        if value is None:
+            raise _Reject(
+                SEMANTICS_INVALID,
+                f"{metric_id}: denominator is required under distinct_count semantics",
+            )
+        try:
+            count = Decimal(str(value))
+        except InvalidOperation:
+            raise _Reject(
+                SEMANTICS_INVALID,
+                f"{metric_id}: denominator is not numeric: {value!r}",
+            ) from None
+        if count < 0 or count != count.to_integral_value():
+            raise _Reject(
+                SEMANTICS_INVALID,
+                f"{metric_id}: denominator must be a non-negative integer count, got {value!r}",
+            )
+
+
 def _iter_csv(path: Path) -> tuple[list[str], Iterator[tuple[int, dict[str, Any]]]]:
     handle = path.open("r", encoding="utf-8-sig", newline="")
     reader = csv.DictReader(handle)
@@ -544,7 +582,7 @@ class MetricProjector:
         try:
             rows = self._meta.query(
                 "SELECT metric_id, definition_version, publishable, formula_disabled, "
-                "window_kind, min_window_days, fact_function "
+                "window_kind, min_window_days, fact_function, aggregation_semantics "
                 "FROM platform.metric_definition WHERE metric_id = %s",
                 (metric_id,),
             )
@@ -589,7 +627,9 @@ class MetricProjector:
                 f"SELECT * FROM {function}(%s, %s, %s)",
                 (window_start, window_end, data_source),
             )
-            fixture = False
+            if definition["aggregation_semantics"] == "distinct_count":
+                _validate_distinct_semantics(metric_id, fact_rows)
+
             base["rowsValid"] = len(fact_rows)
             base["rowsBefore"] = self._count(metric_id, definition["definition_version"])
 

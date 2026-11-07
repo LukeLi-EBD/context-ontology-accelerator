@@ -1,8 +1,9 @@
 """Entity facts -> observation projection -> calculator, fixture-only.
 
-The two v3 metrics that had no fact table are computed here from
-installment-level rows, never from pre-aggregated numbers. All values are
-synthetic and must not be read as business conclusions.
+FIN-INS-021 is computed from policy snapshots (V41: issue_date + 13 months)
+and FIN-BANK-001 from installment-level rows, never from pre-aggregated
+numbers. All values are synthetic and must not be read as business
+conclusions.
 """
 
 from __future__ import annotations
@@ -19,7 +20,13 @@ sys.path.insert(0, "/app/src")
 from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
 from platform_core.assembly import assemble
 from platform_core.config import load_config
-from platform_core.metric_facts import FactLoader, MetricProjector
+from platform_core.metric_facts import (
+    SEMANTICS_INVALID,
+    FactLoader,
+    MetricProjector,
+    _Reject,
+    _validate_distinct_semantics,
+)
 from platform_core.sqlsplit import split_sql_statements
 
 CONFIG = os.environ.get("PLATFORM_CONFIG", "/data/platform.yaml")
@@ -41,6 +48,7 @@ class MetricFactsTest(unittest.TestCase):
         cls.loader = FactLoader(cls.meta)
         cls.projector = MetricProjector(cls.meta)
         cls.metrics = cls.runtime.metrics
+        cls._apply_v41()
         cls._clean()
 
     @classmethod
@@ -55,8 +63,8 @@ class MetricFactsTest(unittest.TestCase):
     def _clean(cls) -> None:
         cls.meta.execute(
             "DELETE FROM platform.metric_observation "
-            "WHERE metric_id = ANY(%s) AND entity_key LIKE %s",
-            (list(IDS), PREFIX + "%"),
+            "WHERE metric_id = ANY(%s) AND data_source = 'fixture' AND fixture = true",
+            (list(IDS),),
         )
         cls.meta.execute(
             "DELETE FROM platform.ins_payment_record WHERE policy_no LIKE %s",
@@ -64,6 +72,10 @@ class MetricFactsTest(unittest.TestCase):
         )
         cls.meta.execute(
             "DELETE FROM platform.loan_installment_plan WHERE agreement_id LIKE %s",
+            (PREFIX + "%",),
+        )
+        cls.meta.execute(
+            "DELETE FROM platform.ins_policy WHERE policy_no LIKE %s",
             (PREFIX + "%",),
         )
 
@@ -95,6 +107,17 @@ class MetricFactsTest(unittest.TestCase):
 
     # ---- migration -----------------------------------------------------
 
+    @classmethod
+    def _apply_v41(cls) -> None:
+        """Re-apply V41 (idempotent) so this suite never depends on whether
+        the shared database migrated before the file last changed."""
+        sql = files("platform_core").joinpath("sql/V41__metric_semantics.sql").read_text(
+            encoding="utf-8"
+        )
+        for statement in split_sql_statements(sql):
+            with cls.meta.tx() as tx:
+                tx.execute(statement)
+
     def test_v20_migration_is_reentrant(self) -> None:
         # V25 added the v7 fact model; later migrations may raise the ceiling.
         self.assertGreaterEqual(SUPPORTED_SCHEMA_VERSION, 25)
@@ -106,6 +129,9 @@ class MetricFactsTest(unittest.TestCase):
             with self.meta.tx() as tx:
                 for statement in statements:
                     tx.execute(statement)
+        # V20 defines the pre-V41 body of FIN-INS-021; restore the current one.
+        for _ in range(2):
+            self._apply_v41()
         rows = self.meta.query(
             "SELECT to_regclass('platform.ins_payment_record') AS ins, "
             "to_regclass('platform.loan_installment_plan') AS loan, "
@@ -161,9 +187,36 @@ class MetricFactsTest(unittest.TestCase):
 
     # ---- FIN-INS-021: period aggregation -------------------------------
 
+    def _insert_policies(self) -> None:
+        """One policy snapshot per policy at 2024-12-31.
+
+        V41 anchors the 13-month cohort on issue_date + 13 months, so no
+        ins_payment_record row is needed. All rows are single-pay on purpose:
+        single premium must not be excluded from the persistency cohort.
+        """
+        rows = [
+            ("H04-P1", "LIFE-A", "2022-12-01", "in_force"),
+            ("H04-P2", "LIFE-A", "2022-12-01", "in_force"),
+            ("H04-P3", "LIFE-A", "2022-12-01", "lapsed"),
+            ("H04-P4", "LIFE-A", "2022-12-01", "surrendered"),
+            ("H04-P5", "LIFE-A", "2022-12-01", "cancelled"),
+            ("H04-Q1", "LIFE-B", "2022-12-01", "in_force"),
+            ("H04-Q2", "LIFE-B", "2022-12-01", "in_force"),
+            # X1: 2023-12-15 + 13 months = 2025-01-15, outside the window.
+            ("H04-X1", "LIFE-A", "2023-12-15", "in_force"),
+        ]
+        with self.meta.tx() as tx:
+            tx.executemany(
+                "INSERT INTO platform.ins_policy (policy_no, product, channel, "
+                "institution, issue_date, policy_year, premium_type, premium_amount, "
+                "first_year_premium, policy_status, status_as_of, data_source, fixture) "
+                "VALUES (%s, %s, 'agent', 'H04-INS', %s::date, 2, 'single', 1000, 1000, "
+                "%s, '2024-12-31'::date, 'fixture', true)",
+                rows,
+            )
+
     def test_ins_021_is_entity_driven(self) -> None:
-        loaded = self._load("insurance_payment", "insurance_payment_records.csv")
-        self.assertTrue(loaded["ok"], loaded)
+        self._insert_policies()
         projected = self._project(INS, date(2024, 1, 1), date(2024, 12, 31))
         self.assertTrue(projected["ok"], projected)
         self.assertEqual(projected["rowsProjected"], 2)
@@ -171,23 +224,65 @@ class MetricFactsTest(unittest.TestCase):
         card = self.metrics.compute(
             INS, period_start=date(2024, 1, 1), period_end=date(2024, 12, 31)
         )
-        # LIFE-A: 5 due, 2 kept (P1,P2; P3 unpaid, P4 lapsed, P5 latest=surrendered)
-        # LIFE-B: 3 due, 2 kept (Q1,Q3; Q2 unpaid)
-        # (2 + 2) / (5 + 3) * 100 = 50.0
-        self.assertAlmostEqual(card["value"], 50.0, places=9)
+        # LIFE-A: 5 in cohort (X1 anchored outside), 2 kept (P1,P2)
+        # LIFE-B: 2 in cohort, 2 kept (Q1,Q2)
+        # (2 + 2) / (5 + 2) * 100 = 57.142857...
+        self.assertAlmostEqual(card["value"], 400.0 / 7.0, places=9)
         self.assertEqual(card["window"]["kind"], "period")
         self.assertEqual(card["sampleCount"], 2)
         self.assertEqual(card["dataSource"], "fixture")
         self.assertTrue(card["fixture"])
         self.assertEqual(card["definitionVersion"], "v3.0")
+        rows = self.meta.query(
+            "SELECT entity_key, numerator, denominator "
+            "FROM platform.metric_observation WHERE metric_id = %s "
+            "AND data_source = 'fixture' AND entity_key = ANY(%s) ORDER BY entity_key",
+            (INS, ["LIFE-A", "LIFE-B"]),
+        )
+        self.assertEqual(
+            [(row["entity_key"], row["numerator"], row["denominator"]) for row in rows],
+            [("LIFE-A", 2.0, 5.0), ("LIFE-B", 2.0, 2.0)],
+        )
 
     def test_period_window_short_is_rejected_before_write(self) -> None:
-        self.assertTrue(self._load("insurance_payment", "insurance_payment_records.csv")["ok"])
         before = self._obs_count(INS)
         rejected = self._project(INS, date(2024, 12, 1), date(2024, 12, 31))
         self.assertFalse(rejected["ok"])
         self.assertEqual(rejected["errorCode"], "E_METRIC_WINDOW_INSUFFICIENT")
         self.assertEqual(self._obs_count(INS), before)
+
+    def test_distinct_count_semantics_are_declared(self) -> None:
+        rows = self.meta.query(
+            "SELECT metric_id, aggregation_semantics, denominator_agg, fact_function "
+            "FROM platform.metric_definition "
+            "WHERE metric_id IN ('FIN-INS-015','FIN-INS-016','FIN-INS-018',"
+            "'FIN-INS-021','FIN-INS-025') "
+            "ORDER BY metric_id"
+        )
+        for row in rows:
+            self.assertEqual(row["aggregation_semantics"], "distinct_count")
+            self.assertEqual(row["denominator_agg"], "sum")
+        self.assertEqual(
+            {row["metric_id"] for row in rows},
+            {"FIN-INS-015", "FIN-INS-016", "FIN-INS-018", "FIN-INS-021", "FIN-INS-025"},
+        )
+
+    def test_distinct_count_supply_is_validated(self) -> None:
+        _validate_distinct_semantics(
+            "FIN-INS-015", [{"entity_key": "A", "denominator": 3}]
+        )
+        for bad in (
+            [
+                {"entity_key": "A", "denominator": 3},
+                {"entity_key": "A", "denominator": 3},
+            ],
+            [{"entity_key": "A", "denominator": None}],
+            [{"entity_key": "A", "denominator": 2.5}],
+            [{"entity_key": "A", "denominator": -1}],
+        ):
+            with self.assertRaises(_Reject) as raised:
+                _validate_distinct_semantics("FIN-INS-015", bad)
+            self.assertEqual(raised.exception.code, SEMANTICS_INVALID)
 
     # ---- FIN-BANK-001: instant aggregation -----------------------------
 

@@ -177,11 +177,28 @@
         item.computabilityTone || 'muted'
       ));
       row.appendChild(tableCell(
-        item.externalLabel,
-        externalTone(item.externalStatus)
+        externalStatusText(item),
+        externalStatusTone(item)
       ));
       row.setAttribute('data-g3-row', '1');
     });
+  }
+
+  // 候选资格 ≠ 当前真能算出数：对外状态列同时给出执行路径与不可用原因。
+  function executionText(item) {
+    if (item.executionPath === 'compute') { return '可 compute'; }
+    if (item.executionPath === 'rule_set') { return '仅 rules API'; }
+    return '当前不可算：' + (item.executionReason || item.executionReasonCode || '未知原因');
+  }
+
+  function externalStatusText(item) {
+    if (!item.externalEligible) { return item.externalLabel; }
+    return item.externalLabel + '｜' + executionText(item);
+  }
+
+  function externalStatusTone(item) {
+    if (!item.externalEligible) { return externalTone(item.externalStatus); }
+    return item.executable ? 'ok' : 'warn';
   }
 
   function startRowObserver() {

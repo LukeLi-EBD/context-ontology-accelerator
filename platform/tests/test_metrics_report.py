@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from datetime import date
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -27,6 +28,7 @@ def _row(
     basis="regulatory",
     publishable=True,
     tier="structurally_computable",
+    metric_kind="ratio",
     formula_text="numerator/denominator*100",
     formula_expr="numerator / denominator",
     missing=None,
@@ -40,6 +42,12 @@ def _row(
     min_window_days=28,
     grain="institution",
     granularity=None,
+    window_kind="period",
+    numerator_bindings=1,
+    denominator_bindings=1,
+    observation_count=1,
+    observation_start=date(2025, 1, 1),
+    observation_end=date(2025, 12, 31),
 ):
     return {
         "metric_id": metric_id,
@@ -54,13 +62,13 @@ def _row(
         "evidence_status": "defined",
         "note": None,
         "definition_version": "v3",
-        "metric_kind": "ratio",
+        "metric_kind": metric_kind,
         "formula_expr": formula_expr,
         "formula_text": formula_text,
         "denominator_text": denominator_text,
         "numerator_agg": "sum",
         "denominator_agg": "sum",
-        "window_kind": "month",
+        "window_kind": window_kind,
         "min_window_days": min_window_days,
         "observation_period": window_text,
         "grain": grain,
@@ -71,6 +79,11 @@ def _row(
         "output_mode": output_mode,
         "provenance_label": provenance,
         "computability_tier": tier,
+        "numerator_bindings": numerator_bindings,
+        "denominator_bindings": denominator_bindings,
+        "observation_count": observation_count,
+        "observation_start": observation_start,
+        "observation_end": observation_end,
     }
 
 
@@ -212,6 +225,88 @@ class ManifestTests(unittest.TestCase):
             response = client.get("/metrics/report/manifest", params={"scope": "bogus"})
         self.assertEqual(response.status_code, 422)
 
+    def test_8_external_counts_separate_eligibility_from_executable(self):
+        rows = [
+            _row("FIN-BANK-001", numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-002", output_mode="rule_set"),
+            _row("FIN-INS-003", observation_count=0, observation_start=None,
+                 observation_end=None),
+            _row("FIN-INS-004", metric_kind="amount", formula_expr="numerator",
+                 numerator_bindings=0, denominator_bindings=0),
+        ]
+        with _client(rows) as client:
+            payload = client.get(
+                "/metrics/report/manifest", params={"scope": "external"}
+            ).json()
+        counts = payload["meta"]["counts"]
+        execution = payload["meta"]["execution"]
+        self.assertEqual(counts["externalEligible"], 4)
+        self.assertEqual(counts["externalCandidates"], 4)
+        # binding 不是 compute 的门槛；amount 已放开，故两条为 compute。
+        self.assertEqual(counts["executableNow"], 2)
+        self.assertEqual(execution["executableNow"], 2)
+        self.assertEqual(execution["ruleSetOnly"], 1)
+        self.assertEqual(execution["unavailable"], 1)
+        self.assertEqual(execution["byReason"], {"no_observations": 1})
+        self.assertIn("只读预检", execution["basis"])
+        self.assertIn("未含观测与窗口", execution["note"])
+
+    def test_9_manifest_row_declares_execution_path_and_reason(self):
+        rows = [
+            _row("FIN-BANK-001", numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-014", metric_kind="amount", formula_expr="numerator",
+                 numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-002", output_mode="rule_set"),
+            _row("FIN-INS-003", observation_count=0, observation_start=None,
+                 observation_end=None),
+        ]
+        with _client(rows) as client:
+            payload = client.get("/metrics/report/manifest").json()
+        by_id = {item["metricId"]: item for item in payload["items"]}
+        compute = by_id["FIN-BANK-001"]
+        self.assertEqual(compute["executionPath"], "compute")
+        self.assertTrue(compute["executable"])
+        # 资格判定只看三项，必须在说明里写明未检查观测与窗口。
+        self.assertIn("未含观测与窗口", compute["externalReason"])
+        # compute 不校验 binding：没有 binding 但已有观测，仍应判为可算。
+        self.assertNotIn("numeratorBinding", compute["executionChecks"])
+        amount = by_id["FIN-INS-014"]
+        self.assertEqual(amount["executionPath"], "compute")
+        self.assertTrue(amount["executable"])
+        self.assertEqual(amount["executionReasonCode"], "compute_ready")
+        rule_set = by_id["FIN-INS-002"]
+        self.assertEqual(rule_set["executionPath"], "rule_set")
+        self.assertFalse(rule_set["executable"])
+        self.assertEqual(rule_set["executionReasonCode"], "rule_set_only")
+        self.assertIn("/rules", rule_set["executionReason"])
+        self.assertIn("rule_set_only", rule_set["externalReason"])
+        missing = by_id["FIN-INS-003"]
+        self.assertEqual(missing["executionPath"], "unavailable")
+        self.assertEqual(missing["executionReasonCode"], "no_observations")
+        self.assertIn("无任何观测", missing["executionReason"])
+
+    def test_10_csv_export_carries_execution_columns(self):
+        rows = [
+            _row("FIN-BANK-001", numerator_bindings=0, denominator_bindings=0),
+            _row("FIN-INS-002", output_mode="rule_set"),
+            _row("FIN-INS-003", observation_count=0, observation_start=None,
+                 observation_end=None),
+        ]
+        with _client(rows) as client:
+            body = client.get(
+                "/metrics/report/manifest.csv", params={"scope": "external"}
+            ).content.decode("utf-8")
+        lines = [line for line in body.splitlines() if line.strip()]
+        self.assertEqual(len(lines), 4)
+        for column in ("可执行路径", "可执行", "执行判定说明", "可用窗口天数", "要求窗口天数"):
+            self.assertIn(column, lines[0])
+        compute_line = next(line for line in lines[1:] if "FIN-BANK-001" in line)
+        self.assertIn("compute", compute_line)
+        self.assertIn("true", compute_line)
+        rule_line = next(line for line in lines[1:] if "FIN-INS-002" in line)
+        self.assertIn("rule_set", rule_line)
+        self.assertIn("false", rule_line)
+
 
 E1_IDS = (
     "FIN-BANK-002",
@@ -337,6 +432,7 @@ FAMILY_ROWS = [
         basis="industry",
         publishable=False,
         variant_of="FIN-BANK-036",
+        formula_text="numerator / denominator * 100（分母=期内完成处置不良账面金额）",
         denominator_text="期内完成处置的不良资产账面金额（有回收方式）",
         window_text="period（季度/年度；与 v1 同一报告期）",
         min_window_days=90,
@@ -406,6 +502,7 @@ class FamilyTests(unittest.TestCase):
         self.assertTrue(diffs["denominator"]["different"])
         self.assertTrue(diffs["observationPeriod"]["different"])
         self.assertTrue(diffs["grain"]["different"])
+        self.assertTrue(diffs["formula"]["different"])
         for variant in family["variants"]:
             self.assertIn("text", variant["window"])
             self.assertIn("minWindowDays", variant["window"])
@@ -436,6 +533,38 @@ class FamilyTests(unittest.TestCase):
         for variant in family["variants"]:
             self.assertEqual(variant["internalNotice"], "内部基线、不外报")
             self.assertFalse(variant["externalEligible"])
+
+    def test_6_family_sql_selects_every_column_the_variant_reads(self):
+        """select A / read B 的字段错位会静默把 different 退化为 false（M-03 复盘 bug）。"""
+        meta = FakeMetadata(FAMILY_ROWS)
+        with TestClient(
+            api_module.create_app(SimpleNamespace(metadata=meta), [])
+        ) as client:
+            payload = client.get("/metrics/report/families").json()
+        sql = next(
+            stmt for stmt, _ in meta.calls if "WHERE output_mode = 'index'" in stmt
+        )
+        for column in (
+            "denominator_text",
+            "denominator_agg",
+            "observation_period",
+            "window_kind",
+            "min_window_days",
+            "granularity",
+            "grain",
+            "formula_text",
+            "formula_expr",
+            "metric_kind",
+            "unit",
+        ):
+            self.assertRegex(sql, r"\b%s\b" % column)
+        # 透出的必须是库里的 denominator_text，而不是 fallback 到 denominator_agg。
+        bank036 = payload["families"][0]
+        texts = {v["metricId"]: v["denominatorText"] for v in bank036["variants"]}
+        self.assertEqual(texts["FIN-BANK-036-v1"], "期初不良资产余额（单位 元）")
+        self.assertEqual(
+            texts["FIN-BANK-036-v2"], "期内完成处置的不良资产账面金额（有回收方式）"
+        )
 
 
 class CardTests(unittest.TestCase):
