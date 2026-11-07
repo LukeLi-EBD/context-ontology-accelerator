@@ -6198,4 +6198,83 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     # --- end G8 ---
 
+    # --- G10 canvas full routes ---
+    # D1-2: additive only. The G5 endpoint above stays the switch surface (its
+    # signature did not change); these routes expose full-only filters,
+    # pagination and aggregation for the independent canvas_full.js panel.
+
+    @app.get("/browse/canvas/manifest")
+    def browse_canvas_manifest() -> dict[str, Any]:
+        """Capability/limits snapshot used by the front-end to switch panels."""
+        manifest = runtime.canvas.manifest()
+        return {
+            "provider": getattr(manifest, "provider", "absent"),
+            "port": getattr(manifest, "port", "CanvasPort"),
+            "capabilities": list(getattr(manifest, "capabilities", [])),
+            "limits": dict(getattr(manifest, "limits", {})),
+            "notes": dict(getattr(manifest, "notes", {})),
+        }
+
+    @app.get("/browse/canvas/full")
+    def browse_canvas_full(
+        source: str = Query(alias="from", min_length=1, max_length=2000),
+        target: str | None = Query(default=None, alias="to", max_length=2000),
+        max_hops: int = Query(default=1, alias="maxHops", ge=1),
+        max_nodes: int | None = Query(default=None, alias="maxNodes", ge=1, le=1000),
+        max_edges: int | None = Query(default=None, alias="maxEdges", ge=1, le=2000),
+        max_paths: int | None = Query(default=None, alias="maxPaths", ge=1, le=50),
+        predicate_types: str | None = Query(
+            default=None, alias="predicateTypes", max_length=400
+        ),
+        include_types: bool = Query(default=True, alias="includeTypes"),
+        include_source: bool = Query(default=True, alias="includeSource"),
+        page_size: int = Query(default=100, alias="pageSize", ge=1),
+        cursor: str | None = Query(default=None, max_length=4000),
+        aggregate: bool = Query(default=True),
+        graph: str | None = Query(default=None, max_length=2000),
+    ) -> dict[str, Any]:
+        """Paged/aggregated full canvas (D1-2, design 62).
+
+        Rejects when the assembled provider is not full, so the page can keep
+        using ``/browse/path`` unchanged under simple/off.
+        """
+        manifest = runtime.canvas.manifest()
+        provider = getattr(manifest, "provider", "absent")
+        if provider != "full" or not hasattr(runtime.canvas, "query"):
+            raise _browse_error(
+                "E_CANVAS_PROVIDER_MISMATCH",
+                "this route requires canvas.provider=full",
+                {"provider": provider},
+            )
+        _canvas_iri(source, "from")
+        requested = None
+        if graph:
+            _canvas_iri(graph, "graph")
+            requested = [graph]
+        if target:
+            _canvas_iri(target, "to")
+        kinds = [
+            part.strip()
+            for part in (predicate_types or "").split(",")
+            if part.strip()
+        ] or None
+        canvas_cfg = runtime.config.canvas
+        return runtime.canvas.query(
+            source,
+            target=target,
+            hops=max_hops,
+            max_nodes=max_nodes or int(canvas_cfg.max_nodes),
+            max_edges=max_edges or int(canvas_cfg.max_edges),
+            max_paths=max_paths or int(canvas_cfg.max_paths),
+            include_types=include_types,
+            include_source=include_source,
+            graphs=requested,
+            predicate_types=kinds,
+            page_size=page_size,
+            cursor=cursor,
+            aggregate=aggregate,
+        )
+
+    # --- end G10 ---
+
     return app
