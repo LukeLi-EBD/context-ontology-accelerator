@@ -1,0 +1,1472 @@
+{
+  "collectedAt": "2026-11-07T07:46:00.761895+08:00",
+  "pointer": {
+    "name": "tbox/current",
+    "versionId": "ont-11f92ebb3326",
+    "semver": "1.2.1",
+    "contentHash": "013b9493419812bc375eaddc68ac554d86879960e13edcc69c2d48209bce28a7",
+    "graph": "urn:platform:graph:tbox:ont-11f92ebb3326",
+    "updatedAt": "2026-11-07T05:37:38.195975+08:00"
+  },
+  "counts": {
+    "classes": 156,
+    "objectProperties": 84,
+    "datatypeProperties": 45,
+    "annotationProperties": 10,
+    "functionalProps": 37,
+    "allPropsRDF": 0,
+    "restrictions": 20,
+    "namedIndividuals": 0,
+    "metricScheme": 0,
+    "termEntries": 18,
+    "termBatchAnchors": 15,
+    "skosConcepts": 180,
+    "prefLabelZh": 196,
+    "prefLabelEn": 84,
+    "altLabelZh": 58,
+    "altLabelNoLang": 146,
+    "definitions": 153,
+    "classesNoLabel": 0,
+    "propsNoLabel": 0
+  },
+  "restrictionKinds": {
+    "onProperty": 20,
+    "onClass": 17,
+    "qualifiedCardinality": 17,
+    "minQualifiedCardinality": 2,
+    "allValuesFrom": 1
+  },
+  "propertyRowCount": 129,
+  "propertyIRIs": [
+    "https://w3id.org/fsldm/agreement#accountModifierNumber",
+    "https://w3id.org/fsldm/agreement#accountNumber",
+    "https://w3id.org/fsldm/agreement#applicationProducedAgreement",
+    "https://w3id.org/fsldm/agreement#appliedProduct",
+    "https://w3id.org/fsldm/agreement#classifiedAgreement",
+    "https://w3id.org/fsldm/agreement#hasPartyRole",
+    "https://w3id.org/fsldm/agreement#hasProductAssignment",
+    "https://w3id.org/fsldm/agreement#ofAgreement",
+    "https://w3id.org/fsldm/agreement#ofClaim",
+    "https://w3id.org/fsldm/agreement#parentAgreement",
+    "https://w3id.org/fsldm/agreement#quotationAcceptedBy",
+    "https://w3id.org/fsldm/agreement#roleParty",
+    "https://w3id.org/fsldm/asset#collateralizes",
+    "https://w3id.org/fsldm/asset#ownershipShare",
+    "https://w3id.org/fsldm/asset#valuationMethod",
+    "https://w3id.org/fsldm/banking#collateralAsset",
+    "https://w3id.org/fsldm/banking#collateralForAgreement",
+    "https://w3id.org/fsldm/banking#haircutOfCollateral",
+    "https://w3id.org/fsldm/banking#mitigatesAgreement",
+    "https://w3id.org/fsldm/campaign#conditionExpression",
+    "https://w3id.org/fsldm/campaign#hasCell",
+    "https://w3id.org/fsldm/campaign#hasPromotion",
+    "https://w3id.org/fsldm/campaign#offeredIncentive",
+    "https://w3id.org/fsldm/channel#deviceNumber",
+    "https://w3id.org/fsldm/channel#deviceStatus",
+    "https://w3id.org/fsldm/channel#parentPage",
+    "https://w3id.org/fsldm/channel#sessionDuration",
+    "https://w3id.org/fsldm/channel#usesChannel",
+    "https://w3id.org/fsldm/core#agreementId",
+    "https://w3id.org/fsldm/core#agreementOf",
+    "https://w3id.org/fsldm/core#assetId",
+    "https://w3id.org/fsldm/core#assetOf",
+    "https://w3id.org/fsldm/core#campaignOf",
+    "https://w3id.org/fsldm/core#channelOf",
+    "https://w3id.org/fsldm/core#classifies",
+    "https://w3id.org/fsldm/core#dueDate",
+    "https://w3id.org/fsldm/core#eventId",
+    "https://w3id.org/fsldm/core#eventOf",
+    "https://w3id.org/fsldm/core#featureOf",
+    "https://w3id.org/fsldm/core#firstPaymentDate",
+    "https://w3id.org/fsldm/core#hasAgreement",
+    "https://w3id.org/fsldm/core#hasAsset",
+    "https://w3id.org/fsldm/core#hasCampaign",
+    "https://w3id.org/fsldm/core#hasChannel",
+    "https://w3id.org/fsldm/core#hasClassValue",
+    "https://w3id.org/fsldm/core#hasCode",
+    "https://w3id.org/fsldm/core#hasCurrency",
+    "https://w3id.org/fsldm/core#hasEvent",
+    "https://w3id.org/fsldm/core#hasFeature",
+    "https://w3id.org/fsldm/core#hasLocator",
+    "https://w3id.org/fsldm/core#hasMetric",
+    "https://w3id.org/fsldm/core#hasParty",
+    "https://w3id.org/fsldm/core#hasProduct",
+    "https://w3id.org/fsldm/core#hasRole",
+    "https://w3id.org/fsldm/core#hasStatus",
+    "https://w3id.org/fsldm/core#identificationType",
+    "https://w3id.org/fsldm/core#identificationValue",
+    "https://w3id.org/fsldm/core#inScheme",
+    "https://w3id.org/fsldm/core#isPrimaryRole",
+    "https://w3id.org/fsldm/core#lastPaymentDate",
+    "https://w3id.org/fsldm/core#locatorOf",
+    "https://w3id.org/fsldm/core#maturityDate",
+    "https://w3id.org/fsldm/core#metricOf",
+    "https://w3id.org/fsldm/core#metricType",
+    "https://w3id.org/fsldm/core#metricValue",
+    "https://w3id.org/fsldm/core#observationDate",
+    "https://w3id.org/fsldm/core#ofObject",
+    "https://w3id.org/fsldm/core#ofSubject",
+    "https://w3id.org/fsldm/core#originationDate",
+    "https://w3id.org/fsldm/core#partyId",
+    "https://w3id.org/fsldm/core#partyOf",
+    "https://w3id.org/fsldm/core#productId",
+    "https://w3id.org/fsldm/core#productOf",
+    "https://w3id.org/fsldm/core#recordedAt",
+    "https://w3id.org/fsldm/core#sourceRecordId",
+    "https://w3id.org/fsldm/core#sourceSystem",
+    "https://w3id.org/fsldm/core#unitOfMeasure",
+    "https://w3id.org/fsldm/core#validFrom",
+    "https://w3id.org/fsldm/core#validUntil",
+    "https://w3id.org/fsldm/event#containsEvent",
+    "https://w3id.org/fsldm/event#eventAmount",
+    "https://w3id.org/fsldm/event#eventPostedTimestamp",
+    "https://w3id.org/fsldm/event#eventSubtype",
+    "https://w3id.org/fsldm/event#eventTimestamp",
+    "https://w3id.org/fsldm/event#eventType",
+    "https://w3id.org/fsldm/event#ofEvent",
+    "https://w3id.org/fsldm/finance#creditAmount",
+    "https://w3id.org/fsldm/finance#debitAmount",
+    "https://w3id.org/fsldm/finance#glAccountNumber",
+    "https://w3id.org/fsldm/finance#lineNumber",
+    "https://w3id.org/fsldm/finance#ofExposureAgreement",
+    "https://w3id.org/fsldm/finance#ofJournalEntry",
+    "https://w3id.org/fsldm/finance#parentGLAccount",
+    "https://w3id.org/fsldm/finance#postedAccount",
+    "https://w3id.org/fsldm/insurance#coverageOfAgreement",
+    "https://w3id.org/fsldm/insurance#insuresAsset",
+    "https://w3id.org/fsldm/insurance#underwritingClassOf",
+    "https://w3id.org/fsldm/investment#portfolioOfParty",
+    "https://w3id.org/fsldm/investment#positionInPortfolio",
+    "https://w3id.org/fsldm/investment#quotedProduct",
+    "https://w3id.org/fsldm/location#administrativeCode",
+    "https://w3id.org/fsldm/location#hasLocator",
+    "https://w3id.org/fsldm/location#latitude",
+    "https://w3id.org/fsldm/location#locatorUsage",
+    "https://w3id.org/fsldm/location#longitude",
+    "https://w3id.org/fsldm/org#employedAssociate",
+    "https://w3id.org/fsldm/org#employingOrganization",
+    "https://w3id.org/fsldm/org#occupiesPosition",
+    "https://w3id.org/fsldm/org#partOfOrganization",
+    "https://w3id.org/fsldm/party#attritionDate",
+    "https://w3id.org/fsldm/party#classifiedParty",
+    "https://w3id.org/fsldm/party#financialDocumentOfParty",
+    "https://w3id.org/fsldm/party#hasGroupMember",
+    "https://w3id.org/fsldm/party#ofParty",
+    "https://w3id.org/fsldm/party#partySince",
+    "https://w3id.org/fsldm/party#ratingLowerBound",
+    "https://w3id.org/fsldm/party#ratingUpperBound",
+    "https://w3id.org/fsldm/party#relatedFrom",
+    "https://w3id.org/fsldm/party#relatedTo",
+    "https://w3id.org/fsldm/party#riskGradePrecedes",
+    "https://w3id.org/fsldm/party#riskGradeReviewDate",
+    "https://w3id.org/fsldm/product#eligibilityCondition",
+    "https://w3id.org/fsldm/product#featureCode",
+    "https://w3id.org/fsldm/product#featureValue",
+    "https://w3id.org/fsldm/product#hasPackageComponent",
+    "https://w3id.org/fsldm/product#leewayLowerBound",
+    "https://w3id.org/fsldm/product#leewayUpperBound",
+    "https://w3id.org/fsldm/product#memberProduct",
+    "https://w3id.org/fsldm/product#parentProductGroup"
+  ],
+  "classRowCount": 156,
+  "classesByNamespace": {
+    "https://w3id.org/fsldm/agreement": 19,
+    "https://w3id.org/fsldm/core": 18,
+    "https://w3id.org/fsldm/location": 16,
+    "https://w3id.org/fsldm/banking": 16,
+    "https://w3id.org/fsldm/investment": 13,
+    "https://w3id.org/fsldm/insurance": 10,
+    "https://w3id.org/fsldm/event": 10,
+    "https://w3id.org/fsldm/party": 10,
+    "https://w3id.org/fsldm/campaign": 8,
+    "https://w3id.org/fsldm/product": 8,
+    "https://w3id.org/fsldm/finance": 8,
+    "https://w3id.org/fsldm/org": 7,
+    "https://w3id.org/fsldm/asset": 7,
+    "https://w3id.org/fsldm/channel": 6
+  },
+  "propsByNamespace": {
+    "https://w3id.org/fsldm/core": 51,
+    "https://w3id.org/fsldm/agreement": 12,
+    "https://w3id.org/fsldm/party": 12,
+    "https://w3id.org/fsldm/finance": 8,
+    "https://w3id.org/fsldm/product": 8,
+    "https://w3id.org/fsldm/event": 7,
+    "https://w3id.org/fsldm/location": 5,
+    "https://w3id.org/fsldm/channel": 5,
+    "https://w3id.org/fsldm/org": 4,
+    "https://w3id.org/fsldm/campaign": 4,
+    "https://w3id.org/fsldm/banking": 4,
+    "https://w3id.org/fsldm/asset": 3,
+    "https://w3id.org/fsldm/investment": 3,
+    "https://w3id.org/fsldm/insurance": 3
+  },
+  "propertyClassified": {
+    "约束": {
+      "count": 19,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/org#partOfOrganization",
+          "label": "上级机构",
+          "local": "partOfOrganization"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#mitigatesAgreement",
+          "label": "所缓释的协议",
+          "local": "mitigatesAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#riskGradePrecedes",
+          "label": "等级高于",
+          "local": "riskGradePrecedes"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#quotedProduct",
+          "label": "报价标的",
+          "local": "quotedProduct"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/finance#ofJournalEntry",
+          "label": "所属凭证",
+          "local": "ofJournalEntry"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasStatus",
+          "label": "当前状态",
+          "local": "hasStatus"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasCurrency",
+          "label": "币种",
+          "local": "hasCurrency"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#collateralizes",
+          "label": "为协议提供担保",
+          "local": "collateralizes"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+          "label": "事件发生时间",
+          "local": "eventTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#originationDate",
+          "label": "起息日 / 放款日",
+          "local": "originationDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#lastPaymentDate",
+          "label": "最后足额还款日",
+          "local": "lastPaymentDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#firstPaymentDate",
+          "label": "首期应还款日",
+          "local": "firstPaymentDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#riskGradeReviewDate",
+          "label": "复评到期日",
+          "local": "riskGradeReviewDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#observationDate",
+          "label": "观察时点",
+          "local": "observationDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#dueDate",
+          "label": "当期应还款日",
+          "local": "dueDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#conditionExpression",
+          "label": "条件表达式",
+          "local": "conditionExpression"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#administrativeCode",
+          "label": "行政区划代码",
+          "local": "administrativeCode"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventPostedTimestamp",
+          "label": "记账时间",
+          "local": "eventPostedTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#partySince",
+          "label": "建立关系日",
+          "local": "partySince"
+        }
+      ]
+    },
+    "流程": {
+      "count": 18,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/core#metricOf",
+          "label": "度量所属主体",
+          "local": "metricOf"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventType",
+          "label": "事件类型",
+          "local": "eventType"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#locatorUsage",
+          "label": "用途",
+          "local": "locatorUsage"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventSubtype",
+          "label": "事件细类",
+          "local": "eventSubtype"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#deviceStatus",
+          "label": "设备状态",
+          "local": "deviceStatus"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#eventOf",
+          "label": "所属事件",
+          "local": "eventOf"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#ofEvent",
+          "label": "所属事件",
+          "local": "ofEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasEvent",
+          "label": "涉及事件",
+          "local": "hasEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#ofObject",
+          "label": "客体端",
+          "local": "ofObject"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasStatus",
+          "label": "当前状态",
+          "local": "hasStatus"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasParty",
+          "label": "涉及当事人",
+          "local": "hasParty"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#containsEvent",
+          "label": "会话包含事件",
+          "local": "containsEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+          "label": "事件发生时间",
+          "local": "eventTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#riskGradeReviewDate",
+          "label": "复评到期日",
+          "local": "riskGradeReviewDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#attritionDate",
+          "label": "流失日",
+          "local": "attritionDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventPostedTimestamp",
+          "label": "记账时间",
+          "local": "eventPostedTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventAmount",
+          "label": "事件金额",
+          "local": "eventAmount"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#eventId",
+          "label": "事件编号",
+          "local": "eventId"
+        }
+      ]
+    },
+    "时效": {
+      "count": 22,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/event#eventType",
+          "label": "事件类型",
+          "local": "eventType"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#metricType",
+          "label": "度量类型",
+          "local": "metricType"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#deviceStatus",
+          "label": "设备状态",
+          "local": "deviceStatus"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasStatus",
+          "label": "当前状态",
+          "local": "hasStatus"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#collateralizes",
+          "label": "为协议提供担保",
+          "local": "collateralizes"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#featureValue",
+          "label": "特性取值",
+          "local": "featureValue"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+          "label": "事件发生时间",
+          "local": "eventTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#maturityDate",
+          "label": "到期日",
+          "local": "maturityDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#originationDate",
+          "label": "起息日 / 放款日",
+          "local": "originationDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#lastPaymentDate",
+          "label": "最后足额还款日",
+          "local": "lastPaymentDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#firstPaymentDate",
+          "label": "首期应还款日",
+          "local": "firstPaymentDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#riskGradeReviewDate",
+          "label": "复评到期日",
+          "local": "riskGradeReviewDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#observationDate",
+          "label": "观察时点",
+          "local": "observationDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#recordedAt",
+          "label": "记录写入时间",
+          "local": "recordedAt"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#dueDate",
+          "label": "当期应还款日",
+          "local": "dueDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#attritionDate",
+          "label": "流失日",
+          "local": "attritionDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasCode",
+          "label": "代码",
+          "local": "hasCode"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#sessionDuration",
+          "label": "会话时长（秒）",
+          "local": "sessionDuration"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#validFrom",
+          "label": "生效时间",
+          "local": "validFrom"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventPostedTimestamp",
+          "label": "记账时间",
+          "local": "eventPostedTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#validUntil",
+          "label": "失效时间",
+          "local": "validUntil"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#partySince",
+          "label": "建立关系日",
+          "local": "partySince"
+        }
+      ]
+    },
+    "阈值": {
+      "count": 9,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/location#locatorUsage",
+          "label": "用途",
+          "local": "locatorUsage"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#quotationAcceptedBy",
+          "label": "报价被接受为协议",
+          "local": "quotationAcceptedBy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#featureValue",
+          "label": "特性取值",
+          "local": "featureValue"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#conditionExpression",
+          "label": "条件表达式",
+          "local": "conditionExpression"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#administrativeCode",
+          "label": "行政区划代码",
+          "local": "administrativeCode"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#sessionDuration",
+          "label": "会话时长（秒）",
+          "local": "sessionDuration"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#leewayUpperBound",
+          "label": "上浮上限",
+          "local": "leewayUpperBound"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#leewayLowerBound",
+          "label": "下浮下限",
+          "local": "leewayLowerBound"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#validUntil",
+          "label": "失效时间",
+          "local": "validUntil"
+        }
+      ]
+    }
+  },
+  "classClassified": {
+    "约束": {
+      "count": 39,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/insurance#Coverage",
+          "label": "保障项",
+          "local": "Coverage"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#IndividualInsurancePolicy",
+          "label": "个人保险单",
+          "local": "IndividualInsurancePolicy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#AssetInspection",
+          "label": "资产查勘记录",
+          "local": "AssetInspection"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#ValueAtRisk",
+          "label": "在险价值",
+          "local": "ValueAtRisk"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementPartyRole",
+          "label": "协议当事人角色",
+          "local": "AgreementPartyRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#SalvageRecord",
+          "label": "残值处置",
+          "local": "SalvageRecord"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Policy",
+          "label": "保单",
+          "local": "Policy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#SeniorityHistory",
+          "label": "缓释协议优先级历史",
+          "local": "SeniorityHistory"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/finance#JournalEntryHeader",
+          "label": "记账凭证",
+          "local": "JournalEntryHeader"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/org#InternalOrganization",
+          "label": "内部机构",
+          "local": "InternalOrganization"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#ClaimEvent",
+          "label": "理赔事件",
+          "local": "ClaimEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#SecuritizationPool",
+          "label": "证券化资产池",
+          "local": "SecuritizationPool"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#AssetValue",
+          "label": "资产估值",
+          "local": "AssetValue"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/finance#JournalEntryLine",
+          "label": "分录行",
+          "local": "JournalEntryLine"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#UnderwritingClass",
+          "label": "核保等级",
+          "local": "UnderwritingClass"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#PromotionResponse",
+          "label": "促销响应",
+          "local": "PromotionResponse"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#TimeBound",
+          "label": "在效期内的事物",
+          "local": "TimeBound"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#StatusAssignment",
+          "label": "状态指派",
+          "local": "StatusAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Asset",
+          "label": "资产",
+          "local": "Asset"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#Promotion",
+          "label": "促销",
+          "local": "Promotion"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#AssetOwnershipRole",
+          "label": "资产权益角色",
+          "local": "AssetOwnershipRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Claim",
+          "label": "理赔",
+          "local": "Claim"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductFeatureEligibility",
+          "label": "特性适用条件",
+          "local": "ProductFeatureEligibility"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#Basel1RiskWeight",
+          "label": "Basel I 风险权重",
+          "local": "Basel1RiskWeight"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/finance#ProfitabilityComponent",
+          "label": "盈利成分",
+          "local": "ProfitabilityComponent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#SwapAgreement",
+          "label": "互换协议",
+          "local": "SwapAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventPartyRole",
+          "label": "事件当事人角色",
+          "local": "EventPartyRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Agreement",
+          "label": "协议",
+          "local": "Agreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#Offer",
+          "label": "优惠",
+          "local": "Offer"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRiskGrade",
+          "label": "当事人风险等级",
+          "local": "PartyRiskGrade"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#CollateralHaircut",
+          "label": "抵押物折扣率参数",
+          "local": "CollateralHaircut"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#GroupInsurancePolicy",
+          "label": "团体保险单",
+          "local": "GroupInsurancePolicy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductPackage",
+          "label": "产品包",
+          "local": "ProductPackage"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#StressTestResult",
+          "label": "压力测试结果",
+          "local": "StressTestResult"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#CommercialInsurancePolicy",
+          "label": "商业保险单",
+          "local": "CommercialInsurancePolicy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementProductAssignment",
+          "label": "协议产品适用关系",
+          "local": "AgreementProductAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+          "label": "风险缓释协议",
+          "local": "RiskMitigantAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#Subrogation",
+          "label": "代位求偿",
+          "local": "Subrogation"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#InsuranceAgreement",
+          "label": "保险合同（保单）",
+          "local": "InsuranceAgreement"
+        }
+      ]
+    },
+    "流程": {
+      "count": 36,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/channel#WebPage",
+          "label": "网页",
+          "local": "WebPage"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#EventLocator",
+          "label": "事件位置",
+          "local": "EventLocator"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#SalvageRecord",
+          "label": "残值处置",
+          "local": "SalvageRecord"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventMetric",
+          "label": "事件度量",
+          "local": "EventMetric"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Policy",
+          "label": "保单",
+          "local": "Policy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#InvestmentAgreement",
+          "label": "投资协议",
+          "local": "InvestmentAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventProductRole",
+          "label": "事件产品角色",
+          "local": "EventProductRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/finance#JournalEntryHeader",
+          "label": "记账凭证",
+          "local": "JournalEntryHeader"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Channel",
+          "label": "渠道",
+          "local": "Channel"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#ClaimEvent",
+          "label": "理赔事件",
+          "local": "ClaimEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventFeature",
+          "label": "事件特性",
+          "local": "EventFeature"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Event",
+          "label": "事件",
+          "local": "Event"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#PromotionResponse",
+          "label": "促销响应",
+          "local": "PromotionResponse"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#ClaimServiceFeature",
+          "label": "理赔服务特性",
+          "local": "ClaimServiceFeature"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventGroup",
+          "label": "事件组",
+          "local": "EventGroup"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#TimeBound",
+          "label": "在效期内的事物",
+          "local": "TimeBound"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#WebSession",
+          "label": "网站会话",
+          "local": "WebSession"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#RealEstate",
+          "label": "房地产",
+          "local": "RealEstate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#StatusAssignment",
+          "label": "状态指派",
+          "local": "StatusAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#InsurableInterest",
+          "label": "可保利益",
+          "local": "InsurableInterest"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementRelation",
+          "label": "协议之间的关系",
+          "local": "AgreementRelation"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#AssetClassification",
+          "label": "资产分类",
+          "local": "AssetClassification"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#Promotion",
+          "label": "促销",
+          "local": "Promotion"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#AccountEvent",
+          "label": "账户事件",
+          "local": "AccountEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Claim",
+          "label": "理赔",
+          "local": "Claim"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductGroup",
+          "label": "产品组",
+          "local": "ProductGroup"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductFeatureLeeway",
+          "label": "特性浮动范围",
+          "local": "ProductFeatureLeeway"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#RoleAssignment",
+          "label": "角色关联",
+          "local": "RoleAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#FinancialEvent",
+          "label": "金融事件",
+          "local": "FinancialEvent"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRelationship",
+          "label": "当事人之间的关系",
+          "local": "PartyRelationship"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventPartyRole",
+          "label": "事件当事人角色",
+          "local": "EventPartyRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementStatement",
+          "label": "协议对账单",
+          "local": "AgreementStatement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRiskGrade",
+          "label": "当事人风险等级",
+          "local": "PartyRiskGrade"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+          "label": "风险缓释协议",
+          "local": "RiskMitigantAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#InsuranceAgreement",
+          "label": "保险合同（保单）",
+          "local": "InsuranceAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#ContactEvent",
+          "label": "接触事件",
+          "local": "ContactEvent"
+        }
+      ]
+    },
+    "时效": {
+      "count": 40,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/finance#LedgerBatch",
+          "label": "记账批次",
+          "local": "LedgerBatch"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#PromotionCell",
+          "label": "投放单元",
+          "local": "PromotionCell"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#InvestmentPosition",
+          "label": "投资头寸",
+          "local": "InvestmentPosition"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#RepurchaseAgreement",
+          "label": "回购协议",
+          "local": "RepurchaseAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementPartyRole",
+          "label": "协议当事人角色",
+          "local": "AgreementPartyRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#InvestmentAgreement",
+          "label": "投资协议",
+          "local": "InvestmentAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#SeniorityHistory",
+          "label": "缓释协议优先级历史",
+          "local": "SeniorityHistory"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AccountFeature",
+          "label": "账户特性",
+          "local": "AccountFeature"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/finance#JournalEntryHeader",
+          "label": "记账凭证",
+          "local": "JournalEntryHeader"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Account",
+          "label": "账户",
+          "local": "Account"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#AssetValue",
+          "label": "资产估值",
+          "local": "AssetValue"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#Bond",
+          "label": "债券",
+          "local": "Bond"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#MarketQuote",
+          "label": "行情报价",
+          "local": "MarketQuote"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Event",
+          "label": "事件",
+          "local": "Event"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Identification",
+          "label": "标识",
+          "local": "Identification"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#PromotionResponse",
+          "label": "促销响应",
+          "local": "PromotionResponse"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#TimeBound",
+          "label": "在效期内的事物",
+          "local": "TimeBound"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#WebSession",
+          "label": "网站会话",
+          "local": "WebSession"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#StatusAssignment",
+          "label": "状态指派",
+          "local": "StatusAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#WebSite",
+          "label": "网站",
+          "local": "WebSite"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#CollateralAgreement",
+          "label": "抵押协议",
+          "local": "CollateralAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Claim",
+          "label": "理赔",
+          "local": "Claim"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#GeographicalArea",
+          "label": "地理区域",
+          "local": "GeographicalArea"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#RoleAssignment",
+          "label": "角色关联",
+          "local": "RoleAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Metric",
+          "label": "度量",
+          "local": "Metric"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRelationship",
+          "label": "当事人之间的关系",
+          "local": "PartyRelationship"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#InsuranceRiskCategory",
+          "label": "保险风险类别",
+          "local": "InsuranceRiskCategory"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#MoneyMarketProduct",
+          "label": "货币市场工具",
+          "local": "MoneyMarketProduct"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#CollateralAssignment",
+          "label": "抵押物指配",
+          "local": "CollateralAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventPartyRole",
+          "label": "事件当事人角色",
+          "local": "EventPartyRole"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Campaign",
+          "label": "营销活动",
+          "local": "Campaign"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductFeature",
+          "label": "产品特性",
+          "local": "ProductFeature"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/org#AssociateEmployment",
+          "label": "任职关系",
+          "local": "AssociateEmployment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRiskGrade",
+          "label": "当事人风险等级",
+          "local": "PartyRiskGrade"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#CollateralHaircut",
+          "label": "抵押物折扣率参数",
+          "local": "CollateralHaircut"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyIdentification",
+          "label": "当事人标识",
+          "local": "PartyIdentification"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Quotation",
+          "label": "报价",
+          "local": "Quotation"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementProductAssignment",
+          "label": "协议产品适用关系",
+          "local": "AgreementProductAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#InsuranceAgreement",
+          "label": "保险合同（保单）",
+          "local": "InsuranceAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#ContactEvent",
+          "label": "接触事件",
+          "local": "ContactEvent"
+        }
+      ]
+    },
+    "阈值": {
+      "count": 10,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/banking#ValueAtRisk",
+          "label": "在险价值",
+          "local": "ValueAtRisk"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#Promotion",
+          "label": "促销",
+          "local": "Promotion"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductFeatureLeeway",
+          "label": "特性浮动范围",
+          "local": "ProductFeatureLeeway"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#GeographicalArea",
+          "label": "地理区域",
+          "local": "GeographicalArea"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyFinancialDocument",
+          "label": "当事人财务报告",
+          "local": "PartyFinancialDocument"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Campaign",
+          "label": "营销活动",
+          "local": "Campaign"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Quotation",
+          "label": "报价",
+          "local": "Quotation"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AgreementProductAssignment",
+          "label": "协议产品适用关系",
+          "local": "AgreementProductAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#InsurableInterest",
+          "label": "可保利益",
+          "local": "InsurableInterest"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+          "label": "风险缓释协议",
+          "local": "RiskMitigantAgreement"
+        }
+      ]
+    }
+  },
+  "keywordProbes": {
+    "retention_any": {
+      "count": 14,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/agreement#AccountFeature",
+          "label": "账户特性",
+          "local": "AccountFeature"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Account",
+          "label": "账户",
+          "local": "Account"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#WebSession",
+          "label": "网站会话",
+          "local": "WebSession"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#StatusAssignment",
+          "label": "状态指派",
+          "local": "StatusAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/channel#WebSite",
+          "label": "网站",
+          "local": "WebSite"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRelationship",
+          "label": "当事人之间的关系",
+          "local": "PartyRelationship"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Campaign",
+          "label": "营销活动",
+          "local": "Campaign"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventType",
+          "label": "事件类型",
+          "local": "eventType"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasStatus",
+          "label": "当前状态",
+          "local": "hasStatus"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#collateralizes",
+          "label": "为协议提供担保",
+          "local": "collateralizes"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#eventTimestamp",
+          "label": "事件发生时间",
+          "local": "eventTimestamp"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#attritionDate",
+          "label": "流失日",
+          "local": "attritionDate"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#hasCode",
+          "label": "代码",
+          "local": "hasCode"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#partySince",
+          "label": "建立关系日",
+          "local": "partySince"
+        }
+      ]
+    },
+    "disposal_any": {
+      "count": 8,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/insurance#SalvageRecord",
+          "label": "残值处置",
+          "local": "SalvageRecord"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/event#EventMetric",
+          "label": "事件度量",
+          "local": "EventMetric"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Policy",
+          "label": "保单",
+          "local": "Policy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#TimeBound",
+          "label": "在效期内的事物",
+          "local": "TimeBound"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#InsurableInterest",
+          "label": "可保利益",
+          "local": "InsurableInterest"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Claim",
+          "label": "理赔",
+          "local": "Claim"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/party#PartyRelationship",
+          "label": "当事人之间的关系",
+          "local": "PartyRelationship"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+          "label": "风险缓释协议",
+          "local": "RiskMitigantAgreement"
+        }
+      ]
+    },
+    "revaluation_any": {
+      "count": 10,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/banking#AssetInspection",
+          "label": "资产查勘记录",
+          "local": "AssetInspection"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#AssetValue",
+          "label": "资产估值",
+          "local": "AssetValue"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#MarketQuote",
+          "label": "行情报价",
+          "local": "MarketQuote"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#CollateralItem",
+          "label": "抵押物项",
+          "local": "CollateralItem"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/investment#MoneyMarketProduct",
+          "label": "货币市场工具",
+          "local": "MoneyMarketProduct"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#CollateralAssignment",
+          "label": "抵押物指配",
+          "local": "CollateralAssignment"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#metricOf",
+          "label": "度量所属主体",
+          "local": "metricOf"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/asset#valuationMethod",
+          "label": "估值方法",
+          "local": "valuationMethod"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#metricType",
+          "label": "度量类型",
+          "local": "metricType"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#featureValue",
+          "label": "特性取值",
+          "local": "featureValue"
+        }
+      ]
+    },
+    "threshold_any": {
+      "count": 6,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/banking#ValueAtRisk",
+          "label": "在险价值",
+          "local": "ValueAtRisk"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#ProductFeatureLeeway",
+          "label": "特性浮动范围",
+          "local": "ProductFeatureLeeway"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#GeographicalArea",
+          "label": "地理区域",
+          "local": "GeographicalArea"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/banking#RiskMitigantAgreement",
+          "label": "风险缓释协议",
+          "local": "RiskMitigantAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/campaign#conditionExpression",
+          "label": "条件表达式",
+          "local": "conditionExpression"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/product#leewayUpperBound",
+          "label": "上浮上限",
+          "local": "leewayUpperBound"
+        }
+      ]
+    },
+    "policy_any": {
+      "count": 7,
+      "items": [
+        {
+          "iri": "https://w3id.org/fsldm/agreement#IndividualInsurancePolicy",
+          "label": "个人保险单",
+          "local": "IndividualInsurancePolicy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#Policy",
+          "label": "保单",
+          "local": "Policy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/core#Agreement",
+          "label": "协议",
+          "local": "Agreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#GroupInsurancePolicy",
+          "label": "团体保险单",
+          "local": "GroupInsurancePolicy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/agreement#CommercialInsurancePolicy",
+          "label": "商业保险单",
+          "local": "CommercialInsurancePolicy"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/insurance#InsuranceAgreement",
+          "label": "保险合同（保单）",
+          "local": "InsuranceAgreement"
+        },
+        {
+          "iri": "https://w3id.org/fsldm/location#locatorUsage",
+          "label": "用途",
+          "local": "locatorUsage"
+        }
+      ]
+    }
+  },
+  "metricSchemeRows": 0,
+  "metricSchemeVariants": 0,
+  "metricSchemeSample": [],
+  "termConceptCount": 85,
+  "termConceptByStatus": {
+    "none": 85
+  }
+}

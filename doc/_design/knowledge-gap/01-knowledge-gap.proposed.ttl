@@ -1,0 +1,145 @@
+@prefix policy: <https://w3id.org/fsldm/policy#> .
+@prefix owl:    <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:   <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+@prefix party:  <https://w3id.org/fsldm/party#> .
+@prefix asset:  <https://w3id.org/fsldm/asset#> .
+@prefix bank:   <https://w3id.org/fsldm/banking#> .
+
+# =============================================================================
+# B 线 · 知识供给 seed 草稿（门禁中性版）
+#
+# 状态：草稿。未发布、未放入 platform/seed、未导入任何栈、未移动指针。
+# 目的：把 G05（保留期限）、G06（抵押物重估处置）缺的两类知识建成"可填值的骨架"。
+#
+# 边界（对齐 A 主尺子）：
+#   1. 不声明 term:termBatch      -> 锚点类计数 15 不变
+#   2. 不写带语言标签的 altLabel -> tagged altLabel 18 不变、untagged 146 不变
+#   3. 不写 term:TermEntry        -> TermEntry 18 不变
+#   4. 不写 skos:notation / inScheme term:MetricScheme -> MetricScheme 85 不变
+#   5. 不写具体数值：保留月数、触发阈值、步骤时限、审批角色一律留空，
+#      标注为「待人工输入」（见 doc/_design/knowledge-gap/01-知识供给现状与缺口-2026-11-07.md §4）
+#
+# 副作用（必须知情）：因为不挂 termBatch，这 3 个类不会进入术语门禁的形状校验，
+# 也不会进入 termlex 的检索词表；它们只被 answerable 的全图 label 扫描看到。
+# 若要让它们真正可检索、可治词，需要走 02-retrieval.proposed.ttl（会移动 A 的高水位计数）。
+# =============================================================================
+
+# ---- 1. 知识节点 ------------------------------------------------------------
+
+policy:RetentionRule a owl:Class ;
+    rdfs:label "历史记录保留"@zh ;
+    rdfs:label "Record Retention Rule"@en ;
+    skos:prefLabel "历史记录保留"@zh ;
+    skos:prefLabel "Record Retention Rule"@en ;
+    skos:definition "对某类业务记录的保留期限、起算时点、例外情形与到期处置作出规定的制度性规则。"@zh ;
+    rdfs:comment "G05 缺口：本体现有 party:PartyRelationship（当事人之间的关系）实体，但没有『保留多久』的知识。本类只声明规则骨架，具体期限待人工输入。"@zh .
+
+policy:DisposalProcedure a owl:Class ;
+    rdfs:label "处置流程"@zh ;
+    rdfs:label "Disposal Procedure"@en ;
+    skos:prefLabel "处置流程"@zh ;
+    skos:prefLabel "Disposal Procedure"@en ;
+    skos:definition "由触发条件启动、按固定步骤执行并要求时限与责任角色约束的业务处置程序。"@zh ;
+    rdfs:comment "G06 缺口：本体现有 asset:CollateralItem（抵押物项）、asset:AssetValue（资产估值）、asset:AssetInspection（资产查勘记录），但没有『价值发生巨大变化后如何处置』的流程知识。本类只声明流程骨架，触发阈值与步骤待人工输入。"@zh .
+
+policy:ProcedureStep a owl:Class ;
+    rdfs:label "处置步骤"@zh ;
+    rdfs:label "Procedure Step"@en ;
+    skos:prefLabel "处置步骤"@zh ;
+    skos:prefLabel "Procedure Step"@en ;
+    skos:definition "处置流程中的一个有序环节，记录动作、责任角色与完成时限。"@zh ;
+    rdfs:comment "步骤是流程的组成单元；具体步骤序列必须来自行内制度或业务确认，seed 不预置任何步骤。"@zh .
+
+# ---- 2. 关系与属性 ----------------------------------------------------------
+
+# 规则/流程作用于哪个实体类（对象是类 IRI，不是个体）
+policy:appliesTo a owl:ObjectProperty ;
+    rdfs:label "适用于"@zh ;
+    skos:definition "声明该规则或流程约束的本体实体类。"@zh .
+
+# --- 时效类（G05） ---
+policy:retentionPeriodMonths a owl:DatatypeProperty ;
+    rdfs:label "保留月数"@zh ;
+    rdfs:range xsd:integer ;
+    skos:definition "记录自起算时点起需保留的月数。仅由制度文件确认后填写。"@zh .
+
+policy:retentionStartEvent a owl:DatatypeProperty ;
+    rdfs:label "保留起算事件"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "保留期限的起算时点，例如关系终止日、合同到期日或销户日。"@zh .
+
+policy:retentionException a owl:DatatypeProperty ;
+    rdfs:label "保留例外"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "延长或缩短保留期的例外情形，例如诉讼、监管调查或争议未结。"@zh .
+
+policy:retentionDisposition a owl:DatatypeProperty ;
+    rdfs:label "到期处置方式"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "保留期届满后的处理方式，例如删除、匿名化或转归档。"@zh .
+
+# --- 流程类（G06） ---
+policy:triggerCondition a owl:DatatypeProperty ;
+    rdfs:label "触发条件"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "启动处置流程的判定条件，例如抵押物估值跌幅达到制度阈值。"@zh .
+
+policy:hasStep a owl:ObjectProperty ;
+    rdfs:label "包含步骤"@zh ;
+    skos:definition "流程与处置步骤之间的组成关系。"@zh .
+
+policy:stepOrder a owl:DatatypeProperty ;
+    rdfs:label "步骤序号"@zh ;
+    rdfs:range xsd:integer ;
+    skos:definition "步骤在流程中的执行顺序，从 1 开始。"@zh .
+
+policy:stepAction a owl:DatatypeProperty ;
+    rdfs:label "步骤动作"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "该步骤要求执行的具体动作，例如重新评估、追加担保或提前收回。"@zh .
+
+policy:responsibleRole a owl:DatatypeProperty ;
+    rdfs:label "责任角色"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "执行该步骤的岗位或部门，由业务确认后填写。"@zh .
+
+policy:stepDueDays a owl:DatatypeProperty ;
+    rdfs:label "步骤时限天数"@zh ;
+    rdfs:range xsd:integer ;
+    skos:definition "该步骤自触发起需在多少天内完成。"@zh .
+
+# --- 溯源（所有规则/流程共用，可核查） ---
+policy:sourceDocument a owl:DatatypeProperty ;
+    rdfs:label "依据文件"@zh ;
+    rdfs:range xsd:string ;
+    skos:definition "规则或流程所依据的监管文件、行内制度或业务确认记录的可核查定位。"@zh .
+
+# =============================================================================
+# 3. 实例模板 —— 全部注释掉，不写入
+#
+# 说明：以下不是"示例值"，而是待填槽位。任何数字/角色/步骤都必须由业务或制度
+# 文件确认；seed 作者不得自行填写合理值。
+# =============================================================================
+
+# 待人工输入 G05：
+# policy:Retention_PartyRelationship a policy:RetentionRule ;
+#     policy:appliesTo party:PartyRelationship ;
+#     policy:retentionPeriodMonths "待人工输入"^^xsd:integer ;
+#     policy:retentionStartEvent "待人工输入" ;
+#     policy:retentionException "待人工输入" ;
+#     policy:retentionDisposition "待人工输入" ;
+#     policy:sourceDocument "待人工输入" .
+
+# 待人工输入 G06：
+# policy:Disposal_CollateralValue a policy:DisposalProcedure ;
+#     policy:appliesTo asset:CollateralItem ;
+#     policy:triggerCondition "待人工输入" ;
+#     policy:hasStep policy:Step_1 ;
+#     policy:sourceDocument "待人工输入" .
+# policy:Step_1 a policy:ProcedureStep ;
+#     policy:stepOrder "待人工输入"^^xsd:integer ;
+#     policy:stepAction "待人工输入" ;
+#     policy:responsibleRole "待人工输入" ;
+#     policy:stepDueDays "待人工输入"^^xsd:integer .
