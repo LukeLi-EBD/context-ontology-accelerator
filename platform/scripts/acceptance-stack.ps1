@@ -47,14 +47,14 @@ $acceptanceOverride = Join-Path $PSScriptRoot '..\docker-compose.acceptance.yml'
 $env:ACCEPTANCE_MODELS_DIR = $modelsDirNormalized
 
 function Get-PgPassword {
-    # 与 compose 的插值顺序保持一致：shell 环境变量 > .env > 默认值。
+    # 与 compose 的插值顺序保持一致：shell 环境变量 > .env；不再回落到硬编码口令。
     if ($env:POSTGRES_PASSWORD) { return $env:POSTGRES_PASSWORD }
     $envFile = Join-Path $root '.env'
     if (Test-Path -LiteralPath $envFile) {
         $match = [regex]::Match((Get-Content -LiteralPath $envFile -Raw), '(?m)^POSTGRES_PASSWORD=([^\r\n]+)')
         if ($match.Success) { return $match.Groups[1].Value.Trim() }
     }
-    return 'platform_dev'
+    throw 'POSTGRES_PASSWORD is not set (env or platform/.env); refusing to fall back to a hard-coded password.'
 }
 
 function Initialize-IsolatedDataRoot {

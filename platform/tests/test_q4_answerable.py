@@ -28,13 +28,7 @@ from platform_core.answerable import AnswerabilityService
 from platform_core.config import ContextConfig, OntologyConfig
 from platform_core.errors import PortError
 
-DSN = os.environ.get(
-    "TEST_PG_DSN",
-    os.environ.get(
-        "PLATFORM__DATABASE__URL",
-        "postgres://platform:platform_dev@postgres:5432/platform",
-    ),
-)
+DSN = os.environ.get("TEST_PG_DSN")
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 
 
@@ -49,6 +43,7 @@ def _resolve_pinned_version(registry) -> str:
     return pointer["versionId"]
 
 
+@unittest.skipUnless(DSN, "TEST_PG_DSN not set; refusing to fall back to PLATFORM__DATABASE__URL")
 class AnswerableTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

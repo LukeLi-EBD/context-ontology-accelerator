@@ -38,7 +38,8 @@ ABOX_GRAPH = "urn:platform:graph:abox:main"
 PRED = "urn:platform:pred:rel"
 OTHER_PRED = "urn:platform:pred:other"
 
-BASE = {"database": {"url": "postgresql://platform:platform_dev@postgres:5432/platform"}}
+DSN = os.environ.get("TEST_PG_DSN")
+BASE = {"database": {"url": DSN or "postgresql://test@127.0.0.1:1/test_offline"}}
 
 
 def load(overrides: dict, environ: dict | None = None):

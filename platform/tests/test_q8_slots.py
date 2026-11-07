@@ -15,7 +15,8 @@ from platform_core.config import load_config
 from platform_core.errors import EXIT_CONFIG, PlatformError, PortError
 from platform_core.reasoning import ReasoningService
 
-BASE = {"database": {"url": "postgresql://platform:platform_dev@postgres:5432/platform"}}
+DSN = os.environ.get("TEST_PG_DSN")
+BASE = {"database": {"url": DSN or "postgresql://test@127.0.0.1:1/test_offline"}}
 
 
 def load(overrides: dict, environ: dict | None = None):

@@ -20,11 +20,12 @@ from platform_core.bootstrap import _check_embedding_identity
 from platform_core.config import EmbeddingConfig, OntologyConfig, StorageConfig
 from platform_core.errors import EXIT_CONFIG, PlatformError, PortError
 
-DSN = os.environ.get("TEST_PG_DSN", "postgres://platform:platform_dev@postgres:5432/platform")
+DSN = os.environ.get("TEST_PG_DSN")
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 DATA_ROOT = os.environ.get("TEST_DATA_ROOT", "/data")
 
 
+@unittest.skipUnless(DSN, "TEST_PG_DSN not set; refusing to fall back to a default database")
 class ContractGuardTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

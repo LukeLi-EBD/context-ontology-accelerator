@@ -16,10 +16,7 @@ from platform_core.config import OntologyConfig
 from platform_core.errors import EXIT_CONFIG, EXIT_UNAVAILABLE, PlatformError
 from platform_core.ontology_init import start
 
-DSN = os.environ.get(
-    "TEST_PG_DSN",
-    "postgres://platform:platform_dev@postgres:5432/platform",
-)
+DSN = os.environ.get("TEST_PG_DSN")
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 BOOTSTRAP_TTL = "/data/ontology/bootstrap.ttl"
 
@@ -37,6 +34,7 @@ class _NoPointerRegistry:
         return None
 
 
+@unittest.skipUnless(DSN, "TEST_PG_DSN not set; refusing to fall back to a default database")
 class OntologyInitGateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

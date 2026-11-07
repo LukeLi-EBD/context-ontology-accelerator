@@ -18,13 +18,7 @@ from platform_core.adapters.ontology_pg import (
 )
 from platform_core.errors import PortError
 
-DSN = os.environ.get(
-    "TEST_PG_DSN",
-    os.environ.get(
-        "PLATFORM__DATABASE__URL",
-        "postgresql://platform:platform_dev@postgres:5432/platform",
-    ),
-)
+DSN = os.environ.get("TEST_PG_DSN")
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 NAMESPACE = "https://w3id.org/fsldm/"
 TTL = """\
@@ -36,6 +30,7 @@ TTL = """\
 """
 
 
+@unittest.skipUnless(DSN, "TEST_PG_DSN not set; refusing to fall back to PLATFORM__DATABASE__URL")
 class PersistenceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

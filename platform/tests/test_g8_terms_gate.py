@@ -50,7 +50,8 @@ from platform_core.errors import EXIT_CONFIG, PlatformError
 from platform_core.sqlsplit import split_sql_statements
 from platform_core.validation import ShaclValidator
 
-BASE = {"database": {"url": "postgresql://platform:platform_dev@postgres:5432/platform"}}
+DSN = os.environ.get("TEST_PG_DSN")
+BASE = {"database": {"url": DSN or "postgresql://test@127.0.0.1:1/test_offline"}}
 
 SKOS_PREFIX = """\
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
@@ -392,13 +393,6 @@ class GateSemanticsTests(unittest.TestCase):
                 os.environ["PLATFORM_SMOKE_TOKEN"] = previous
 
 
-DSN = os.environ.get(
-    "TEST_PG_DSN",
-    os.environ.get(
-        "PLATFORM__DATABASE__URL",
-        "postgres://platform:***MASKED***@host.docker.internal:5432/platform",
-    ),
-)
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://host.docker.internal:7878")
 REASONER_URL = os.environ.get("TEST_REASONER_URL", "http://host.docker.internal:7879")
 POINTER_NAME = "tbox/current"
@@ -417,6 +411,7 @@ class _FakeObjects:
         return self.store[(bucket, key)], {}
 
 
+@unittest.skipUnless(DSN, "TEST_PG_DSN not set; refusing to fall back to PLATFORM__DATABASE__URL")
 class PublishGateTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

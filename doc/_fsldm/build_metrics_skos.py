@@ -18,6 +18,7 @@ rows produce byte-identical TTL.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -26,8 +27,15 @@ HERE = Path(__file__).resolve().parent
 TERMS = HERE / "fsldm-terms.ttl"
 OUT = HERE / "fsldm-metrics.ttl"
 
+PGPASSWORD = os.environ.get("PGPASSWORD")
+if not PGPASSWORD:
+    raise SystemExit(
+        "PGPASSWORD is not set; refusing to use a hard-coded database password. "
+        "Export PGPASSWORD (or source the deployment .env) before running this generator."
+    )
+
 PSQL = [
-    "docker", "exec", "-e", "PGPASSWORD=platform_dev", "agent-platform-postgres",
+    "docker", "exec", "-e", f"PGPASSWORD={PGPASSWORD}", "agent-platform-postgres",
     "psql", "-U", "platform", "-d", "platform", "-A", "-t", "-c",
     "SELECT json_agg(t) FROM (SELECT metric_id, name_zh, display_name, definition, "
     "variant_of, domain FROM platform.metric_definition ORDER BY metric_id) t;",

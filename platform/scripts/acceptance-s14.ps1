@@ -42,6 +42,18 @@ $repoRoot = Split-Path -Parent $root
 Set-Location $root
 if (-not $EvidenceDir) { $EvidenceDir = Join-Path $repoRoot 'doc\evidence' }
 New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
+
+# 口令只从环境或部署 .env 读取；不回落硬编码。
+if (-not $env:POSTGRES_PASSWORD) {
+    $envFile = Join-Path $root '.env'
+    if (Test-Path -LiteralPath $envFile) {
+        $m = [regex]::Match((Get-Content -LiteralPath $envFile -Raw), '(?m)^POSTGRES_PASSWORD=([^\r\n]+)')
+        if ($m.Success) { $env:POSTGRES_PASSWORD = $m.Groups[1].Value.Trim() }
+    }
+}
+if (-not $env:POSTGRES_PASSWORD) {
+    throw 'POSTGRES_PASSWORD is not set (env or platform/.env); refusing to fall back to a hard-coded password.'
+}
 $gitSha = (& git -C $repoRoot rev-parse --short HEAD 2>$null | Select-Object -First 1)
 if (-not $gitSha) { $gitSha = 'nogit' }
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -101,7 +113,7 @@ if (-not $NoLock) {
 $excludeArg = ($ExcludeFiles -join ',')
 $dockerArgs = @(
     'run', '--rm', '--network', $network, '--entrypoint', 'python',
-    '-e', 'TEST_PG_DSN=postgresql://platform:platform_dev@postgres:5432/platform',
+    '-e', "TEST_PG_DSN=postgresql://platform:$($env:POSTGRES_PASSWORD)@postgres:5432/platform",
     '-e', 'TEST_OXIGRAPH_URL=http://oxigraph:7878',
     '-e', 'TEST_REASONER_URL=http://reasoner:7879',
     '-v', "$root\src:/app/src:ro",
