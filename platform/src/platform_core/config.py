@@ -276,6 +276,10 @@ class ReasoningConfig(_Strict):
     max_assembly_bytes: int = Field(
         default=50 * 1024 * 1024, ge=1024, le=500 * 1024 * 1024
     )
+    # Offline-window guard: when false (default) a governed publish/rollback
+    # does NOT start a full A-Box materialization. Inference then runs only via
+    # the explicit offline `materialize` action, never as a publish side effect.
+    materialize_online: bool = False
 
 
 class LogConfig(_Strict):

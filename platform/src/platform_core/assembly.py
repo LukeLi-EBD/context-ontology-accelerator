@@ -148,10 +148,13 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     # S11: governed publish runs SHACL + consistency + breaking gates, then
     # materializes the RDFS->OWL->SHACL chain. Legacy direct publish (bootstrap
     # and S1 scripts) intentionally stays dependency-free.
+    # The hook honours reasoning.materialize_online: with the default false a
+    # publish records a deferred materialization instead of starting full
+    # A-Box inference on the online path.
     ontology.set_governance(
         validator=validator,
         reasoner=reasoner,
-        materializer=reasoning.materialize,
+        materializer=reasoning.publish_materializer,
         abox_graphs=cfg.reasoning.abox_graphs,
         reason_profile=cfg.reasoning.profile,
     )

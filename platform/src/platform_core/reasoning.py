@@ -144,6 +144,24 @@ class ReasoningService:
     def target_graph(self, version_id: str) -> str:
         return f"{self._config.inferred_graph_prefix}{version_id}"
 
+    def publish_materializer(self) -> dict[str, Any]:
+        """Materialization hook for governed publish and rollback.
+
+        ``reasoning.materialize_online=false`` (default) keeps the online path
+        from starting a full A-Box inference as a publish side effect: the
+        caller records a deferred gate result and the operator runs
+        ``materialize`` inside the offline window instead.
+        """
+        if not self._config.materialize_online:
+            return {
+                "jobId": None,
+                "inferred": 0,
+                "skipped": True,
+                "deferred": "offline_only",
+                "reason": "reasoning.materialize_online=false",
+            }
+        return self.materialize()
+
     def materialize(
         self, profile: str | None = None, force: bool = False,
         abox_graphs: list[str] | None = None,
@@ -589,12 +607,12 @@ class ReasoningService:
 
     def status(self) -> dict[str, Any]:
         pointer = self._pointer()
-        inferred_triples = None
-        if pointer:
-            try:
-                inferred_triples = self._graph.count_graph(pointer["targetGraph"])
-            except PortError:
-                inferred_triples = None
+        # The inferred graph size is recorded in platform.inferred_pointer when
+        # materialize replaces the graph, so read that stat instead of running
+        # COUNT on every status call. At 322k triples the COUNT alone cost ~115 ms
+        # (6 ms -> 125 ms on /reasoning/status); the stored value is exact for
+        # graphs this service wrote and is refreshed on the next materialize.
+        inferred_triples = int(pointer["inferred"]) if pointer else None
         available: bool | None = None
         if self._config.mode != "off":
             try:
