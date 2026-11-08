@@ -136,6 +136,16 @@ $PlaceholderHints = @('your_', 'your-', 'xxxx', 'example', 'sample', 'placeholde
 # --- Audited allowlist: exact hits only, one entry per (file, line, pattern, text). ---
 # Do NOT add directory/pattern-wide exemptions here; any new hit must still block.
 # Each entry records what matched, why it is not a credential, when, and who approved.
+#
+# GOVERNANCE (applies to the list below, not to the scan rules themselves):
+#   * A new entry may only be added after a human has reviewed the hit and signed off
+#     (ApprovedBy must name the person/decision, ApprovedOn must carry the date).
+#   * The push step itself is NOT allowed to add entries on its own initiative; if a
+#     false positive blocks a push, stop and ask the requester instead of self-exempting.
+#   * Any entry that was added by an automated/push flow still carries
+#     ReviewStatus = '[PENDING-HUMAN-REVIEW]' until a human confirms it.
+#   * Removing an entry, or widening the match (file/line/pattern/text), requires the
+#     same sign-off; the scan rules themselves are out of scope here.
 $SecretScanAllowlist = @(
     [pscustomobject]@{
         File       = 'doc/evidence/acceptance-s14-platform-acceptance-20261107-003809-b2bcd8d.log'
@@ -163,6 +173,7 @@ $SecretScanAllowlist = @(
         Reason     = 'acceptance verdict text; "NOT PASS:" + coverage_mismatch identifier trips the assigned-secret rule, no credential value present'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+        ReviewStatus = '[PENDING-HUMAN-REVIEW] added by the push flow on generic authorization; not reviewed line by line'
     },
     [pscustomobject]@{
         File       = 'doc/evidence/acceptance-s14-platform-acceptance-20261107-043532-b53314a.log'
@@ -172,6 +183,7 @@ $SecretScanAllowlist = @(
         Reason     = 'acceptance verdict text; "NOT PASS:" + tests_failed identifier trips the assigned-secret rule, no credential value present'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+        ReviewStatus = '[PENDING-HUMAN-REVIEW] added by the push flow on generic authorization; not reviewed line by line'
     },
     [pscustomobject]@{
         File       = 'platform/tests/test_g8_terms_gate.py'
@@ -181,6 +193,7 @@ $SecretScanAllowlist = @(
         Reason     = 'reads an env var into a local; the token value is a random uuid generated at runtime, no literal secret in the diff'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+        ReviewStatus = '[PENDING-HUMAN-REVIEW] added by the push flow on generic authorization; not reviewed line by line'
     },
     [pscustomobject]@{
         File       = 'doc/_fsldm/build_metrics_skos.py'
@@ -190,6 +203,7 @@ $SecretScanAllowlist = @(
         Reason     = 'variable assignment read from the environment; the next lines abort when it is unset, so no literal credential exists'
         ApprovedOn = '2026-11-08'
         ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+        ReviewStatus = '[PENDING-HUMAN-REVIEW] entry added by the push step itself (d3f60c6); needs human sign-off to count as approved'
     }
 )
 
