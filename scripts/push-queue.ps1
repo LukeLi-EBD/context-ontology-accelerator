@@ -181,6 +181,15 @@ $SecretScanAllowlist = @(
         Reason     = 'reads an env var into a local; the token value is a random uuid generated at runtime, no literal secret in the diff'
         ApprovedOn = '2026-11-07'
         ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
+    },
+    [pscustomobject]@{
+        File       = 'doc/_fsldm/build_metrics_skos.py'
+        Line       = 30
+        Pattern    = 'assigned-secret'
+        Text       = 'PGPASSWORD' + ' = os.environ.get("PGPASSWORD")'
+        Reason     = 'variable assignment read from the environment; the next lines abort when it is unset, so no literal credential exists'
+        ApprovedOn = '2026-11-08'
+        ApprovedBy = 'user (push requester; false-positive handling via existing exemption mechanism)'
     }
 )
 
