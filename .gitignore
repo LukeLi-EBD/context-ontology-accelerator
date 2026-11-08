@@ -269,3 +269,5 @@ doc/_qa-v2/
 doc/_evidence-audit/
 doc/_review/
 doc/_qa-audit/
+# 本地回滚/撤回备份（如 ont-587cc7df09a5-2026-11-08）：只在宿主机留档，不入库（added 2026-11-08）
+doc/_backup/

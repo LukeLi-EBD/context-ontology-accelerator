@@ -1451,18 +1451,23 @@ party:riskGradeReviewDate a owl:DatatypeProperty;
 评级不是定了就不动的：监管要求定期复评，逾期未复评的评级在授信审批里应当被判为失效。
 这条属性是"评级有效期"与"数据有效期"分离的体现 ——
 validUntil 说这条记录什么时候不再成立，复评日说这条记录什么时候该被重看。两者可以不等。"""@zh .
-party:riskGradePrecedes a owl:ObjectProperty , owl:TransitiveProperty , owl:AsymmetricProperty;
+party:riskGradePrecedes a owl:ObjectProperty , owl:TransitiveProperty;
     rdfs:label "等级高于"@zh;
     rdfs:domain skos:Concept;
     rdfs:range skos:Concept;
     rdfs:comment """同一套评级方案内，两个等级之间的先后关系（RISK GRADE TYPE ASSOC 的 "has precedence over"）。
 为什么不用 skos:broader：broader 表达的是"上下位概念"，无序且可多父；
 风险等级是**全序**（可比较大小），A 级优于 B 级、B 级优于 C 级，这是可传递的。
-所以单独建一条 Transitive + Asymmetric 的属性。
-写成 Asymmetric 是有代价的：一旦数据里出现环（A 高于 B、B 高于 A），
-OWL 语义下本体直接不一致 —— 而这个仓库没有真正的推理器，拦不住。
-环检测放在 SHACL-SPARQL 里，属于"未执行"清单（见指南第 9 节）。
-上生产前必须用 HermiT/ELK 或 pyshacl 跑一遍。"""@zh .
+所以声明为 Transitive：闭包可推出（A→B→C→D 得 A→D），查询侧也可用属性路径 + 求传递闭包。
+**不声明 owl:AsymmetricProperty**：OWL 2 DL 的全局限制规定，传递属性属于非简单属性，
+非简单属性不得出现在 asymmetric / irreflexive / functional / inverseFunctional / disjoint 公理中，
+两者同时声明会让本体非法（HermiT 装载即失败），所以只能二选一。
+这里保传递性（它承担全序闭包推理），把"严格序无环"（A 高于 B 且 B 高于 A 即不一致）
+交给 OWL 之外的 SHACL-SPARQL：
+  ASK { ?a party:riskGradePrecedes+ ?b . ?b party:riskGradePrecedes+ ?a }
+该环检测属"未执行"清单（见指南第 9 节），上生产前必须用 pyshacl 跑一遍。
+若将来确实需要 OWL 层拒绝环，唯一合法改法是去掉 Transitive、让本属性变简单属性后恢复 Asymmetric，
+代价是失去隐式闭包（只断言相邻等级的 A-Box 将推不出 A→D），需同步改为显式写全闭包。"""@zh .
 party:ratingLowerBound a owl:DatatypeProperty;
     rdfs:label "等级下界"@zh;
     rdfs:domain skos:Concept;
