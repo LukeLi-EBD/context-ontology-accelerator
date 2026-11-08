@@ -20,6 +20,17 @@ ROBOT_JAR = os.environ.get("ROBOT_JAR", "/opt/robot/robot.jar")
 RIOT_BIN = os.environ.get("RIOT_BIN", "/opt/jena/bin/riot")
 JAVA_OPTS = os.environ.get("JAVA_OPTS", "-Xmx2g")
 REASON_TIMEOUT = int(os.environ.get("REASON_TIMEOUT_SECONDS", "600"))
+# Offline owl:imports resolution. The catalog is optional so existing images and
+# deployments without the mount keep working unchanged.
+ROBOT_CATALOG = os.environ.get("ROBOT_CATALOG", "/catalog/catalog-v001.xml")
+
+
+def catalog_args() -> list[str]:
+    """Return ROBOT --catalog args only when the mounted catalog exists."""
+    path = Path(ROBOT_CATALOG)
+    return ["--catalog", path.as_posix()] if path.is_file() else []
+
+
 PROFILE_REASONER = {
     # ROBOT's `reason` exposes ELK/HermiT/JFact only; RDFS closure is not offered.
     "EL": "ELK",
@@ -103,6 +114,7 @@ def reason(request: ReasonRequest) -> dict[str, object]:
             "-jar",
             ROBOT_JAR,
             "reason",
+            *catalog_args(),
             "--reasoner",
             reasoner,
             # ROBOT only emits inferred axioms that a generator requests. ELK
@@ -186,6 +198,7 @@ def _run_robot(
             "-jar",
             ROBOT_JAR,
             "reason",
+            *catalog_args(),
             "--reasoner",
             reasoner,
         ]

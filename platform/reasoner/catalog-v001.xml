@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog" prefer="public">
+  <!-- Offline resolution for the FS-LDM ontologies imported by older T-Box
+       wrappers. Mounted read-only at /catalog; see docker-compose reasoner.volumes. -->
+  <uri name="https://w3id.org/fsldm/merged" uri="file:///catalog/fsldm-merged.ttl"/>
+  <uri name="https://w3id.org/fsldm/terms" uri="file:///catalog/fsldm-terms.ttl"/>
+</catalog>

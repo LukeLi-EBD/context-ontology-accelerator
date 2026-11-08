@@ -148,6 +148,7 @@ services:
       context: ./reasoner
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    # app.py 含 --catalog 逻辑；改动后必须重建本 tag，否则下面的 catalog 挂载不生效。
     image: agent-reasoner:0.1-s5
     container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-reasoner
     profiles: ["learn", "reasoning"]
@@ -156,6 +157,12 @@ services:
       JAVA_OPTS: "-Xmx2g"
     ports:
       - "127.0.0.1:${REASONER_PORT:-7879}:7879"
+    # 离线 owl:imports：catalog 把 w3id IRI 映射到本地 TTL，避免 ROBOT 联网解析
+    # 404 时抛 UnloadableImportException。文件只读挂载，不改变镜像内语义。
+    volumes:
+      - ./reasoner/catalog-v001.xml:/catalog/catalog-v001.xml:ro
+      - ../doc/_fsldm/fsldm-merged.ttl:/catalog/fsldm-merged.ttl:ro
+      - ../doc/_fsldm/fsldm-terms.ttl:/catalog/fsldm-terms.ttl:ro
     # 4g = java -Xmx2g + 2g 留给 JVM 元空间/线程栈/uvicorn 本体（原 3g 并发推理易 OOM）
     mem_limit: 4g
     healthcheck:
