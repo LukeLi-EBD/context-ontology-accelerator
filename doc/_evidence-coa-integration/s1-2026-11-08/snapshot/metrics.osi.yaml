@@ -1,0 +1,2018 @@
+osi_spec_version: '1.0'
+datasets:
+- name: platform.bank_collection_case
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_collection_recovery
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_concentration_stat
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_credit_application
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_credit_facility
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_deposit_account
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_disposal_event
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_ews_signal
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_loan_account
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_loan_repayment
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_npl_snapshot
+  source: postgres
+  data_source_id: platform
+- name: platform.bank_provision_snapshot
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_aum_snapshot
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_behavior_snapshot
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_campaign_touch
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_cohort_stat
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_complaint
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_master
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_product_holding
+  source: postgres
+  data_source_id: platform
+- name: platform.cust_transaction
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_claim_case
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_claim_reserve_snapshot
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_payment_record
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_persistence_stat
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_policy
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_policy_event
+  source: postgres
+  data_source_id: platform
+- name: platform.ins_underwriting_stat
+  source: postgres
+  data_source_id: platform
+- name: platform.loan_installment_plan
+  source: postgres
+  data_source_id: platform
+metrics:
+- name: CUST-001
+  description: 距客户最近一次有效行为（交易/还款/缴费/保单生效）的天数，越短越活跃。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, MAX(days_since_last_behavior)
+        AS numerator FROM platform.cust_behavior_snapshot WHERE as_of = ''2025-12-31''
+        AND (days_since_last_behavior IS NOT NULL) AND data_source = ''synthetic''
+        GROUP BY customer_no)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_behavior_snapshot
+      unit: 天
+      return_type: duration
+      time_dimension: as_of
+      defined_by: platform
+      label: RFM-R（最近一次行为）
+- name: CUST-002
+  description: 统计窗口内客户有效交易（或缴费）次数，反映交互频次。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, COUNT(DISTINCT txn_date)
+        AS numerator FROM platform.cust_transaction WHERE txn_date >= ''2025-01-01''
+        AND txn_date <= ''2025-12-31'' AND (txn_type <> ''refund'' AND amount > 0)
+        AND data_source = ''synthetic'' GROUP BY customer_no)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_transaction
+      unit: 次
+      return_type: count
+      time_dimension: txn_date
+      defined_by: platform
+      label: RFM-F（频次）
+- name: CUST-003
+  description: 统计窗口内客户有效交易金额合计，反映客户贡献规模。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, SUM(amount) AS numerator
+        FROM platform.cust_transaction WHERE txn_date >= ''2025-01-01'' AND txn_date
+        <= ''2025-12-31'' AND (txn_type <> ''refund'') AND data_source = ''synthetic''
+        GROUP BY customer_no)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_transaction
+      unit: 元
+      return_type: amount
+      time_dimension: txn_date
+      defined_by: platform
+      label: RFM-M（金额）
+- name: CUST-004
+  description: 对 R/F/M 三个维度分别按分位数切 5 档（1–5 分），组合为三位 RFM 码用于客户分层。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: score(ntile, rfm_code, 5)
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 档/码（1–5）
+      return_type: score
+      defined_by: platform
+      label: RFM 分档（五分位）
+- name: CUST-005
+  description: 无有效交易客户用注册/开卡/首单/保单生效日作为代理最近行为日计算 R，并单独标记未激活
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, MAX(days_since_proxy_event)
+        AS numerator FROM platform.cust_behavior_snapshot WHERE as_of = ''2025-12-31''
+        AND (last_txn_date IS NULL AND days_since_proxy_event IS NOT NULL) AND data_source
+        = ''synthetic'' GROUP BY customer_no)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_behavior_snapshot
+      unit: 天
+      return_type: duration
+      time_dimension: as_of
+      defined_by: platform
+      label: RFM-R（无交易代理口径）
+- name: CUST-006
+  description: 按获客起始期分组（cohort），第 N 月仍活跃的客户占该 cohort 初始客户数的比例。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT cohort_key AS entity_key, SUM(retained_customers)
+        AS numerator FROM platform.cust_cohort_stat WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY cohort_key),
+
+        den AS (SELECT cohort_key AS entity_key, SUM(cohort_customers) AS denominator
+        FROM platform.cust_cohort_stat WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY cohort_key)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_cohort_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 客户留存率（cohort）
+- name: CUST-007
+  description: 期初客户中在观察窗口内无任何有效行为的客户占比。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT cohort_key AS entity_key, SUM(cohort_customers
+        - active_customers) AS numerator FROM platform.cust_cohort_stat WHERE as_of
+        >= ''2025-01-01'' AND as_of <= ''2025-12-31'' AND data_source = ''synthetic''
+        GROUP BY cohort_key),
+
+        den AS (SELECT cohort_key AS entity_key, SUM(cohort_customers) AS denominator
+        FROM platform.cust_cohort_stat WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY cohort_key)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_cohort_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 客户流失率
+- name: CUST-008
+  description: 本月活跃客户中上月也活跃的比例，逐月滚动观察整体客户盘留存。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(active_and_prior_month)
+        AS numerator FROM platform.cust_cohort_stat WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(prior_month_active) AS denominator
+        FROM platform.cust_cohort_stat WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_cohort_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 月度滚动留存率
+- name: CUST-009
+  description: 客户在观察时点持有的有效产品数量，按产品大类去重
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, COUNT(DISTINCT product_category)
+        AS numerator FROM platform.cust_product_holding WHERE as_of = ''2025-12-31''
+        AND (holding_status = ''active'') AND data_source = ''synthetic'' GROUP BY
+        customer_no)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_product_holding
+      unit: 个
+      return_type: count
+      time_dimension: as_of
+      defined_by: platform
+      label: 产品持有数
+- name: CUST-010
+  description: 客户平均持有有效产品数，反映交叉销售深度
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, ((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0))) AS metric_value FROM platform.metric_fact_cust_010('2025-01-01', '2025-12-31',
+        'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 个/户
+      return_type: ratio
+      defined_by: platform
+      label: 人均产品数
+- name: CUST-011
+  description: 本公司在该客户某品类获得的业务额占该客户该品类总消费的比例。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: numerator / denominator * 100
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      label: 钱包份额（SOW）
+- name: CUST-012
+  description: 客户在观察时点在本行/集团持有的可计入资产市值合计（存款、理财、基金、保险、国债等）。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, SUM(aum) AS numerator
+        FROM platform.cust_aum_snapshot WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY customer_no)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_aum_snapshot
+      unit: 元
+      return_type: amount
+      time_dimension: as_of
+      defined_by: platform
+      label: AUM（时点）
+- name: CUST-013
+  description: 观察期内客户每日 AUM 的平均值，用于平滑时点波动。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT customer_no AS entity_key, SUM(aum) AS numerator
+        FROM platform.cust_aum_snapshot WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY customer_no),
+
+        den AS (SELECT customer_no AS entity_key, COUNT(DISTINCT as_of) AS denominator
+        FROM platform.cust_aum_snapshot WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY customer_no)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, ((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0))) AS metric_value FROM
+        num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.cust_aum_snapshot
+      unit: 元
+      return_type: period_value
+      time_dimension: as_of
+      defined_by: platform
+      label: AUM（日均）
+- name: FIN-BANK-001
+  description: 贷款合同到期（含批准展期后到期）未归还时，自到期日次日起至观察日累计的自然日天数。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (COALESCE(f.numerator, 0)::numeric) AS metric_value FROM platform.metric_fact_fin_bank_001('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 天
+      return_type: duration
+      defined_by: platform
+      label: 逾期天数（DPD）
+- name: FIN-BANK-002
+  description: 按逾期天数将账户划入 M0–M6 月度分桶，M0 未逾期、M1 逾期 1–30 天、M2 逾期 31–60 天，其余每 30 天一档至
+    M6
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: band(dpd, 30, 6)
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 档（M0–M6）
+      return_type: band
+      defined_by: platform
+      label: 逾期分档（M0–M6）
+- name: FIN-BANK-003
+  description: 本金、利息或收益逾期超过 90 天的金融资产，风险分类下限至少为次级类。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 若 max(观察日 − 应还款日, 0) > 90 → 分类下限 = 次级（可下调不可上调）；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 档（正常/关注/次级/可疑/损失）
+      return_type: rule_set
+      defined_by: platform
+      label: 逾期90天→至少次级
+- name: FIN-BANK-004
+  description: 把逾期超过 90 天作为已发生信用减值（credit-impaired）的判断依据之一，据此划入 IFRS 9 第三阶段。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 若 DPD > 90 → Stage 3；否则按信用风险显著增加判断 Stage 2/1；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 阶段（Stage 1/2/3）
+      return_type: rule_set
+      defined_by: platform
+      label: 逾期90天→Stage 3
+- name: FIN-BANK-005
+  description: 自初始确认后信用风险显著增加但尚未发生信用减值的金融资产划入第二阶段，30 天逾期作为可推翻的显著增加假设
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: Stage2 = (DPD>30) ∧ 未发生信用减值，允许以定量或定性证据推翻
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 阶段（Stage 1/2/3）与占比 %
+      return_type: rule_set
+      defined_by: platform
+      label: Stage 2“30 天显著增加”
+- name: FIN-BANK-006
+  description: 未按合同还足当期应还金额（含信用卡最低还款额）时判定该期逾期，按整期逾期而非仅未还部分
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 逾期标志=1 若 实还金额<当期应还金额或最低还款额，逾期起点=应还款日次日
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 标志 0/1 与天
+      return_type: rule_set
+      defined_by: platform
+      label: 部分还款/最低还款逾期判定
+- name: FIN-BANK-007
+  description: 按债务人偿债能力、逾期与减值情况，把金融资产划分为正常、关注、次级、可疑、损失五类，后三类合称不良。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: classification ∈ {正常, 关注, 次级, 可疑, 损失}；不良 = 次级 + 可疑 + 损失；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 档
+      return_type: rule_set
+      defined_by: platform
+      label: 五级分类结果
+- name: FIN-BANK-008
+  description: 不良贷款余额占各项贷款余额的比重，衡量信贷资产质量。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(principal_balance)
+        AS numerator FROM platform.bank_loan_account WHERE as_of = ''2025-12-31''
+        AND (risk_class IN (''substandard'',''doubtful'',''loss'')) AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(principal_balance) AS denominator
+        FROM platform.bank_loan_account WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 不良贷款率
+- name: FIN-BANK-009
+  description: 同一非零售债务人在本行被分为不良的债权超过 10% 时，该债务人在本行的全部债权归为不良。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 若 本行对该债务人不良余额 / 本行对该债务人全部债权余额 > 10% → 全部债权归为不良；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 标志/档
+      return_type: rule_set
+      defined_by: platform
+      label: 交叉违约触发不良
+- name: FIN-BANK-010
+  description: 因债务人财务困难而作出有利于债务人的合同调整或提供再融资所形成的资产，观察期至少 1 年且不少于连续 2 个还款期。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 重组标志 = 财务困难 ∧ 合同调整；观察期 = max(1 年, 连续 2 个还款期)；重组后分类下限：原正常/关注→至少关注，再次重组→至少次级；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 标志/档
+      return_type: rule_set
+      defined_by: platform
+      label: 重组贷款（现行）
+- name: FIN-BANK-011
+  description: 2007 指引口径下需要重组的贷款至少归为次级，观察期内不得上调分类。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 重组标志 = 需要重组；分类下限 = 次级；观察期 ≥ 180 天；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 标志/档
+      return_type: rule_set
+      defined_by: platform
+      label: 重组贷款（旧规）
+- name: FIN-BANK-012
+  description: 通过展期、借新还旧或其他债务融资方式偿还的资产，按重组规则归类并适用分类下限。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 若 展期获批 ∨ 借新还旧 → 至少关注；满足财务困难则计入重组；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 标志/档
+      return_type: rule_set
+      defined_by: platform
+      label: 展期/借新还旧归类
+- name: FIN-BANK-013
+  description: 期初正常类贷款中在报告期内迁徙到后四类的金额，占期初正常类余额扣期间减少后的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start
+        - period_decrease_amount, 0)) AS numerator FROM platform.bank_loan_account
+        WHERE as_of >= ''2025-01-01'' AND as_of <= ''2025-12-31'' AND (risk_class_start
+        = ''normal'' AND risk_class_end IN (''special'',''substandard'',''doubtful'',''loss''))
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start - period_decrease_amount,
+        0)) AS denominator FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND (risk_class_start = ''normal'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 正常类贷款迁徙率
+- name: FIN-BANK-014
+  description: 期初关注类贷款中在报告期内迁徙为不良的金额，占期初关注类余额扣期间减少后的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start
+        - period_decrease_amount, 0)) AS numerator FROM platform.bank_loan_account
+        WHERE as_of >= ''2025-01-01'' AND as_of <= ''2025-12-31'' AND (risk_class_start
+        = ''special'' AND risk_class_end IN (''substandard'',''doubtful'',''loss''))
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start - period_decrease_amount,
+        0)) AS denominator FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND (risk_class_start = ''special'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 关注类贷款迁徙率
+- name: FIN-BANK-015
+  description: 期初次级类贷款中在报告期内迁徙为可疑或损失的金额，占期初次级类余额扣期间减少后的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start
+        - period_decrease_amount, 0)) AS numerator FROM platform.bank_loan_account
+        WHERE as_of >= ''2025-01-01'' AND as_of <= ''2025-12-31'' AND (risk_class_start
+        = ''substandard'' AND risk_class_end IN (''doubtful'',''loss'')) AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start - period_decrease_amount,
+        0)) AS denominator FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND (risk_class_start = ''substandard'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 次级类贷款迁徙率
+- name: FIN-BANK-016
+  description: 期初可疑类贷款中在报告期内迁徙为损失的金额，占期初可疑类余额扣期间减少后的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start
+        - period_decrease_amount, 0)) AS numerator FROM platform.bank_loan_account
+        WHERE as_of >= ''2025-01-01'' AND as_of <= ''2025-12-31'' AND (risk_class_start
+        = ''doubtful'' AND risk_class_end = ''loss'') AND data_source = ''synthetic''
+        GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(GREATEST(balance_start - period_decrease_amount,
+        0)) AS denominator FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND (risk_class_start = ''doubtful'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 可疑类贷款迁徙率
+- name: FIN-BANK-017
+  description: 期初逾期 30–59 天的账户在观察期末迁徙到 60 天及以上的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, COUNT(DISTINCT account_id)
+        AS numerator FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND (dpd_start BETWEEN 30 AND 59 AND dpd_end >=
+        60) AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, COUNT(DISTINCT account_id) AS denominator
+        FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND (dpd_start BETWEEN 30 AND 59) AND data_source = ''synthetic''
+        GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 逾期迁徙率 30→60
+- name: FIN-BANK-018
+  description: 期初逾期 60–89 天的账户在观察期末迁徙到 90 天及以上的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, COUNT(DISTINCT account_id)
+        AS numerator FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01''
+        AND as_of <= ''2025-12-31'' AND (dpd_start BETWEEN 60 AND 89 AND dpd_end >=
+        90) AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, COUNT(DISTINCT account_id) AS denominator
+        FROM platform.bank_loan_account WHERE as_of >= ''2025-01-01'' AND as_of <=
+        ''2025-12-31'' AND (dpd_start BETWEEN 60 AND 89) AND data_source = ''synthetic''
+        GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 逾期迁徙率 60→90
+- name: FIN-BANK-019
+  description: 期初 DPD30–59 的同批账户在连续两个自然月内累计迁徙到 90 天以上的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: metric_fin_bank_017 * metric_fin_bank_018
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: derived_rate
+      defined_by: platform
+      label: 30→90 累计迁徙率
+- name: FIN-BANK-020
+  description: 以户数而非余额计算的迁徙率变体：期初该分类客户中期末迁徙到更高分类的客户占比；仅作内部风控对照，监管口径为余额法。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: numerator / denominator * 100
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      label: 迁徙率（户数口径变体）
+- name: FIN-BANK-021
+  description: 五级分类迁徙矩阵口径：期初正常类与关注类贷款在观察期末迁徙为不良（次级/可疑/损失）的比例；核销不计入迁徙分母，单独列示。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: numerator / denominator * 100
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      label: 迁徙率（期末余额口径变体）
+- name: FIN-BANK-022
+  description: 贷款损失准备余额对不良贷款余额的覆盖程度，监管基本标准 150%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(provision_balance)
+        AS numerator FROM platform.bank_provision_snapshot WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(npl_balance) AS denominator
+        FROM platform.bank_provision_snapshot WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_provision_snapshot
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 拨备覆盖率
+- name: FIN-BANK-023
+  description: 贷款损失准备余额占各项贷款余额的比重，监管基本标准 2.5%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(provision_balance)
+        AS numerator FROM platform.bank_provision_snapshot WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(loan_balance) AS denominator
+        FROM platform.bank_provision_snapshot WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_provision_snapshot
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 贷款拨备率
+- name: FIN-BANK-024
+  description: 按信用风险自初始确认后是否显著增加、是否发生信用减值，把金融资产划入三个阶段并分别按 12 个月或存续期 ECL 计量。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: Stage 1：未显著增加→12 个月 ECL；Stage 2：显著增加且未减值→存续期 ECL；Stage 3：已减值→存续期
+        ECL；规则型
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 阶段（Stage 1/2/3）
+      return_type: rule_set
+      defined_by: platform
+      label: IFRS 9 三阶段划分
+- name: FIN-BANK-025
+  description: 对同一借款人的贷款余额占商业银行资本余额的比重，监管上限 10%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, MAX(max_single_customer_loan)
+        AS numerator FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, MAX(capital_balance) AS denominator
+        FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_concentration_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 单一客户贷款集中度
+- name: FIN-BANK-026
+  description: 对非同业单一客户的风险暴露占一级资本净额的比重（上限 15%）；贷款余额/资本净额（上限 10%）为并列变体。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, MAX(max_single_customer_exposure)
+        AS numerator FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, MAX(tier1_capital_net) AS denominator
+        FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_concentration_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 单一非同业客户风险暴露/一级资本净额
+- name: FIN-BANK-027
+  description: 对一组非同业关联客户的风险暴露占一级资本净额的比重，监管上限 20%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, MAX(max_group_exposure)
+        AS numerator FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, MAX(tier1_capital_net) AS denominator
+        FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_concentration_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 非同业关联客户风险暴露集中度
+- name: FIN-BANK-028
+  description: 最大一家集团客户的授信总额占资本净额的比重，监管上限 15%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, MAX(max_group_credit)
+        AS numerator FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, MAX(capital_net) AS denominator
+        FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_concentration_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 单一集团客户授信集中度
+- name: FIN-BANK-029
+  description: 全部关联方授信总额占资本净额的比重，监管上限 50%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, MAX(total_related_exposure)
+        AS numerator FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31''
+        AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, MAX(capital_net) AS denominator
+        FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_concentration_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 全部关联度
+- name: FIN-BANK-030
+  description: 对单一客户或一组关联客户的风险暴露超过一级资本净额 2.5% 时，认定为大额风险暴露。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, MAX(GREATEST(max_single_customer_exposure,
+        max_group_exposure)) AS numerator FROM platform.bank_concentration_stat WHERE
+        as_of = ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, MAX(tier1_capital_net) AS denominator
+        FROM platform.bank_concentration_stat WHERE as_of = ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_concentration_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 大额风险暴露认定
+- name: FIN-BANK-031
+  description: 统计期内首次受理的信贷申请中，在观察截止日（期末+30 天）前完成审批且结论为通过的申请笔数占比
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0)) * 100)) AS metric_value FROM platform.metric_fact_fin_bank_031('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 申请通过率
+- name: FIN-BANK-032
+  description: 同一时点已用授信本金占已批复且有效授信额度的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0)) * 100)) AS metric_value FROM platform.metric_fact_fin_bank_032('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 额度使用率
+- name: FIN-BANK-033
+  description: 新发放贷款在首个还款期即发生逾期的账户占比（固定账户口径变体 A）
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, COUNT(DISTINCT account_id)
+        AS numerator FROM platform.bank_loan_account WHERE first_payment_due_date
+        >= ''2025-01-01'' AND first_payment_due_date <= ''2025-12-31'' AND (first_payment_due_date
+        IS NOT NULL AND first_payment_default_flag) AND data_source = ''synthetic''
+        GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, COUNT(DISTINCT account_id) AS denominator
+        FROM platform.bank_loan_account WHERE first_payment_due_date >= ''2025-01-01''
+        AND first_payment_due_date <= ''2025-12-31'' AND (first_payment_due_date IS
+        NOT NULL) AND data_source = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.bank_loan_account
+      unit: '%'
+      return_type: ratio
+      time_dimension: first_payment_due_date
+      defined_by: platform
+      label: 首逾率（FPD）
+- name: FIN-BANK-034
+  description: 按可配置规则集监测资产质量恶化信号，命中对象进入预警清单，按规则严重度与命中数输出 L1–L3
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 预警等级 = f(命中规则集合)，规则 R01–R10 与阈值沿用 v5 rule_set_json
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 等级 L1–L3 加命中清单
+      return_type: rule_set
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 早期预警（EWS）
+- name: FIN-BANK-035
+  description: 观察期初在催账户的本金在观察期内现金回收的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0)) * 100)) AS metric_value FROM platform.metric_fact_fin_bank_035('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 催收回收率
+- name: FIN-BANK-036
+  description: 口径族索引：不良处置率（-v1，默认）与处置回收率（-v2）并列；本行不单独出数。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 不适用（族索引；见 FIN-BANK-036-v1 / -v2）
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: index
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 不良处置率/处置回收率
+- name: FIN-BANK-036-v1
+  description: 期内完成处置的不良资产账面金额（gross，含核销）占期初不良资产余额的比例。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0)) * 100)) AS metric_value FROM platform.metric_fact_fin_bank_036_v1('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 不良处置率
+- name: FIN-BANK-036-v2
+  description: 报告期内完成处置的不良资产实际回收金额占期内处置标的账面金额的比例，衡量处置回收效率。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0)) * 100)) AS metric_value FROM platform.metric_fact_fin_bank_036_v2('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 处置回收率
+- name: FIN-INS-001
+  description: 按保险合同确认的保费收入，不含保户投资款新增交费和投连险独立账户新增交费。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (COALESCE(f.numerator, 0)::numeric) AS metric_value FROM platform.metric_fact_fin_ins_001('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: 元
+      return_type: sum
+      defined_by: platform
+      label: 原保险保费收入
+- name: FIN-INS-002
+  description: 统计期内销售的保单保费总额，按销售/承保时点归集，批改按批单调整。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(premium_amount -
+        reversal_amount) AS numerator FROM platform.ins_policy WHERE issue_date >=
+        ''2025-01-01'' AND issue_date <= ''2025-12-31'' AND (status_as_of = ''2025-12-31'')
+        AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_policy
+      unit: 元
+      return_type: amount
+      time_dimension: issue_date
+      defined_by: platform
+      label: 签单保费
+- name: FIN-INS-003
+  description: 按收付实现制，统计期内实际收到的保费扣除批退与退费
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(collected_premium)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY
+        institution)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: 元
+      return_type: amount
+      time_dimension: period_end
+      defined_by: platform
+      label: 实收保费
+- name: FIN-INS-004
+  description: 期交保单项下第二个保单年度及以后各期应收（签单）保费之和。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(due_amount) AS numerator
+        FROM platform.ins_payment_record WHERE due_date >= ''2025-01-01'' AND due_date
+        <= ''2025-12-31'' AND (payment_type = ''current'' AND policy_year >= 2 AND
+        status_as_of = ''2025-12-31'') AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_payment_record
+      unit: 元
+      return_type: amount
+      time_dimension: due_date
+      defined_by: platform
+      label: 续期保费（签单口径）
+- name: FIN-INS-005
+  description: 按缴费方式区分趸交与期交，并计算新单首年保费（首年期交保费 + 趸交保费）。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(CASE WHEN premium_type
+        = ''single'' THEN premium_amount ELSE first_year_premium END) AS numerator
+        FROM platform.ins_policy WHERE issue_date >= ''2025-01-01'' AND issue_date
+        <= ''2025-12-31'' AND (status_as_of = ''2025-12-31'') AND data_source = ''synthetic''
+        GROUP BY product)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_policy
+      unit: 元
+      return_type: amount
+      time_dimension: issue_date
+      defined_by: platform
+      label: 趸交/期交与首年保费
+- name: FIN-INS-006
+  description: 实际保费完成额占计划保费的比重
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(collected_premium)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY
+        institution),
+
+        den AS (SELECT institution AS entity_key, SUM(plan_premium) AS denominator
+        FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01'' AND
+        period_end <= ''2025-12-31'' AND data_source = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 保费达成率
+- name: FIN-INS-007
+  description: 赔款支出占保费收入的比重（简单口径，不调未决准备金与再保摊回）
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(paid_amount) AS
+        numerator FROM platform.ins_claim_case WHERE decision_date >= ''2025-01-01''
+        AND decision_date <= ''2025-12-31'' AND (claim_status = ''paid'') AND data_source
+        = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, SUM(premium_amount - reversal_amount)
+        AS denominator FROM platform.ins_policy WHERE issue_date >= ''2025-01-01''
+        AND issue_date <= ''2025-12-31'' AND (NOT is_investment_linked AND status_as_of
+        = ''2025-12-31'') AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_claim_case
+      unit: '%'
+      return_type: ratio
+      time_dimension: decision_date
+      defined_by: platform
+      label: 简单赔付率
+- name: FIN-INS-008
+  description: 财产险口径下，赔付支出（含未决赔款准备金变动、扣摊回）占自留保费（扣未到期责任准备金变动）的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(paid_claims
+        + claim_reserve_change - reinsurance_recoverable) AS numerator FROM platform.ins_underwriting_stat
+        WHERE period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND (business_line
+        = ''property'') AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(retained_premium - unearned_reserve_change)
+        AS denominator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''property'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 综合赔付率（财产险·规则18）
+- name: FIN-INS-009
+  description: 一年期及以下个人短期健康险的再保后综合赔付率。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(paid_claims
+        + claim_reserve_change - reinsurance_recoverable) AS numerator FROM platform.ins_underwriting_stat
+        WHERE period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND (business_line
+        = ''health'') AND data_source = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(earned_premium - ceded_premium
+        + reinsurance_reserve_change) AS denominator FROM platform.ins_underwriting_stat
+        WHERE period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND (business_line
+        = ''health'') AND data_source = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 综合赔付率（短期健康险）
+- name: FIN-INS-010
+  description: 按财政部绩效评价口径，赔付相关支出占已赚保费的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(paid_claims
+        + claim_reserve_change) AS numerator FROM platform.ins_underwriting_stat WHERE
+        period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(signed_premium - ceded_premium
+        - unearned_reserve_change) AS denominator FROM platform.ins_underwriting_stat
+        WHERE period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 综合赔付率（财政部）
+- name: FIN-INS-011
+  description: 财产险当期赔付与费用合计占自留保费（扣未到期责任准备金变动）的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(paid_claims
+        + claim_reserve_change - reinsurance_recoverable + expense_total) AS numerator
+        FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01'' AND
+        period_end <= ''2025-12-31'' AND (business_line = ''property'') AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(retained_premium - unearned_reserve_change)
+        AS denominator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''property'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 综合成本率（财产险当期）
+- name: FIN-INS-012
+  description: 两年费用与赔付合计占两年自留保费净额的比重（2003 旧规口径的代数合并式）
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: metric_fin_ins_027 + metric_fin_ins_013
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: derived_rate
+      defined_by: platform
+      label: 两年综合成本率（2003）
+- name: FIN-INS-013
+  description: 旧规两年口径赔付率：两年赔款及准备金提转差合计占两年自留保费（扣准备金提转差）的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(paid_claims
+        + claim_reserve_change + long_term_reserve_change - reinsurance_recoverable)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''property'') AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(retained_premium - unearned_reserve_change
+        - long_term_reserve_change) AS denominator FROM platform.ins_underwriting_stat
+        WHERE period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND (business_line
+        = ''property'') AND data_source = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 两年赔付率（2003）
+- name: FIN-INS-014
+  description: 评估时点对已发生未结案赔案计提的准备金，含已报案、IBNR 与理赔费用准备金。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(reported_reserve
+        + ibnr_reserve + expense_reserve) AS numerator FROM platform.ins_claim_reserve_snapshot
+        WHERE as_of = ''2025-12-31'' AND (case_status = ''open'') AND data_source
+        = ''synthetic'' GROUP BY product)
+
+        SELECT num.entity_key AS entity_key, num.numerator AS numerator, NULL::numeric
+        AS denominator, (COALESCE(num.numerator, 0)::numeric) AS metric_value FROM
+        num'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_claim_reserve_snapshot
+      unit: 元
+      return_type: amount
+      time_dimension: as_of
+      defined_by: platform
+      label: 未决赔款准备金
+- name: FIN-INS-015
+  description: 统计期内正常结案赔案的平均赔款金额。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(paid_amount) AS
+        numerator FROM platform.ins_claim_case WHERE decision_date >= ''2025-01-01''
+        AND decision_date <= ''2025-12-31'' AND (claim_status = ''paid'' AND paid_amount
+        > 0) AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, COUNT(DISTINCT claim_no) AS denominator
+        FROM platform.ins_claim_case WHERE decision_date >= ''2025-01-01'' AND decision_date
+        <= ''2025-12-31'' AND (claim_status = ''paid'' AND paid_amount > 0) AND data_source
+        = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, ((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0))) AS metric_value FROM
+        num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_claim_case
+      unit: 元/件
+      return_type: ratio
+      time_dimension: decision_date
+      defined_by: platform
+      label: 案均已决金额
+- name: FIN-INS-016
+  description: 评估时点未决赔案的平均未决估损金额。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(reported_reserve
+        + ibnr_reserve + expense_reserve) AS numerator FROM platform.ins_claim_reserve_snapshot
+        WHERE as_of = ''2025-12-31'' AND (case_status = ''open'') AND data_source
+        = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, COUNT(DISTINCT claim_no) AS denominator
+        FROM platform.ins_claim_reserve_snapshot WHERE as_of = ''2025-12-31'' AND
+        (case_status = ''open'') AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, ((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0))) AS metric_value FROM
+        num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_claim_reserve_snapshot
+      unit: 元/件
+      return_type: ratio
+      time_dimension: as_of
+      defined_by: platform
+      label: 案均未决金额
+- name: FIN-INS-017
+  description: 统计期内报案件数占有效保单件数的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, COUNT(DISTINCT claim_no)
+        AS numerator FROM platform.ins_claim_case WHERE report_date >= ''2025-01-01''
+        AND report_date <= ''2025-12-31'' AND (claim_status <> ''withdrawn'') AND
+        data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, COUNT(DISTINCT policy_no) AS denominator
+        FROM platform.ins_policy WHERE status_as_of = ''2025-12-31'' AND (policy_status
+        = ''in_force'') AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_claim_case
+      unit: '%'
+      return_type: ratio
+      time_dimension: report_date
+      defined_by: platform
+      label: 报案率
+- name: FIN-INS-018
+  description: 立案数量占有效报案数量的比例（有效报案剔除注销报案）。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, COUNT(DISTINCT claim_no)
+        AS numerator FROM platform.ins_claim_case WHERE report_date >= ''2025-01-01''
+        AND report_date <= ''2025-12-31'' AND (claim_status <> ''withdrawn'' AND filing_date
+        IS NOT NULL) AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, COUNT(DISTINCT claim_no) AS denominator
+        FROM platform.ins_claim_case WHERE report_date >= ''2025-01-01'' AND report_date
+        <= ''2025-12-31'' AND (claim_status <> ''withdrawn'') AND data_source = ''synthetic''
+        GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_claim_case
+      unit: '%'
+      return_type: ratio
+      time_dimension: report_date
+      defined_by: platform
+      label: 报案立案率
+- name: FIN-INS-019
+  description: 长期险及投资型业务退保金合计占期初责任准备金与本年签单保费合计的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(surrender_amount)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''life'') AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(beginning_reserve_total + policyholder_deposit_beginning
+        + separate_account_beginning + current_term_premium) AS denominator FROM platform.ins_underwriting_stat
+        WHERE period_end >= ''2025-01-01'' AND period_end <= ''2025-12-31'' AND (business_line
+        = ''life'') AND data_source = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 综合退保率（现行）
+- name: FIN-INS-020
+  description: 旧规口径退保金占上年末长期险责任准备金与本年长期险保费收入之和的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(surrender_amount)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''life'') AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(beginning_reserve_total + current_term_premium)
+        AS denominator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''life'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 退保率（2003 公式）
+- name: FIN-INS-021
+  description: 上年可比季度末的长期寿险有效保单在本季度末仍有效的比例（13 个月继续率，件数口径）。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, (((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0)) * 100)) AS metric_value FROM platform.metric_fact_fin_ins_021('2025-01-01',
+        '2025-12-31', 'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      label: 13 个月继续率（有效保单件数）
+- name: FIN-INS-022
+  description: 口径族索引：13 个月保费继续率按宽限期口径（FIN-INS-022-v1）与自然月口径（FIN-INS-022-v2）并列；本行不单独出数。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 不适用（族索引；见 FIN-INS-022-v1 / FIN-INS-022-v2）
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: index
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 13 个月保费继续率
+- name: FIN-INS-022-v1
+  description: 族索引，默认 v1 宽限期口径，第 1 个保单年度结束后宽限期内实收第 2 个保单年度首期规模保费占首年实收规模保费的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(renewed_premium)
+        AS numerator FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01''
+        AND cohort_period <= ''2025-12-31'' AND (valuation_basis = ''grace'' AND renewal_year
+        = 2) AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, SUM(first_year_premium) AS denominator
+        FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01'' AND
+        cohort_period <= ''2025-12-31'' AND (valuation_basis = ''grace'' AND renewal_year
+        = 2) AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_persistence_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: cohort_period
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 13 个月保费继续率（宽限期口径）
+- name: FIN-INS-022-v2
+  description: 评价期前溯 12 个月承保的个人期交新单，在保单进入第 13 个保单月（第 2 个保单年度首月，按保单周年日对齐）所在自然月内实收的第
+    2 个保单年度首期规模保费，占该批新单首个保单年度实收规模保费的比例。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(renewed_premium)
+        AS numerator FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01''
+        AND cohort_period <= ''2025-12-31'' AND (valuation_basis = ''natural'' AND
+        renewal_year = 2) AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, SUM(first_year_premium) AS denominator
+        FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01'' AND
+        cohort_period <= ''2025-12-31'' AND (valuation_basis = ''natural'' AND renewal_year
+        = 2) AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_persistence_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: cohort_period
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 13 个月保费继续率（自然月口径）
+- name: FIN-INS-023
+  description: 口径族索引：25 个月继续率按宽限期口径（FIN-INS-023-v1）与自然月口径（FIN-INS-023-v2）并列；本行不单独出数。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 不适用（族索引；见 FIN-INS-023-v1 / FIN-INS-023-v2）
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: index
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 25 个月继续率
+- name: FIN-INS-023-v1
+  description: 族索引，默认 v1 宽限期口径，第 2 个保单年度结束后宽限期内实收第 3 个保单年度首期规模保费占首年实收规模保费的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(renewed_premium)
+        AS numerator FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01''
+        AND cohort_period <= ''2025-12-31'' AND (valuation_basis = ''grace'' AND renewal_year
+        = 3) AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, SUM(first_year_premium) AS denominator
+        FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01'' AND
+        cohort_period <= ''2025-12-31'' AND (valuation_basis = ''grace'' AND renewal_year
+        = 3) AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_persistence_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: cohort_period
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 25 个月保费继续率（宽限期口径）
+- name: FIN-INS-023-v2
+  description: 评价期前溯 24 个月承保的个人期交新单，在保单进入第 25 个保单月（第 3 个保单年度首月，按保单周年日对齐）所在自然月内实收的第
+    3 个保单年度首期规模保费，占该批新单首个保单年度实收规模保费的比例。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(renewed_premium)
+        AS numerator FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01''
+        AND cohort_period <= ''2025-12-31'' AND (valuation_basis = ''natural'' AND
+        renewal_year = 3) AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, SUM(first_year_premium) AS denominator
+        FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01'' AND
+        cohort_period <= ''2025-12-31'' AND (valuation_basis = ''natural'' AND renewal_year
+        = 3) AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_persistence_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: cohort_period
+      defined_by: platform
+      effective_from: '2026-11-06'
+      label: 25 个月保费继续率（自然月口径）
+- name: FIN-INS-024
+  description: 到期应续保车辆中实际在本司续保的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT product AS entity_key, SUM(renewed_vehicle_count)
+        AS numerator FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01''
+        AND cohort_period <= ''2025-12-31'' AND (valuation_basis = ''vehicle_renewal'')
+        AND data_source = ''synthetic'' GROUP BY product),
+
+        den AS (SELECT product AS entity_key, SUM(due_vehicle_count) AS denominator
+        FROM platform.ins_persistence_stat WHERE cohort_period >= ''2025-01-01'' AND
+        cohort_period <= ''2025-12-31'' AND (valuation_basis = ''vehicle_renewal'')
+        AND data_source = ''synthetic'' GROUP BY product)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_persistence_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: cohort_period
+      defined_by: platform
+      label: 续保率（车险）
+- name: FIN-INS-025
+  description: 个人营销渠道新单首年保费除以新单件数。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: SELECT f.entity_key AS entity_key, f.numerator AS numerator, f.denominator
+        AS denominator, ((COALESCE(f.numerator, 0)::numeric / NULLIF((f.denominator)::numeric,
+        0))) AS metric_value FROM platform.metric_fact_fin_ins_025('2025-01-01', '2025-12-31',
+        'synthetic') AS f
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_policy
+      unit: 元/件
+      return_type: ratio
+      time_dimension: issue_date
+      defined_by: platform
+      label: 保单件均（个人营销渠道）
+- name: FIN-INS-026
+  description: 单一渠道费用支出占该渠道签单保费的比例
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT channel AS entity_key, SUM(expense_total) AS
+        numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (channel <> ''-'') AND data_source =
+        ''synthetic'' GROUP BY channel),
+
+        den AS (SELECT channel AS entity_key, SUM(signed_premium) AS denominator FROM
+        platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01'' AND period_end
+        <= ''2025-12-31'' AND (channel <> ''-'') AND data_source = ''synthetic'' GROUP
+        BY channel)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 渠道费用率
+- name: FIN-INS-027
+  description: 财产险口径下业务及管理费、手续费佣金、分保费用与税金等费用合计占自留保费（扣未到期责任准备金变动）的比重。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT institution AS entity_key, SUM(expense_total)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''property'') AND data_source
+        = ''synthetic'' GROUP BY institution),
+
+        den AS (SELECT institution AS entity_key, SUM(retained_premium - unearned_reserve_change)
+        AS denominator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (business_line = ''property'') AND data_source
+        = ''synthetic'' GROUP BY institution)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 综合费用率
+- name: FIN-INS-028
+  description: 手续费及佣金支出占保费收入的比例，衡量渠道成本结构。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: 'WITH num AS (SELECT channel AS entity_key, SUM(commission_expense)
+        AS numerator FROM platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01''
+        AND period_end <= ''2025-12-31'' AND (channel <> ''-'') AND data_source =
+        ''synthetic'' GROUP BY channel),
+
+        den AS (SELECT channel AS entity_key, SUM(signed_premium) AS denominator FROM
+        platform.ins_underwriting_stat WHERE period_end >= ''2025-01-01'' AND period_end
+        <= ''2025-12-31'' AND (channel <> ''-'') AND data_source = ''synthetic'' GROUP
+        BY channel)
+
+        SELECT COALESCE(num.entity_key, den.entity_key) AS entity_key, COALESCE(num.numerator,
+        0) AS numerator, den.denominator AS denominator, (((COALESCE(num.numerator,
+        0)::numeric / NULLIF((den.denominator)::numeric, 0)) * 100)) AS metric_value
+        FROM num FULL OUTER JOIN den USING (entity_key)'
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      source_table: platform.ins_underwriting_stat
+      unit: '%'
+      return_type: ratio
+      time_dimension: period_end
+      defined_by: platform
+      label: 手续费及佣金占比
+- name: FIN-INS-029
+  description: 保险公司实际资本与最低资本的比值，衡量资本总体充足状况，监管达标线 ≥100%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: numerator / denominator * 100
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      label: 综合偿付能力充足率
+- name: FIN-INS-030
+  description: 保险公司核心资本与最低资本的比值，监管达标线 ≥50%。
+  expression:
+    dialects:
+    - dialect: ANSI_SQL
+      expression: numerator / denominator * 100
+  custom_extensions:
+  - vendor_name: COA
+    data:
+      data_source_id: platform
+      unit: '%'
+      return_type: ratio
+      defined_by: platform
+      label: 核心偿付能力充足率

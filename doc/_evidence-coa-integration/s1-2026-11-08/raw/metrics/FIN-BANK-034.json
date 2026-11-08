@@ -1,0 +1,489 @@
+{
+  "metricId": "FIN-BANK-034",
+  "name": "早期预警（EWS）",
+  "domain": "bank",
+  "evidenceBasis": "industry",
+  "publishable": false,
+  "inference": true,
+  "formulaDisabled": false,
+  "missing": "regulatory_source",
+  "evidenceStatus": "EVIDENCE_MISSING",
+  "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 监管只要求建立机制，不规定公式；v5 的 10 条规则与阈值是可执行定义，本表不新增规则。反驳：阈值未校准会误报，必须业务确认；拿到监管细则只改阈值来源。",
+  "effectiveDate": "2026-11-06",
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 30
+      },
+      "level": "L1",
+      "signal": "逾期进入关注",
+      "window": "日",
+      "debounce": "连续 2 个观测日",
+      "threshold": ">=30 天",
+      "suppression": "已核销/已结清/已进入不良处置的不重复告警",
+      "trigger_fields": [
+        "dpd"
+      ]
+    },
+    {
+      "id": "R02",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 90
+      },
+      "level": "L3",
+      "signal": "逾期进入不良",
+      "window": "日",
+      "debounce": "即时",
+      "threshold": ">=90 天",
+      "suppression": "同一对象 30 天内已 L3 的合并；不抑制首次 90+",
+      "trigger_fields": [
+        "dpd"
+      ]
+    },
+    {
+      "id": "R03",
+      "spec": {
+        "op": "band_cross",
+        "to": 60,
+        "end": "dpd_end",
+        "from": 30,
+        "start": "dpd_start"
+      },
+      "level": "L2",
+      "signal": "逾期迁徙恶化",
+      "window": "30 天",
+      "debounce": "事件触发 1 次",
+      "threshold": "30→60 天（跨 1 档）",
+      "suppression": "已获批展期/重组观察期内抑制",
+      "trigger_fields": [
+        "dpd_start",
+        "dpd_end"
+      ]
+    },
+    {
+      "id": "R04",
+      "spec": {
+        "op": "downgrade",
+        "curr": "risk_class_curr",
+        "prev": "risk_class_prev",
+        "scale": [
+          "normal",
+          "special",
+          "substandard",
+          "doubtful",
+          "loss"
+        ],
+        "value": 1
+      },
+      "level": "L2",
+      "signal": "五级分类下迁",
+      "window": "90 天",
+      "debounce": "事件触发 1 次",
+      "threshold": "下调 >=1 档",
+      "suppression": "30 天内回调则撤销本次告警（滞回）",
+      "trigger_fields": [
+        "risk_class_prev",
+        "risk_class_curr"
+      ]
+    },
+    {
+      "id": "R05",
+      "spec": {
+        "op": "downgrade",
+        "curr": "rating_notch_curr",
+        "prev": "rating_notch_prev",
+        "value": 2
+      },
+      "level": "L2",
+      "signal": "外部评级下调",
+      "window": "180 天",
+      "debounce": "事件触发 1 次",
+      "threshold": "下调 >=2 个 notch",
+      "suppression": "评级观察名单已告警的 90 天内合并",
+      "trigger_fields": [
+        "rating_notch_prev",
+        "rating_notch_curr"
+      ]
+    },
+    {
+      "id": "R06",
+      "spec": {
+        "op": "ratio_gte",
+        "value": 0.9,
+        "numerator": "drawn_principal",
+        "denominator": "approved_limit"
+      },
+      "level": "L1",
+      "signal": "额度高占用",
+      "window": "连续 30 天",
+      "debounce": "连续 30 天",
+      "threshold": "使用率 >=90%",
+      "suppression": "额度已冻结/已过期/已注销的不告警",
+      "trigger_fields": [
+        "drawn_principal",
+        "approved_limit"
+      ]
+    },
+    {
+      "id": "R07",
+      "spec": {
+        "op": "any_true",
+        "fields": [
+          "other_facility_dpd_90plus",
+          "default_flag"
+        ]
+      },
+      "level": "L3",
+      "signal": "交叉违约",
+      "window": "90 天",
+      "debounce": "即时",
+      "threshold": "任一其他债项 90+ 或违约",
+      "suppression": "同一债务人 30 天内已 L3 的合并",
+      "trigger_fields": [
+        "other_facility_dpd_90plus",
+        "default_flag"
+      ]
+    },
+    {
+      "id": "R08",
+      "spec": {
+        "op": "drop_gte",
+        "field": "monthly_inflow",
+        "value": 0.5,
+        "baseline": "inflow_12m_avg"
+      },
+      "level": "L2",
+      "signal": "现金流异动",
+      "window": "连续 2 个月",
+      "debounce": "连续 2 个月",
+      "threshold": "较过去 12 个月均值下降 >=50%",
+      "suppression": "同比同月也下降 >=50% 的视为季节性，降为 L1 观察",
+      "trigger_fields": [
+        "monthly_inflow"
+      ]
+    },
+    {
+      "id": "R09",
+      "spec": {
+        "op": "any_of",
+        "clauses": [
+          {
+            "op": "gte",
+            "field": "consecutive_partial_count",
+            "value": 2
+          },
+          {
+            "op": "ratio_lte",
+            "value": 0.7,
+            "numerator": "paid_amount",
+            "denominator": "due_amount"
+          }
+        ]
+      },
+      "level": "L1",
+      "signal": "还款行为异动",
+      "window": "2 个还款期",
+      "debounce": "连续 2 期",
+      "threshold": "连续 2 期仅最低/部分还款，或还款额下降 >=30%",
+      "suppression": "因利率调整/展期导致应还额变化的，先还原再判断",
+      "trigger_fields": [
+        "paid_amount",
+        "due_amount"
+      ]
+    },
+    {
+      "id": "R10",
+      "spec": {
+        "op": "any_of",
+        "clauses": [
+          {
+            "op": "drop_gte",
+            "field": "collateral_ratio_curr",
+            "value": 0.2,
+            "baseline": "collateral_ratio_prev"
+          },
+          {
+            "op": "equals",
+            "field": "guarantee_status",
+            "value": "revoked"
+          }
+        ]
+      },
+      "level": "L2",
+      "signal": "押品/担保弱化",
+      "window": "90 天",
+      "debounce": "事件触发 1 次",
+      "threshold": "押品覆盖率下降 >=20%，或担保撤销",
+      "suppression": "已安排重估/已批准替换担保的 30 天内抑制",
+      "trigger_fields": [
+        "collateral_value",
+        "loan_balance",
+        "guarantee_status"
+      ]
+    }
+  ],
+  "definition": "按可配置规则集监测资产质量恶化信号，命中对象进入预警清单，按规则严重度与命中数输出 L1–L3",
+  "formulaText": "预警等级 = f(命中规则集合)，规则 R01–R10 与阈值沿用 v5 rule_set_json",
+  "denominatorText": "不适用",
+  "observationPeriodText": "point-in-time（日/周）",
+  "granularityText": "customer 或 agreement",
+  "provenanceLabel": "推测",
+  "unit": "等级 L1–L3 加命中清单",
+  "browse": {
+    "metricId": "FIN-BANK-034",
+    "nameZh": "早期预警（EWS）",
+    "domain": "bank",
+    "evidenceBasis": "industry",
+    "publishable": false,
+    "inference": true,
+    "formulaDisabled": false,
+    "missing": "regulatory_source",
+    "definitionStatus": "EVIDENCE_MISSING",
+    "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 监管只要求建立机制，不规定公式；v5 的 10 条规则与阈值是可执行定义，本表不新增规则。反驳：阈值未校准会误报，必须业务确认；拿到监管细则只改阈值来源。",
+    "definitionVersion": "v3.0",
+    "unit": "等级 L1–L3 加命中清单",
+    "effectiveDate": "2026-11-06",
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "早期预警（EWS）〔推测〕",
+    "definition": "按可配置规则集监测资产质量恶化信号，命中对象进入预警清单，按规则严重度与命中数输出 L1–L3",
+    "formulaText": "预警等级 = f(命中规则集合)，规则 R01–R10 与阈值沿用 v5 rule_set_json",
+    "denominatorText": "不适用",
+    "observationPeriodText": "point-in-time（日/周）",
+    "granularityText": "customer 或 agreement",
+    "provenanceLabel": "推测",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 30
+        },
+        "level": "L1",
+        "signal": "逾期进入关注",
+        "window": "日",
+        "debounce": "连续 2 个观测日",
+        "threshold": ">=30 天",
+        "suppression": "已核销/已结清/已进入不良处置的不重复告警",
+        "trigger_fields": [
+          "dpd"
+        ]
+      },
+      {
+        "id": "R02",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 90
+        },
+        "level": "L3",
+        "signal": "逾期进入不良",
+        "window": "日",
+        "debounce": "即时",
+        "threshold": ">=90 天",
+        "suppression": "同一对象 30 天内已 L3 的合并；不抑制首次 90+",
+        "trigger_fields": [
+          "dpd"
+        ]
+      },
+      {
+        "id": "R03",
+        "spec": {
+          "op": "band_cross",
+          "to": 60,
+          "end": "dpd_end",
+          "from": 30,
+          "start": "dpd_start"
+        },
+        "level": "L2",
+        "signal": "逾期迁徙恶化",
+        "window": "30 天",
+        "debounce": "事件触发 1 次",
+        "threshold": "30→60 天（跨 1 档）",
+        "suppression": "已获批展期/重组观察期内抑制",
+        "trigger_fields": [
+          "dpd_start",
+          "dpd_end"
+        ]
+      },
+      {
+        "id": "R04",
+        "spec": {
+          "op": "downgrade",
+          "curr": "risk_class_curr",
+          "prev": "risk_class_prev",
+          "scale": [
+            "normal",
+            "special",
+            "substandard",
+            "doubtful",
+            "loss"
+          ],
+          "value": 1
+        },
+        "level": "L2",
+        "signal": "五级分类下迁",
+        "window": "90 天",
+        "debounce": "事件触发 1 次",
+        "threshold": "下调 >=1 档",
+        "suppression": "30 天内回调则撤销本次告警（滞回）",
+        "trigger_fields": [
+          "risk_class_prev",
+          "risk_class_curr"
+        ]
+      },
+      {
+        "id": "R05",
+        "spec": {
+          "op": "downgrade",
+          "curr": "rating_notch_curr",
+          "prev": "rating_notch_prev",
+          "value": 2
+        },
+        "level": "L2",
+        "signal": "外部评级下调",
+        "window": "180 天",
+        "debounce": "事件触发 1 次",
+        "threshold": "下调 >=2 个 notch",
+        "suppression": "评级观察名单已告警的 90 天内合并",
+        "trigger_fields": [
+          "rating_notch_prev",
+          "rating_notch_curr"
+        ]
+      },
+      {
+        "id": "R06",
+        "spec": {
+          "op": "ratio_gte",
+          "value": 0.9,
+          "numerator": "drawn_principal",
+          "denominator": "approved_limit"
+        },
+        "level": "L1",
+        "signal": "额度高占用",
+        "window": "连续 30 天",
+        "debounce": "连续 30 天",
+        "threshold": "使用率 >=90%",
+        "suppression": "额度已冻结/已过期/已注销的不告警",
+        "trigger_fields": [
+          "drawn_principal",
+          "approved_limit"
+        ]
+      },
+      {
+        "id": "R07",
+        "spec": {
+          "op": "any_true",
+          "fields": [
+            "other_facility_dpd_90plus",
+            "default_flag"
+          ]
+        },
+        "level": "L3",
+        "signal": "交叉违约",
+        "window": "90 天",
+        "debounce": "即时",
+        "threshold": "任一其他债项 90+ 或违约",
+        "suppression": "同一债务人 30 天内已 L3 的合并",
+        "trigger_fields": [
+          "other_facility_dpd_90plus",
+          "default_flag"
+        ]
+      },
+      {
+        "id": "R08",
+        "spec": {
+          "op": "drop_gte",
+          "field": "monthly_inflow",
+          "value": 0.5,
+          "baseline": "inflow_12m_avg"
+        },
+        "level": "L2",
+        "signal": "现金流异动",
+        "window": "连续 2 个月",
+        "debounce": "连续 2 个月",
+        "threshold": "较过去 12 个月均值下降 >=50%",
+        "suppression": "同比同月也下降 >=50% 的视为季节性，降为 L1 观察",
+        "trigger_fields": [
+          "monthly_inflow"
+        ]
+      },
+      {
+        "id": "R09",
+        "spec": {
+          "op": "any_of",
+          "clauses": [
+            {
+              "op": "gte",
+              "field": "consecutive_partial_count",
+              "value": 2
+            },
+            {
+              "op": "ratio_lte",
+              "value": 0.7,
+              "numerator": "paid_amount",
+              "denominator": "due_amount"
+            }
+          ]
+        },
+        "level": "L1",
+        "signal": "还款行为异动",
+        "window": "2 个还款期",
+        "debounce": "连续 2 期",
+        "threshold": "连续 2 期仅最低/部分还款，或还款额下降 >=30%",
+        "suppression": "因利率调整/展期导致应还额变化的，先还原再判断",
+        "trigger_fields": [
+          "paid_amount",
+          "due_amount"
+        ]
+      },
+      {
+        "id": "R10",
+        "spec": {
+          "op": "any_of",
+          "clauses": [
+            {
+              "op": "drop_gte",
+              "field": "collateral_ratio_curr",
+              "value": 0.2,
+              "baseline": "collateral_ratio_prev"
+            },
+            {
+              "op": "equals",
+              "field": "guarantee_status",
+              "value": "revoked"
+            }
+          ]
+        },
+        "level": "L2",
+        "signal": "押品/担保弱化",
+        "window": "90 天",
+        "debounce": "事件触发 1 次",
+        "threshold": "押品覆盖率下降 >=20%，或担保撤销",
+        "suppression": "已安排重估/已批准替换担保的 30 天内抑制",
+        "trigger_fields": [
+          "collateral_value",
+          "loan_balance",
+          "guarantee_status"
+        ]
+      }
+    ]
+  }
+}

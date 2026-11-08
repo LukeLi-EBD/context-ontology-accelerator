@@ -1,0 +1,101 @@
+{
+  "metricId": "FIN-BANK-003",
+  "name": "逾期90天→至少次级",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 91
+      },
+      "level": "L3",
+      "signal": "逾期超过 90 天，分类下限至少次级",
+      "window": "日",
+      "debounce": "即时",
+      "threshold": ">90 天",
+      "suppression": "同对象 30 天内已 L3 的合并；已下调分类的不重复告警",
+      "configurable": true,
+      "change_control": "90 天为定义原文阈值，调整需风险管理部/监管口径负责人签字",
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "本金、利息或收益逾期超过 90 天的金融资产，风险分类下限至少为次级类。",
+  "formulaText": "若 max(观察日 − 应还款日, 0) > 90 → 分类下限 = 次级（可下调不可上调）；规则型",
+  "denominatorText": "不适用（规则判定）",
+  "observationPeriodText": "point-in-time（分类日/观察日）",
+  "granularityText": "asset（单笔金融资产；非零售按债务人）",
+  "provenanceLabel": "原文",
+  "unit": "档（正常/关注/次级/可疑/损失）",
+  "browse": {
+    "metricId": "FIN-BANK-003",
+    "nameZh": "逾期90天→至少次级",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "档（正常/关注/次级/可疑/损失）",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "逾期90天→至少次级",
+    "definition": "本金、利息或收益逾期超过 90 天的金融资产，风险分类下限至少为次级类。",
+    "formulaText": "若 max(观察日 − 应还款日, 0) > 90 → 分类下限 = 次级（可下调不可上调）；规则型",
+    "denominatorText": "不适用（规则判定）",
+    "observationPeriodText": "point-in-time（分类日/观察日）",
+    "granularityText": "asset（单笔金融资产；非零售按债务人）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 91
+        },
+        "level": "L3",
+        "signal": "逾期超过 90 天，分类下限至少次级",
+        "window": "日",
+        "debounce": "即时",
+        "threshold": ">90 天",
+        "suppression": "同对象 30 天内已 L3 的合并；已下调分类的不重复告警",
+        "configurable": true,
+        "change_control": "90 天为定义原文阈值，调整需风险管理部/监管口径负责人签字",
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

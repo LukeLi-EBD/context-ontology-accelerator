@@ -1,0 +1,105 @@
+{
+  "metricId": "FIN-BANK-012",
+  "name": "展期/借新还旧归类",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "any_true",
+        "fields": [
+          "extension_approved",
+          "refinanced"
+        ]
+      },
+      "level": "L1",
+      "signal": "展期获批或借新还旧，分类下限至少关注",
+      "window": "合同调整日",
+      "debounce": "事件触发 1 次",
+      "threshold": "extension_approved=true 或 refinanced=true",
+      "suppression": "满足财务困难则转 FIN-BANK-010 重组口径并升级",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "extension_approved",
+        "refinanced"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "通过展期、借新还旧或其他债务融资方式偿还的资产，按重组规则归类并适用分类下限。",
+  "formulaText": "若 展期获批 ∨ 借新还旧 → 至少关注；满足财务困难则计入重组；规则型",
+  "denominatorText": "不适用（判定规则）",
+  "observationPeriodText": "point-in-time（合同调整日）",
+  "granularityText": "agreement（单笔协议）",
+  "provenanceLabel": "原文",
+  "unit": "标志/档",
+  "browse": {
+    "metricId": "FIN-BANK-012",
+    "nameZh": "展期/借新还旧归类",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "标志/档",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "展期/借新还旧归类",
+    "definition": "通过展期、借新还旧或其他债务融资方式偿还的资产，按重组规则归类并适用分类下限。",
+    "formulaText": "若 展期获批 ∨ 借新还旧 → 至少关注；满足财务困难则计入重组；规则型",
+    "denominatorText": "不适用（判定规则）",
+    "observationPeriodText": "point-in-time（合同调整日）",
+    "granularityText": "agreement（单笔协议）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "any_true",
+          "fields": [
+            "extension_approved",
+            "refinanced"
+          ]
+        },
+        "level": "L1",
+        "signal": "展期获批或借新还旧，分类下限至少关注",
+        "window": "合同调整日",
+        "debounce": "事件触发 1 次",
+        "threshold": "extension_approved=true 或 refinanced=true",
+        "suppression": "满足财务困难则转 FIN-BANK-010 重组口径并升级",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "extension_approved",
+          "refinanced"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

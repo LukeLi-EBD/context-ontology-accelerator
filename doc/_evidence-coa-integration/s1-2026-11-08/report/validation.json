@@ -1,0 +1,4000 @@
+{
+  "parse": {
+    "metrics": 85,
+    "errors": [],
+    "warnings": [],
+    "roundTripOk": true,
+    "roundTripErrors": []
+  },
+  "manifestCounts": {
+    "total": 85,
+    "publishable": 60,
+    "executable": 56,
+    "both": 43
+  },
+  "coaCounts": {
+    "sqlOk": 62,
+    "valid": 62,
+    "sqlSources": {
+      "binding": 52,
+      "formula_text_fallback": 23,
+      "fact_function": 10
+    }
+  },
+  "categories": {
+    "agree_executable": 56,
+    "agree_not_executable": 23,
+    "platform_not_executable_but_sql_present:no_observations": 5,
+    "platform_not_executable_but_sql_present:quartet_incomplete": 1
+  },
+  "differences": [
+    {
+      "metricId": "FIN-BANK-035",
+      "category": "platform_not_executable_but_sql_present:no_observations",
+      "executable": false,
+      "publishable": true,
+      "executionReasonCode": "no_observations",
+      "executionReason": "库内该口径无任何观测记录",
+      "sqlSource": "fact_function",
+      "coaSqlOk": true,
+      "coaBlockingChecks": []
+    },
+    {
+      "metricId": "FIN-BANK-036-v1",
+      "category": "platform_not_executable_but_sql_present:no_observations",
+      "executable": false,
+      "publishable": true,
+      "executionReasonCode": "no_observations",
+      "executionReason": "库内该口径无任何观测记录",
+      "sqlSource": "fact_function",
+      "coaSqlOk": true,
+      "coaBlockingChecks": []
+    },
+    {
+      "metricId": "FIN-INS-004",
+      "category": "platform_not_executable_but_sql_present:no_observations",
+      "executable": false,
+      "publishable": false,
+      "executionReasonCode": "no_observations",
+      "executionReason": "库内该口径无任何观测记录",
+      "sqlSource": "binding",
+      "coaSqlOk": true,
+      "coaBlockingChecks": []
+    },
+    {
+      "metricId": "FIN-INS-017",
+      "category": "platform_not_executable_but_sql_present:quartet_incomplete",
+      "executable": false,
+      "publishable": true,
+      "executionReasonCode": "quartet_incomplete",
+      "executionReason": "四元组不完整：缺 denominator_agg",
+      "sqlSource": "binding",
+      "coaSqlOk": true,
+      "coaBlockingChecks": []
+    },
+    {
+      "metricId": "FIN-INS-022-v2",
+      "category": "platform_not_executable_but_sql_present:no_observations",
+      "executable": false,
+      "publishable": false,
+      "executionReasonCode": "no_observations",
+      "executionReason": "库内该口径无任何观测记录",
+      "sqlSource": "binding",
+      "coaSqlOk": true,
+      "coaBlockingChecks": []
+    },
+    {
+      "metricId": "FIN-INS-023-v2",
+      "category": "platform_not_executable_but_sql_present:no_observations",
+      "executable": false,
+      "publishable": false,
+      "executionReasonCode": "no_observations",
+      "executionReason": "库内该口径无任何观测记录",
+      "sqlSource": "binding",
+      "coaSqlOk": true,
+      "coaBlockingChecks": []
+    }
+  ],
+  "metrics": {
+    "CUST-001": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_behavior_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_behavior_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_behavior_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_behavior_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 7,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_behavior_snapshot"
+    },
+    "CUST-002": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_transaction' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_transaction",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_transaction' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_transaction",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_transaction"
+    },
+    "CUST-003": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_transaction' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_transaction",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_transaction' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_transaction",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 9,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_transaction"
+    },
+    "CUST-004": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Anonymous fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT score(ntile, rfm_code, 5) FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Anonymous fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT score(ntile, rfm_code, 5) FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "CUST-005": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_behavior_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_behavior_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_behavior_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_behavior_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 7,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_behavior_snapshot"
+    },
+    "CUST-006": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_cohort_stat"
+    },
+    "CUST-007": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_cohort_stat"
+    },
+    "CUST-008": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_cohort_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_cohort_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_cohort_stat"
+    },
+    "CUST-009": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_product_holding' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_product_holding",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_product_holding' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_product_holding",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 7,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_product_holding"
+    },
+    "CUST-010": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "CUST-011": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "CUST-012": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_aum_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_aum_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_aum_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_aum_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 7,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_aum_snapshot"
+    },
+    "CUST-013": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.cust_aum_snapshot' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.cust_aum_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.cust_aum_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.cust_aum_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.cust_aum_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.cust_aum_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.cust_aum_snapshot"
+    },
+    "FIN-BANK-001": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-BANK-002": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Anonymous fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT band(dpd, 30, 6) FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Anonymous fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT band(dpd, 30, 6) FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-003": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 6.\n  若 max\u001b[4m(\u001b[0m观察日 − 应还款日, 0) > 90 → 分类下限 = 次级（可下调不可上调）；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 6.\n  若 max\u001b[4m(\u001b[0m观察日 − 应还款日, 0) > 90 → 分类下限 = 次级（可下调不可上调）；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 6.\n  若 max\u001b[4m(\u001b[0m观察日 − 应还款日, 0) > 90 → 分类下限 = 次级（可下调不可上调）；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-004": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 7.\n  若 DPD \u001b[4m>\u001b[0m 90 → Stage 3；否则按信用风险显著增加判断 Stage 2/1；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 7.\n  若 DPD \u001b[4m>\u001b[0m 90 → Stage 3；否则按信用风险显著增加判断 Stage 2/1；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 7.\n  若 DPD \u001b[4m>\u001b[0m 90 → Stage 3；否则按信用风险显著增加判断 Stage 2/1；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-005": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 40.\n  Stage2 = (DPD>30) ∧ \u001b[4m未发生信用减值，允许以定量或定性证据推翻\u001b[0m",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 40.\n  Stage2 = (DPD>30) ∧ \u001b[4m未发生信用减值，允许以定量或定性证据推翻\u001b[0m"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 40.\n  Stage2 = (DPD>30) ∧ \u001b[4m未发生信用减值，允许以定量或定性证据推翻\u001b[0m",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-006": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 13.\n  逾期标志=1 若 \u001b[4m实还金额\u001b[0m<当期应还金额或最低还款额，逾期起点=应还款日次日",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 13.\n  逾期标志=1 若 \u001b[4m实还金额\u001b[0m<当期应还金额或最低还款额，逾期起点=应还款日次日"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 13.\n  逾期标志=1 若 \u001b[4m实还金额\u001b[0m<当期应还金额或最低还款额，逾期起点=应还款日次日",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-007": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 18.\n  classification ∈ \u001b[4m{\u001b[0m正常, 关注, 次级, 可疑, 损失}；不良 = 次级 + 可疑 + 损失；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 18.\n  classification ∈ \u001b[4m{\u001b[0m正常, 关注, 次级, 可疑, 损失}；不良 = 次级 + 可疑 + 损失；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 18.\n  classification ∈ \u001b[4m{\u001b[0m正常, 关注, 次级, 可疑, 损失}；不良 = 次级 + 可疑 + 损失；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-008": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-009": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 15.\n  若 本行对该债务人不良余额 \u001b[4m/\u001b[0m 本行对该债务人全部债权余额 > 10% → 全部债权归为不良；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 15.\n  若 本行对该债务人不良余额 \u001b[4m/\u001b[0m 本行对该债务人全部债权余额 > 10% → 全部债权归为不良；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 15.\n  若 本行对该债务人不良余额 \u001b[4m/\u001b[0m 本行对该债务人全部债权余额 > 10% → 全部债权归为不良；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-010": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 22.\n  重组标志 = 财务困难 ∧ \u001b[4m合同调整；观察期\u001b[0m = max(1 年, 连续 2 个还款期)；重组后分类下限：原正常/关注→至少关注，再次重组→至少次级；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 22.\n  重组标志 = 财务困难 ∧ \u001b[4m合同调整；观察期\u001b[0m = max(1 年, 连续 2 个还款期)；重组后分类下限：原正常/关注→至少关注，再次重组→至少次级；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 22.\n  重组标志 = 财务困难 ∧ \u001b[4m合同调整；观察期\u001b[0m = max(1 年, 连续 2 个还款期)；重组后分类下限：原正常/关注→至少关注，再次重组→至少次级；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-011": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 31.\n  重组标志 = 需要重组；分类下限 = 次级；观察期 ≥ \u001b[4m180\u001b[0m 天；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 31.\n  重组标志 = 需要重组；分类下限 = 次级；观察期 ≥ \u001b[4m180\u001b[0m 天；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 31.\n  重组标志 = 需要重组；分类下限 = 次级；观察期 ≥ \u001b[4m180\u001b[0m 天；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-012": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 8.\n  若 展期获批 \u001b[4m∨\u001b[0m 借新还旧 → 至少关注；满足财务困难则计入重组；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 8.\n  若 展期获批 \u001b[4m∨\u001b[0m 借新还旧 → 至少关注；满足财务困难则计入重组；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 8.\n  若 展期获批 \u001b[4m∨\u001b[0m 借新还旧 → 至少关注；满足财务困难则计入重组；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-013": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-014": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-015": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-016": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-017": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 12,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-018": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 12,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-019": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT metric_fin_bank_017 * metric_fin_bank_018 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT metric_fin_bank_017 * metric_fin_bank_018 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-020": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-021": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-022": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_provision_snapshot' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_provision_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_provision_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_provision_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_provision_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_provision_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_provision_snapshot"
+    },
+    "FIN-BANK-023": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_provision_snapshot' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_provision_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_provision_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_provision_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_provision_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_provision_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_provision_snapshot"
+    },
+    "FIN-BANK-024": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 7.\n  Stage \u001b[4m1\u001b[0m：未显著增加→12 个月 ECL；Stage 2：显著增加且未减值→存续期 ECL；Stage 3：已减值→存续期 ECL；规则型",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 7.\n  Stage \u001b[4m1\u001b[0m：未显著增加→12 个月 ECL；Stage 2：显著增加且未减值→存续期 ECL；Stage 3：已减值→存续期 ECL；规则型"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 7.\n  Stage \u001b[4m1\u001b[0m：未显著增加→12 个月 ECL；Stage 2：显著增加且未减值→存续期 ECL；Stage 3：已减值→存续期 ECL；规则型",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-025": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_concentration_stat"
+    },
+    "FIN-BANK-026": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_concentration_stat"
+    },
+    "FIN-BANK-027": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_concentration_stat"
+    },
+    "FIN-BANK-028": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_concentration_stat"
+    },
+    "FIN-BANK-029": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_concentration_stat"
+    },
+    "FIN-BANK-030": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_concentration_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_concentration_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_concentration_stat"
+    },
+    "FIN-BANK-031": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-BANK-032": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-BANK-033": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.bank_loan_account' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.bank_loan_account",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.bank_loan_account"
+    },
+    "FIN-BANK-034": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 27.\n  预警等级 = f(命中规则集合)，规则 \u001b[4mR01–R10\u001b[0m 与阈值沿用 v5 rule_set_json",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 27.\n  预警等级 = f(命中规则集合)，规则 \u001b[4mR01–R10\u001b[0m 与阈值沿用 v5 rule_set_json"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 27.\n  预警等级 = f(命中规则集合)，规则 \u001b[4mR01–R10\u001b[0m 与阈值沿用 v5 rule_set_json",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-035": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-BANK-036": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mBANK-036-v1 / -v2）",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mBANK-036-v1 / -v2）"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mBANK-036-v1 / -v2）",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-BANK-036-v1": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-BANK-036-v2": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-INS-001": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-INS-002": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 9,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_policy"
+    },
+    "FIN-INS-003": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 9,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-004": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_payment_record' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_payment_record",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_payment_record' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_payment_record",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_payment_record"
+    },
+    "FIN-INS-005": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 9,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_policy"
+    },
+    "FIN-INS-006": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-007": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'premium_amount' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "premium_amount",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'reversal_amount' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "reversal_amount",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'issue_date' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "issue_date",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'is_investment_linked' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "is_investment_linked",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'status_as_of' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "status_as_of",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 11,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_claim_case"
+    },
+    "FIN-INS-008": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-009": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-010": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-011": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-012": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Add fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT metric_fin_ins_027 + metric_fin_ins_013 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Add fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT metric_fin_ins_027 + metric_fin_ins_013 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-INS-013": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-014": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_claim_reserve_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_claim_reserve_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_claim_reserve_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_claim_reserve_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 7,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_claim_reserve_snapshot"
+    },
+    "FIN-INS-015": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 11,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_claim_case"
+    },
+    "FIN-INS-016": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_claim_reserve_snapshot' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_claim_reserve_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_claim_reserve_snapshot' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_claim_reserve_snapshot",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_claim_reserve_snapshot' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_claim_reserve_snapshot",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 8,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_claim_reserve_snapshot"
+    },
+    "FIN-INS-017": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'status_as_of' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "status_as_of",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'policy_status' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "policy_status",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 11,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_claim_case"
+    },
+    "FIN-INS-018": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_claim_case' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_claim_case",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_claim_case"
+    },
+    "FIN-INS-019": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-020": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-021": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 6,
+      "sqlSource": "fact_function",
+      "sourceTable": ""
+    },
+    "FIN-INS-022": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mINS-022-v1 / FIN-INS-022-v2）",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mINS-022-v1 / FIN-INS-022-v2）"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mINS-022-v1 / FIN-INS-022-v2）",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-INS-022-v1": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_persistence_stat"
+    },
+    "FIN-INS-022-v2": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_persistence_stat"
+    },
+    "FIN-INS-023": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape",
+        "sql_syntax"
+      ],
+      "errors": [
+        {
+          "check": "sql_syntax",
+          "severity": "error",
+          "message": "SQL syntax error (ANSI_SQL): Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mINS-023-v1 / FIN-INS-023-v2）",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0,
+            "error": "Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mINS-023-v1 / FIN-INS-023-v2）"
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: SQL expression could not be parsed (TRINO): Invalid expression / Unexpected token. Line 1, Col: 14.\n  不适用（族索引；见 FIN\u001b[4m-\u001b[0mINS-023-v1 / FIN-INS-023-v2）",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 0,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-INS-023-v1": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_persistence_stat"
+    },
+    "FIN-INS-023-v2": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_persistence_stat"
+    },
+    "FIN-INS-024": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_persistence_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_persistence_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_persistence_stat"
+    },
+    "FIN-INS-025": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'platform.' not found in data source 'platform'",
+          "details": {
+            "table": "platform.",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_policy' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_policy",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 7,
+      "sqlSource": "fact_function",
+      "sourceTable": "platform.ins_policy"
+    },
+    "FIN-INS-026": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-027": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-028": {
+      "valid": true,
+      "coaSqlOk": true,
+      "blockingChecks": [],
+      "errors": [],
+      "warnings": [
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'num' not found in data source 'platform'",
+          "details": {
+            "table": "num",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "table_reference",
+          "severity": "warning",
+          "message": "Table 'den' not found in data source 'platform'",
+          "details": {
+            "table": "den",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'denominator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "denominator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'entity_key' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "entity_key",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        },
+        {
+          "check": "column_reference",
+          "severity": "warning",
+          "message": "Column 'numerator' not found in table 'platform.ins_underwriting_stat' metadata",
+          "details": {
+            "column": "numerator",
+            "table": "platform.ins_underwriting_stat",
+            "dataSourceId": "platform"
+          }
+        }
+      ],
+      "lookupCalls": 10,
+      "sqlSource": "binding",
+      "sourceTable": "platform.ins_underwriting_stat"
+    },
+    "FIN-INS-029": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    },
+    "FIN-INS-030": {
+      "valid": false,
+      "coaSqlOk": false,
+      "blockingChecks": [
+        "sql_shape"
+      ],
+      "errors": [
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "ANSI_SQL",
+            "index": 0
+          }
+        },
+        {
+          "check": "sql_shape",
+          "severity": "error",
+          "message": "Tier 1 executes the selected expression as TRINO SQL, but it is not executable: Expression must be a full SELECT statement — got a Mul fragment. The serve-time SQL firewall only executes SELECT statements; wrap the fragment, e.g. 'SELECT numerator / denominator * 100 FROM <source_table>'.",
+          "details": {
+            "dialect": "TRINO",
+            "executionPath": "tier1"
+          }
+        }
+      ],
+      "warnings": [],
+      "lookupCalls": 5,
+      "sqlSource": "formula_text_fallback",
+      "sourceTable": ""
+    }
+  }
+}

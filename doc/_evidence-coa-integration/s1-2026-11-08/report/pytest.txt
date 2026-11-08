@@ -1,0 +1,7 @@
+﻿........................................................................ [ 29%]
+........................................................................ [ 59%]
+........................................................................ [ 88%]
+...............ssss.........                                             [100%]
+=========================== short test summary info ===========================
+SKIPPED [4] coa\packages\metric-service\tests\unit\test_validator.py: DynamoDBDataSourceLookup deprecated — replaced by SmusCatalogDataSourceLookup
+240 passed, 4 skipped in 0.47s

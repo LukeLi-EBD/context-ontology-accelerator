@@ -1,0 +1,123 @@
+{
+  "metricId": "FIN-BANK-005",
+  "name": "Stage 2“30 天显著增加”",
+  "domain": "bank",
+  "evidenceBasis": "industry",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": "regulatory_source",
+  "evidenceStatus": "EVIDENCE_MISSING",
+  "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 30 天阈值来自 IFRS 9 B5.5.18 可推翻假设，原文未取到，定义原则属行业通行。反驳：若公司采用 60 天阈值或低信用风险简化，30 天不成立；拿到原文只补引注。",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "all_of",
+        "clauses": [
+          {
+            "op": "gte",
+            "field": "dpd",
+            "value": 31
+          },
+          {
+            "op": "equals",
+            "field": "credit_impaired",
+            "value": false
+          }
+        ]
+      },
+      "level": "L2",
+      "signal": "逾期 30 天以上且未发生信用减值，划入 Stage 2",
+      "window": "报告日",
+      "debounce": "即时",
+      "threshold": ">30 天 且 credit_impaired=false",
+      "disclaimer": "30 天为可推翻假设，默认值非监管阈值，需业务确认后调整",
+      "suppression": "有定量/定性证据推翻显著增加的，人工抑制并留痕",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd",
+        "credit_impaired"
+      ],
+      "threshold_source": "industry_default"
+    }
+  ],
+  "definition": "自初始确认后信用风险显著增加但尚未发生信用减值的金融资产划入第二阶段，30 天逾期作为可推翻的显著增加假设",
+  "formulaText": "Stage2 = (DPD>30) ∧ 未发生信用减值，允许以定量或定性证据推翻",
+  "denominatorText": "全部存续金融资产余额或笔数",
+  "observationPeriodText": "point-in-time（报告日）",
+  "granularityText": "asset（单笔资产，非零售按债务人）",
+  "provenanceLabel": "行业通行",
+  "unit": "阶段（Stage 1/2/3）与占比 %",
+  "browse": {
+    "metricId": "FIN-BANK-005",
+    "nameZh": "Stage 2“30 天显著增加”",
+    "domain": "bank",
+    "evidenceBasis": "industry",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": "regulatory_source",
+    "definitionStatus": "EVIDENCE_MISSING",
+    "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 30 天阈值来自 IFRS 9 B5.5.18 可推翻假设，原文未取到，定义原则属行业通行。反驳：若公司采用 60 天阈值或低信用风险简化，30 天不成立；拿到原文只补引注。",
+    "definitionVersion": "v3.0",
+    "unit": "阶段（Stage 1/2/3）与占比 %",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "Stage 2“30 天显著增加”〔行业〕",
+    "definition": "自初始确认后信用风险显著增加但尚未发生信用减值的金融资产划入第二阶段，30 天逾期作为可推翻的显著增加假设",
+    "formulaText": "Stage2 = (DPD>30) ∧ 未发生信用减值，允许以定量或定性证据推翻",
+    "denominatorText": "全部存续金融资产余额或笔数",
+    "observationPeriodText": "point-in-time（报告日）",
+    "granularityText": "asset（单笔资产，非零售按债务人）",
+    "provenanceLabel": "行业通行",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "all_of",
+          "clauses": [
+            {
+              "op": "gte",
+              "field": "dpd",
+              "value": 31
+            },
+            {
+              "op": "equals",
+              "field": "credit_impaired",
+              "value": false
+            }
+          ]
+        },
+        "level": "L2",
+        "signal": "逾期 30 天以上且未发生信用减值，划入 Stage 2",
+        "window": "报告日",
+        "debounce": "即时",
+        "threshold": ">30 天 且 credit_impaired=false",
+        "disclaimer": "30 天为可推翻假设，默认值非监管阈值，需业务确认后调整",
+        "suppression": "有定量/定性证据推翻显著增加的，人工抑制并留痕",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd",
+          "credit_impaired"
+        ],
+        "threshold_source": "industry_default"
+      }
+    ]
+  }
+}

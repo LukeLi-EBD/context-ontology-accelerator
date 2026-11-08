@@ -1,0 +1,73 @@
+S1 调用链证据（全部在独立 venv 内、进程内完成；未调用 platform API）
+
+validate_metric source: D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py
+JsonDataSourceLookup source: D:\agentABC\coa\packages\local-providers\src\coa_local_providers\json_lookup.py
+lookup calls total: 594
+
+## 方法级 stack（首次调用）
+
+### catalog_available
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:340 in <module>
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:159 in main
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:555 in validate_metric
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:599 in _check_table_references
+
+### get_table_columns
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:340 in <module>
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:159 in main
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:556 in validate_metric
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:717 in _check_column_references
+
+### known_tables
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:340 in <module>
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:159 in main
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:555 in validate_metric
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:600 in _check_table_references
+
+### table_exists
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:340 in <module>
+  D:\agentABC\coa\packages\local-providers\scripts\run_s1.py:159 in main
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:555 in validate_metric
+  D:\agentABC\coa\packages\metric-service\src\coa_metrics\validator.py:624 in _check_table_references
+
+## 调用样本（每个 method 取前 10 条）
+  catalog_available: CUST-001 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-002 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-003 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-004 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-005 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-006 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-007 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-008 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-009 -> table_exists/get_columns('platform', None)
+  catalog_available: CUST-010 -> table_exists/get_columns('platform', None)
+  get_table_columns: CUST-001 -> table_exists/get_columns('platform', 'platform.cust_behavior_snapshot')
+  get_table_columns: CUST-001 -> table_exists/get_columns('platform', 'platform.cust_behavior_snapshot')
+  get_table_columns: CUST-001 -> table_exists/get_columns('platform', 'platform.cust_behavior_snapshot')
+  get_table_columns: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  get_table_columns: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  get_table_columns: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  get_table_columns: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  get_table_columns: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  get_table_columns: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  get_table_columns: CUST-003 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  known_tables: CUST-001 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-002 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-003 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-004 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-005 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-006 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-007 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-008 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-009 -> table_exists/get_columns('platform', None)
+  known_tables: CUST-010 -> table_exists/get_columns('platform', None)
+  table_exists: CUST-001 -> table_exists/get_columns('platform', 'num')
+  table_exists: CUST-001 -> table_exists/get_columns('platform', 'platform.cust_behavior_snapshot')
+  table_exists: CUST-002 -> table_exists/get_columns('platform', 'num')
+  table_exists: CUST-002 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  table_exists: CUST-003 -> table_exists/get_columns('platform', 'num')
+  table_exists: CUST-003 -> table_exists/get_columns('platform', 'platform.cust_transaction')
+  table_exists: CUST-005 -> table_exists/get_columns('platform', 'num')
+  table_exists: CUST-005 -> table_exists/get_columns('platform', 'platform.cust_behavior_snapshot')
+  table_exists: CUST-006 -> table_exists/get_columns('platform', 'num')
+  table_exists: CUST-006 -> table_exists/get_columns('platform', 'den')

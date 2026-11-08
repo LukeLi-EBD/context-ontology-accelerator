@@ -1,0 +1,1566 @@
+{
+  "data_sources": {
+    "platform": {
+      "catalog_available": true,
+      "rejection_reasons": {},
+      "tables": {
+        "platform.bank_collection_case": [
+          {
+            "name": "account_id",
+            "data_type": "text"
+          },
+          {
+            "name": "case_id",
+            "data_type": "text"
+          },
+          {
+            "name": "case_status",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "outstanding_principal",
+            "data_type": "numeric"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "status_as_of",
+            "data_type": "date"
+          }
+        ],
+        "platform.bank_collection_recovery": [
+          {
+            "name": "case_id",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fee_recovered",
+            "data_type": "numeric"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "interest_recovered",
+            "data_type": "numeric"
+          },
+          {
+            "name": "principal_recovered",
+            "data_type": "numeric"
+          },
+          {
+            "name": "recovery_channel",
+            "data_type": "text"
+          },
+          {
+            "name": "recovery_date",
+            "data_type": "date"
+          },
+          {
+            "name": "recovery_id",
+            "data_type": "bigint"
+          }
+        ],
+        "platform.bank_concentration_stat": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "capital_balance",
+            "data_type": "numeric"
+          },
+          {
+            "name": "capital_net",
+            "data_type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "max_group_credit",
+            "data_type": "numeric"
+          },
+          {
+            "name": "max_group_exposure",
+            "data_type": "numeric"
+          },
+          {
+            "name": "max_single_customer_exposure",
+            "data_type": "numeric"
+          },
+          {
+            "name": "max_single_customer_loan",
+            "data_type": "numeric"
+          },
+          {
+            "name": "tier1_capital_net",
+            "data_type": "numeric"
+          },
+          {
+            "name": "total_related_exposure",
+            "data_type": "numeric"
+          }
+        ],
+        "platform.bank_credit_application": [
+          {
+            "name": "accept_date",
+            "data_type": "date"
+          },
+          {
+            "name": "application_id",
+            "data_type": "text"
+          },
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "decision_date",
+            "data_type": "date"
+          },
+          {
+            "name": "decision_status",
+            "data_type": "text"
+          },
+          {
+            "name": "duplicate_group_id",
+            "data_type": "text"
+          },
+          {
+            "name": "first_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "internal_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "requested_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "test_flag",
+            "data_type": "boolean"
+          }
+        ],
+        "platform.bank_credit_facility": [
+          {
+            "name": "agreement_id",
+            "data_type": "text"
+          },
+          {
+            "name": "approved_limit",
+            "data_type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "currency",
+            "data_type": "text"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "drawn_principal",
+            "data_type": "numeric"
+          },
+          {
+            "name": "effective_from",
+            "data_type": "date"
+          },
+          {
+            "name": "effective_to",
+            "data_type": "date"
+          },
+          {
+            "name": "facility_status",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "fx_rate",
+            "data_type": "numeric"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "internal_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "limit_type",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "status_as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "test_flag",
+            "data_type": "boolean"
+          }
+        ],
+        "platform.bank_deposit_account": [
+          {
+            "name": "account_status",
+            "data_type": "text"
+          },
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "balance",
+            "data_type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "deposit_id",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          }
+        ],
+        "platform.bank_disposal_event": [
+          {
+            "name": "asset_id",
+            "data_type": "text"
+          },
+          {
+            "name": "completion_date",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "disposal_fee",
+            "data_type": "numeric"
+          },
+          {
+            "name": "disposal_type",
+            "data_type": "text"
+          },
+          {
+            "name": "event_id",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "gross_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "recovery_cash",
+            "data_type": "numeric"
+          },
+          {
+            "name": "recovery_noncash_fv",
+            "data_type": "numeric"
+          }
+        ],
+        "platform.bank_ews_signal": [
+          {
+            "name": "approved_limit",
+            "data_type": "numeric"
+          },
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "collateral_ratio_curr",
+            "data_type": "numeric"
+          },
+          {
+            "name": "collateral_ratio_prev",
+            "data_type": "numeric"
+          },
+          {
+            "name": "consecutive_partial_count",
+            "data_type": "integer"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "default_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "dpd",
+            "data_type": "integer"
+          },
+          {
+            "name": "dpd_end",
+            "data_type": "integer"
+          },
+          {
+            "name": "dpd_start",
+            "data_type": "integer"
+          },
+          {
+            "name": "drawn_principal",
+            "data_type": "numeric"
+          },
+          {
+            "name": "due_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "guarantee_status",
+            "data_type": "text"
+          },
+          {
+            "name": "inflow_12m_avg",
+            "data_type": "numeric"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "monthly_inflow",
+            "data_type": "numeric"
+          },
+          {
+            "name": "other_facility_dpd_90plus",
+            "data_type": "boolean"
+          },
+          {
+            "name": "paid_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "rating_notch_curr",
+            "data_type": "integer"
+          },
+          {
+            "name": "rating_notch_prev",
+            "data_type": "integer"
+          },
+          {
+            "name": "risk_class_curr",
+            "data_type": "text"
+          },
+          {
+            "name": "risk_class_prev",
+            "data_type": "text"
+          }
+        ],
+        "platform.bank_loan_account": [
+          {
+            "name": "account_id",
+            "data_type": "text"
+          },
+          {
+            "name": "account_status",
+            "data_type": "text"
+          },
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "balance_end",
+            "data_type": "numeric"
+          },
+          {
+            "name": "balance_start",
+            "data_type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "disbursed_date",
+            "data_type": "date"
+          },
+          {
+            "name": "dpd_end",
+            "data_type": "integer"
+          },
+          {
+            "name": "dpd_start",
+            "data_type": "integer"
+          },
+          {
+            "name": "first_payment_default_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "first_payment_due_date",
+            "data_type": "date"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "guarantee_type",
+            "data_type": "text"
+          },
+          {
+            "name": "industry",
+            "data_type": "text"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "maturity_date",
+            "data_type": "date"
+          },
+          {
+            "name": "period_decrease_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "period_start",
+            "data_type": "date"
+          },
+          {
+            "name": "principal_balance",
+            "data_type": "numeric"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "region",
+            "data_type": "text"
+          },
+          {
+            "name": "risk_class",
+            "data_type": "text"
+          },
+          {
+            "name": "risk_class_end",
+            "data_type": "text"
+          },
+          {
+            "name": "risk_class_start",
+            "data_type": "text"
+          }
+        ],
+        "platform.bank_loan_repayment": [
+          {
+            "name": "account_id",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "due_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "due_date",
+            "data_type": "date"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "installment_no",
+            "data_type": "integer"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "interest_paid",
+            "data_type": "numeric"
+          },
+          {
+            "name": "is_partial",
+            "data_type": "boolean"
+          },
+          {
+            "name": "overdue_days",
+            "data_type": "integer"
+          },
+          {
+            "name": "paid_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "paid_date",
+            "data_type": "date"
+          },
+          {
+            "name": "penalty_paid",
+            "data_type": "numeric"
+          },
+          {
+            "name": "principal_paid",
+            "data_type": "numeric"
+          },
+          {
+            "name": "repayment_id",
+            "data_type": "bigint"
+          },
+          {
+            "name": "status_as_of",
+            "data_type": "date"
+          }
+        ],
+        "platform.bank_npl_snapshot": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "asset_id",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "npl_balance",
+            "data_type": "numeric"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "risk_class",
+            "data_type": "text"
+          }
+        ],
+        "platform.bank_provision_snapshot": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "loan_balance",
+            "data_type": "numeric"
+          },
+          {
+            "name": "npl_balance",
+            "data_type": "numeric"
+          },
+          {
+            "name": "provision_balance",
+            "data_type": "numeric"
+          }
+        ],
+        "platform.cust_aum_snapshot": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "aum",
+            "data_type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "product_type",
+            "data_type": "text"
+          }
+        ],
+        "platform.cust_behavior_snapshot": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "days_since_last_behavior",
+            "data_type": "integer"
+          },
+          {
+            "name": "days_since_proxy_event",
+            "data_type": "integer"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "last_behavior_date",
+            "data_type": "date"
+          },
+          {
+            "name": "last_txn_date",
+            "data_type": "date"
+          }
+        ],
+        "platform.cust_campaign_touch": [
+          {
+            "name": "campaign_id",
+            "data_type": "text"
+          },
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "response_date",
+            "data_type": "date"
+          },
+          {
+            "name": "response_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "touch_date",
+            "data_type": "date"
+          },
+          {
+            "name": "touch_id",
+            "data_type": "text"
+          }
+        ],
+        "platform.cust_cohort_stat": [
+          {
+            "name": "active_and_prior_month",
+            "data_type": "integer"
+          },
+          {
+            "name": "active_customers",
+            "data_type": "integer"
+          },
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "cohort_customers",
+            "data_type": "integer"
+          },
+          {
+            "name": "cohort_key",
+            "data_type": "text"
+          },
+          {
+            "name": "cohort_month",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "prior_month_active",
+            "data_type": "integer"
+          },
+          {
+            "name": "retained_customers",
+            "data_type": "integer"
+          }
+        ],
+        "platform.cust_complaint": [
+          {
+            "name": "category",
+            "data_type": "text"
+          },
+          {
+            "name": "closed_date",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "opened_date",
+            "data_type": "date"
+          },
+          {
+            "name": "ticket_id",
+            "data_type": "text"
+          },
+          {
+            "name": "ticket_status",
+            "data_type": "text"
+          }
+        ],
+        "platform.cust_master": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "customer_status",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "registration_date",
+            "data_type": "date"
+          },
+          {
+            "name": "segment",
+            "data_type": "text"
+          }
+        ],
+        "platform.cust_product_holding": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "holding_id",
+            "data_type": "text"
+          },
+          {
+            "name": "holding_status",
+            "data_type": "text"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "product_category",
+            "data_type": "text"
+          }
+        ],
+        "platform.cust_transaction": [
+          {
+            "name": "amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "product_category",
+            "data_type": "text"
+          },
+          {
+            "name": "txn_date",
+            "data_type": "date"
+          },
+          {
+            "name": "txn_id",
+            "data_type": "text"
+          },
+          {
+            "name": "txn_type",
+            "data_type": "text"
+          }
+        ],
+        "platform.ins_claim_case": [
+          {
+            "name": "claim_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "claim_no",
+            "data_type": "text"
+          },
+          {
+            "name": "claim_status",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "decision_date",
+            "data_type": "date"
+          },
+          {
+            "name": "filing_date",
+            "data_type": "date"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "paid_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "policy_no",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "report_date",
+            "data_type": "date"
+          }
+        ],
+        "platform.ins_claim_reserve_snapshot": [
+          {
+            "name": "as_of",
+            "data_type": "date"
+          },
+          {
+            "name": "case_status",
+            "data_type": "text"
+          },
+          {
+            "name": "claim_no",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "expense_reserve",
+            "data_type": "numeric"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "ibnr_reserve",
+            "data_type": "numeric"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "reported_reserve",
+            "data_type": "numeric"
+          }
+        ],
+        "platform.ins_payment_record": [
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "due_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "due_date",
+            "data_type": "date"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "grace_end_date",
+            "data_type": "date"
+          },
+          {
+            "name": "installment_no",
+            "data_type": "integer"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "paid_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "paid_date",
+            "data_type": "date"
+          },
+          {
+            "name": "payment_id",
+            "data_type": "bigint"
+          },
+          {
+            "name": "payment_status",
+            "data_type": "text"
+          },
+          {
+            "name": "payment_type",
+            "data_type": "text"
+          },
+          {
+            "name": "policy_no",
+            "data_type": "text"
+          },
+          {
+            "name": "policy_status",
+            "data_type": "text"
+          },
+          {
+            "name": "policy_year",
+            "data_type": "integer"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "reinstatement_flag",
+            "data_type": "boolean"
+          },
+          {
+            "name": "status_as_of",
+            "data_type": "date"
+          }
+        ],
+        "platform.ins_persistence_stat": [
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "cohort_period",
+            "data_type": "date"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "due_vehicle_count",
+            "data_type": "integer"
+          },
+          {
+            "name": "first_year_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "renewal_year",
+            "data_type": "integer"
+          },
+          {
+            "name": "renewed_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "renewed_vehicle_count",
+            "data_type": "integer"
+          },
+          {
+            "name": "valuation_basis",
+            "data_type": "text"
+          }
+        ],
+        "platform.ins_policy": [
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "customer_no",
+            "data_type": "text"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "first_year_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "is_investment_linked",
+            "data_type": "boolean"
+          },
+          {
+            "name": "issue_date",
+            "data_type": "date"
+          },
+          {
+            "name": "policy_no",
+            "data_type": "text"
+          },
+          {
+            "name": "policy_status",
+            "data_type": "text"
+          },
+          {
+            "name": "policy_year",
+            "data_type": "integer"
+          },
+          {
+            "name": "premium_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "premium_type",
+            "data_type": "text"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "reversal_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "status_as_of",
+            "data_type": "date"
+          }
+        ],
+        "platform.ins_policy_event": [
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "event_date",
+            "data_type": "date"
+          },
+          {
+            "name": "event_id",
+            "data_type": "text"
+          },
+          {
+            "name": "event_type",
+            "data_type": "text"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "policy_no",
+            "data_type": "text"
+          }
+        ],
+        "platform.ins_underwriting_stat": [
+          {
+            "name": "beginning_reserve_total",
+            "data_type": "numeric"
+          },
+          {
+            "name": "business_line",
+            "data_type": "text"
+          },
+          {
+            "name": "ceded_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "channel",
+            "data_type": "text"
+          },
+          {
+            "name": "claim_reserve_change",
+            "data_type": "numeric"
+          },
+          {
+            "name": "collected_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "commission_expense",
+            "data_type": "numeric"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "current_term_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "earned_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "expense_total",
+            "data_type": "numeric"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "long_term_reserve_change",
+            "data_type": "numeric"
+          },
+          {
+            "name": "paid_claims",
+            "data_type": "numeric"
+          },
+          {
+            "name": "period_end",
+            "data_type": "date"
+          },
+          {
+            "name": "period_start",
+            "data_type": "date"
+          },
+          {
+            "name": "plan_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "policyholder_deposit_beginning",
+            "data_type": "numeric"
+          },
+          {
+            "name": "product",
+            "data_type": "text"
+          },
+          {
+            "name": "reinsurance_recoverable",
+            "data_type": "numeric"
+          },
+          {
+            "name": "reinsurance_reserve_change",
+            "data_type": "numeric"
+          },
+          {
+            "name": "retained_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "separate_account_beginning",
+            "data_type": "numeric"
+          },
+          {
+            "name": "signed_premium",
+            "data_type": "numeric"
+          },
+          {
+            "name": "surrender_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "unearned_reserve_change",
+            "data_type": "numeric"
+          }
+        ],
+        "platform.loan_installment_plan": [
+          {
+            "name": "agreement_id",
+            "data_type": "text"
+          },
+          {
+            "name": "created_at",
+            "data_type": "timestamp with time zone"
+          },
+          {
+            "name": "data_source",
+            "data_type": "text"
+          },
+          {
+            "name": "due_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "due_date",
+            "data_type": "date"
+          },
+          {
+            "name": "fixture",
+            "data_type": "boolean"
+          },
+          {
+            "name": "installment_no",
+            "data_type": "integer"
+          },
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "overdue_days",
+            "data_type": "integer"
+          },
+          {
+            "name": "paid_amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "paid_date",
+            "data_type": "date"
+          },
+          {
+            "name": "plan_id",
+            "data_type": "bigint"
+          },
+          {
+            "name": "status_as_of",
+            "data_type": "date"
+          }
+        ]
+      }
+    }
+  }
+}

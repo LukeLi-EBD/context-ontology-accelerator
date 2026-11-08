@@ -1,0 +1,767 @@
+{
+  "CUST-001": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_behavior_snapshot"
+  },
+  "CUST-002": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_transaction"
+  },
+  "CUST-003": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_transaction"
+  },
+  "CUST-004": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "metric_kind_not_drivable",
+    "executionReason": "metric_kind=score，compute 不支持该类型（仅 ratio/duration/sum/count/amount/period_value）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "CUST-005": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_behavior_snapshot"
+  },
+  "CUST-006": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_cohort_stat"
+  },
+  "CUST-007": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_cohort_stat"
+  },
+  "CUST-008": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_cohort_stat"
+  },
+  "CUST-009": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_product_holding"
+  },
+  "CUST-010": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "CUST-011": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "CUST-012": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_aum_snapshot"
+  },
+  "CUST-013": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.cust_aum_snapshot"
+  },
+  "FIN-BANK-001": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-BANK-002": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-003": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-004": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-005": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-006": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-007": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-008": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-009": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-010": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-011": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-012": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-013": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-014": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-015": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-016": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-017": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-018": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-019": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "metric_kind_not_drivable",
+    "executionReason": "metric_kind=derived_rate，compute 不支持该类型（仅 ratio/duration/sum/count/amount/period_value）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-020": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-021": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-022": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_provision_snapshot"
+  },
+  "FIN-BANK-023": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_provision_snapshot"
+  },
+  "FIN-BANK-024": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-025": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_concentration_stat"
+  },
+  "FIN-BANK-026": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_concentration_stat"
+  },
+  "FIN-BANK-027": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_concentration_stat"
+  },
+  "FIN-BANK-028": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_concentration_stat"
+  },
+  "FIN-BANK-029": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_concentration_stat"
+  },
+  "FIN-BANK-030": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_concentration_stat"
+  },
+  "FIN-BANK-031": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-BANK-032": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-BANK-033": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.bank_loan_account"
+  },
+  "FIN-BANK-034": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "rule_set_only",
+    "executionReason": "rule_set 指标只能走 POST /metrics/{id}/rules，不能走 compute",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-035": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-BANK-036": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "variant_required",
+    "executionReason": "族索引不直接出数：需先选择变体（E_METRIC_VARIANT_REQUIRED）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-BANK-036-v1": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-BANK-036-v2": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-INS-001": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-INS-002": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_policy"
+  },
+  "FIN-INS-003": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-004": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_payment_record"
+  },
+  "FIN-INS-005": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_policy"
+  },
+  "FIN-INS-006": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-007": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_claim_case"
+  },
+  "FIN-INS-008": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-009": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-010": {
+    "publishable": false,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-011": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-012": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "metric_kind_not_drivable",
+    "executionReason": "metric_kind=derived_rate，compute 不支持该类型（仅 ratio/duration/sum/count/amount/period_value）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-INS-013": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 730 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-014": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_claim_reserve_snapshot"
+  },
+  "FIN-INS-015": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_claim_case"
+  },
+  "FIN-INS-016": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 1 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_claim_reserve_snapshot"
+  },
+  "FIN-INS-017": {
+    "publishable": true,
+    "executable": false,
+    "executionReasonCode": "quartet_incomplete",
+    "executionReason": "四元组不完整：缺 denominator_agg",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_claim_case"
+  },
+  "FIN-INS-018": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_claim_case"
+  },
+  "FIN-INS-019": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-020": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-021": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": ""
+  },
+  "FIN-INS-022": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "variant_required",
+    "executionReason": "族索引不直接出数：需先选择变体（E_METRIC_VARIANT_REQUIRED）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-INS-022-v1": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_persistence_stat"
+  },
+  "FIN-INS-022-v2": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_persistence_stat"
+  },
+  "FIN-INS-023": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "variant_required",
+    "executionReason": "族索引不直接出数：需先选择变体（E_METRIC_VARIANT_REQUIRED）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-INS-023-v1": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 730 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_persistence_stat"
+  },
+  "FIN-INS-023-v2": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_persistence_stat"
+  },
+  "FIN-INS-024": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_persistence_stat"
+  },
+  "FIN-INS-025": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "fact_function",
+    "sourceTable": "platform.ins_policy"
+  },
+  "FIN-INS-026": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-027": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-028": {
+    "publishable": true,
+    "executable": true,
+    "executionReasonCode": "compute_ready",
+    "executionReason": "可走 /metrics/{metric_id}/output?compute=true（可用窗口 365 天）",
+    "definitionVersion": "v3.0",
+    "sqlSource": "binding",
+    "sourceTable": "platform.ins_underwriting_stat"
+  },
+  "FIN-INS-029": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  },
+  "FIN-INS-030": {
+    "publishable": false,
+    "executable": false,
+    "executionReasonCode": "no_observations",
+    "executionReason": "库内该口径无任何观测记录",
+    "definitionVersion": "v3.0",
+    "sqlSource": "formula_text_fallback",
+    "sourceTable": ""
+  }
+}

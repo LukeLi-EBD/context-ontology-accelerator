@@ -1,0 +1,123 @@
+{
+  "metricId": "FIN-BANK-011",
+  "name": "重组贷款（旧规）",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade B：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "all_of",
+        "clauses": [
+          {
+            "op": "equals",
+            "field": "restructuring_flag",
+            "value": true
+          },
+          {
+            "op": "gte",
+            "field": "days_since_restructure",
+            "value": 180
+          }
+        ]
+      },
+      "level": "L2",
+      "signal": "重组观察期已满 180 天，分类下限次级（旧规）",
+      "window": "观察期 >=180 天",
+      "debounce": "观察期内持续",
+      "threshold": "restructuring_flag=true 且 days_since_restructure>=180",
+      "suppression": "观察期内不得上调分类；仅历史对照口径",
+      "configurable": true,
+      "change_control": "180 天为旧规原文，调整需合规审批",
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "restructuring_flag",
+        "days_since_restructure"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "2007 指引口径下需要重组的贷款至少归为次级，观察期内不得上调分类。",
+  "formulaText": "重组标志 = 需要重组；分类下限 = 次级；观察期 ≥ 180 天；规则型",
+  "denominatorText": "不适用（判定规则）",
+  "observationPeriodText": "period（观察期 ≥ 180 天，自重组日起算；旧规口径，仅历史对照）",
+  "granularityText": "agreement（单笔协议）",
+  "provenanceLabel": "原文",
+  "unit": "标志/档",
+  "browse": {
+    "metricId": "FIN-BANK-011",
+    "nameZh": "重组贷款（旧规）",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade B：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "标志/档",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "period",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "重组贷款（旧规）",
+    "definition": "2007 指引口径下需要重组的贷款至少归为次级，观察期内不得上调分类。",
+    "formulaText": "重组标志 = 需要重组；分类下限 = 次级；观察期 ≥ 180 天；规则型",
+    "denominatorText": "不适用（判定规则）",
+    "observationPeriodText": "period（观察期 ≥ 180 天，自重组日起算；旧规口径，仅历史对照）",
+    "granularityText": "agreement（单笔协议）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "all_of",
+          "clauses": [
+            {
+              "op": "equals",
+              "field": "restructuring_flag",
+              "value": true
+            },
+            {
+              "op": "gte",
+              "field": "days_since_restructure",
+              "value": 180
+            }
+          ]
+        },
+        "level": "L2",
+        "signal": "重组观察期已满 180 天，分类下限次级（旧规）",
+        "window": "观察期 >=180 天",
+        "debounce": "观察期内持续",
+        "threshold": "restructuring_flag=true 且 days_since_restructure>=180",
+        "suppression": "观察期内不得上调分类；仅历史对照口径",
+        "configurable": true,
+        "change_control": "180 天为旧规原文，调整需合规审批",
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "restructuring_flag",
+          "days_since_restructure"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "metricId": "FIN-BANK-009",
+  "name": "交叉违约触发不良",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "ratio_gte",
+        "value": 0.1,
+        "numerator": "npl_balance",
+        "denominator": "total_balance"
+      },
+      "level": "L3",
+      "signal": "同一债务人不良债权占比超过 10%，全部债权归为不良",
+      "window": "分类日",
+      "debounce": "即时",
+      "threshold": ">10%",
+      "suppression": "同一债务人 30 天内已 L3 的合并",
+      "configurable": true,
+      "change_control": "10% 为定义原文阈值，调整需风险管理部签字",
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "npl_balance",
+        "total_balance"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "同一非零售债务人在本行被分为不良的债权超过 10% 时，该债务人在本行的全部债权归为不良。",
+  "formulaText": "若 本行对该债务人不良余额 / 本行对该债务人全部债权余额 > 10% → 全部债权归为不良；规则型",
+  "denominatorText": "本行对同一非零售债务人的全部债权余额（按债务人去重汇总）；单位 元",
+  "observationPeriodText": "point-in-time（分类日）",
+  "granularityText": "customer（非零售债务人）",
+  "provenanceLabel": "原文",
+  "unit": "标志/档",
+  "browse": {
+    "metricId": "FIN-BANK-009",
+    "nameZh": "交叉违约触发不良",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "标志/档",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "交叉违约触发不良",
+    "definition": "同一非零售债务人在本行被分为不良的债权超过 10% 时，该债务人在本行的全部债权归为不良。",
+    "formulaText": "若 本行对该债务人不良余额 / 本行对该债务人全部债权余额 > 10% → 全部债权归为不良；规则型",
+    "denominatorText": "本行对同一非零售债务人的全部债权余额（按债务人去重汇总）；单位 元",
+    "observationPeriodText": "point-in-time（分类日）",
+    "granularityText": "customer（非零售债务人）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "ratio_gte",
+          "value": 0.1,
+          "numerator": "npl_balance",
+          "denominator": "total_balance"
+        },
+        "level": "L3",
+        "signal": "同一债务人不良债权占比超过 10%，全部债权归为不良",
+        "window": "分类日",
+        "debounce": "即时",
+        "threshold": ">10%",
+        "suppression": "同一债务人 30 天内已 L3 的合并",
+        "configurable": true,
+        "change_control": "10% 为定义原文阈值，调整需风险管理部签字",
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "npl_balance",
+          "total_balance"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

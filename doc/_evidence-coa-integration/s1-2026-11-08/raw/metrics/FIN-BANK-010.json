@@ -1,0 +1,123 @@
+{
+  "metricId": "FIN-BANK-010",
+  "name": "重组贷款（现行）",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "all_of",
+        "clauses": [
+          {
+            "op": "equals",
+            "field": "financial_difficulty",
+            "value": true
+          },
+          {
+            "op": "equals",
+            "field": "contract_modified",
+            "value": true
+          }
+        ]
+      },
+      "level": "L2",
+      "signal": "财务困难且合同调整，计入重组，分类下限至少关注",
+      "window": "观察期 >=365 天且 >=连续 2 个还款期",
+      "debounce": "观察期内持续",
+      "threshold": "financial_difficulty=true 且 contract_modified=true",
+      "suppression": "观察期内不得上调分类；再次重组升级为 L3",
+      "configurable": true,
+      "change_control": "观察期 365 天为定义原文，调整需合规审批",
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "financial_difficulty",
+        "contract_modified"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "因债务人财务困难而作出有利于债务人的合同调整或提供再融资所形成的资产，观察期至少 1 年且不少于连续 2 个还款期。",
+  "formulaText": "重组标志 = 财务困难 ∧ 合同调整；观察期 = max(1 年, 连续 2 个还款期)；重组后分类下限：原正常/关注→至少关注，再次重组→至少次级；规则型",
+  "denominatorText": "不适用（判定规则）",
+  "observationPeriodText": "period（观察期 ≥ 365 天且 ≥ 连续 2 个还款期，自调整后首次还款日起算）",
+  "granularityText": "agreement（单笔协议）",
+  "provenanceLabel": "原文",
+  "unit": "标志/档",
+  "browse": {
+    "metricId": "FIN-BANK-010",
+    "nameZh": "重组贷款（现行）",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "标志/档",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "period",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "重组贷款（现行）",
+    "definition": "因债务人财务困难而作出有利于债务人的合同调整或提供再融资所形成的资产，观察期至少 1 年且不少于连续 2 个还款期。",
+    "formulaText": "重组标志 = 财务困难 ∧ 合同调整；观察期 = max(1 年, 连续 2 个还款期)；重组后分类下限：原正常/关注→至少关注，再次重组→至少次级；规则型",
+    "denominatorText": "不适用（判定规则）",
+    "observationPeriodText": "period（观察期 ≥ 365 天且 ≥ 连续 2 个还款期，自调整后首次还款日起算）",
+    "granularityText": "agreement（单笔协议）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "all_of",
+          "clauses": [
+            {
+              "op": "equals",
+              "field": "financial_difficulty",
+              "value": true
+            },
+            {
+              "op": "equals",
+              "field": "contract_modified",
+              "value": true
+            }
+          ]
+        },
+        "level": "L2",
+        "signal": "财务困难且合同调整，计入重组，分类下限至少关注",
+        "window": "观察期 >=365 天且 >=连续 2 个还款期",
+        "debounce": "观察期内持续",
+        "threshold": "financial_difficulty=true 且 contract_modified=true",
+        "suppression": "观察期内不得上调分类；再次重组升级为 L3",
+        "configurable": true,
+        "change_control": "观察期 365 天为定义原文，调整需合规审批",
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "financial_difficulty",
+          "contract_modified"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

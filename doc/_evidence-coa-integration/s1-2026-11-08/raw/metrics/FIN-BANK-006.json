@@ -1,0 +1,105 @@
+{
+  "metricId": "FIN-BANK-006",
+  "name": "部分还款/最低还款逾期判定",
+  "domain": "bank",
+  "evidenceBasis": "industry",
+  "publishable": true,
+  "inference": true,
+  "formulaDisabled": false,
+  "missing": "source",
+  "evidenceStatus": "NO_SOURCE",
+  "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 无成文公式，按合同实务。反驳：信用卡最低还款与贷款整期应还不同，若合同允许部分还款不逾期则不成立；须业务确认合同条款。",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "ratio_lt",
+        "value": 1.0,
+        "numerator": "paid_amount",
+        "denominator": "due_amount"
+      },
+      "level": "L1",
+      "signal": "实还金额低于当期应还，判定该期逾期",
+      "window": "应还款日后逐日",
+      "debounce": "当期首次触发",
+      "threshold": "paid_amount/due_amount < 1",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "宽限期内、已批准展期的不告警",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "paid_amount",
+        "due_amount"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "未按合同还足当期应还金额（含信用卡最低还款额）时判定该期逾期，按整期逾期而非仅未还部分",
+  "formulaText": "逾期标志=1 若 实还金额<当期应还金额或最低还款额，逾期起点=应还款日次日",
+  "denominatorText": "当期应还期次数（按账户×期次去重）",
+  "observationPeriodText": "point-in-time（逐日更新，月末快照）",
+  "granularityText": "account",
+  "provenanceLabel": "推测",
+  "unit": "标志 0/1 与天",
+  "browse": {
+    "metricId": "FIN-BANK-006",
+    "nameZh": "部分还款/最低还款逾期判定",
+    "domain": "bank",
+    "evidenceBasis": "industry",
+    "publishable": true,
+    "inference": true,
+    "formulaDisabled": false,
+    "missing": "source",
+    "definitionStatus": "NO_SOURCE",
+    "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 无成文公式，按合同实务。反驳：信用卡最低还款与贷款整期应还不同，若合同允许部分还款不逾期则不成立；须业务确认合同条款。",
+    "definitionVersion": "v3.0",
+    "unit": "标志 0/1 与天",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "部分还款/最低还款逾期判定〔推测〕",
+    "definition": "未按合同还足当期应还金额（含信用卡最低还款额）时判定该期逾期，按整期逾期而非仅未还部分",
+    "formulaText": "逾期标志=1 若 实还金额<当期应还金额或最低还款额，逾期起点=应还款日次日",
+    "denominatorText": "当期应还期次数（按账户×期次去重）",
+    "observationPeriodText": "point-in-time（逐日更新，月末快照）",
+    "granularityText": "account",
+    "provenanceLabel": "推测",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "ratio_lt",
+          "value": 1.0,
+          "numerator": "paid_amount",
+          "denominator": "due_amount"
+        },
+        "level": "L1",
+        "signal": "实还金额低于当期应还，判定该期逾期",
+        "window": "应还款日后逐日",
+        "debounce": "当期首次触发",
+        "threshold": "paid_amount/due_amount < 1",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "宽限期内、已批准展期的不告警",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "paid_amount",
+          "due_amount"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

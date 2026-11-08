@@ -1,0 +1,101 @@
+{
+  "metricId": "FIN-BANK-004",
+  "name": "逾期90天→Stage 3",
+  "domain": "bank",
+  "evidenceBasis": "industry",
+  "publishable": false,
+  "inference": true,
+  "formulaDisabled": false,
+  "missing": "regulatory_source",
+  "evidenceStatus": "INDUSTRY_ONLY",
+  "note": "Grade C：学术/厂商/行业资料，非监管原文；仅内部出数",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 91
+      },
+      "level": "L3",
+      "signal": "逾期超过 90 天，划入 IFRS 9 Stage 3",
+      "window": "报告日",
+      "debounce": "即时",
+      "threshold": ">90 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "同对象 30 天内已 Stage 3 的合并",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "把逾期超过 90 天作为已发生信用减值（credit-impaired）的判断依据之一，据此划入 IFRS 9 第三阶段。",
+  "formulaText": "若 DPD > 90 → Stage 3；否则按信用风险显著增加判断 Stage 2/1；规则型",
+  "denominatorText": "不适用（规则判定）",
+  "observationPeriodText": "point-in-time（报告日）",
+  "granularityText": "asset（单笔金融资产）",
+  "provenanceLabel": "行业通行",
+  "unit": "阶段（Stage 1/2/3）",
+  "browse": {
+    "metricId": "FIN-BANK-004",
+    "nameZh": "逾期90天→Stage 3",
+    "domain": "bank",
+    "evidenceBasis": "industry",
+    "publishable": false,
+    "inference": true,
+    "formulaDisabled": false,
+    "missing": "regulatory_source",
+    "definitionStatus": "INDUSTRY_ONLY",
+    "note": "Grade C：学术/厂商/行业资料，非监管原文；仅内部出数",
+    "definitionVersion": "v3.0",
+    "unit": "阶段（Stage 1/2/3）",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "逾期90天→Stage 3〔行业〕",
+    "definition": "把逾期超过 90 天作为已发生信用减值（credit-impaired）的判断依据之一，据此划入 IFRS 9 第三阶段。",
+    "formulaText": "若 DPD > 90 → Stage 3；否则按信用风险显著增加判断 Stage 2/1；规则型",
+    "denominatorText": "不适用（规则判定）",
+    "observationPeriodText": "point-in-time（报告日）",
+    "granularityText": "asset（单笔金融资产）",
+    "provenanceLabel": "行业通行",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 91
+        },
+        "level": "L3",
+        "signal": "逾期超过 90 天，划入 IFRS 9 Stage 3",
+        "window": "报告日",
+        "debounce": "即时",
+        "threshold": ">90 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "同对象 30 天内已 Stage 3 的合并",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

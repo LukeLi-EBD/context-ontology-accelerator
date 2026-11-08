@@ -1,0 +1,311 @@
+{
+  "metricId": "FIN-BANK-002",
+  "name": "逾期分档（M0–M6）",
+  "domain": "bank",
+  "evidenceBasis": "industry",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCE_MISSING",
+  "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 行业通行分桶，不是监管定义。反驳：若系统或合同把 M1 定义为 0–30 天，整个边界偏移一档；拿到内部贷后制度只改档界说明，不改 ID。",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 1
+      },
+      "level": "L1",
+      "signal": "逾期进入 M1（1-30 天）",
+      "window": "日",
+      "debounce": "连续 2 个观测日",
+      "threshold": ">=1 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "已核销/已结清/已进入不良处置的不重复告警",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R02",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 31
+      },
+      "level": "L1",
+      "signal": "逾期进入 M2（31-60 天）",
+      "window": "日",
+      "debounce": "连续 2 个观测日",
+      "threshold": ">=31 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "同上；观察期内分类不得上调",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R03",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 61
+      },
+      "level": "L2",
+      "signal": "逾期进入 M3（61-90 天）",
+      "window": "日",
+      "debounce": "即时",
+      "threshold": ">=61 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "已重组/已展期的观察期内按重组口径",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R04",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 91
+      },
+      "level": "L2",
+      "signal": "逾期进入 M4（91-120 天）",
+      "window": "日",
+      "debounce": "即时",
+      "threshold": ">=91 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "同上",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R05",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 121
+      },
+      "level": "L2",
+      "signal": "逾期进入 M5（121-150 天）",
+      "window": "日",
+      "debounce": "即时",
+      "threshold": ">=121 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "同上",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R06",
+      "spec": {
+        "op": "gte",
+        "field": "dpd",
+        "value": 151
+      },
+      "level": "L3",
+      "signal": "逾期进入 M6（151 天及以上）",
+      "window": "日",
+      "debounce": "即时",
+      "threshold": ">=151 天",
+      "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+      "suppression": "同一对象 30 天内已 L3 的合并",
+      "configurable": true,
+      "evidence_basis": "industry",
+      "trigger_fields": [
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "按逾期天数将账户划入 M0–M6 月度分桶，M0 未逾期、M1 逾期 1–30 天、M2 逾期 31–60 天，其余每 30 天一档至 M6",
+  "formulaText": "M 档 = floor((max(观察日−应还款日,0)−1)/30)+1，DPD=0 记 M0",
+  "denominatorText": "不适用（分档规则）",
+  "observationPeriodText": "point-in-time（月末观察日快照）",
+  "granularityText": "account（单笔贷款/信用卡账户）",
+  "provenanceLabel": "行业通行",
+  "unit": "档（M0–M6）",
+  "browse": {
+    "metricId": "FIN-BANK-002",
+    "nameZh": "逾期分档（M0–M6）",
+    "domain": "bank",
+    "evidenceBasis": "industry",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCE_MISSING",
+    "note": "依据行业通行做法定稿为平台基线；将来获原文后替换。未获监管原文，本终裁为平台内部基线，不代表监管报送口径；对外报送须替换为原文口径。 行业通行分桶，不是监管定义。反驳：若系统或合同把 M1 定义为 0–30 天，整个边界偏移一档；拿到内部贷后制度只改档界说明，不改 ID。",
+    "definitionVersion": "v3.0",
+    "unit": "档（M0–M6）",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "band",
+    "formula": "band(dpd, 30, 6)",
+    "numeratorAgg": "max",
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "逾期分档（M0–M6）〔行业〕",
+    "definition": "按逾期天数将账户划入 M0–M6 月度分桶，M0 未逾期、M1 逾期 1–30 天、M2 逾期 31–60 天，其余每 30 天一档至 M6",
+    "formulaText": "M 档 = floor((max(观察日−应还款日,0)−1)/30)+1，DPD=0 记 M0",
+    "denominatorText": "不适用（分档规则）",
+    "observationPeriodText": "point-in-time（月末观察日快照）",
+    "granularityText": "account（单笔贷款/信用卡账户）",
+    "provenanceLabel": "行业通行",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 1
+        },
+        "level": "L1",
+        "signal": "逾期进入 M1（1-30 天）",
+        "window": "日",
+        "debounce": "连续 2 个观测日",
+        "threshold": ">=1 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "已核销/已结清/已进入不良处置的不重复告警",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R02",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 31
+        },
+        "level": "L1",
+        "signal": "逾期进入 M2（31-60 天）",
+        "window": "日",
+        "debounce": "连续 2 个观测日",
+        "threshold": ">=31 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "同上；观察期内分类不得上调",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R03",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 61
+        },
+        "level": "L2",
+        "signal": "逾期进入 M3（61-90 天）",
+        "window": "日",
+        "debounce": "即时",
+        "threshold": ">=61 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "已重组/已展期的观察期内按重组口径",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R04",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 91
+        },
+        "level": "L2",
+        "signal": "逾期进入 M4（91-120 天）",
+        "window": "日",
+        "debounce": "即时",
+        "threshold": ">=91 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "同上",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R05",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 121
+        },
+        "level": "L2",
+        "signal": "逾期进入 M5（121-150 天）",
+        "window": "日",
+        "debounce": "即时",
+        "threshold": ">=121 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "同上",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R06",
+        "spec": {
+          "op": "gte",
+          "field": "dpd",
+          "value": 151
+        },
+        "level": "L3",
+        "signal": "逾期进入 M6（151 天及以上）",
+        "window": "日",
+        "debounce": "即时",
+        "threshold": ">=151 天",
+        "disclaimer": "默认值为行业通行配置，非监管阈值，需业务确认后调整",
+        "suppression": "同一对象 30 天内已 L3 的合并",
+        "configurable": true,
+        "evidence_basis": "industry",
+        "trigger_fields": [
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}

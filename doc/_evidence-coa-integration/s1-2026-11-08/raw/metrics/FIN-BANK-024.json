@@ -1,0 +1,187 @@
+{
+  "metricId": "FIN-BANK-024",
+  "name": "IFRS 9 三阶段划分",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "any_of",
+        "clauses": [
+          {
+            "op": "any_true",
+            "fields": [
+              "credit_impaired"
+            ]
+          },
+          {
+            "op": "gte",
+            "field": "dpd",
+            "value": 91
+          }
+        ]
+      },
+      "level": "L3",
+      "signal": "已发生信用减值或逾期 90 天以上，划入 Stage 3",
+      "window": "报告日",
+      "debounce": "即时",
+      "threshold": "credit_impaired=true 或 dpd>=91",
+      "suppression": "同一对象 30 天内已 Stage 3 的合并",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "credit_impaired",
+        "dpd"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R02",
+      "spec": {
+        "op": "all_of",
+        "clauses": [
+          {
+            "op": "equals",
+            "field": "significant_increase",
+            "value": true
+          },
+          {
+            "op": "equals",
+            "field": "credit_impaired",
+            "value": false
+          }
+        ]
+      },
+      "level": "L2",
+      "signal": "信用风险显著增加且未减值，划入 Stage 2",
+      "window": "报告日",
+      "debounce": "即时",
+      "threshold": "significant_increase=true 且 credit_impaired=false",
+      "disclaimer": "显著增加的判定因子需业务确认，默认值非监管阈值",
+      "suppression": "有定量/定性证据推翻的，人工抑制并留痕",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "significant_increase",
+        "credit_impaired"
+      ],
+      "threshold_source": "industry_default"
+    }
+  ],
+  "definition": "按信用风险自初始确认后是否显著增加、是否发生信用减值，把金融资产划入三个阶段并分别按 12 个月或存续期 ECL 计量。",
+  "formulaText": "Stage 1：未显著增加→12 个月 ECL；Stage 2：显著增加且未减值→存续期 ECL；Stage 3：已减值→存续期 ECL；规则型",
+  "denominatorText": "不适用（分类规则）",
+  "observationPeriodText": "point-in-time（报告日）",
+  "granularityText": "asset（单笔金融资产）",
+  "provenanceLabel": "原文",
+  "unit": "阶段（Stage 1/2/3）",
+  "browse": {
+    "metricId": "FIN-BANK-024",
+    "nameZh": "IFRS 9 三阶段划分",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "阶段（Stage 1/2/3）",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "IFRS 9 三阶段划分",
+    "definition": "按信用风险自初始确认后是否显著增加、是否发生信用减值，把金融资产划入三个阶段并分别按 12 个月或存续期 ECL 计量。",
+    "formulaText": "Stage 1：未显著增加→12 个月 ECL；Stage 2：显著增加且未减值→存续期 ECL；Stage 3：已减值→存续期 ECL；规则型",
+    "denominatorText": "不适用（分类规则）",
+    "observationPeriodText": "point-in-time（报告日）",
+    "granularityText": "asset（单笔金融资产）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "any_of",
+          "clauses": [
+            {
+              "op": "any_true",
+              "fields": [
+                "credit_impaired"
+              ]
+            },
+            {
+              "op": "gte",
+              "field": "dpd",
+              "value": 91
+            }
+          ]
+        },
+        "level": "L3",
+        "signal": "已发生信用减值或逾期 90 天以上，划入 Stage 3",
+        "window": "报告日",
+        "debounce": "即时",
+        "threshold": "credit_impaired=true 或 dpd>=91",
+        "suppression": "同一对象 30 天内已 Stage 3 的合并",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "credit_impaired",
+          "dpd"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R02",
+        "spec": {
+          "op": "all_of",
+          "clauses": [
+            {
+              "op": "equals",
+              "field": "significant_increase",
+              "value": true
+            },
+            {
+              "op": "equals",
+              "field": "credit_impaired",
+              "value": false
+            }
+          ]
+        },
+        "level": "L2",
+        "signal": "信用风险显著增加且未减值，划入 Stage 2",
+        "window": "报告日",
+        "debounce": "即时",
+        "threshold": "significant_increase=true 且 credit_impaired=false",
+        "disclaimer": "显著增加的判定因子需业务确认，默认值非监管阈值",
+        "suppression": "有定量/定性证据推翻的，人工抑制并留痕",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "significant_increase",
+          "credit_impaired"
+        ],
+        "threshold_source": "industry_default"
+      }
+    ]
+  }
+}

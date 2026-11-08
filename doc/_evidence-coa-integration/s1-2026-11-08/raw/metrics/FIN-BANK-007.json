@@ -1,0 +1,219 @@
+{
+  "metricId": "FIN-BANK-007",
+  "name": "五级分类结果",
+  "domain": "bank",
+  "evidenceBasis": "regulatory",
+  "publishable": true,
+  "inference": false,
+  "formulaDisabled": false,
+  "missing": null,
+  "evidenceStatus": "EVIDENCED",
+  "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+  "effectiveDate": null,
+  "variantOf": null,
+  "outputMode": "rule_set",
+  "ruleSet": [
+    {
+      "id": "R01",
+      "spec": {
+        "op": "equals",
+        "field": "risk_class",
+        "value": "substandard"
+      },
+      "level": "L3",
+      "signal": "分类为次级（不良）",
+      "window": "分类日",
+      "debounce": "即时",
+      "threshold": "risk_class=substandard",
+      "suppression": "同一对象 30 天内已 L3 的合并",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "risk_class"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R02",
+      "spec": {
+        "op": "equals",
+        "field": "risk_class",
+        "value": "doubtful"
+      },
+      "level": "L3",
+      "signal": "分类为可疑（不良）",
+      "window": "分类日",
+      "debounce": "即时",
+      "threshold": "risk_class=doubtful",
+      "suppression": "同上",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "risk_class"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R03",
+      "spec": {
+        "op": "equals",
+        "field": "risk_class",
+        "value": "loss"
+      },
+      "level": "L3",
+      "signal": "分类为损失（不良）",
+      "window": "分类日",
+      "debounce": "即时",
+      "threshold": "risk_class=loss",
+      "suppression": "同上",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "risk_class"
+      ],
+      "threshold_source": "definition_text"
+    },
+    {
+      "id": "R04",
+      "spec": {
+        "op": "equals",
+        "field": "risk_class",
+        "value": "special"
+      },
+      "level": "L1",
+      "signal": "分类为关注",
+      "window": "分类日",
+      "debounce": "即时",
+      "threshold": "risk_class=special",
+      "suppression": "已按重组/展期规则处理的按相应规则合并",
+      "configurable": true,
+      "evidence_basis": "regulatory",
+      "trigger_fields": [
+        "risk_class"
+      ],
+      "threshold_source": "definition_text"
+    }
+  ],
+  "definition": "按债务人偿债能力、逾期与减值情况，把金融资产划分为正常、关注、次级、可疑、损失五类，后三类合称不良。",
+  "formulaText": "classification ∈ {正常, 关注, 次级, 可疑, 损失}；不良 = 次级 + 可疑 + 损失；规则型",
+  "denominatorText": "不适用（分类枚举）",
+  "observationPeriodText": "point-in-time（分类日/报告期末）",
+  "granularityText": "asset（单笔金融资产；非零售按债务人）",
+  "provenanceLabel": "原文",
+  "unit": "档",
+  "browse": {
+    "metricId": "FIN-BANK-007",
+    "nameZh": "五级分类结果",
+    "domain": "bank",
+    "evidenceBasis": "regulatory",
+    "publishable": true,
+    "inference": false,
+    "formulaDisabled": false,
+    "missing": null,
+    "definitionStatus": "EVIDENCED",
+    "note": "Grade A：研究稿可定位监管原文/条款（未与 PDF 逐字核验）",
+    "definitionVersion": "v3.0",
+    "unit": "档",
+    "effectiveDate": null,
+    "variantOf": null,
+    "outputMode": "rule_set",
+    "metricKind": "rule_set",
+    "formula": null,
+    "numeratorAgg": null,
+    "denominator": null,
+    "observationPeriod": {
+      "kind": "instant",
+      "minWindowDays": null
+    },
+    "grain": null,
+    "displayName": "五级分类结果",
+    "definition": "按债务人偿债能力、逾期与减值情况，把金融资产划分为正常、关注、次级、可疑、损失五类，后三类合称不良。",
+    "formulaText": "classification ∈ {正常, 关注, 次级, 可疑, 损失}；不良 = 次级 + 可疑 + 损失；规则型",
+    "denominatorText": "不适用（分类枚举）",
+    "observationPeriodText": "point-in-time（分类日/报告期末）",
+    "granularityText": "asset（单笔金融资产；非零售按债务人）",
+    "provenanceLabel": "原文",
+    "ruleSet": [
+      {
+        "id": "R01",
+        "spec": {
+          "op": "equals",
+          "field": "risk_class",
+          "value": "substandard"
+        },
+        "level": "L3",
+        "signal": "分类为次级（不良）",
+        "window": "分类日",
+        "debounce": "即时",
+        "threshold": "risk_class=substandard",
+        "suppression": "同一对象 30 天内已 L3 的合并",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "risk_class"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R02",
+        "spec": {
+          "op": "equals",
+          "field": "risk_class",
+          "value": "doubtful"
+        },
+        "level": "L3",
+        "signal": "分类为可疑（不良）",
+        "window": "分类日",
+        "debounce": "即时",
+        "threshold": "risk_class=doubtful",
+        "suppression": "同上",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "risk_class"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R03",
+        "spec": {
+          "op": "equals",
+          "field": "risk_class",
+          "value": "loss"
+        },
+        "level": "L3",
+        "signal": "分类为损失（不良）",
+        "window": "分类日",
+        "debounce": "即时",
+        "threshold": "risk_class=loss",
+        "suppression": "同上",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "risk_class"
+        ],
+        "threshold_source": "definition_text"
+      },
+      {
+        "id": "R04",
+        "spec": {
+          "op": "equals",
+          "field": "risk_class",
+          "value": "special"
+        },
+        "level": "L1",
+        "signal": "分类为关注",
+        "window": "分类日",
+        "debounce": "即时",
+        "threshold": "risk_class=special",
+        "suppression": "已按重组/展期规则处理的按相应规则合并",
+        "configurable": true,
+        "evidence_basis": "regulatory",
+        "trigger_fields": [
+          "risk_class"
+        ],
+        "threshold_source": "definition_text"
+      }
+    ]
+  }
+}
