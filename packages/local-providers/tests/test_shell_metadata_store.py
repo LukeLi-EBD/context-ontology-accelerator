@@ -56,7 +56,7 @@ def test_query_returns_a_tuple_of_mappings(pg_dsn: str) -> None:
     assert rows[0]["echo"] == "coa"
 
 
-def test_execute_returns_the_affected_row_count(pg_dsn: str) -> None:
+def test_execute_returns_the_affected_row_count(pg_dsn_readwrite: str) -> None:
     table = f"coa_shell_metadata_{uuid.uuid4().hex[:8]}"
     store = _open(pg_dsn)
     shell = MetadataStoreShell(store, provider="postgres")

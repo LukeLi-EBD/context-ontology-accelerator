@@ -59,30 +59,47 @@ def test_constructor_rejects_an_object_missing_a_method() -> None:
         ObjectStoreShell(NoList())
 
 
-@pytest.fixture()
-def live_shell(pg_dsn: str, tmp_path: Path):
+def _stack(pg_dsn: str, tmp_path: Path):
     """Real LayeredObjectStore over live PG + a temp filesystem CAS."""
     store = MetadataPg(pg_dsn, pool_max=2)
     store.open(retry_seconds=5.0)
+    registered = store.query("SELECT to_regclass('platform.blob') AS reg")[0]["reg"]
+    if not registered:
+        store.close()
+        pytest.skip("platform schema 未迁移，无法跑真实对象存储")
+    root = tmp_path / "storage"
+    fs = FsCasBackend(root, tmp_path / "tmp")
+    fs.ensure_dirs()
+    layered = LayeredObjectStore(
+        StorageConfig(
+            root=str(root),
+            tmp_dir=str(tmp_path / "tmp"),
+            pg_blob_max_file_mb=1,
+            min_free_pct=0,
+        ),
+        store,
+        fs,
+        PgByteaBackend(store),
+    )
+    return ObjectStoreShell(layered), store
+
+
+@pytest.fixture()
+def live_shell(pg_dsn_readwrite: str, tmp_path: Path):
+    """Object store for write cases; skips unless write access is opted in."""
+    shell, store = _stack(pg_dsn_readwrite, tmp_path)
     try:
-        registered = store.query("SELECT to_regclass('platform.blob') AS reg")[0]["reg"]
-        if not registered:
-            pytest.skip("platform schema 未迁移，无法跑真实对象存储")
-        root = tmp_path / "storage"
-        fs = FsCasBackend(root, tmp_path / "tmp")
-        fs.ensure_dirs()
-        layered = LayeredObjectStore(
-            StorageConfig(
-                root=str(root),
-                tmp_dir=str(tmp_path / "tmp"),
-                pg_blob_max_file_mb=1,
-                min_free_pct=0,
-            ),
-            store,
-            fs,
-            PgByteaBackend(store),
-        )
-        yield ObjectStoreShell(layered), store
+        yield shell, store
+    finally:
+        store.close()
+
+
+@pytest.fixture()
+def readonly_shell(pg_dsn: str, tmp_path: Path):
+    """Object store for read-only cases against the acceptance database."""
+    shell, store = _stack(pg_dsn, tmp_path)
+    try:
+        yield shell, store
     finally:
         store.close()
 
@@ -134,8 +151,8 @@ def test_put_get_head_list_delete_roundtrip(live_shell) -> None:
         _purge(store, key, digest)
 
 
-def test_missing_object_maps_to_not_found(live_shell) -> None:
-    shell, _ = live_shell
+def test_missing_object_maps_to_not_found(readonly_shell) -> None:
+    shell, _ = readonly_shell
     with pytest.raises(PortError) as excinfo:
         shell.head(BUCKET, f"absent-{uuid.uuid4().hex}")
     assert excinfo.value.code is PortErrorCode.NOT_FOUND
@@ -146,8 +163,8 @@ def test_delete_of_an_absent_key_is_a_no_op(live_shell) -> None:
     shell.delete(BUCKET, f"absent-{uuid.uuid4().hex}")
 
 
-def test_probe_reaches_the_metadata_backend(live_shell) -> None:
-    shell, _ = live_shell
+def test_probe_reaches_the_metadata_backend(readonly_shell) -> None:
+    shell, _ = readonly_shell
     snapshot = shell.probe()
     assert snapshot["status"] == "ok"
     assert snapshot["provider"] == "layered"
