@@ -477,10 +477,11 @@ SOURCES = "coa_sources.api.sources_handler"
 METRICS = "coa_metrics.api.metric_api_handler"
 ONTOLOGY = "coa_ontology.api_proxy_handler"
 DATA_LAYER = "coa_data_layer.handler"
-# Sentinel: the T-Box lifecycle lives in the platform kernel (8093), not in a
-# Lambda handler. `dispatch` proxies these paths instead of calling a handler.
+# Sentinel: the T-Box lifecycle lives in platform_core, not in a Lambda
+# handler.  `dispatch` routes these paths to an in-process ASGI app instead of
+# calling a handler.  It runs in *this* process (no port, no second config).
 KERNEL = "__kernel__"
-KERNEL_ENDPOINT = os.environ.get("COA_KERNEL_ENDPOINT", "http://127.0.0.1:8093")
+_LIFECYCLE_CONFIG = REPO / "packages/platform-core/config/authoritative-8080.yaml"
 
 ROUTES: list[tuple[str, str]] = [
     ("/namespaces", NAMESPACE),
@@ -632,15 +633,108 @@ def _match(path: str) -> tuple[str, dict[str, str], str] | None:
 
 async def _kernel_call(method: str, path: str, body: bytes | None = None,
                        content_type: str = "application/json") -> tuple[int, bytes, str]:
-    """One request to the local platform kernel (8093)."""
+    """One request to the lifecycle app, in process (httpx ASGITransport)."""
     import httpx
 
     headers = {"content-type": content_type} if body else {}
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        resp = await client.request(
-            method, KERNEL_ENDPOINT + path, content=body, headers=headers
-        )
+    transport = httpx.ASGITransport(app=_lifecycle_app())
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://lifecycle", timeout=120.0
+    ) as client:
+        resp = await client.request(method, path, content=body, headers=headers)
     return resp.status_code, resp.content, resp.headers.get("content-type", "application/json")
+
+
+_LIFECYCLE_APP: Any = None
+
+
+def _lifecycle_dir() -> Path:
+    base = Path(os.environ.get("TEMP") or os.environ.get("TMP") or ".") / "coa-local-stack"
+    return base / "lifecycle"
+
+
+def _configure_lifecycle_env() -> None:
+    """Configuration the embedded platform_core app needs (local values only)."""
+    work = _lifecycle_dir()
+    defaults = {
+        "PLATFORM__HTTP__BIND": "127.0.0.1",
+        "PLATFORM__DATA_DIR": str(work),
+        "PLATFORM__DATABASE__URL": "postgresql://platform:platform_dev@127.0.0.1:5444/serve_local",
+        "PLATFORM__GRAPH__ENDPOINT": "http://127.0.0.1:7878",
+        "PLATFORM__STORAGE__ROOT": str(work / "storage"),
+        "PLATFORM__STORAGE__TMP_DIR": str(work / "tmp"),
+        # The acceptance default (10% free) rejects registration on this dev box.
+        "PLATFORM__STORAGE__MIN_FREE_PCT": "2",
+        # Quoted: the loader parses env values as YAML, bare `off` becomes False.
+        "PLATFORM__ONTOLOGY__INIT_MODE": '"off"',
+        "PLATFORM__CANVAS__PROVIDER": '"off"',
+        # Import validates `<shapes_dir>/<namespace>/*.ttl`; /data does not exist here.
+        "PLATFORM__REASONING__SHAPES_DIR": str(work / "shapes"),
+        # The consistency gate is fail-closed; use the shared local reasoner.
+        "PLATFORM__REASONING__ENDPOINT": "http://127.0.0.1:7879",
+        "PLATFORM__EMBEDDING__ENDPOINT": "http://127.0.0.1:8081/v1",
+    }
+    for key, value in defaults.items():
+        os.environ.setdefault(key, value)
+    for sub in ("", "storage", "tmp"):
+        (work / sub).mkdir(parents=True, exist_ok=True)
+
+
+def _add_register_route(app: Any, runtime: Any) -> None:
+    """Local draft-only registration: platform's HTTP import cannot do it.
+
+    `/ontology/import` only stages, and `/ontology/imports/{id}/publish` ends in
+    a pointer switch.  The only path that writes a `status='draft'` row is
+    `OntologyRegistry.import_source` (file based), so this route adapts it.
+    """
+    import base64
+
+    @app.post("/local/ontology/register")
+    async def register(request: Request) -> dict[str, Any]:
+        body = await request.json()
+        raw = body.get("content")
+        if isinstance(raw, str):
+            data = raw.encode("utf-8")
+        elif body.get("contentBase64"):
+            data = base64.b64decode(body["contentBase64"])
+        else:
+            return {"error": "content or contentBase64 is required"}
+        rdf_format = str(body.get("format") or "turtle")
+        suffix = "trig" if rdf_format == "trig" else "ttl"
+        namespace = body.get("targetNamespace") or body.get("namespace")
+        existing = runtime.ontology.list_versions()
+        semver = str(body.get("semver") or f"0.{len(existing) + 1}.0")
+        path = _lifecycle_dir() / f"register-{uuid.uuid4().hex[:8]}.{suffix}"
+        path.write_bytes(data)
+        try:
+            result = runtime.ontology.import_source(
+                str(path), semver, label=namespace, rdf_format=rdf_format
+            )
+        finally:
+            path.unlink(missing_ok=True)
+        return {**result, "targetNamespace": namespace}
+
+
+def _lifecycle_app() -> Any:
+    """Build the platform_core ASGI app once, inside the bridge process."""
+    global _LIFECYCLE_APP
+    if _LIFECYCLE_APP is not None:
+        return _LIFECYCLE_APP
+    _configure_lifecycle_env()
+    from platform_core.api import create_app
+    from platform_core.assembly import assemble
+    from platform_core.config import load_config
+    from platform_core.ontology_init import start as start_ontology
+
+    runtime = assemble(load_config(_LIFECYCLE_CONFIG))
+    # The CLI's self-check normally opens the pool; without it every DB route
+    # answers 503 E_DB_UNAVAILABLE.  No HTTP server means no lifespan either.
+    runtime.metadata.open(retry_seconds=30.0)
+    start_ontology(runtime)
+    app = create_app(runtime, [])
+    _add_register_route(app, runtime)
+    _LIFECYCLE_APP = app
+    return app
 
 
 def _kernel_translate(
@@ -746,9 +840,9 @@ async def _kernel_register_version(
 
     `/ontology/import` alone only stages (no `ontology_version` row), and
     `/ontology/imports/{id}/publish` publishes (pointer switch) rather than
-    registering.  The kernel's draft-only path is `import_source`, adapted on
-    8093 as `/local/ontology/register`; see coa_kernel_local.py for why it sits
-    there and not in platform_core.api.
+    registering.  The draft-only path is `import_source`, exposed to the
+    in-process app as `/local/ontology/register` (added by
+    `_add_register_route`) because `platform_core.api` has no such endpoint.
     """
     ontology_id = path_params.get("ontologyId", "")
     try:
@@ -807,9 +901,9 @@ async def _kernel_proxy(
     except Exception as exc:  # kernel down: say so instead of a bare 500
         return JSONResponse(
             {
-                "error": "ontology kernel unavailable",
+                "error": "ontology lifecycle unavailable",
                 "detail": str(exc),
-                "endpoint": KERNEL_ENDPOINT,
+                "mode": "in-process",
             },
             status_code=503,
         )
