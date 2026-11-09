@@ -373,6 +373,55 @@ def _iri(s: str) -> str:
     return f"<{s}>"
 
 
+# ── Graph scope: bind ?g or filter it ───────────────────────────────────
+#
+# ``FILTER(STRSTARTS(STR(?g), "ns-prefix/"))`` leaves ``?g`` unbound while the
+# engine plans the pattern, so it may evaluate every quad in the store against
+# the outer pattern before the filter applies. Measured on the local stack with
+# 5 named graphs / 123,828 quads: one namespace-scoped entity search (empty
+# result set, identical query shape) took 86.3s; binding ``?g`` to the three
+# namespace graphs with ``VALUES`` took 0.058s, and a single constant graph
+# took 0.0028s. Enumerating the named graphs themselves costs 3.5ms.
+#
+# The default follows the provider: the Oxigraph transport has no cross-graph
+# statistics to exploit, so the enumeration pays for itself; the Neptune DB
+# path keeps its existing prefix filter until the VALUES plan is measured on a
+# real cluster (Neptune has its own optimizer/statistics story, and we do not
+# change the AWS query shape without evidence). ``COA_ONTOLOGY_GRAPH_SCOPE``
+# overrides either default for a single environment.
+_GRAPH_SCOPE_ENV = "COA_ONTOLOGY_GRAPH_SCOPE"
+_GRAPH_SCOPE_MODES = ("values", "prefix")
+
+
+def _graph_scope_mode() -> str:
+    """Return ``values`` (bind ``?g``) or ``prefix`` (filter ``?g``)."""
+    raw = os.getenv(_GRAPH_SCOPE_ENV, "").strip().lower()
+    if raw:
+        if raw not in _GRAPH_SCOPE_MODES:
+            raise RuntimeError(f"Unknown {_GRAPH_SCOPE_ENV}={raw!r}; expected one of {_GRAPH_SCOPE_MODES}")
+        return raw
+    provider = os.getenv("COA_PROVIDER_ONTOLOGY_GRAPH", "").strip().lower()
+    return "values" if provider == "oxigraph" else "prefix"
+
+
+def _namespace_graphs(namespace: str | None) -> list[str]:
+    """Enumerate the non-empty named graphs under this namespace's prefix.
+
+    ``GRAPH ?g { }`` is answered from the store's named-graph index alone (no
+    triple scan), so this is cheap even with many graphs.
+    """
+    ns_prefix = _namespace_graph_prefix(namespace).rstrip("/") + "/"
+    sparql = f"""
+    SELECT DISTINCT ?g WHERE {{
+      GRAPH ?g {{ }}
+      FILTER(STRSTARTS(STR(?g), "{_esc(ns_prefix)}"))
+    }}
+    ORDER BY ?g
+    """
+    bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+    return [b["g"]["value"] for b in bindings if b.get("g", {}).get("value")]
+
+
 def _storable_iris(uris: Iterable[str]) -> list[str]:
     """The distinct ``uris`` that :func:`_iri` accepts, sorted; the store never holds the others."""
     storable = []
@@ -1322,28 +1371,53 @@ class NeptuneDBGraphStore(GraphStore):
         ontology_id: str | None,
         exclude_ontology_id: str | None,
     ) -> str:
-        """Build a SPARQL ``FILTER`` that pins ``?g`` to this namespace's graphs.
+        """Build a SPARQL clause that pins ``?g`` to this namespace's graphs.
 
         This MUST be applied wherever ``?g`` is bound — including the outer query
         of the paged search — so results never leak across namespaces that happen
         to share an ontology IRI (a subject like ``foaf:Person`` exists in many
         namespaces' graphs).
 
+        Two equivalent shapes exist (see :func:`_graph_scope_mode`):
+
+        - ``values``: enumerate the namespace's named graphs once and bind
+          ``?g`` with ``VALUES``. The engine evaluates the pattern only in
+          those graphs.
+        - ``prefix``: leave ``?g`` unbound and filter it with ``STRSTARTS``.
+          Semantically identical, but the engine may walk every quad in the
+          store before the filter applies.
+
         Args:
             namespace: Namespace whose named-graph prefix to scope to.
             ontology_id: When set, pin ``?g`` to that single ontology's graph
-                instead of the whole namespace prefix.
+                instead of the whole namespace.
             exclude_ontology_id: When set, additionally exclude that ontology's
                 graph (e.g. governed-metrics).
 
         Returns:
-            One or more newline-joined ``FILTER(...)`` clauses over ``?g``.
+            One or more newline-joined SPARQL clauses over ``?g``.
         """
-        ns_prefix = _namespace_graph_prefix(namespace).rstrip("/") + "/"
         if ontology_id:
             graph_filter = f"FILTER(?g = {_iri(_ontology_graph_uri(ontology_id, namespace))})"
-        else:
-            graph_filter = f'FILTER(STRSTARTS(STR(?g), "{_esc(ns_prefix)}"))'
+            if exclude_ontology_id:
+                excluded_graph = _ontology_graph_uri(exclude_ontology_id, namespace)
+                graph_filter += f"\n          FILTER(?g != {_iri(excluded_graph)})"
+            return graph_filter
+
+        if _graph_scope_mode() == "values":
+            graphs = _namespace_graphs(namespace)
+            if exclude_ontology_id:
+                excluded_graph = _ontology_graph_uri(exclude_ontology_id, namespace)
+                graphs = [g for g in graphs if g != excluded_graph]
+            if graphs:
+                values = "\n            ".join(_iri(g) for g in graphs)
+                return f"VALUES ?g {{\n            {values}\n          }}"
+            # No graph in this namespace (or all excluded): an empty VALUES
+            # block makes the pattern unsatisfiable without scanning anything.
+            return "VALUES ?g { }"
+
+        ns_prefix = _namespace_graph_prefix(namespace).rstrip("/") + "/"
+        graph_filter = f'FILTER(STRSTARTS(STR(?g), "{_esc(ns_prefix)}"))'
         if exclude_ontology_id:
             excluded_graph = _ontology_graph_uri(exclude_ontology_id, namespace)
             graph_filter += f"\n          FILTER(?g != {_iri(excluded_graph)})"
