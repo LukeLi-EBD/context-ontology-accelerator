@@ -396,6 +396,7 @@ const _aMu = "authMode";
 const _aTE = "appendedToExisting";
 const _aWN = "athenaWorkgroupName";
 const _ad = "added";
+const _al = "alt_labels";
 const _at = "at";
 const _b = "body";
 const _bE = "bedrockEmbeddings";
@@ -584,6 +585,7 @@ const _iPK = "isPartitionKey";
 const _iR = "isRescan";
 const _ic = "inferred_constraints";
 const _id = "id";
+const _im = "is_mapped";
 const _in = "instructions";
 const _inc = "include";
 const _j = "jobs";
@@ -675,6 +677,7 @@ const _pT = "principalType";
 const _pTr = "proposalType";
 const _pTre = "preferredTopics";
 const _pa = "passed";
+const _pl = "predicate_label";
 const _po = "port";
 const _pr = "predicate";
 const _pri = "principal";
@@ -780,6 +783,7 @@ const _tTr = "triggerType";
 const _tWE = "tablesWithEvidence";
 const _tWEa = "tablesWithoutEvidence";
 const _ta = "tags";
+const _tc = "total_count";
 const _ti = "title";
 const _tie = "tier";
 const _tier = "tiers";
@@ -1375,7 +1379,7 @@ export var GetOntologyUploadUrlOutput$: StaticStructureSchema = [3, n8, _GOUUOe,
 export var GraphEdge$: StaticStructureSchema = [3, n8, _GE,
   0,
   [_pr, _dir, _ne, _pL],
-  [0, 0, () => GraphNeighbor$, 0], 3
+  [0, 0, () => GraphNeighbor$, [0, { [_jN]: _pl }]], 3
 ];
 export var GraphNeighbor$: StaticStructureSchema = [3, n8, _GN,
   0,
@@ -1395,12 +1399,12 @@ export var GraphSearchInput$: StaticStructureSchema = [3, n8, _GSI,
 export var GraphSearchOutput$: StaticStructureSchema = [3, n8, _GSO,
   0,
   [_h, _tC],
-  [[() => GraphSearchHitList, 0], 1], 1
+  [[() => GraphSearchHitList, 0], [1, { [_jN]: _tc }]], 1
 ];
 export var GraphVertex$: StaticStructureSchema = [3, n8, _GV,
   0,
   [_ur, _k, _nam, _ty, _lab, _com, _aL, _gU, _iM, _sup, _ed],
-  [0, 0, 0, 64 | 0, 64 | 0, 64 | 0, 64 | 0, 64 | 0, 2, [2, n8, _SA, 0, 0, 64 | 0], () => GraphEdgeList], 3
+  [0, 0, 0, 64 | 0, 64 | 0, 64 | 0, [64 | 0, { [_jN]: _al }], [64 | 0, { [_jN]: _gu }], [2, { [_jN]: _im }], [2, n8, _SA, 0, 0, 64 | 0], [() => GraphEdgeList, 0]], 3
 ];
 export var IngestJob$: StaticStructureSchema = [3, n8, _IJ,
   0,
@@ -2171,7 +2175,8 @@ var NamespaceSummaryList: StaticListSchema = [1, n2, _NSL,
   0, () => NamespaceSummary$
 ];
 var GraphEdgeList: StaticListSchema = [1, n8, _GEL,
-  0, () => GraphEdge$
+  0, [() => GraphEdge$,
+    0]
 ];
 var GraphSearchHitList: StaticListSchema = [1, n8, _GSHL,
   0, [() => GraphSearchHit$,

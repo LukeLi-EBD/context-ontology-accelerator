@@ -28,10 +28,10 @@ class GraphEdge(BaseModel):
     A relationship edge between two graph vertices, carrying the connecting predicate, its direction, and the neighboring vertex on the other end.
     """ # noqa: E501
     predicate: StrictStr = Field(description="IRI of the connecting predicate.")
-    predicate_label: Optional[StrictStr] = Field(default=None, description="Human-readable label of the predicate.", alias="predicateLabel")
+    predicate_label: Optional[StrictStr] = Field(default=None, description="Human-readable label of the predicate.")
     direction: StrictStr = Field(description="Direction of the edge relative to the source vertex (incoming/outgoing).")
     neighbor: GraphNeighbor
-    __properties: ClassVar[List[str]] = ["predicate", "predicateLabel", "direction", "neighbor"]
+    __properties: ClassVar[List[str]] = ["predicate", "predicate_label", "direction", "neighbor"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -88,7 +88,7 @@ class GraphEdge(BaseModel):
 
         _obj = cls.model_validate({
             "predicate": obj.get("predicate"),
-            "predicateLabel": obj.get("predicateLabel"),
+            "predicate_label": obj.get("predicate_label"),
             "direction": obj.get("direction"),
             "neighbor": GraphNeighbor.from_dict(obj["neighbor"]) if obj.get("neighbor") is not None else None
         })

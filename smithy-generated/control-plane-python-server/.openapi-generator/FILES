@@ -484,7 +484,3 @@ coa_control_plane_server/models/validation_warning.py
 coa_control_plane_server/models/vkg_health_status.py
 coa_control_plane_server/models/warning_severity.py
 coa_control_plane_server/test/__init__.py
-coa_control_plane_server/test/test_embedding_record.py
-coa_control_plane_server/test/test_get_entity_embeddings_response_content.py
-coa_control_plane_server/test/test_search_embeddings_request_content.py
-coa_control_plane_server/test/test_search_embeddings_response_content.py

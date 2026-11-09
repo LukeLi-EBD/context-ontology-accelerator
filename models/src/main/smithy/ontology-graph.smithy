@@ -601,6 +601,7 @@ structure GraphEdge {
     predicate: String
 
     /// Human-readable label of the predicate.
+    @jsonName("predicate_label")
     predicateLabel: String
 
     /// Direction of the edge relative to the source vertex (incoming/outgoing).
@@ -641,9 +642,11 @@ structure GraphVertex {
 
     /// Alternative labels (skos:altLabel) — carries source synonyms curated
     /// during enrichment and emitted onto the induced class/property.
+    @jsonName("alt_labels")
     altLabels: StringList
 
     /// IRIs of the named graphs the vertex appears in.
+    @jsonName("graph_uris")
     graphUris: StringList
 
     /// Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is
@@ -652,6 +655,7 @@ structure GraphVertex {
     /// true; unstructured-induced and foundational classes are false (the marker
     /// is absent). Derived from the top-level ``coa:isMapped`` triple and
     /// excluded from ``edges``.
+    @jsonName("is_mapped")
     isMapped: Boolean
 
     /// Previous generations of this vertex's annotations, retired when a
@@ -730,6 +734,7 @@ operation GraphSearch {
         /// Total number of hits matching the query across all pages, so a
         /// client can render a known page count. Independent of ``limit`` /
         /// ``offset``.
+        @jsonName("total_count")
         totalCount: Integer
     }
 }

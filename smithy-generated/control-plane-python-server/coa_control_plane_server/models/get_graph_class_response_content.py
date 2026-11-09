@@ -33,12 +33,12 @@ class GetGraphClassResponseContent(BaseModel):
     types: Optional[List[StrictStr]] = Field(default=None, description="RDF types (rdf:type) declared on the vertex.")
     labels: Optional[List[StrictStr]] = Field(default=None, description="Human-readable labels (rdfs:label) of the vertex.")
     comments: Optional[List[StrictStr]] = Field(default=None, description="Descriptive comments (rdfs:comment) on the vertex.")
-    alt_labels: Optional[List[StrictStr]] = Field(default=None, description="Alternative labels (skos:altLabel) — carries source synonyms curated during enrichment and emitted onto the induced class/property.", alias="altLabels")
-    graph_uris: Optional[List[StrictStr]] = Field(default=None, description="IRIs of the named graphs the vertex appears in.", alias="graphUris")
-    is_mapped: Optional[StrictBool] = Field(default=None, description="Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is backed by an R2RML mapping and therefore answerable by the structured Tier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are true; unstructured-induced and foundational classes are false (the marker is absent). Derived from the top-level ``coa:isMapped`` triple and excluded from ``edges``.", alias="isMapped")
+    alt_labels: Optional[List[StrictStr]] = Field(default=None, description="Alternative labels (skos:altLabel) — carries source synonyms curated during enrichment and emitted onto the induced class/property.")
+    graph_uris: Optional[List[StrictStr]] = Field(default=None, description="IRIs of the named graphs the vertex appears in.")
+    is_mapped: Optional[StrictBool] = Field(default=None, description="Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is backed by an R2RML mapping and therefore answerable by the structured Tier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are true; unstructured-induced and foundational classes are false (the marker is absent). Derived from the top-level ``coa:isMapped`` triple and excluded from ``edges``.")
     superseded: Optional[Dict[str, List[StrictStr]]] = Field(default=None, description="Retired annotation literals keyed by kind (``comments`` / ``definitions`` / ``altLabels`` / ``glossaryTerms`` / ``tags``). See ``GraphVertex.superseded``.")
     edges: Optional[List[GraphEdge]] = Field(default=None, description="Outgoing relationship edges from this vertex.")
-    __properties: ClassVar[List[str]] = ["uri", "kind", "namespace", "types", "labels", "comments", "altLabels", "graphUris", "isMapped", "superseded", "edges"]
+    __properties: ClassVar[List[str]] = ["uri", "kind", "namespace", "types", "labels", "comments", "alt_labels", "graph_uris", "is_mapped", "superseded", "edges"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -104,9 +104,9 @@ class GetGraphClassResponseContent(BaseModel):
             "types": obj.get("types"),
             "labels": obj.get("labels"),
             "comments": obj.get("comments"),
-            "altLabels": obj.get("altLabels"),
-            "graphUris": obj.get("graphUris"),
-            "isMapped": obj.get("isMapped"),
+            "alt_labels": obj.get("alt_labels"),
+            "graph_uris": obj.get("graph_uris"),
+            "is_mapped": obj.get("is_mapped"),
             "superseded": obj.get("superseded"),
             "edges": [GraphEdge.from_dict(_item) for _item in obj["edges"]] if obj.get("edges") is not None else None
         })

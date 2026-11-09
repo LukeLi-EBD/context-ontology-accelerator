@@ -1,4 +1,4 @@
-﻿# Auto-generated — models only (see smithy-generate.sh)
+# Auto-generated — models only (see smithy-generate.sh)
 from coa_control_plane_server.models.accept_proposal_request_content import AcceptProposalRequestContent
 from coa_control_plane_server.models.accept_proposal_response_content import AcceptProposalResponseContent
 from coa_control_plane_server.models.access_denied_error_response_content import AccessDeniedErrorResponseContent

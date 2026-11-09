@@ -28,8 +28,8 @@ class GraphSearchResponseContent(BaseModel):
     GraphSearchResponseContent
     """ # noqa: E501
     hits: List[GraphSearchHit] = Field(description="The matching graph search hits (the requested page window).")
-    total_count: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Total number of hits matching the query across all pages, so a client can render a known page count. Independent of ``limit`` / ``offset``.", alias="totalCount")
-    __properties: ClassVar[List[str]] = ["hits", "totalCount"]
+    total_count: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Total number of hits matching the query across all pages, so a client can render a known page count. Independent of ``limit`` / ``offset``.")
+    __properties: ClassVar[List[str]] = ["hits", "total_count"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -90,7 +90,7 @@ class GraphSearchResponseContent(BaseModel):
 
         _obj = cls.model_validate({
             "hits": [GraphSearchHit.from_dict(_item) for _item in obj["hits"]] if obj.get("hits") is not None else None,
-            "totalCount": obj.get("totalCount")
+            "total_count": obj.get("total_count")
         })
         return _obj
 
