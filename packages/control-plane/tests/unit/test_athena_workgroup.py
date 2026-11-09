@@ -5,12 +5,10 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from coa_common.constants import RESOURCE_PREFIX
-
-MODULE_SERVICE = "coa_control_plane.namespace.service"
 
 pytestmark = pytest.mark.unit
 
@@ -31,6 +29,25 @@ def env_vars(monkeypatch):
 # ═══════════════════════════════════════════════════════════════════
 # Workgroup Creation (namespace service)
 # ═══════════════════════════════════════════════════════════════════
+
+
+def test_warehouse_admin_resolves_a_catalog_interface(monkeypatch):
+    """The lazy resolver must use the catalog's interface name, not a nickname."""
+    from coa_control_plane.namespace import cleanup, service
+    from coa_runtime.registry import default_registry
+
+    seen: list[str] = []
+
+    def _resolve(name: str):
+        seen.append(name)
+        return MagicMock()
+
+    monkeypatch.setattr("coa_runtime.registry.resolve", _resolve)
+    service._warehouse_admin()
+    cleanup._warehouse_admin()
+
+    assert seen == ["WarehouseAdminPort", "WarehouseAdminPort"]
+    assert set(seen) <= set(default_registry().interfaces)
 
 
 class TestAthenaWorkgroupCreation:
@@ -64,12 +81,14 @@ class TestAthenaWorkgroupCreation:
             metadata_store=mock_metadata,
         )
 
-    @patch(f"{MODULE_SERVICE}.boto3")
-    def test_creates_workgroup_with_correct_name(self, mock_boto3):
+    def test_creates_workgroup_with_correct_name(self, monkeypatch):
+        from coa_control_plane.namespace import service
+
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {"Parameter": {"Value": f"{RESOURCE_PREFIX}-dev-athena-results-123"}}
-        mock_athena = MagicMock()
-        mock_boto3.client.side_effect = lambda svc, **kw: mock_ssm if svc == "ssm" else mock_athena
+        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        admin = MagicMock()
+        monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
         svc = self._make_service()
         from coa_control_plane_server.models.create_namespace_request_content import (
@@ -79,21 +98,22 @@ class TestAthenaWorkgroupCreation:
         req = CreateNamespaceRequestContent(name="sales", owner="alice@co.com")
         svc.create(req)
 
-        # Workgroup should be created with prefix + namespace UUID
-        mock_athena.create_work_group.assert_called_once()
-        call_kwargs = mock_athena.create_work_group.call_args.kwargs
-        assert call_kwargs["Name"].startswith(f"{RESOURCE_PREFIX}-dev-")
-        assert (
-            f"{RESOURCE_PREFIX}-dev-athena-results-123"
-            in call_kwargs["Configuration"]["ResultConfiguration"]["OutputLocation"]
-        )
+        # Workgroup name is prefix + namespace UUID; results go to the bucket/namespace prefix.
+        admin.create_workgroup.assert_called_once()
+        name = admin.create_workgroup.call_args.args[0]
+        output_location = admin.create_workgroup.call_args.kwargs["output_location"]
+        assert name.startswith(f"{RESOURCE_PREFIX}-dev-")
+        assert output_location.startswith(f"s3://{RESOURCE_PREFIX}-dev-athena-results-123/")
+        assert output_location.endswith(f"/{name.removeprefix(f'{RESOURCE_PREFIX}-dev-')}/")
 
-    @patch(f"{MODULE_SERVICE}.boto3")
-    def test_workgroup_stored_in_ddb_record(self, mock_boto3):
+    def test_workgroup_stored_in_ddb_record(self, monkeypatch):
+        from coa_control_plane.namespace import service
+
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {"Parameter": {"Value": f"{RESOURCE_PREFIX}-dev-athena-results-123"}}
-        mock_athena = MagicMock()
-        mock_boto3.client.side_effect = lambda svc, **kw: mock_ssm if svc == "ssm" else mock_athena
+        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        admin = MagicMock()
+        monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
         svc = self._make_service()
         from coa_control_plane_server.models.create_namespace_request_content import (
@@ -108,16 +128,16 @@ class TestAthenaWorkgroupCreation:
         assert len(ns_put_calls) == 1
         assert ns_put_calls[0].args[0]["athenaWorkgroupName"].startswith(f"{RESOURCE_PREFIX}-dev-")
 
-    @patch(f"{MODULE_SERVICE}.boto3")
-    def test_workgroup_already_exists_is_idempotent(self, mock_boto3):
+    def test_provider_failure_does_not_persist_workgroup_name(self, monkeypatch):
+        """Unconfirmed workgroups must not be recorded in the namespace item."""
+        from coa_control_plane.namespace import service
+
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {"Parameter": {"Value": f"{RESOURCE_PREFIX}-dev-athena-results-123"}}
-        mock_athena = MagicMock()
-        mock_athena.exceptions.InvalidRequestException = type("InvalidRequestException", (Exception,), {})
-        mock_athena.create_work_group.side_effect = mock_athena.exceptions.InvalidRequestException(
-            "WorkGroup already exists"
-        )
-        mock_boto3.client.side_effect = lambda svc, **kw: mock_ssm if svc == "ssm" else mock_athena
+        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        admin = MagicMock()
+        admin.create_workgroup.side_effect = RuntimeError("provider unavailable")
+        monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
         svc = self._make_service()
         from coa_control_plane_server.models.create_namespace_request_content import (
@@ -128,9 +148,12 @@ class TestAthenaWorkgroupCreation:
         # Should not raise
         svc.create(req)
 
-    @patch(f"{MODULE_SERVICE}.boto3")
-    def test_missing_ssm_param_skips_workgroup_creation(self, mock_boto3):
+        ns_puts = [c for c in svc._ns_dao.put.call_args_list if c.args[0].get("athenaWorkgroupName")]
+        assert ns_puts == []
+
+    def test_missing_ssm_param_skips_workgroup_creation(self, monkeypatch):
         from botocore.exceptions import ClientError
+        from coa_control_plane.namespace import service
 
         mock_ssm = MagicMock()
 
@@ -142,8 +165,9 @@ class TestAthenaWorkgroupCreation:
             raise ClientError({"Error": {"Code": "ParameterNotFound", "Message": "not found"}}, "GetParameter")
 
         mock_ssm.get_parameter.side_effect = get_parameter_side_effect
-        mock_athena = MagicMock()
-        mock_boto3.client.side_effect = lambda svc, **kw: mock_ssm if svc == "ssm" else mock_athena
+        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        admin = MagicMock()
+        monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
         svc = self._make_service()
         from coa_control_plane_server.models.create_namespace_request_content import (
@@ -152,42 +176,35 @@ class TestAthenaWorkgroupCreation:
 
         req = CreateNamespaceRequestContent(name="sales", owner="alice@co.com")
         svc.create(req)
-        # Athena create_work_group should NOT be called (SSM param missing)
-        mock_athena.create_work_group.assert_not_called()
+        # Warehouse admin should NOT be called (SSM param missing)
+        admin.create_workgroup.assert_not_called()
 
 
 # ═══════════════════════════════════════════════════════════════════
 # Workgroup Deletion (cleanup.py — invoked by the deletion pipeline's
 # delete_platform step, see test_namespace_deletion_pipeline.py for the
-# step-level test and test_namespace_cleanup.py for delete_athena_workgroup
-# unit coverage). This section only covers the not-found edge case.
+# step-level test and test_namespace_cleanup.py for the skip/no-op case).
+# "Not found" is the provider's contract now, not cleanup's.
 # ═══════════════════════════════════════════════════════════════════
 
 
 class TestAthenaWorkgroupDeletion:
-    def test_delete_athena_workgroup_handles_not_found(self):
-        from coa_control_plane.namespace.cleanup import delete_athena_workgroup
+    def test_delete_delegates_to_warehouse_admin(self, monkeypatch):
+        from coa_control_plane.namespace import cleanup
 
-        with patch("coa_control_plane.namespace.cleanup.boto3") as mock_boto3:
-            mock_athena = MagicMock()
-            mock_athena.exceptions.InvalidRequestException = type("InvalidRequestException", (Exception,), {})
-            mock_athena.delete_work_group.side_effect = mock_athena.exceptions.InvalidRequestException(
-                "WorkGroup not found"
-            )
-            mock_boto3.client.return_value = mock_athena
+        admin = MagicMock()
+        monkeypatch.setattr(cleanup, "_warehouse_admin", lambda: admin)
 
-            # Should not raise
-            delete_athena_workgroup(f"{RESOURCE_PREFIX}-dev-ns-123")
+        cleanup.delete_athena_workgroup(f"{RESOURCE_PREFIX}-dev-ns-123")
 
-    def test_delete_athena_workgroup_success(self):
-        from coa_control_plane.namespace.cleanup import delete_athena_workgroup
+        admin.delete_workgroup.assert_called_once_with(f"{RESOURCE_PREFIX}-dev-ns-123")
 
-        with patch("coa_control_plane.namespace.cleanup.boto3") as mock_boto3:
-            mock_athena = MagicMock()
-            mock_boto3.client.return_value = mock_athena
+    def test_delete_propagates_provider_failure(self, monkeypatch):
+        from coa_control_plane.namespace import cleanup
 
-            delete_athena_workgroup(f"{RESOURCE_PREFIX}-dev-ns-123")
+        admin = MagicMock()
+        admin.delete_workgroup.side_effect = RuntimeError("warehouse unreachable")
+        monkeypatch.setattr(cleanup, "_warehouse_admin", lambda: admin)
 
-            mock_athena.delete_work_group.assert_called_once_with(
-                WorkGroup=f"{RESOURCE_PREFIX}-dev-ns-123", RecursiveDeleteOption=True
-            )
+        with pytest.raises(RuntimeError):
+            cleanup.delete_athena_workgroup(f"{RESOURCE_PREFIX}-dev-ns-123")

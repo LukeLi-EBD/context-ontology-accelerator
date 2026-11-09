@@ -150,24 +150,22 @@ class TestDeleteAthenaWorkgroup:
     def test_skips_when_no_workgroup_name(self, monkeypatch):
         from coa_control_plane.namespace import cleanup
 
-        mock_athena = MagicMock()
-        monkeypatch.setattr(cleanup.boto3, "client", lambda *a, **k: mock_athena)
+        admin = MagicMock()
+        monkeypatch.setattr(cleanup, "_warehouse_admin", lambda: admin)
 
         cleanup.delete_athena_workgroup(None)
 
-        mock_athena.delete_work_group.assert_not_called()
+        admin.delete_workgroup.assert_not_called()
 
     def test_deletes_workgroup(self, monkeypatch):
         from coa_control_plane.namespace import cleanup
 
-        mock_athena = MagicMock()
-        monkeypatch.setattr(cleanup.boto3, "client", lambda *a, **k: mock_athena)
+        admin = MagicMock()
+        monkeypatch.setattr(cleanup, "_warehouse_admin", lambda: admin)
 
         cleanup.delete_athena_workgroup(f"{RESOURCE_PREFIX}-dev-sales")
 
-        mock_athena.delete_work_group.assert_called_once_with(
-            WorkGroup=f"{RESOURCE_PREFIX}-dev-sales", RecursiveDeleteOption=True
-        )
+        admin.delete_workgroup.assert_called_once_with(f"{RESOURCE_PREFIX}-dev-sales")
 
 
 @pytest.mark.unit

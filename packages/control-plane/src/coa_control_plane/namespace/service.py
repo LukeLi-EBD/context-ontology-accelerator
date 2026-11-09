@@ -24,6 +24,13 @@ from coa_control_plane_server.models.namespace_status import NamespaceStatus
 
 logger = structlog.get_logger(__name__)
 
+
+def _warehouse_admin():
+    """The configured warehouse control plane; resolved lazily, never at import."""
+    from coa_runtime.registry import resolve
+
+    return resolve("WarehouseAdminPort").instance
+
 # Pending reservations expire after 5 minutes (safety net for crashes).
 _RESERVATION_TTL_SECONDS = 300
 
@@ -163,7 +170,6 @@ class NamespaceService:
         resource_prefix = os.environ.get("RESOURCE_PREFIX", "coa-dev-")
         workgroup_name = f"{resource_prefix}{namespace_id}"
         results_bucket_ssm = os.environ.get("ATHENA_RESULTS_BUCKET_SSM", "")
-        tag_prefix = os.environ.get("TAG_PREFIX", "coa")
 
         if not results_bucket_ssm:
             logger.warning("athena_results_bucket_ssm_not_configured", namespace_id=namespace_id)
@@ -177,36 +183,16 @@ class NamespaceService:
             logger.warning("athena_results_bucket_ssm_not_found", param=results_bucket_ssm)
             return None
 
-        athena = boto3.client("athena", region_name=os.environ.get("AWS_REGION", "us-east-1"))
-
         try:
-            athena.create_work_group(
-                Name=workgroup_name,
-                Configuration={
-                    "ResultConfiguration": {
-                        "OutputLocation": f"s3://{results_bucket}/{namespace_id}/",
-                        "EncryptionConfiguration": {"EncryptionOption": "SSE_S3"},
-                    },
-                    "EnforceWorkGroupConfiguration": True,
-                    "PublishCloudWatchMetricsEnabled": True,
-                    "EngineVersion": {"SelectedEngineVersion": "Athena engine version 3"},
-                },
-                Tags=[
-                    {"Key": f"{tag_prefix}:namespace", "Value": namespace_id},
-                    {"Key": f"{tag_prefix}:managed", "Value": "true"},
-                ],
+            _warehouse_admin().create_workgroup(
+                workgroup_name,
+                output_location=f"s3://{results_bucket}/{namespace_id}/",
             )
             logger.info("athena_workgroup_created", workgroup_name=workgroup_name)
             return workgroup_name
-        except athena.exceptions.InvalidRequestException as exc:
-            if "already exists" in str(exc):
-                logger.info("athena_workgroup_already_exists", workgroup_name=workgroup_name)
-                return workgroup_name
-            # Any other InvalidRequestException is a real failure; don't
-            # claim the workgroup exists.
-            logger.exception("athena_workgroup_create_failed", workgroup_name=workgroup_name)
-            return None
-        except BotoClientError:
+        except Exception:
+            # Any failure — including a provider that could not be resolved —
+            # means the workgroup was not confirmed; the caller must not persist it.
             logger.exception("athena_workgroup_create_failed", workgroup_name=workgroup_name)
             return None
 

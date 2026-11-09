@@ -32,6 +32,13 @@ from coa_common.opensearch import AossVectorClient
 
 logger = structlog.get_logger(__name__)
 
+
+def _warehouse_admin():
+    """The configured warehouse control plane; resolved lazily, never at import."""
+    from coa_runtime.registry import resolve
+
+    return resolve("WarehouseAdminPort").instance
+
 _MAX_PAGINATION_PAGES = 1000
 
 
@@ -39,18 +46,11 @@ _MAX_PAGINATION_PAGES = 1000
 
 
 def delete_athena_workgroup(workgroup_name: str | None) -> None:
-    """Delete Athena workgroup. Raises on failure (not-found is OK)."""
+    """Delete the namespace's workgroup. Raises on failure (not-found is OK)."""
     if not workgroup_name:
         return
-    athena = boto3.client("athena", region_name=os.environ.get("AWS_REGION", "us-east-1"), config=async_boto_config())
-    try:
-        athena.delete_work_group(WorkGroup=workgroup_name, RecursiveDeleteOption=True)
-        logger.info("athena_workgroup_deleted", workgroup_name=workgroup_name)
-    except athena.exceptions.InvalidRequestException as exc:
-        if "not found" in str(exc).lower():
-            logger.info("athena_workgroup_not_found", workgroup_name=workgroup_name)
-        else:
-            raise
+    _warehouse_admin().delete_workgroup(workgroup_name)
+    logger.info("athena_workgroup_deleted", workgroup_name=workgroup_name)
 
 
 def delete_smu_project(namespace_id: str, item: dict[str, Any]) -> None:
