@@ -54,8 +54,26 @@ class GraphAdminPort(Protocol):
 class WarehouseAdminPort(Protocol):
     """Warehouse control plane: workgroups, catalogues, read-only ad-hoc SQL."""
 
-    def create_workgroup(self, name: str, *, output_location: str = "") -> str:
-        """Create (or acknowledge) a workgroup and return its name."""
+    def create_workgroup(
+        self,
+        name: str,
+        *,
+        output_location: str = "",
+        encryption: str = "",
+        engine_version: str = "",
+        enforce_configuration: bool = False,
+        publish_metrics: bool = False,
+        tags: Mapping[str, str] | None = None,
+    ) -> str:
+        """Create (or acknowledge) a workgroup and return its name.
+
+        The keyword fields are the workgroup's policy, not decoration: they
+        carry the result location, at-rest encryption option, engine version,
+        whether clients must use this workgroup's settings, whether CloudWatch
+        metrics are published, and the resource tags. Providers that have no
+        workgroup concept (e.g. PostgreSQL) accept them as no-ops so callers
+        can pass the full policy unconditionally.
+        """
         ...
 
     def delete_workgroup(self, name: str) -> None:

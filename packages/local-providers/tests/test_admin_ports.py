@@ -113,6 +113,19 @@ def test_workgroup_and_catalog_calls_are_documented_no_ops() -> None:
     admin, _ = _warehouse()
 
     assert admin.create_workgroup("wg", output_location="s3://x") == "wg"
+    # The full Athena policy is part of the contract; local must accept it as a no-op.
+    assert (
+        admin.create_workgroup(
+            "wg",
+            output_location="s3://x/ns/",
+            encryption="SSE_S3",
+            engine_version="Athena engine version 3",
+            enforce_configuration=True,
+            publish_metrics=True,
+            tags={"coa:namespace": "ns", "coa:managed": "true"},
+        )
+        == "wg"
+    )
     admin.delete_workgroup("wg")
     admin.register_catalog("cat", parameters={"a": "b"})
     admin.delete_catalog("cat")

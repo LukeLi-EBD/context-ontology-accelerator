@@ -81,12 +81,21 @@ class TestAthenaWorkgroupCreation:
             metadata_store=mock_metadata,
         )
 
-    def test_creates_workgroup_with_correct_name(self, monkeypatch):
+    def _stub_role_ssm(self, monkeypatch):
+        """The DataZone project-access role lookup is out of scope here."""
         from coa_control_plane.namespace import service
 
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {"Parameter": {"Value": f"{RESOURCE_PREFIX}-dev-athena-results-123"}}
-        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        ssm = MagicMock()
+        ssm.get_parameter.return_value = {"Parameter": {"Value": "arn:aws:iam::123:role/project-access"}}
+        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: ssm)
+
+    def test_creates_workgroup_with_full_policy(self, monkeypatch):
+        from coa_control_plane.namespace import service
+
+        self._stub_role_ssm(monkeypatch)
+        provider = MagicMock()
+        provider.get.return_value = f"{RESOURCE_PREFIX}-dev-athena-results-123"
+        monkeypatch.setattr(service, "_config_provider", lambda: provider)
         admin = MagicMock()
         monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
@@ -101,17 +110,27 @@ class TestAthenaWorkgroupCreation:
         # Workgroup name is prefix + namespace UUID; results go to the bucket/namespace prefix.
         admin.create_workgroup.assert_called_once()
         name = admin.create_workgroup.call_args.args[0]
-        output_location = admin.create_workgroup.call_args.kwargs["output_location"]
+        kwargs = admin.create_workgroup.call_args.kwargs
+        namespace_id = name.removeprefix(f"{RESOURCE_PREFIX}-dev-")
         assert name.startswith(f"{RESOURCE_PREFIX}-dev-")
-        assert output_location.startswith(f"s3://{RESOURCE_PREFIX}-dev-athena-results-123/")
-        assert output_location.endswith(f"/{name.removeprefix(f'{RESOURCE_PREFIX}-dev-')}/")
+        assert kwargs["output_location"] == f"s3://{RESOURCE_PREFIX}-dev-athena-results-123/{namespace_id}/"
+        # The six policy fields dropped by the first pass must reach the provider.
+        assert kwargs["encryption"] == "SSE_S3"
+        assert kwargs["engine_version"] == "Athena engine version 3"
+        assert kwargs["enforce_configuration"] is True
+        assert kwargs["publish_metrics"] is True
+        assert kwargs["tags"] == {
+            "scl:namespace": namespace_id,
+            "scl:managed": "true",
+        }
 
     def test_workgroup_stored_in_ddb_record(self, monkeypatch):
         from coa_control_plane.namespace import service
 
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {"Parameter": {"Value": f"{RESOURCE_PREFIX}-dev-athena-results-123"}}
-        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        self._stub_role_ssm(monkeypatch)
+        provider = MagicMock()
+        provider.get.return_value = f"{RESOURCE_PREFIX}-dev-athena-results-123"
+        monkeypatch.setattr(service, "_config_provider", lambda: provider)
         admin = MagicMock()
         monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
@@ -128,13 +147,14 @@ class TestAthenaWorkgroupCreation:
         assert len(ns_put_calls) == 1
         assert ns_put_calls[0].args[0]["athenaWorkgroupName"].startswith(f"{RESOURCE_PREFIX}-dev-")
 
-    def test_provider_failure_does_not_persist_workgroup_name(self, monkeypatch):
-        """Unconfirmed workgroups must not be recorded in the namespace item."""
+    def test_provider_failure_propagates(self, monkeypatch):
+        """A failed create must not be disguised as "no workgroup configured"."""
         from coa_control_plane.namespace import service
 
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {"Parameter": {"Value": f"{RESOURCE_PREFIX}-dev-athena-results-123"}}
-        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        self._stub_role_ssm(monkeypatch)
+        provider = MagicMock()
+        provider.get.return_value = f"{RESOURCE_PREFIX}-dev-athena-results-123"
+        monkeypatch.setattr(service, "_config_provider", lambda: provider)
         admin = MagicMock()
         admin.create_workgroup.side_effect = RuntimeError("provider unavailable")
         monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
@@ -145,27 +165,40 @@ class TestAthenaWorkgroupCreation:
         )
 
         req = CreateNamespaceRequestContent(name="sales", owner="alice@co.com")
-        # Should not raise
-        svc.create(req)
+        with pytest.raises(RuntimeError, match="provider unavailable"):
+            svc.create(req)
 
         ns_puts = [c for c in svc._ns_dao.put.call_args_list if c.args[0].get("athenaWorkgroupName")]
         assert ns_puts == []
 
-    def test_missing_ssm_param_skips_workgroup_creation(self, monkeypatch):
-        from botocore.exceptions import ClientError
+    def test_bucket_read_failure_propagates(self, monkeypatch):
+        from coa_ports import PortError, PortErrorCode
         from coa_control_plane.namespace import service
 
-        mock_ssm = MagicMock()
+        self._stub_role_ssm(monkeypatch)
+        provider = MagicMock()
+        provider.get.side_effect = PortError(PortErrorCode.UNAVAILABLE, "ssm down", provider="ssm")
+        monkeypatch.setattr(service, "_config_provider", lambda: provider)
+        admin = MagicMock()
+        monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
-        # Mock SSM to return role ARN but fail on Athena bucket lookup
-        def get_parameter_side_effect(Name):
-            if "dz-project-access-role-arn" in Name:
-                return {"Parameter": {"Value": "arn:aws:iam::123:role/project-access"}}
-            # Athena results bucket SSM param is missing
-            raise ClientError({"Error": {"Code": "ParameterNotFound", "Message": "not found"}}, "GetParameter")
+        svc = self._make_service()
+        from coa_control_plane_server.models.create_namespace_request_content import (
+            CreateNamespaceRequestContent,
+        )
 
-        mock_ssm.get_parameter.side_effect = get_parameter_side_effect
-        monkeypatch.setattr(service.boto3, "client", lambda *a, **kw: mock_ssm)
+        req = CreateNamespaceRequestContent(name="sales", owner="alice@co.com")
+        with pytest.raises(PortError):
+            svc.create(req)
+        admin.create_workgroup.assert_not_called()
+
+    def test_missing_bucket_skips_workgroup_creation(self, monkeypatch):
+        from coa_control_plane.namespace import service
+
+        self._stub_role_ssm(monkeypatch)
+        provider = MagicMock()
+        provider.get.return_value = None
+        monkeypatch.setattr(service, "_config_provider", lambda: provider)
         admin = MagicMock()
         monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
 
@@ -176,7 +209,34 @@ class TestAthenaWorkgroupCreation:
 
         req = CreateNamespaceRequestContent(name="sales", owner="alice@co.com")
         svc.create(req)
-        # Warehouse admin should NOT be called (SSM param missing)
+        # No result bucket configured is "workgroup feature not provisioned", not an error.
+        admin.create_workgroup.assert_not_called()
+        ns_puts = [c for c in svc._ns_dao.put.call_args_list if c.args[0].get("athenaWorkgroupName")]
+        assert ns_puts == []
+
+    def test_unconfigured_config_provider_skips_workgroup_creation(self, monkeypatch):
+        from coa_runtime.errors import MissingConfigurationError
+        from coa_control_plane.namespace import service
+
+        def _raise():
+            raise MissingConfigurationError(
+                "ConfigProvider has no provider configured",
+                interface="ConfigProvider",
+                key="COA_PROVIDER_CONFIG",
+            )
+
+        self._stub_role_ssm(monkeypatch)
+        monkeypatch.setattr(service, "_config_provider", _raise)
+        admin = MagicMock()
+        monkeypatch.setattr(service, "_warehouse_admin", lambda: admin)
+
+        svc = self._make_service()
+        from coa_control_plane_server.models.create_namespace_request_content import (
+            CreateNamespaceRequestContent,
+        )
+
+        req = CreateNamespaceRequestContent(name="sales", owner="alice@co.com")
+        svc.create(req)
         admin.create_workgroup.assert_not_called()
 
 

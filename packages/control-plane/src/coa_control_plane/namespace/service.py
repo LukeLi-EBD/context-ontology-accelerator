@@ -31,6 +31,13 @@ def _warehouse_admin():
 
     return resolve("WarehouseAdminPort").instance
 
+
+def _config_provider():
+    """The configured config store; resolved lazily, never at import."""
+    from coa_runtime.registry import resolve
+
+    return resolve("ConfigProvider").instance
+
 # Pending reservations expire after 5 minutes (safety net for crashes).
 _RESERVATION_TTL_SECONDS = 300
 
@@ -131,9 +138,9 @@ class NamespaceService:
             raise
 
         # Step 2c: Create Athena workgroup for query isolation.
-        # `_create_athena_workgroup` returns None if the workgroup could not
-        # be confirmed to exist in Athena (e.g., SSM param missing); in that
-        # case we do not persist a stale workgroup name in DDB.
+        # `_create_athena_workgroup` returns None only when no result bucket is
+        # configured; failures raise so the namespace is not created with a
+        # silently missing workgroup.
         workgroup_name = self._create_athena_workgroup(namespace_id)
 
         # Step 3: Write namespace record, roles, mappings, and confirm reservation.
@@ -160,41 +167,51 @@ class NamespaceService:
         """Create a per-namespace Athena workgroup for query isolation.
 
         Returns the workgroup name on confirmed success (newly created OR
-        pre-existing). Returns None if the workgroup could not be confirmed
-        to exist in Athena (e.g., SSM parameter missing, AWS error). The
-        caller MUST NOT persist a name returned as None — doing so creates
-        a namespace record that references a non-existent workgroup.
+        pre-existing). Returns None when the deployment has no result bucket
+        configured — the workgroup feature is simply not provisioned there.
+        Configuration and provider failures raise: a namespace that silently
+        references no workgroup while the caller believes one was created is
+        worse than an explicit failure.
         """
-        from botocore.exceptions import ClientError as BotoClientError
+        from coa_runtime.errors import ConfigurationError
 
         resource_prefix = os.environ.get("RESOURCE_PREFIX", "coa-dev-")
         workgroup_name = f"{resource_prefix}{namespace_id}"
         results_bucket_ssm = os.environ.get("ATHENA_RESULTS_BUCKET_SSM", "")
+        tag_prefix = os.environ.get("TAG_PREFIX", "coa")
 
         if not results_bucket_ssm:
             logger.warning("athena_results_bucket_ssm_not_configured", namespace_id=namespace_id)
             return None
 
-        ssm = boto3.client("ssm", region_name=os.environ.get("AWS_REGION", "us-east-1"))
         try:
-            resp = ssm.get_parameter(Name=results_bucket_ssm)
-            results_bucket = resp["Parameter"]["Value"]
-        except BotoClientError:
+            results_bucket = _config_provider().get(results_bucket_ssm)
+        except ConfigurationError:
+            logger.warning(
+                "config_provider_not_configured",
+                param=results_bucket_ssm,
+                namespace_id=namespace_id,
+                exc_info=True,
+            )
+            return None
+        if not results_bucket:
             logger.warning("athena_results_bucket_ssm_not_found", param=results_bucket_ssm)
             return None
 
-        try:
-            _warehouse_admin().create_workgroup(
-                workgroup_name,
-                output_location=f"s3://{results_bucket}/{namespace_id}/",
-            )
-            logger.info("athena_workgroup_created", workgroup_name=workgroup_name)
-            return workgroup_name
-        except Exception:
-            # Any failure — including a provider that could not be resolved —
-            # means the workgroup was not confirmed; the caller must not persist it.
-            logger.exception("athena_workgroup_create_failed", workgroup_name=workgroup_name)
-            return None
+        _warehouse_admin().create_workgroup(
+            workgroup_name,
+            output_location=f"s3://{results_bucket}/{namespace_id}/",
+            encryption="SSE_S3",
+            engine_version="Athena engine version 3",
+            enforce_configuration=True,
+            publish_metrics=True,
+            tags={
+                f"{tag_prefix}:namespace": namespace_id,
+                f"{tag_prefix}:managed": "true",
+            },
+        )
+        logger.info("athena_workgroup_created", workgroup_name=workgroup_name)
+        return workgroup_name
 
     def _check_name_available(self, name: str) -> None:
         result = self._ns_dao.query(

@@ -33,8 +33,23 @@ class PgWarehouseAdmin:
         self._meta = MetadataPg(dsn, pool_max=pool_max)
         self._meta.open(retry_seconds=open_timeout_seconds)
 
-    def create_workgroup(self, name: str, *, output_location: str = "") -> str:
-        """No-op: PostgreSQL needs no workgroup; returns ``name`` for bookkeeping."""
+    def create_workgroup(
+        self,
+        name: str,
+        *,
+        output_location: str = "",
+        encryption: str = "",
+        engine_version: str = "",
+        enforce_configuration: bool = False,
+        publish_metrics: bool = False,
+        tags: Mapping[str, str] | None = None,
+    ) -> str:
+        """No-op: PostgreSQL needs no workgroup; returns ``name`` for bookkeeping.
+
+        The policy fields (location, encryption, engine version, enforcement,
+        metrics, tags) are accepted so callers pass the same arguments as on
+        Athena; locally there is nothing to configure.
+        """
         if not name:
             raise PortError(
                 PortErrorCode.INVALID_ARGUMENT,
