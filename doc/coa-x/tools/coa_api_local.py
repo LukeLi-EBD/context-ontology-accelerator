@@ -470,6 +470,8 @@ def _seed_demo_catalog(namespace_id: str) -> dict[str, Any]:
 
 NAMESPACE = "coa_control_plane.namespace.namespace_api_handler"
 ROLES = "coa_control_plane.roles.namespace_roles_handler"
+# Platform-scoped role list lives in its own Lambda (GET /roles).
+PLATFORM_ROLES = "coa_control_plane.roles.list_platform_roles_handler"
 GRANTS = "coa_control_plane.grants.grants_handler"
 SOURCES = "coa_sources.api.sources_handler"
 METRICS = "coa_metrics.api.metric_api_handler"
@@ -484,6 +486,11 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/roles/{roleId}", ROLES),
     ("/namespaces/{namespaceId}/grants", GRANTS),
     ("/namespaces/{namespaceId}/grants/{grantId}", GRANTS),
+    # Platform-scoped roles and grants (GLOBAL partition, no namespace in path).
+    ("/roles", PLATFORM_ROLES),
+    ("/grants", GRANTS),
+    ("/grants/{grantId}", GRANTS),
+    ("/principals/{principalId}/grants", GRANTS),
     ("/namespaces/{namespaceId}/sources", SOURCES),
     ("/namespaces/{namespaceId}/sources/{sourceId}", SOURCES),
     ("/namespaces/{namespaceId}/sources/{sourceId}/rescan", SOURCES),
