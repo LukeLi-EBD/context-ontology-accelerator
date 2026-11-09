@@ -214,6 +214,16 @@ def _openai_http_llm(settings: Settings) -> Any:
         "no",
         "off",
     }
+    # ``converse`` streams internally by default so an abandoned request is
+    # observable to the endpoint (llama.cpp otherwise keeps the slot to the end of
+    # the generation). ``COA_LLM_HTTP_STREAM_CONVERSE=0`` restores one request.
+    converse_raw = settings.get("COA_LLM_HTTP_STREAM_CONVERSE")
+    stream_converse = True if converse_raw is None else converse_raw.lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
     return OpenAICompatChat(
         base_url=settings.require("COA_LLM_HTTP_BASE_URL", interface="LLMClient"),
         model=settings.require("COA_LLM_HTTP_MODEL", interface="LLMClient"),
@@ -222,6 +232,7 @@ def _openai_http_llm(settings: Settings) -> Any:
             "COA_LLM_HTTP_TIMEOUT_S", default=120.0, interface="LLMClient"
         ),
         stream_enabled=stream_enabled,
+        stream_converse=stream_converse,
         guardrail_mode=settings.get("COA_LLM_HTTP_GUARDRAIL") or "reject",
     )
 

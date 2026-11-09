@@ -13,16 +13,24 @@
 .PARAMETER Namespace
     查询使用的 namespace（必须是 UUID v4，且与 Cedar 策略一致）。
 
+.PARAMETER LlmProvider
+    local（默认）：起本机 llama.cpp 0.5B（8077）。
+    ark：用火山方舟 coding plan 端点，密钥从 packages/platform-core/.env 或环境变量读。
+    本脚本从不把密钥写入任何文件或日志。
+
 .PARAMETER Keep
     保留容器、进程与日志以便排查；默认全部清理。
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1
     powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1 -Keep
+    powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1 -LlmProvider ark -Keep
 #>
 [CmdletBinding()]
 param(
     [string]$Namespace = "550e8400-e29b-41d4-a716-446655440000",
+    [ValidateSet("local", "ark")]
+    [string]$LlmProvider = "local",
     [switch]$Keep
 )
 
@@ -40,6 +48,11 @@ $LlmPort     = 8077
 $CmPort      = 8091
 $DlPort      = 8092
 $EmbedPort   = 8081
+
+# Ark（火山方舟 coding plan）：密钥只从 .env 或环境变量读，绝不写盘。
+$ArkEnvFile  = Join-Path $Repo "packages\platform-core\.env"
+$ArkBaseUrl  = "https://ark.cn-beijing.volces.com/api/coding/v3"
+$ArkModel    = "deepseek-v4-1-flash-261017"
 
 $PgDsn       = "postgresql://platform:platform_dev@127.0.0.1:$PgPort/platform"
 $OxiUrl      = "http://127.0.0.1:$OxiPort"
@@ -112,6 +125,17 @@ function Write-Json([string]$Path, [string]$Text) {
     [System.IO.File]::WriteAllText($Path, $Text, (New-Object System.Text.UTF8Encoding($false)))
 }
 
+function Get-EnvValue([string]$Path, [string]$Key) {
+    # 只读取，不回显；返回值直接进进程环境变量，不落盘。
+    if (-not (Test-Path $Path)) { return $null }
+    foreach ($line in Get-Content $Path) {
+        if ($line -match "^\s*$([regex]::Escape($Key))\s*=") {
+            return (($line -split "=", 2)[1]).Trim()
+        }
+    }
+    return $null
+}
+
 function Start-Box([string]$Name, [string[]]$Arguments) {
     & docker run -d --name $Name @Arguments | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "FAILED: docker run $Name" }
@@ -138,7 +162,18 @@ function Cleanup {
 # ---- preflight ------------------------------------------------------------
 Write-Step "0/7 preflight"
 Assert-True (Test-Path $Python) "project venv python: $Python"
-Assert-True (Test-Path $Model) "GGUF model: $Model"
+if ($LlmProvider -eq "local") {
+    Assert-True (Test-Path $Model) "GGUF model: $Model"
+} else {
+    $arkKey = $env:COA_LLM_HTTP_API_KEY
+    if (-not $arkKey) { $arkKey = Get-EnvValue $ArkEnvFile "PLATFORM__LLM__API_KEY" }
+    Assert-True ([bool]$arkKey) "Ark api key from `$env:COA_LLM_HTTP_API_KEY or $ArkEnvFile (value not printed)"
+    $arkBase = Get-EnvValue $ArkEnvFile "PLATFORM__LLM__BASE_URL"
+    $arkModelName = Get-EnvValue $ArkEnvFile "PLATFORM__LLM__MODEL"
+    if ($arkBase) { $ArkBaseUrl = $arkBase }
+    if ($arkModelName) { $ArkModel = $arkModelName }
+    Write-Host "  ok  llm=ark base=$ArkBaseUrl model=$ArkModel" -ForegroundColor Green
+}
 Assert-True (Test-Path $Bootstrap) "bootstrap helper: $Bootstrap"
 Assert-True (Test-Path $Runner) "process runner: $Runner"
 Assert-True ($null -ne (Get-Command docker -ErrorAction SilentlyContinue)) "docker on PATH"
@@ -161,6 +196,14 @@ Start-Box $PgContainer @(
     "pgvector/pgvector:pg18-trixie"
 )
 Wait-Port $PgPort 60 "pgvector"
+# 端口先开、再初始化：只等端口会让第一次连接被拒。用 pg_isready 等真正的可服务状态。
+$ready = $false
+for ($i = 0; $i -lt 60; $i++) {
+    & docker exec $PgContainer pg_isready -U platform -d platform 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+    Start-Sleep -Milliseconds 500
+}
+Assert-True $ready "pgvector accepting connections"
 & $Python $Bootstrap migrate --dsn $PgDsn
 if ($LASTEXITCODE -ne 0) { throw "FAILED: platform migrations" }
 
@@ -181,25 +224,36 @@ Wait-Http "$OxiUrl/" 60 "oxigraph"
 & $Python $Bootstrap ontology --oxigraph $OxiUrl --namespace $Namespace
 if ($LASTEXITCODE -ne 0) { throw "FAILED: ontology load" }
 
-# ---- 4. local LLM ---------------------------------------------------------
-Write-Step "4/7 local OpenAI-compatible LLM ($LlmPort)"
-if (-not (Test-Port $LlmPort)) {
-    $threads = [Math]::Min(12, [Environment]::ProcessorCount)
-    Start-Background "llm" $Python @(
-        "-m", "llama_cpp.server",
-        "--model", "`"$Model`"",
-        "--model_alias", "qwen2.5-0.5b",
-        "--host", "127.0.0.1",
-        "--port", "$LlmPort",
-        "--n_ctx", "8192",
-        "--n_threads", "$threads",
-        "--n_threads_batch", "$threads",
-        "--chat_format", "chatml"
-    ) | Out-Null
+# ---- 4. LLM endpoint -------------------------------------------------------
+if ($LlmProvider -eq "local") {
+    Write-Step "4/7 local OpenAI-compatible LLM ($LlmPort)"
+    if (-not (Test-Port $LlmPort)) {
+        $threads = [Math]::Min(12, [Environment]::ProcessorCount)
+        Start-Background "llm" $Python @(
+            "-m", "llama_cpp.server",
+            "--model", "`"$Model`"",
+            "--model_alias", "qwen2.5-0.5b",
+            "--host", "127.0.0.1",
+            "--port", "$LlmPort",
+            "--n_ctx", "8192",
+            "--n_threads", "$threads",
+            "--n_threads_batch", "$threads",
+            "--chat_format", "chatml"
+        ) | Out-Null
+    } else {
+        Write-Host "  ok  LLM already listening on $LlmPort" -ForegroundColor Green
+    }
+    Wait-Http "$LlmUrl/models" 120 "llm"
 } else {
-    Write-Host "  ok  LLM already listening on $LlmPort" -ForegroundColor Green
+    Write-Step "4/7 Volcano Ark chat endpoint"
+    try {
+        $probe = Invoke-WebRequest -Uri "$ArkBaseUrl/models" -UseBasicParsing -TimeoutSec 30 `
+            -Headers @{ Authorization = "Bearer $arkKey" }
+        Assert-True ($probe.StatusCode -eq 200) "ark /models reachable (HTTP $($probe.StatusCode))"
+    } catch {
+        throw "FAILED: ark endpoint unreachable at $ArkBaseUrl : $($_.Exception.Message)"
+    }
 }
-Wait-Http "$LlmUrl/models" 120 "llm"
 
 # ---- 5. context-manager ---------------------------------------------------
 Write-Step "5/7 context-manager ($CmPort)"
@@ -223,14 +277,22 @@ $env:COA_METRIC_INDEX_PG_DSN              = $PgDsn
 $env:COA_PROVIDER_EMBEDDING               = "bge-local"
 $env:COA_EMBEDDING_BGE_ENDPOINT           = "http://127.0.0.1:$EmbedPort/v1"
 $env:COA_PROVIDER_LLM                     = "openai-http"
-$env:COA_LLM_HTTP_BASE_URL                = $LlmUrl
-$env:COA_LLM_HTTP_MODEL                   = "qwen2.5-0.5b"
-$env:COA_LLM_HTTP_TIMEOUT_S               = "300"
+if ($LlmProvider -eq "local") {
+    $env:COA_LLM_HTTP_BASE_URL            = $LlmUrl
+    $env:COA_LLM_HTTP_MODEL               = "qwen2.5-0.5b"
+    $env:COA_LLM_HTTP_TIMEOUT_S           = "300"
+    $env:SERVE_VKG_TRANSLATION_TIMEOUT_S  = "300"
+} else {
+    $env:COA_LLM_HTTP_BASE_URL            = $ArkBaseUrl
+    $env:COA_LLM_HTTP_MODEL               = $ArkModel
+    $env:COA_LLM_HTTP_API_KEY             = $arkKey
+    $env:COA_LLM_HTTP_TIMEOUT_S           = "120"
+    $env:SERVE_VKG_TRANSLATION_TIMEOUT_S  = "60"
+}
 $env:COA_PROVIDER_AUTHORIZATION           = "local-file"
 $env:COA_AUTHORIZATION_FILE               = $AuthzFile
 $env:GRAPH_URI_TEMPLATE                   = "https://ontology.local/{namespace}"
 $env:RESOLVE_TIMEOUT_S                    = "420"
-$env:SERVE_VKG_TRANSLATION_TIMEOUT_S      = "300"
 
 @"
 {
@@ -286,7 +348,9 @@ try {
     $body = $reader.ReadToEnd()
 }
 $stopwatch.Stop()
-$body | Set-Content -Encoding utf8 $AnswerFile
+# 同一套不带 BOM 的写法：data-layer / CM 按严格 JSON 解析，BOM 会被判为非法前缀。
+# 不要用 Set-Content -Encoding utf8（Windows PowerShell 5.1 会写 BOM）。
+Write-Json $AnswerFile $body
 
 Write-Host "  http_status=$status elapsed=$([Math]::Round($stopwatch.Elapsed.TotalSeconds,1))s body=$AnswerFile"
 Assert-True ($status -eq 200) "HTTP 200 (not 500)"
@@ -294,8 +358,22 @@ Assert-True ($status -eq 200) "HTTP 200 (not 500)"
 $parsed = $body | ConvertFrom-Json
 $result = $parsed.result
 Assert-True ($null -ne $result) "response carries a result"
-Assert-True ([double]$result.tier -ge 3) "Tier-3 answered (tier=$($result.tier))"
-Assert-True ($result.supportingContent.Count -ge 1) "supporting evidence present ($($result.supportingContent.Count) chunks)"
+# 成功判据：tier>=2 即可。合法 tier=2 是契约的一部分（结构化层真的查了表），
+# 不能因为「没走到 Tier-3」就判失败 —— 那是把正确答案当失败。
+$tier = [double]$result.tier
+Assert-True ($tier -ge 2) "Tier-2 or Tier-3 answered (tier=$tier)"
+if ($tier -lt 3) {
+    Assert-True ($result.resultRows.Count -ge 1) "Tier-2 returned rows ($($result.resultRows.Count))"
+    # 退化常量：把占位/常量塞进 SELECT 冒充查询结果（'N/A'、'0'、NOT_ANSWERABLE 之类），
+    # SQL 里没有 FROM。这类回答不是「Tier-2 通过」，必须判失败。
+    $sql = [string]$result.queryUsed
+    Assert-True ($sql -match '(?i)\bfrom\b') "Tier-2 SQL reads a table, not a bare constant (queryUsed='$sql')"
+    $firstCell = ""
+    foreach ($prop in $result.resultRows[0].PSObject.Properties) { $firstCell = ([string]$prop.Value).Trim(); break }
+    Assert-True ($firstCell -notmatch '(?i)^\s*NOT_ANSWERABLE') "no refusal disguised as a Tier-2 row (firstCell='$firstCell')"
+} else {
+    Assert-True ($result.supportingContent.Count -ge 1) "supporting evidence present ($($result.supportingContent.Count) chunks)"
+}
 
 Write-Host ""
 Write-Host "hop trace:" -ForegroundColor Cyan

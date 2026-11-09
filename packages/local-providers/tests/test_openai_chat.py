@@ -23,7 +23,7 @@ import pytest
 from coa_ports import PortError, PortErrorCode
 
 from coa_local_providers.contracts import ConverseResult
-from coa_local_providers.openai_chat import OpenAICompatChat
+from coa_local_providers.openai_chat import _MODELS_REJECTING_TOP_P, OpenAICompatChat
 
 _PACKAGES = Path(__file__).resolve().parents[2]
 _RUNTIME_SRC = str(_PACKAGES / "coa-runtime" / "src")
@@ -42,11 +42,16 @@ class FakeChatEndpoint:
         http_status: int = 200,
         finish_reason: str = "stop",
         deltas: tuple[str, ...] = _DELTAS,
+        frame_delay_s: float = 0.01,
+        reject_params: tuple[str, ...] = (),
     ) -> None:
         self.requests: list[dict[str, Any]] = []
+        self.disconnects = 0
         self._http_status = http_status
         self._finish_reason = finish_reason
         self._deltas = deltas
+        self._frame_delay_s = frame_delay_s
+        self._reject_params = reject_params
         self._server: ThreadingHTTPServer | None = None
         self._thread: threading.Thread | None = None
 
@@ -93,6 +98,12 @@ class FakeChatEndpoint:
                         {"error": {"message": "endpoint rejected the request"}},
                     )
                     return
+                for param in peer._reject_params:
+                    if param in payload:
+                        self._send_json(
+                            400, {"error": {"message": f"{param} must be in (0, 1]"}}
+                        )
+                        return
                 if payload.get("stream"):
                     self._send_sse()
                 else:
@@ -120,18 +131,42 @@ class FakeChatEndpoint:
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Cache-Control", "no-cache")
                 self.end_headers()
-                for delta in peer._deltas:
+                last = len(peer._deltas) - 1
+                for index, delta in enumerate(peer._deltas):
                     frame = {
                         "id": "chatcmpl-test",
-                        "choices": [{"index": 0, "delta": {"content": delta}}],
+                        "choices": [
+                            {
+                                "index": 0,
+                                "delta": {"content": delta},
+                                "finish_reason": (
+                                    peer._finish_reason if index == last else None
+                                ),
+                            }
+                        ],
                     }
-                    self.wfile.write(
-                        ("data: " + json.dumps(frame) + "\n\n").encode("utf-8")
-                    )
+                    if not self._write_sse(frame):
+                        return
+                    time.sleep(peer._frame_delay_s)
+                self._write_sse(None)
+
+            def _write_sse(self, frame: dict[str, Any] | None) -> bool:
+                """Write one frame; False once the client has gone away."""
+                line = (
+                    "data: [DONE]\n\n"
+                    if frame is None
+                    else "data: " + json.dumps(frame) + "\n\n"
+                )
+                try:
+                    self.wfile.write(line.encode("utf-8"))
                     self.wfile.flush()
-                    time.sleep(0.01)
-                self.wfile.write(b"data: [DONE]\n\n")
-                self.wfile.flush()
+                except OSError:
+                    # The reader closed the connection mid-answer. This is what a
+                    # cancelled converse looks like from the server's side, and it
+                    # is the signal that stops real generation (llama.cpp).
+                    peer.disconnects += 1
+                    return False
+                return True
 
             def _send_json(self, status: int, body: dict[str, Any]) -> None:
                 data = json.dumps(body).encode("utf-8")
@@ -207,7 +242,9 @@ def test_converse_returns_plain_text_and_forwards_sampling_knobs() -> None:
     assert payload["temperature"] == 0.25
     assert payload["top_p"] == 0.9
     assert payload["max_tokens"] == 77
-    assert payload["stream"] is False
+    # converse streams internally by default so an abandoned call is observable to
+    # the endpoint (see the adapter docstring); it still returns one joined string.
+    assert payload["stream"] is True
     assert payload["messages"][0] == {"role": "system", "content": "Be brief."}
     # guard_content has no guardrail to score it, but must still reach the model.
     assert payload["messages"][1]["content"] == (
@@ -353,6 +390,71 @@ def test_dead_endpoint_is_unavailable_and_health_check_never_raises() -> None:
     assert error.provider_code == "E_LLM_HTTP_UNREACHABLE"
     assert health["ok"] is False
     assert health["provider"] == "openai-http"
+
+
+def test_converse_can_be_forced_back_to_a_single_request() -> None:
+    peer = FakeChatEndpoint()
+    url = peer.start()
+    client = OpenAICompatChat(
+        base_url=url, model="configured-model", stream_converse=False
+    )
+    try:
+        result = _run(_converse_and_close(client))
+    finally:
+        peer.stop()
+
+    assert result.text == "Hello from the endpoint"
+    assert peer.requests[0]["payload"]["stream"] is False
+
+
+def test_cancelled_converse_closes_the_stream_so_the_server_can_stop() -> None:
+    # 400 frames x 4096 bytes at 5ms: ~2s of generation if nobody stops it. Cancelling
+    # after a few frames must close the connection, which is the only signal a
+    # llama.cpp server gets between chunks — this is what the 176.6s slot occupancy
+    # was missing.
+    peer = FakeChatEndpoint(
+        deltas=tuple("x" * 4096 for _ in range(400)), frame_delay_s=0.005
+    )
+    url = peer.start()
+    client = OpenAICompatChat(base_url=url, model="configured-model", timeout_s=30)
+
+    async def _call() -> None:
+        task = asyncio.create_task(client.converse("hi"))
+        await asyncio.sleep(0.1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        for _ in range(100):
+            if peer.disconnects:
+                break
+            await asyncio.sleep(0.05)
+        await client.close()
+
+    try:
+        _run(_call())
+    finally:
+        peer.stop()
+
+    assert peer.disconnects >= 1, "the endpoint never saw the stream being abandoned"
+    assert len(peer.requests) == 1
+
+
+def test_streamed_converse_sheds_a_rejected_sampling_param() -> None:
+    peer = FakeChatEndpoint(reject_params=("top_p",))
+    url = peer.start()
+    client = OpenAICompatChat(base_url=url, model="rejects-top-p")
+    try:
+        result = _run(_converse_and_close(client, temperature=0.0, top_p=0))
+    finally:
+        peer.stop()
+        _MODELS_REJECTING_TOP_P.discard("rejects-top-p")
+
+    assert result.text == "Hello from the endpoint"
+    assert len(peer.requests) == 2
+    assert peer.requests[0]["payload"]["top_p"] == 0
+    assert "top_p" not in peer.requests[1]["payload"]
+    # The retry keeps the streaming transport the caller's abandonment relies on.
+    assert peer.requests[1]["payload"]["stream"] is True
 
 
 def test_finish_reason_length_marks_the_result_truncated() -> None:
