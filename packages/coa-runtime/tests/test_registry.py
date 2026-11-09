@@ -275,7 +275,7 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
         "GraphAdminPort": ["oxigraph"],
         "GraphClient": ["fuseki", "oxigraph"],
         "GraphStorePort": ["oxigraph"],
-        "LLMClient": ["openai-compatible"],
+        "LLMClient": ["openai-compatible", "openai-http"],
         "MetadataStorePort": ["postgres"],
         "MetricGraph": ["neptune", "oxigraph"],
         "MetricIndexPort": ["platform-pg"],

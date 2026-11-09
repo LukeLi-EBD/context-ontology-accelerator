@@ -203,6 +203,29 @@ def _llm_shell(settings: Settings) -> Any:
     )
 
 
+def _openai_http_llm(settings: Settings) -> Any:
+    """Any OpenAI-compatible ``/chat/completions`` endpoint (llama.cpp, Ark, ...)."""
+    from coa_local_providers.openai_chat import OpenAICompatChat
+
+    stream_raw = settings.get("COA_LLM_HTTP_STREAM")
+    stream_enabled = True if stream_raw is None else stream_raw.lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+    return OpenAICompatChat(
+        base_url=settings.require("COA_LLM_HTTP_BASE_URL", interface="LLMClient"),
+        model=settings.require("COA_LLM_HTTP_MODEL", interface="LLMClient"),
+        api_key=settings.get("COA_LLM_HTTP_API_KEY") or None,
+        timeout_s=settings.get_float(
+            "COA_LLM_HTTP_TIMEOUT_S", default=120.0, interface="LLMClient"
+        ),
+        stream_enabled=stream_enabled,
+        guardrail_mode=settings.get("COA_LLM_HTTP_GUARDRAIL") or "reject",
+    )
+
+
 def _bge_local(settings: Settings) -> Any:
     from coa_local_providers.embedding_bge import BgeLocalEmbedding
 
@@ -595,11 +618,19 @@ SPECS: tuple[InterfaceSpec, ...] = (
         required_methods=("converse", "health_check"),
         expects_async=True,
         providers=_providers(
+            _done(
+                "openai-http",
+                _openai_http_llm,
+                "直连 /chat/completions：纯文本 + 真流式 + 参数透传；无护栏概念",
+            ),
             _done("openai-compatible", _llm_shell, "同步 complete_json 的异步薄壳；流式与 embed 显式 unsupported"),
-            _todo("llama-cpp", "实现位于 coa-gateway 验证跑道，未迁入"),
+            _todo("llama-cpp", "由 openai-http 覆盖（llama.cpp server 即 OpenAI 兼容端点）"),
             _todo("bedrock", _AWS),
         ),
-        notes="converse/health_check 可包；converse_stream/embed 抛 PortError(unsupported)；embed 归 EmbeddingPort",
+        notes=(
+            "openai-http 服务 converse/converse_stream，guardrail_id 默认拒绝（可配 ignore 旁路）；"
+            "embed 归 EmbeddingPort；openai-compatible 仍只包 complete_json"
+        ),
     ),
     InterfaceSpec(
         name="QueryExecutor",

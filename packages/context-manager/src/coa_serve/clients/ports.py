@@ -77,6 +77,11 @@ class PortEmbedding:
     def __init__(self, inner: Any) -> None:
         self._inner = inner
 
+    @property
+    def model(self) -> str:
+        """The provider's model name, when it publishes one (for ``kbSearch``)."""
+        return str(getattr(self._inner, "model", "") or "")
+
     async def embed(self, text: str) -> list[float]:
         vectors = await self._inner.embed([text])
         if not vectors:
@@ -100,8 +105,31 @@ class ChatWithPortEmbedding:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._chat, name)
 
+    @property
+    def embedding_model(self) -> str:
+        """Model that produced the query vector (the embedding port's, not chat's)."""
+        return str(getattr(self._embedding, "model", "") or "")
+
     async def embed(self, text: str) -> list[float]:
         return await self._embedding.embed(text)
+
+
+def resolve_chat_client(config: Any) -> Any:
+    """``COA_PROVIDER_LLM`` -> the chat client, else the legacy Bedrock client.
+
+    A configured key wins even when it names ``openai-compatible``/``openai-http``;
+    an unresolvable key raises at init. With no key the Bedrock client is kept, so
+    existing deployments are unchanged until they opt in.
+    """
+    from coa_runtime.settings import Settings
+
+    if Settings.from_environ().get("COA_PROVIDER_LLM") is not None:
+        return _resolve("LLMClient")
+    from .bedrock import BedrockLLMClient
+
+    return BedrockLLMClient(
+        model_id=config.bedrock_model_id, region=config.bedrock_region
+    )
 
 
 def resolve_embedding_client() -> PortEmbedding:
@@ -157,6 +185,7 @@ __all__ = [
     "GraphClientAdapter",
     "PortEmbedding",
     "resolve_authorization_port",
+    "resolve_chat_client",
     "resolve_embedding_client",
     "resolve_graph_client",
     "resolve_session_metadata",

@@ -29,10 +29,10 @@ from coa_common.sparql_config import graph_sources_enabled
 from pydantic import ValidationError
 
 from .clients.athena import AthenaQueryExecutor
-from .clients.bedrock import BedrockLLMClient
 from .clients.composite_executor import CompositeQueryExecutor
 from .clients.ports import (
     ChatWithPortEmbedding,
+    resolve_chat_client,
     resolve_embedding_client,
     resolve_graph_client,
     resolve_session_metadata,
@@ -239,10 +239,9 @@ async def _ensure_initialized():
         # ConfigurationError, never a fallback to the AWS endpoints.
         graph_client = resolve_graph_client()
         vector_client = resolve_vector_client()
-        bedrock_client = BedrockLLMClient(model_id=config.bedrock_model_id, region=config.bedrock_region)
-        # Embeddings come from COA_PROVIDER_EMBEDDING (bge-local locally); chat
-        # stays on the Bedrock client until a chat-shaped local provider exists.
-        bedrock_client = ChatWithPortEmbedding(bedrock_client, resolve_embedding_client())
+        bedrock_client = ChatWithPortEmbedding(
+            resolve_chat_client(config), resolve_embedding_client()
+        )
         # VKG endpoint used as template: "://vkg." is replaced with "://vkg-{ns}." per request
 
         from .clients.sources_registry import SourcesRegistry
@@ -681,7 +680,7 @@ async def _handle_kb_search(payload: dict, request_id: str) -> dict:
         t0 = time.perf_counter()
         embedding = await bedrock_client.embed(query)
         embed_ms = int((time.perf_counter() - t0) * 1000)
-        trace.record(StepId.QUERY_EMBED, "success", embed_ms, tool_used="bedrock")
+        trace.record(StepId.QUERY_EMBED, "success", embed_ms, tool_used="embedding")
     except Exception as e:
         logger.error("kb_search_embed_error", error=str(e), request_id=request_id)
         raise DataSourceUnavailableError("Embedding generation failed") from e
@@ -724,7 +723,7 @@ async def _handle_kb_search(payload: dict, request_id: str) -> dict:
         # Tier-3-only deprecated aliases are not added here.
         "chunks": [_supporting_content_from_chunk(chunk, include_deprecated_aliases=False) for chunk in chunks],
         "trace": trace.steps_serializable,
-        "queryEmbeddingModel": bedrock_client._embed_model_id,
+        "queryEmbeddingModel": bedrock_client.embedding_model,
         "requestId": request_id,
         "statusCode": 200,
     }
