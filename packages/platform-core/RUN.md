@@ -1,18 +1,18 @@
 ﻿# 运行手册（platform）
 
-面向"另一台机器 clone 后能跑起来"。`platform/` 是独立项目：所有命令都在
-**`coa/platform`** 目录下执行，无需 `-f` 指定 compose 文件。
+面向"另一台机器 clone 后能跑起来"。`packages/platform-core/` 是独立项目：所有命令都在
+**`coa/packages/platform-core`** 目录下执行，无需 `-f` 指定 compose 文件。
 
 三行起（已装 Docker Desktop；全新机器**不需要**预置数据目录）：
 
 ```powershell
-git clone <repo> coa && cd coa\platform
+git clone <repo> coa && cd coa\packages\platform-core
 Copy-Item .env.example .env        # 填 POSTGRES_PASSWORD；不要保留 CHANGE_ME
 powershell -ExecutionPolicy Bypass -File scripts\stack.ps1 up -Name agent-platform -DataRoot D:/agentABC/data
 ```
 
 > 必须用 `stack.ps1 up`，不要只跑 `docker compose up -d --wait`：`stack.ps1` 会自动建目录、
-> 生成 `data/platform.yaml`，并从仓库内 `platform/seed/` 拷贝 `ontology/bootstrap.ttl` 与
+> 生成 `data/platform.yaml`，并从仓库内 `packages/platform-core/seed/` 拷贝 `ontology/bootstrap.ttl` 与
 > `shapes/`。全新机器上直接 `compose up` 会因缺少 T-Box 种子以 `E_ONTOLOGY_TBOX_MISSING`（69）
 > 退出（2026-11-06 迁移演练实测）。
 
@@ -34,16 +34,16 @@ powershell -ExecutionPolicy Bypass -File scripts\stack.ps1 up -Name agent-platfo
 `stack.ps1 up` 会自动完成下面全部步骤；手工部署时可照做：
 
 ```powershell
-Copy-Item .env.example .env                            # 放 coa/platform/.env（gitignored）
+Copy-Item .env.example .env                            # 放 coa/packages/platform-core/.env（gitignored）
 New-Item -ItemType Directory -Force D:\agentABC\data
 Copy-Item platform.example.yaml D:\agentABC\data\platform.yaml   # 填 database.url 口令（与 .env 一致）
 Copy-Item seed\ontology\bootstrap.ttl D:\agentABC\data\ontology\
 Copy-Item seed\shapes\* D:\agentABC\data\shapes\ -Recurse
 ```
 
-- **T-Box 种子随仓库提供**：`platform/seed/ontology/bootstrap.ttl`（660 B）与
-  `platform/seed/shapes/`（core + fsldm）。非默认数据根优先从默认数据根拷贝，找不到时回退到
-  `platform/seed/`；两者都没有时启动会以 `E_ONTOLOGY_TBOX_MISSING` 失败。
+- **T-Box 种子随仓库提供**：`packages/platform-core/seed/ontology/bootstrap.ttl`（660 B）与
+  `packages/platform-core/seed/shapes/`（core + fsldm）。非默认数据根优先从默认数据根拷贝，找不到时回退到
+  `packages/platform-core/seed/`；两者都没有时启动会以 `E_ONTOLOGY_TBOX_MISSING` 失败。
 - `platform.yaml` 里 `database.url` 的口令必须与 `.env` 的 `POSTGRES_PASSWORD` 一致。`serve`
   会读 compose 注入的 `PLATFORM__DATABASE__URL`，但 `smoke-s3` 这类会用文件里 URL 起第二个池的
   子命令不走覆盖，口令不一致会 `password authentication failed`。`stack.ps1` 检测到
@@ -51,11 +51,11 @@ Copy-Item seed\shapes\* D:\agentABC\data\shapes\ -Recurse
 - `D:\agentABC\data\models\bge-m3\`：BGE-M3 模型约 **2.14 GB**（含 `pytorch_model.bin` 2.17 GB），目录固定，只读挂载给 TEI。
   离线拷贝：`robocopy <源>\models D:\agentABC\data\models /E`。不放入时 embedding 容器无法启动，检索退化为仅词法（响应标注 `lexicalOnly`）。
 - `reasoner/robot.jar`（93 MB）**不需要手工放置**：`reasoner` 镜像构建时自动下载并校验，见下节。
-- `D:\agentABC\data\` 全部内容不进 git；`coa/.gitignore` 已排除 `platform/data/`、`platform/logs/`、`platform/models/`、`platform/.env`。
+- `D:\agentABC\data\` 全部内容不进 git；`coa/.gitignore` 已排除 `packages/platform-core/data/`、`packages/platform-core/logs/`、`packages/platform-core/models/`、`packages/platform-core/.env`。
 
 ### robot.jar（reasoner，构建时自动下载）
 
-`platform/reasoner/Dockerfile` 默认在构建时从 ROBOT 官方 release 拉取 `robot.jar`
+`packages/platform-core/reasoner/Dockerfile` 默认在构建时从 ROBOT 官方 release 拉取 `robot.jar`
 （v1.9.6，93,636,279 字节），并用 `ROBOT_JAR_SHA256` 校验；下载失败或文件为空时**构建直接失败**，
 不会静默留下空文件。
 
@@ -63,7 +63,7 @@ Copy-Item seed\shapes\* D:\agentABC\data\shapes\ -Recurse
 
 ```powershell
 docker compose build reasoner
-# 等价：docker build -t agent-reasoner:0.1-s5 -f platform/reasoner/Dockerfile platform/reasoner
+# 等价：docker build -t agent-reasoner:0.1-s5 -f packages/platform-core/reasoner/Dockerfile packages/platform-core/reasoner
 ```
 
 换版本或换源（两个 build-arg）：
@@ -88,11 +88,11 @@ docker compose build reasoner `
 
 ```powershell
 docker compose build reasoner --build-arg ROBOT_JAR_URL=
-docker run --rm -v D:\agentABC\coa\platform\reasoner\robot.jar:/opt/robot/robot.jar:ro `
+docker run --rm -v D:\agentABC\coa\packages\platform-core\reasoner\robot.jar:/opt/robot/robot.jar:ro `
   agent-reasoner:0.1-s5 java -jar /opt/robot/robot.jar --version
 ```
 
-   用 compose 时加一个 override 文件（如 `platform/reasoner.local.yml`）：
+   用 compose 时加一个 override 文件（如 `packages/platform-core/reasoner.local.yml`）：
 
 ```yaml
 services:
@@ -459,12 +459,12 @@ powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget 
 | 配置项 | 位置（均不在仓库内） | 必填内容 | 缺失/错误的可观察后果 |
 | --- | --- | --- | --- |
 | `platform.yaml` | `${PLATFORM_DATA_ROOT}/platform.yaml`（api 以 `--config` 读取，默认挂载 `D:/agentABC/data`） | `database.url` 与栈的 `POSTGRES_PASSWORD` 一致；`paths` 指向数据根；`reasoning.abox_graphs` **至少同时含** `urn:platform:graph:abox:main` 与 `urn:platform:graph:abox:synthetic` | 缺文件 → api 启动失败；口令不一致 → `password authentication failed`；`abox_graphs` 只剩 `abox:main`（与仓库 `platform.example.yaml:121-122` 一样）→ `/reasoning/status.aboxGraphs` 只报 main 且 `abox:main` 计数 0，`emptyAbox=true`、`coverage.instances.graphs` 与状态集合不一致，P01 的「状态与看板不一致」原样重现，B04 实例数归零 |
-| `platform/.env` | `platform/.env`（gitignored，compose `env_file` 注入） | `POSTGRES_PASSWORD`、`ARK_API_KEY`、`PLATFORM_SMOKE_TOKEN` | 见下三行 |
+| `packages/platform-core/.env` | `packages/platform-core/.env`（gitignored，compose `env_file` 注入） | `POSTGRES_PASSWORD`、`ARK_API_KEY`、`PLATFORM_SMOKE_TOKEN` | 见下三行 |
 | `PLATFORM_SMOKE_TOKEN` | `.env` 或本机环境变量，经 compose 传 `PLATFORM_SMOKE_TOKEN` 给 api | 单值内部 token；轮换后 `docker compose up -d --force-recreate api` | 未配置 → fail-closed：`purpose=smoke` 发布一律 409 `E_TERM_GATE_BLOCKED`（`tokenStatus="unconfigured"`），smoke 自检探针全部被拒——这是安全默认，不是功能回归 |
 | `ARK_API_KEY` | 同上 | Ark/豆包 key | 抽取与 LLM 问答步骤失败或降级，只读本体/指标接口不受影响 |
 | 镜像 tag | 部署侧 override（见 10.2） | 指向本次发布镜像（如 `agent-platform:merged-42`） | 不带 override → 回落 `docker-compose.yml` 的默认 `agent-platform:0.1-s5`；该镜像 schema 上限低于当前迁移链（`SUPPORTED_SCHEMA_VERSION = 43`），api 就绪检查报 `E_DB_MIGRATION_MISMATCH` |
 | BGE-M3 权重 | `${PLATFORM_DATA_ROOT}/models/bge-m3` | 完整模型目录 | `learn`/`embedding` profile 起不来，检索降级为 `lexicalOnly` |
-| T-Box/SHACL 种子 | `${PLATFORM_DATA_ROOT}/seed/`（自 `platform/seed/` 复制） | `bootstrap.ttl`、`shacl.ttl` 等 | 首次引导失败：`E_ONTOLOGY_TBOX_MISSING`（退出码 69），`/tbox/current` 为空 |
+| T-Box/SHACL 种子 | `${PLATFORM_DATA_ROOT}/seed/`（自 `packages/platform-core/seed/` 复制） | `bootstrap.ttl`、`shacl.ttl` 等 | 首次引导失败：`E_ONTOLOGY_TBOX_MISSING`（退出码 69），`/tbox/current` 为空 |
 | `robot/robot.jar` | `${PLATFORM_DATA_ROOT}/robot/robot.jar`（构建期也允许联网下载） | HermiT 推理所需 | reasoner 无法物化，A-Box 推理保持 deferred、`/reasoning/status` 推理计数不增长 |
 
 > `datagen.allow_official_schema: true` 仅验收栈需要（允许 synthetic 写入 `platform.*` 事实表）。
@@ -472,7 +472,7 @@ powershell -ExecutionPolicy Bypass -File scripts/drill-migrate.ps1 -ResetTarget 
 > 安全开关，不是部署便利项。
 >
 > **权威栈配置基线**：仓库内默认值（`platform.example.yaml`、`config.py`）**仅用于开发和单测**。
-> AS-8080 权威栈必须显式加载脱敏基线 `platform/config/authoritative-8080.yaml`；按默认值起栈
+> AS-8080 权威栈必须显式加载脱敏基线 `packages/platform-core/config/authoritative-8080.yaml`；按默认值起栈
 > 会得到“另一个系统”：`/browse/canvas/*` **503 `E_CANVAS_DISABLED`**、B04 归零、
 > `abox:synthetic` 缺失、合成数据被拒。启动后必须跑
 > `powershell -File scripts/stack-verify.ps1`，PASS 之前的对外数字不得引用。
@@ -508,7 +508,7 @@ services:
 ```
 
 ```powershell
-docker compose -f platform/docker-compose.yml -f <override> up -d --no-deps platform
+docker compose -f packages/platform-core/docker-compose.yml -f <override> up -d --no-deps platform
 docker inspect agent-platform-api --format '{{.Config.Image}} {{.Image}}'   # tag 与 image id 双核对
 ```
 
@@ -520,7 +520,7 @@ docker inspect agent-platform-api --format '{{.Config.Image}} {{.Image}}'   # ta
 
 ### 11.1 为什么在线不自动触发
 
-- 开关：`reasoning.materialize_online` 默认 `false`（`platform/src/platform_core/config.py`）。发布/回滚钩子
+- 开关：`reasoning.materialize_online` 默认 `false`（`packages/platform-core/src/platform_core/config.py`）。发布/回滚钩子
   `ReasoningService.publish_materializer()` 只返回 deferral，不启动推理：
   `{"jobId": null, "inferred": 0, "skipped": true, "deferred": "offline_only",
    "reason": "reasoning.materialize_online=false"}`。发布证据 `gates.materialization` 原样记录该对象

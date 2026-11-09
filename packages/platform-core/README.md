@@ -15,7 +15,7 @@
 ### 步骤
 
 ```powershell
-cd D:\agentABC\coa\platform
+cd D:\agentABC\coa\packages\platform-core
 powershell -ExecutionPolicy Bypass -File .\scripts\up.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\seed.ps1
 ```
@@ -154,7 +154,7 @@ docker compose exec -T platform python -c "import urllib.request as u; r=u.Reque
 | 火山方舟 | `llm.base_url: https://ark.cn-beijing.volces.com/api/v3`；`llm.model: <接入点ID>` |
 | Ollama（本机） | `llm.base_url: http://host.docker.internal:11434/v1`；`llm.model: qwen2.5:7b`；key 可留空 |
 
-密钥放在 `coa/platform/.env`（Compose 会注入 platform 容器），键名与 `llm.api_key_env` 一致。改后重启 platform。
+密钥放在 `coa/packages/platform-core/.env`（Compose 会注入 platform 容器），键名与 `llm.api_key_env` 一致。改后重启 platform。
 Ollama 在 Linux 上需把 `host.docker.internal` 换成宿主 IP 或加 `extra_hosts`。
 
 ### 4.2 Embedding

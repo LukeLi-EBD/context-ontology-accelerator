@@ -21,7 +21,7 @@ graph:
   max_rows: 10000
 
 canvas:
-  provider: off               # off=禁用 /browse/path；simple=D1-1 多跳；full=D1-2 全画布（多路径/分页/聚合）
+  provider: "off"             # off=禁用 /browse/path；simple=D1-1 多跳；full=D1-2 全画布（多路径/分页/聚合）
   simple_max_hops: 3          # simple 硬上限 3
   full_max_hops: 4            # full 硬上限 6（超过 6 一律拒绝）
   max_nodes: 200

@@ -1,4 +1,4 @@
-﻿# S14 acceptance: run the FULL unittest tree in platform/tests inside the platform
+﻿# S14 acceptance: run the FULL unittest tree in packages/platform-core/tests inside the platform
 # image and print one unified summary.
 #
 # Coverage rule (2026-11-06): no `-k` keyword filter anymore. Everything that
@@ -38,7 +38,7 @@ param(
 )
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
-$repoRoot = Split-Path -Parent $root
+$repoRoot = Split-Path -Parent (Split-Path -Parent $root)
 Set-Location $root
 if (-not $EvidenceDir) { $EvidenceDir = Join-Path $repoRoot 'doc\evidence' }
 New-Item -ItemType Directory -Force -Path $EvidenceDir | Out-Null
@@ -52,7 +52,7 @@ if (-not $env:POSTGRES_PASSWORD) {
     }
 }
 if (-not $env:POSTGRES_PASSWORD) {
-    throw 'POSTGRES_PASSWORD is not set (env or platform/.env); refusing to fall back to a hard-coded password.'
+    throw 'POSTGRES_PASSWORD is not set (env or packages/platform-core/.env); refusing to fall back to a hard-coded password.'
 }
 $gitSha = (& git -C $repoRoot rev-parse --short HEAD 2>$null | Select-Object -First 1)
 if (-not $gitSha) { $gitSha = 'nogit' }

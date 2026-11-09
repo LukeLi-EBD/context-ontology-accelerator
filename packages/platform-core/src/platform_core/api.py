@@ -4995,7 +4995,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         "triple",
         "chunk",
     }
-    # Frozen 24-query set from doc/_design/24 §5.2 and platform/tests/term_eval.py.
+    # Frozen 24-query set from doc/_design/24 §5.2 and packages/platform-core/tests/term_eval.py.
     # It is deliberately duplicated here so the panel does not import a test
     # module; the strings and expected classes must stay byte-identical.
     _G4_QUERY_SET = (
@@ -5957,7 +5957,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "count": len(_G4_QUERY_SET),
                 "evaluated": len(results),
                 "groups": sorted({item["group"] for item in _G4_QUERY_SET}),
-                "source": "doc/_design/24 §5.2 + platform/tests/term_eval.py",
+                "source": "doc/_design/24 §5.2 + packages/platform-core/tests/term_eval.py",
             },
             "filters": {
                 "intent": intent,

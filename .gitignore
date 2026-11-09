@@ -252,15 +252,15 @@ packages/web-app/public/downloads/
 # --- platform runtime (integrated from _impl; data lives outside the repo) ---
 # Runtime data (3.8 GB incl. 2.3 GB embedding models) is bind-mounted from
 # D:/agentABC/data by docker-compose.yml; only the placeholder README is tracked.
-platform/data/
-platform/logs/
-platform/tmp/
-platform/.lock/
-platform/models/
-platform/.env
-platform/platform.yaml
-platform/**/*.log
-platform/**/*.jsonl
+packages/platform-core/data/
+packages/platform-core/logs/
+packages/platform-core/tmp/
+packages/platform-core/.lock/
+packages/platform-core/models/
+packages/platform-core/.env
+packages/platform-core/platform.yaml
+packages/platform-core/**/*.log
+packages/platform-core/**/*.jsonl
 
 # --- Evidence / audit snapshots: never tracked (added 2026-11-07) ---
 # 915daf1 误将这些本地证据目录入库；现退回未跟踪，历史提交不改写。

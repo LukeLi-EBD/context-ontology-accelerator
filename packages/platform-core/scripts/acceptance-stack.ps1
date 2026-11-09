@@ -39,7 +39,7 @@ Set-Location $root
 $stackScript = Join-Path $PSScriptRoot 'stack.ps1'
 $dataPath = $DataRoot -replace '/', [IO.Path]::DirectorySeparatorChar
 $dataRootNormalized = $DataRoot -replace '\\', '/'
-$sharedDataPath = Split-Path -Parent (Split-Path -Parent $root)
+$sharedDataPath = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $root))
 $sharedDataRoot = Join-Path $sharedDataPath 'data'
 if (-not $ModelsDir) { $ModelsDir = Join-Path $sharedDataRoot 'models' }
 $modelsDirNormalized = ($ModelsDir -replace '\\', '/')
@@ -54,7 +54,7 @@ function Get-PgPassword {
         $match = [regex]::Match((Get-Content -LiteralPath $envFile -Raw), '(?m)^POSTGRES_PASSWORD=([^\r\n]+)')
         if ($match.Success) { return $match.Groups[1].Value.Trim() }
     }
-    throw 'POSTGRES_PASSWORD is not set (env or platform/.env); refusing to fall back to a hard-coded password.'
+    throw 'POSTGRES_PASSWORD is not set (env or packages/platform-core/.env); refusing to fall back to a hard-coded password.'
 }
 
 function Initialize-IsolatedDataRoot {
@@ -130,7 +130,7 @@ switch ($Action) {
             -ReasonerPort $ReasonerPort -EmbeddingPort $EmbeddingPort -OxigraphPort $OxigraphPort `
             -DataRoot $dataRootNormalized -Services postgres,oxigraph,platform,reasoner,embedding `
             -ExtraComposeFiles $acceptanceOverride -WaitSeconds $WaitSeconds `
-            -BootstrapSource '../doc/_fsldm/fsldm-merged.ttl'
+            -BootstrapSource '../../doc/_fsldm/fsldm-merged.ttl'
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         # stack.ps1 只等 API /readyz；TEI 模型 warmup 需要额外时间，必须等 /health 200
         # 否则 smoke-s13 会在 E_EMBED_UNAVAILABLE 上失败（实测 2026-11-07）。

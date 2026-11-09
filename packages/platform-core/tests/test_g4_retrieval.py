@@ -3,7 +3,7 @@
 Pure API tests: the answer/answerable helpers are patched locally and the
 metadata/graph ports are small fakes, so no postgres/oxigraph/reasoner is
 required. Run only this file:
-  .venv/Scripts/python.exe -m pytest platform/tests/test_g4_retrieval.py -q
+  .venv/Scripts/python.exe -m pytest packages/platform-core/tests/test_g4_retrieval.py -q
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, "../src")
-sys.path.insert(0, "platform/src")
+sys.path.insert(0, "packages/platform-core/src")
 
 import platform_core.api as api_module
 

@@ -15,7 +15,7 @@
 # 详见 doc/_design/decisions/权威栈可复现-2026-11-07.md（R1）。
 #
 # 启动时用本文件替换 /data/platform.yaml（或 PLATFORM_CONFIG 指向本文件）后，
-# 先跑 `powershell -File platform/scripts/stack-verify.ps1` 校验身份五元组。
+# 先跑 `powershell -File packages/platform-core/scripts/stack-verify.ps1` 校验身份五元组。
 
 mode: single
 config_version: 1

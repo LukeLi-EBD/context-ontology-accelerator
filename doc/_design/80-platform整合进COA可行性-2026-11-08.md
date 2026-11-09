@@ -4,6 +4,8 @@
 > 口径沿用 79 号文档的 A/B/C 三分，不重新统计：
 > **A 可回灌 8,659 行 / B 重叠应废弃 16,404 行 / C 净新增 14,102 行**（另有验收脚手架 4,810 行、web 6,255 行）。
 > 本文只做只读核实，不改代码、不启动长期服务、不碰 8080。
+>
+> **路径口径更新（2026-11-08）**：仓库目录已由 `platform/` 改为 `packages/platform-core/`（`git mv`，Python 包名 `platform_core` 不变）。下文写于改名之前，凡指代该目录的 `platform/` 一律按新路径理解；已在第 1.1 节标注。
 
 ---
 
@@ -23,7 +25,7 @@
 
 ### 1.1 作为 workspace 成员的技术形态
 
-`platform/pyproject.toml` 已存在：setuptools 后端、包名 `platform-core`、`requires-python >=3.12`、src layout、含 SQL package data。从 PEP 517 角度，它可以作为一个 uv workspace 成员。
+`packages/platform-core/pyproject.toml` 已存在：setuptools 后端、包名 `platform-core`、`requires-python >=3.12`、src layout、含 SQL package data。从 PEP 517 角度，它可以作为一个 uv workspace 成员。
 
 但根 `pyproject.toml` 的 `members` 里有：
 
@@ -40,7 +42,7 @@
 | 从根 `members` 移除两个缺失成员 | **否**，修改上游元数据 | 依赖 generated models 的包可能 import 失败 |
 | 保持 platform 在 workspace 外，用独立 venv / path dependency | 是 | 可以运行，但不是“workspace 成员被管理” |
 
-另外，仓库根目录名 `platform/` 与 Python 标准库 `platform` 同名。当前没有 `__init__.py`，PEP 420 下通常会继续找到标准库模块，但这是长期风险；若整合，建议移到 `packages/platform-core/`，不要保留根级 `platform/`。
+另外，仓库根目录名 `platform/` 与 Python 标准库 `platform` 同名。当前没有 `__init__.py`，PEP 420 下通常会继续找到标准库模块，但这是长期风险；**2026-11-08 已执行移到 `packages/platform-core/`**，不再保留根级 `platform/`（Python 包名仍为 `platform_core`）。
 
 ### 1.2 依赖冲突清单
 

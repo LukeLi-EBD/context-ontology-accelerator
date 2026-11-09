@@ -1,11 +1,11 @@
 ﻿# source-ref-health.ps1 - 值级溯源断链检测（只读）
 # 用法:
-#   powershell -ExecutionPolicy Bypass -File platform/scripts/source-ref-health.ps1
-#   powershell -ExecutionPolicy Bypass -File platform/scripts/source-ref-health.ps1 -Detail
-#   powershell -ExecutionPolicy Bypass -File platform/scripts/source-ref-health.ps1 -Container platform-acceptance-postgres
+#   powershell -ExecutionPolicy Bypass -File packages/platform-core/scripts/source-ref-health.ps1
+#   powershell -ExecutionPolicy Bypass -File packages/platform-core/scripts/source-ref-health.ps1 -Detail
+#   powershell -ExecutionPolicy Bypass -File packages/platform-core/scripts/source-ref-health.ps1 -Container platform-acceptance-postgres
 # 退出码: 0=无未标记断链; 1=存在未标记断链（需标记或重发）; 2=执行失败
 #
-# 检测口径与 platform/src/platform_core/source_ref.py 的解析器一致：
+# 检测口径与 packages/platform-core/src/platform_core/source_ref.py 的解析器一致：
 #   obs      -> (metric_id, definition_version, entity_key, window_start, window_end)
 #   obs-set  -> asOf 命中 as_of，或 periodStart/periodEnd 覆盖 window_start/window_end，
 #               叠加可选 entityKey / institution / fixture

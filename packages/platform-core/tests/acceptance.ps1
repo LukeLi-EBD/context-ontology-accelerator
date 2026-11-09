@@ -46,7 +46,7 @@ $lockFileName = if ($effectiveStack -eq 'agent-platform') { 'heavy.lock' } else 
 
 # 证据入仓：每次验收写一份 transcript 到 git 跟踪目录 doc/evidence/，
 # 固定命名 acceptance-s0s13-<时间戳>-<git sha>.log（不再只写在 .gitignore 的 logs/ 下）。
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $evidenceDir = Join-Path $repoRoot 'doc\evidence'
 New-Item -ItemType Directory -Force -Path $evidenceDir | Out-Null
 $gitSha = (& git -C $repoRoot rev-parse --short HEAD 2>$null | Select-Object -First 1)

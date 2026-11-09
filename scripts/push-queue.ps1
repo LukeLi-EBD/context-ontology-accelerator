@@ -157,7 +157,7 @@ $SecretScanAllowlist = @(
         ApprovedBy = 'user (push requester, explicit approval of option 1)'
     },
     [pscustomobject]@{
-        File       = 'platform/scripts/acceptance-stack.ps1'
+        File       = 'packages/platform-core/scripts/acceptance-stack.ps1'
         Line       = 70
         Pattern    = 'assigned-secret'
         Text       = '$password' + ' = Get-PgPassword'
@@ -186,7 +186,7 @@ $SecretScanAllowlist = @(
         ReviewStatus = '[PENDING-HUMAN-REVIEW] added by the push flow on generic authorization; not reviewed line by line'
     },
     [pscustomobject]@{
-        File       = 'platform/tests/test_g8_terms_gate.py'
+        File       = 'packages/platform-core/tests/test_g8_terms_gate.py'
         Line       = 467
         Pattern    = 'assigned-secret'
         Text       = 'cls._previous_token' + ' = os.environ.get("PLATFORM_SMOKE_TOKEN")'

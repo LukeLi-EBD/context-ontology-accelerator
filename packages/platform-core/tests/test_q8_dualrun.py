@@ -1,9 +1,13 @@
 """Q8-c: dual-run evidence — oxigraph-http vs jena-fuseki, ELK vs HermiT.
 
-Requires the graph-fuseki profile to be up:
+KNOWN UNCOVERED: the acceptance stack does not start the ``graph-fuseki``
+profile, so ``test_1_graph_common_subset_is_equivalent`` is skipped unless
+``TEST_FUSEKI_URL`` is set explicitly. It is never reported as passing without
+a real Fuseki. ``test_2``/``test_3`` only need the reasoner, which the stack has.
+
+To cover it:
   docker compose --profile graph-fuseki up -d fuseki
-Run inside the platform container:
-  docker compose exec -T -e PYTHONPATH=/app/src platform \
+  docker compose exec -T -e PYTHONPATH=/app/src -e TEST_FUSEKI_URL=http://fuseki:3030 platform \
     python /tmp/hosttests/test_q8_dualrun.py
 """
 
@@ -21,6 +25,8 @@ from platform_core.reasoning import ReasoningService
 OXIGRAPH_URL = os.environ.get("TEST_OXIGRAPH_URL", "http://oxigraph:7878")
 FUSEKI_URL = os.environ.get("TEST_FUSEKI_URL", "http://fuseki:3030")
 REASONER_URL = os.environ.get("TEST_REASONER_URL", "http://reasoner:7879")
+# No default: a dual-run "pass" requires a Fuseki that was actually named.
+FUSEKI_COVERED = bool(os.environ.get("TEST_FUSEKI_URL"))
 
 TURTLE = b"""@prefix ex: <urn:platform:q8:dual#> .
 ex:s1 ex:p "one" .
@@ -50,6 +56,10 @@ ex:x a owl:NamedIndividual, ex:A, ex:B .
 
 
 class DualRunTests(unittest.TestCase):
+    @unittest.skipUnless(
+        FUSEKI_COVERED,
+        "KNOWN UNCOVERED: acceptance stack has no fuseki; set TEST_FUSEKI_URL to run the dual-run",
+    )
     def test_1_graph_common_subset_is_equivalent(self):
         stores = {
             "oxigraph-http": OxigraphHttpStore(OXIGRAPH_URL),

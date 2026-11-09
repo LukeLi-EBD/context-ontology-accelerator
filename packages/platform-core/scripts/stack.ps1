@@ -38,15 +38,15 @@ param(
     [switch]$RemoveDataRoot,
     [switch]$AssumeLock,
     [string]$Owner = '',
-    # 追加的 compose override（相对 platform/ 或绝对路径），用于独立验收栈把
+    # 追加的 compose override（相对 packages/platform-core/ 或绝对路径），用于独立验收栈把
     # 只读模型资产挂进 embedding；不改变默认共享栈行为。
     [string[]]$ExtraComposeFiles = @(),
-    # 新建数据根播种 bootstrap.ttl 时追加的 T-Box 源（相对 platform/ 或绝对路径）。
+    # 新建数据根播种 bootstrap.ttl 时追加的 T-Box 源（相对 packages/platform-core/ 或绝对路径）。
     # 用于把 B-05 指标 SKOS 词表（doc/_fsldm/fsldm-metrics.ttl，85 概念）并入
     # baseline T-Box，使全新库初始化后即带词表。只在新播种时生效：已有数据根
     # 不会被改写，避免改变正在运行的栈的 T-Box 内容哈希。
-    [string[]]$ExtraOntologySeeds = @('../doc/_fsldm/fsldm-metrics.ttl'),
-    # 新建数据根时显式指定 baseline T-Box 源（相对 platform/ 或绝对路径）。
+    [string[]]$ExtraOntologySeeds = @('../../doc/_fsldm/fsldm-metrics.ttl'),
+    # 新建数据根时显式指定 baseline T-Box 源（相对 packages/platform-core/ 或绝对路径）。
     # 缺省保持历史顺序（共享数据根 -> 仓库 seed）。独立验收栈用它指向仓库里的
     # FS-LDM baseline，让全新库不依赖本机历史数据根。
     [string]$BootstrapSource = ''

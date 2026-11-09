@@ -1,7 +1,7 @@
 ﻿# stack-verify.ps1 - 权威栈 AS-8080 身份五元组与关键计数校验（只读）
 # 用法:
-#   powershell -ExecutionPolicy Bypass -File platform/scripts/stack-verify.ps1
-#   powershell -ExecutionPolicy Bypass -File platform/scripts/stack-verify.ps1 -ApiBase http://127.0.0.1:8080
+#   powershell -ExecutionPolicy Bypass -File packages/platform-core/scripts/stack-verify.ps1
+#   powershell -ExecutionPolicy Bypass -File packages/platform-core/scripts/stack-verify.ps1 -ApiBase http://127.0.0.1:8080
 # 退出码: 0=全部一致; 1=身份或计数不一致; 2=执行失败（容器/API/psql/基线比对不可用）
 #
 # 身份五元组（评审报告 §9.5）:
@@ -13,7 +13,7 @@
 # QA 加硬点:
 #   * schema 必须精确等于期望值，不再接受“允许集合”；
 #   * 容器 id 与 StartedAt 与台账最后一条比对，不是只打印；
-#   * 仓库基线 platform/config/authoritative-8080.yaml 与生效配置逐键比对；
+#   * 仓库基线 packages/platform-core/config/authoritative-8080.yaml 与生效配置逐键比对；
 #   * manifest 关键数字（85/60/56/43/57/35/28/7/0）纳入断言。
 #
 # 本脚本只读：docker inspect / docker cp / sha256sum / SELECT / GET，不写任何表、不重启容器。

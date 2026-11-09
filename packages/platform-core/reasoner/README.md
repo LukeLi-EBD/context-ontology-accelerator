@@ -10,14 +10,14 @@
 （`3d112f47a5c2e82fd96c2bc40e582a86d1e6ad24f67648ef103ec5f21985ba5e`）。
 `curl -f` 返回非 0（HTTP ≥ 400）或下载后文件为空都会**直接让构建失败**，不会留下空 jar。
 
-`robot.jar` 约 93 MB，超过仓库单文件限制，**仍不纳入版本库**（见 `platform/.gitignore`）。
+`robot.jar` 约 93 MB，超过仓库单文件限制，**仍不纳入版本库**（见 `packages/platform-core/.gitignore`）。
 
 ```powershell
 # 标准（联网）
-docker compose -f platform/docker-compose.yml build reasoner
+docker compose -f packages/platform-core/docker-compose.yml build reasoner
 
 # 换源/关校验
-docker compose -f platform/docker-compose.yml build reasoner `
+docker compose -f packages/platform-core/docker-compose.yml build reasoner `
   --build-arg ROBOT_JAR_URL=https://github.com/ontodev/robot/releases/download/v1.9.6/robot.jar `
   --build-arg ROBOT_JAR_SHA256=3d112f47a5c2e82fd96c2bc40e582a86d1e6ad24f67648ef103ec5f21985ba5e
 ```

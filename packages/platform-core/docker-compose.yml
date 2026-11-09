@@ -161,8 +161,8 @@ services:
     # 404 时抛 UnloadableImportException。文件只读挂载，不改变镜像内语义。
     volumes:
       - ./reasoner/catalog-v001.xml:/catalog/catalog-v001.xml:ro
-      - ../doc/_fsldm/fsldm-merged.ttl:/catalog/fsldm-merged.ttl:ro
-      - ../doc/_fsldm/fsldm-terms.ttl:/catalog/fsldm-terms.ttl:ro
+      - ../../doc/_fsldm/fsldm-merged.ttl:/catalog/fsldm-merged.ttl:ro
+      - ../../doc/_fsldm/fsldm-terms.ttl:/catalog/fsldm-terms.ttl:ro
     # 4g = java -Xmx2g + 2g 留给 JVM 元空间/线程栈/uvicorn 本体（原 3g 并发推理易 OOM）
     mem_limit: 4g
     healthcheck:
