@@ -1,0 +1,17 @@
+# DocumentStatus
+
+Lifecycle status of an ingested document.
+
+## Enum
+
+* `UPLOADED` (value: `'UPLOADED'`)
+
+* `PROCESSING` (value: `'PROCESSING'`)
+
+* `INDEXED` (value: `'INDEXED'`)
+
+* `FAILED` (value: `'FAILED'`)
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

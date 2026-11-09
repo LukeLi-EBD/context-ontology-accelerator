@@ -2147,6 +2147,1545 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/candidates": {
+            "get": {
+                "description": "List extracted fact candidates awaiting review (or filtered by status).",
+                "operationId": "ListFactCandidates",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListFactCandidates_example1": {
+                                "summary": "List pending candidates",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "query",
+                        "description": "Only candidates extracted from this document.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Only candidates extracted from this document."
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Only candidates in this review status (default: all).",
+                        "schema": {
+                            "$ref": "#/components/schemas/FactCandidateStatus"
+                        },
+                        "examples": {
+                            "ListFactCandidates_example1": {
+                                "summary": "List pending candidates",
+                                "description": "",
+                                "value": "PENDING"
+                            }
+                        }
+                    },
+                    {
+                        "name": "nextToken",
+                        "in": "query",
+                        "description": "Pagination token from a previous response.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "minLength": 1,
+                            "description": "Pagination token from a previous response."
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum candidates per page (default and maximum 200).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 200,
+                            "minimum": 1,
+                            "description": "Maximum candidates per page (default and maximum 200)."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListFactCandidates 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListFactCandidatesResponseContent"
+                                },
+                                "examples": {
+                                    "ListFactCandidates_example1": {
+                                        "summary": "List pending candidates",
+                                        "description": "",
+                                        "value": {
+                                            "items": []
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidCandidates",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListFactCandidates_example1": {
+                                "summary": "List pending candidates",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/candidates/{candidateId}/approve": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidCandidatesCandidateidApprove",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Approve a candidate: write the fact to the ledger and project it into the\nnamespace A-Box graph. Idempotent per candidate; a second approval answers\n409 with the fact id already written.",
+                "operationId": "ApproveFactCandidate",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ApproveFactCandidateRequestContent"
+                            },
+                            "examples": {
+                                "ApproveFactCandidate_example1": {
+                                    "summary": "Approve a candidate",
+                                    "description": "",
+                                    "value": {}
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ApproveFactCandidate 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApproveFactCandidateResponseContent"
+                                },
+                                "examples": {
+                                    "ApproveFactCandidate_example1": {
+                                        "summary": "Approve a candidate",
+                                        "description": "",
+                                        "value": {
+                                            "factId": "4d5e6f70-8192-4a3b-9c4d-5e6f708192a3",
+                                            "status": "APPROVED"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ConflictError 409 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConflictErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/candidates/{candidateId}/reject": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidCandidatesCandidateidReject",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Reject a candidate. The row is kept for audit; nothing is written to the\nfact ledger or the A-Box graph.",
+                "operationId": "RejectFactCandidate",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RejectFactCandidateRequestContent"
+                            },
+                            "examples": {
+                                "RejectFactCandidate_example1": {
+                                    "summary": "Reject a candidate",
+                                    "description": "",
+                                    "value": {
+                                        "reason": "Predicate is too generic to publish."
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RejectFactCandidate 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RejectFactCandidateResponseContent"
+                                },
+                                "examples": {
+                                    "RejectFactCandidate_example1": {
+                                        "summary": "Reject a candidate",
+                                        "description": "",
+                                        "value": {
+                                            "status": "REJECTED"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/documents": {
+            "get": {
+                "description": "List documents registered in the namespace, newest first.",
+                "operationId": "ListDocuments",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocuments_example1": {
+                                "summary": "List the namespace's documents",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Optional lifecycle-status filter.",
+                        "schema": {
+                            "$ref": "#/components/schemas/DocumentStatus"
+                        }
+                    },
+                    {
+                        "name": "nextToken",
+                        "in": "query",
+                        "description": "Pagination token from a previous response.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "minLength": 1,
+                            "description": "Pagination token from a previous response."
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum documents per page (default and maximum 100).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "description": "Maximum documents per page (default and maximum 100)."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListDocuments 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListDocumentsResponseContent"
+                                },
+                                "examples": {
+                                    "ListDocuments_example1": {
+                                        "summary": "List the namespace's documents",
+                                        "description": "",
+                                        "value": {
+                                            "items": []
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidDocuments",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "UploadDocument_example1": {
+                                "summary": "Upload a plain-text policy",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST,GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Store a document's bytes and register it for ingestion.\n\n`contentBase64` carries the bytes. The content hash is computed server-side\nfrom the decoded bytes, so the returned `contentHash` is always the hash of\nwhat was stored; `contentSha256`, when supplied, is verified against it.\nRe-uploading identical bytes into the same namespace answers 409 with the\nexisting document id.",
+                "operationId": "UploadDocument",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadDocumentRequestContent"
+                            },
+                            "examples": {
+                                "UploadDocument_example1": {
+                                    "summary": "Upload a plain-text policy",
+                                    "description": "",
+                                    "value": {
+                                        "filename": "loan-policy.txt",
+                                        "contentType": "text/plain",
+                                        "contentBase64": "5L+d6K+B6LS35qy+5pS/562W"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "UploadDocument_example1": {
+                                "summary": "Upload a plain-text policy",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "UploadDocument 201 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadDocumentResponseContent"
+                                },
+                                "examples": {
+                                    "UploadDocument_example1": {
+                                        "summary": "Upload a plain-text policy",
+                                        "description": "",
+                                        "value": {
+                                            "documentId": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d",
+                                            "version": 1,
+                                            "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                            "status": "PROCESSING"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ConflictError 409 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConflictErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/documents/{documentId}/chunks": {
+            "get": {
+                "description": "List the chunks of one document in document order.",
+                "operationId": "ListDocumentChunks",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "path",
+                        "description": "Document whose chunks to list.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Document whose chunks to list."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "nextToken",
+                        "in": "query",
+                        "description": "Pagination token from a previous response.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "minLength": 1,
+                            "description": "Pagination token from a previous response."
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum chunks per page (default and maximum 200).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 200,
+                            "minimum": 1,
+                            "description": "Maximum chunks per page (default and maximum 200)."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListDocumentChunks 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListDocumentChunksResponseContent"
+                                },
+                                "examples": {
+                                    "ListDocumentChunks_example1": {
+                                        "summary": "List one document's chunks",
+                                        "description": "",
+                                        "value": {
+                                            "items": [
+                                                {
+                                                    "chunkId": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                                    "page": 1,
+                                                    "text": "示例切片文本",
+                                                    "charStart": 0,
+                                                    "charEnd": 6
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidDocumentsDocumentidChunks",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "path",
+                        "description": "Document whose chunks to list.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Document whose chunks to list."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/export-osi": {
             "get": {
                 "description": "Export metric definitions as an OSI (Open Semantic Interchange) YAML document.",
@@ -3253,7 +4792,7 @@
         },
         "/namespaces/{namespaceId}/graph/class": {
             "get": {
-                "description": "Look up a class vertex by IRI.\n\nThe IRI is passed as a query parameter (``?uri=\u2026``) rather than a\npath label to avoid double-encoding issues with slashes and hash\nfragments common in OWL IRIs (e.g. ``http://example.org/ont#Foo``).",
+                "description": "Look up a class vertex by IRI.\n\nThe IRI is passed as a query parameter (``?uri=…``) rather than a\npath label to avoid double-encoding issues with slashes and hash\nfragments common in OWL IRIs (e.g. ``http://example.org/ont#Foo``).",
                 "operationId": "GetGraphClass",
                 "parameters": [
                     {
@@ -8095,7 +9634,7 @@
         },
         "/namespaces/{namespaceId}/ontologies": {
             "delete": {
-                "description": "Delete an induced ontology and all its artifacts (graph triples,\nvector embeddings, and registry entry) from a namespace.\n\nAsync \u2014 returns **202** immediately: the registry entry is removed\nsynchronously (so ``ListOntologies`` no longer lists it \u2014 the client-visible\nstatus), then the slower Neptune named-graph DROP and per-embedding AOSS\nteardown run in the background. Clients poll ``ListOntologies`` until the id\nis gone. This mirrors the async accept flow and avoids the API Gateway 29s\nintegration timeout (504) on large ontologies.\n\nThe ontology id is a full IRI (contains ``://`` and ``#``), so it is passed\nas a query parameter rather than a path label \u2014 API Gateway mangles a\nURL-encoded ``#`` in a path segment (falls through to IAM auth \u2192 403). This\nmirrors the graph vertex-lookup endpoints (``/graph/class?uri=``).",
+                "description": "Delete an induced ontology and all its artifacts (graph triples,\nvector embeddings, and registry entry) from a namespace.\n\nAsync — returns **202** immediately: the registry entry is removed\nsynchronously (so ``ListOntologies`` no longer lists it — the client-visible\nstatus), then the slower Neptune named-graph DROP and per-embedding AOSS\nteardown run in the background. Clients poll ``ListOntologies`` until the id\nis gone. This mirrors the async accept flow and avoids the API Gateway 29s\nintegration timeout (504) on large ontologies.\n\nThe ontology id is a full IRI (contains ``://`` and ``#``), so it is passed\nas a query parameter rather than a path label — API Gateway mangles a\nURL-encoded ``#`` in a path segment (falls through to IAM auth → 403). This\nmirrors the graph vertex-lookup endpoints (``/graph/class?uri=``).",
                 "operationId": "DeleteOntology",
                 "parameters": [
                     {
@@ -9619,7 +11158,7 @@
                 }
             },
             "post": {
-                "description": "Ingest an ontology file from S3 (async \u2014 returns 202, poll ingest-status).\n\nEach call starts a new ingest job; send a `clientToken` to make a retry safe.",
+                "description": "Ingest an ontology file from S3 (async — returns 202, poll ingest-status).\n\nEach call starts a new ingest job; send a `clientToken` to make a retry safe.",
                 "operationId": "IngestOntologyFromS3",
                 "requestBody": {
                     "content": {
@@ -12003,7 +13542,7 @@
                 }
             },
             "post": {
-                "description": "Accept a proposal asynchronously \u2014 merge its ontology into the target\nnamespace on a background worker. Returns 202 immediately with the\nproposal flipped to ``accepting``. Clients poll ``GetProposal`` until\n``status`` becomes ``accepted`` (success) or ``pending`` (failed \u2014\n``acceptError`` on the proposal record carries the reason).\n\nNaturally idempotent, so there is no `clientToken`: accepting an\nalready-accepted proposal returns ``accepted`` without starting a new job,\nand a repeat while the first accept is in progress is a ConflictError (409).",
+                "description": "Accept a proposal asynchronously — merge its ontology into the target\nnamespace on a background worker. Returns 202 immediately with the\nproposal flipped to ``accepting``. Clients poll ``GetProposal`` until\n``status`` becomes ``accepted`` (success) or ``pending`` (failed —\n``acceptError`` on the proposal record carries the reason).\n\nNaturally idempotent, so there is no `clientToken`: accepting an\nalready-accepted proposal returns ``accepted`` without starting a new job,\nand a repeat while the first accept is in progress is a ConflictError (409).",
                 "operationId": "AcceptProposal",
                 "requestBody": {
                     "content": {
@@ -13531,7 +15070,7 @@
                 }
             },
             "post": {
-                "description": "Repair malformed / mis-cased / aliased XSD datatype tokens in a proposal's\nstored Turtle (e.g. `xsd:datetime` \u2192 `xsd:dateTime`, `xsd:varchar` \u2192\n`xsd:string`). User-initiated + consent-gated: the DatatypeTokenValidator\nsurfaces the offending tokens at validation time, and the user invokes this\nto apply the fix. Server-authoritative (the canonical XSD map lives on the\nserver, not the client). Rewrites known-malformed tokens only \u2014 valid types\n(incl. `xsd:date`) and unrecognized `xsd:` tokens are left untouched.\n\nWith `dryRun` true, computes and returns the same change list WITHOUT\npersisting \u2014 used by the accept-time guard to detect unrepaired datatype\nissues before an accept, without mutating the proposal.\n\nNaturally idempotent, so there is no `clientToken`: a repeat finds the\ntokens already canonical and rewrites nothing (`repairedCount` 0).",
+                "description": "Repair malformed / mis-cased / aliased XSD datatype tokens in a proposal's\nstored Turtle (e.g. `xsd:datetime` → `xsd:dateTime`, `xsd:varchar` →\n`xsd:string`). User-initiated + consent-gated: the DatatypeTokenValidator\nsurfaces the offending tokens at validation time, and the user invokes this\nto apply the fix. Server-authoritative (the canonical XSD map lives on the\nserver, not the client). Rewrites known-malformed tokens only — valid types\n(incl. `xsd:date`) and unrecognized `xsd:` tokens are left untouched.\n\nWith `dryRun` true, computes and returns the same change list WITHOUT\npersisting — used by the accept-time guard to detect unrepaired datatype\nissues before an accept, without mutating the proposal.\n\nNaturally idempotent, so there is no `clientToken`: a repeat finds the\ntokens already canonical and rewrites nothing (`repairedCount` 0).",
                 "operationId": "RepairProposalDatatypes",
                 "requestBody": {
                     "content": {
@@ -14141,7 +15680,7 @@
                 }
             },
             "post": {
-                "description": "Trigger validation of a proposal \u2014 runs the configured tier validators\n(HermiT reasoning, structural metrics, OoPS!) and returns a job ID for\npolling. Each call starts a new job; send a `clientToken` to make a retry\nsafe.",
+                "description": "Trigger validation of a proposal — runs the configured tier validators\n(HermiT reasoning, structural metrics, OoPS!) and returns a job ID for\npolling. Each call starts a new job; send a `clientToken` to make a retry\nsafe.",
                 "operationId": "ValidateProposal",
                 "requestBody": {
                     "content": {
@@ -15474,7 +17013,7 @@
                 }
             },
             "post": {
-                "description": "Create a new source.\nThe body must contain sourceType plus exactly one of:\n  databaseSource  \u2014 when sourceType = DATABASE\n  documentSource  \u2014 when sourceType = DOCUMENTS",
+                "description": "Create a new source.\nThe body must contain sourceType plus exactly one of:\n  databaseSource  — when sourceType = DATABASE\n  documentSource  — when sourceType = DOCUMENTS",
                 "operationId": "CreateSource",
                 "requestBody": {
                     "content": {
@@ -19744,7 +21283,7 @@
                 }
             },
             "put": {
-                "description": "Review a single column on a table \u2014 set reviewStatus to APPROVED or REJECTED.\n\nDataZone asset revision is only written when the resulting status differs\nfrom the existing one.",
+                "description": "Review a single column on a table — set reviewStatus to APPROVED or REJECTED.\n\nDataZone asset revision is only written when the resulting status differs\nfrom the existing one.",
                 "operationId": "ReviewSourceColumn",
                 "requestBody": {
                     "content": {
@@ -20083,7 +21622,7 @@
                 }
             },
             "put": {
-                "description": "Decline a re-scan-flagged removal so approving the re-scan will NOT delete\nit. Drops the table (or one column of it) from the re-scan removal set in the\nbackup blob; the surfaced pendingDeletion marker clears on the next read.\n\n\"Removed from the source\" does not always mean \"deleted\" \u2014 a partial scan, a\npermission change, or a narrowed include/exclude filter can drop a table or\ncolumn that should be kept. This lets the steward veto a specific removal.\n\nOnly valid while the source is in RESCAN_REVIEW. Omit columnName to keep the\nwhole table; set it to keep one removed column. Idempotent \u2014 keeping an item\nthat is not in the removal set is a no-op.",
+                "description": "Decline a re-scan-flagged removal so approving the re-scan will NOT delete\nit. Drops the table (or one column of it) from the re-scan removal set in the\nbackup blob; the surfaced pendingDeletion marker clears on the next read.\n\n\"Removed from the source\" does not always mean \"deleted\" — a partial scan, a\npermission change, or a narrowed include/exclude filter can drop a table or\ncolumn that should be kept. This lets the steward veto a specific removal.\n\nOnly valid while the source is in RESCAN_REVIEW. Omit columnName to keep the\nwhole table; set it to keep one removed column. Idempotent — keeping an item\nthat is not in the removal set is a no-op.",
                 "operationId": "KeepRescanRemoval",
                 "requestBody": {
                     "content": {
@@ -20414,7 +21953,7 @@
                 }
             },
             "patch": {
-                "description": "Edit a table's primary key and foreign key relationships. Steward intent is\nauthoritative: affected keys are stored with source = STEWARD_SPECIFIED,\noverriding deterministic or AI-inferred keys. Provide `primaryKey` and/or\n`foreignKeys` \u2014 an omitted field is left unchanged; an empty list clears it.\nKey columns are validated against the table's columns. Does NOT change\nreviewStatus.",
+                "description": "Edit a table's primary key and foreign key relationships. Steward intent is\nauthoritative: affected keys are stored with source = STEWARD_SPECIFIED,\noverriding deterministic or AI-inferred keys. Provide `primaryKey` and/or\n`foreignKeys` — an omitted field is left unchanged; an empty list clears it.\nKey columns are validated against the table's columns. Does NOT change\nreviewStatus.",
                 "operationId": "UpdateSourceTableKeys",
                 "requestBody": {
                     "content": {
@@ -21043,7 +22582,7 @@
                 }
             },
             "put": {
-                "description": "Review a single table \u2014 set reviewStatus to APPROVED or REJECTED.\n\nCascades to PENDING columns on that table only (REJECTED columns are not\ntouched). DataZone asset revision is only written when the resulting\nstatus differs from the existing one.",
+                "description": "Review a single table — set reviewStatus to APPROVED or REJECTED.\n\nCascades to PENDING columns on that table only (REJECTED columns are not\ntouched). DataZone asset revision is only written when the resulting\nstatus differs from the existing one.",
                 "operationId": "ReviewSourceTable",
                 "requestBody": {
                     "content": {
@@ -22185,6 +23724,39 @@
                     "message"
                 ]
             },
+            "ApproveFactCandidateRequestContent": {
+                "type": "object",
+                "properties": {
+                    "actor": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Identity of the approving principal; defaults to the caller."
+                    },
+                    "factOverrides": {
+                        "$ref": "#/components/schemas/FactOverrides"
+                    }
+                }
+            },
+            "ApproveFactCandidateResponseContent": {
+                "type": "object",
+                "properties": {
+                    "factId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier of the written fact."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/FactCandidateStatus"
+                    }
+                },
+                "required": [
+                    "factId",
+                    "status"
+                ]
+            },
             "ApproveSourceResponseContent": {
                 "type": "object",
                 "properties": {
@@ -22519,7 +24091,7 @@
                         "items": {
                             "type": "string"
                         },
-                        "description": "Sampled distinct values for low-cardinality categorical columns\n(capped, best-effort). Empty for high-cardinality, non-string, or\nunsampled columns. Used by the serve NL\u2192SQL layer to hint the LLM\nwith correct enum literals for WHERE clauses, and shown in the UI."
+                        "description": "Sampled distinct values for low-cardinality categorical columns\n(capped, best-effort). Empty for high-cardinality, non-string, or\nunsampled columns. Used by the serve NL→SQL layer to hint the LLM\nwith correct enum literals for WHERE clauses, and shown in the UI."
                     },
                     "pendingDeletion": {
                         "type": "boolean",
@@ -22621,13 +24193,13 @@
             },
             "CreateDatabaseSourceInput": {
                 "type": "object",
-                "description": "Database source creation fields.\nExactly one of glueConfiguration, jdbcConfiguration, customConnectorConfiguration,\ndatabricksSqlWarehouseConfiguration or sparqlConfiguration must be provided \u2014 it\nselects the sub-type.",
+                "description": "Database source creation fields.\nExactly one of glueConfiguration, jdbcConfiguration, customConnectorConfiguration,\ndatabricksSqlWarehouseConfiguration or sparqlConfiguration must be provided — it\nselects the sub-type.",
                 "properties": {
                     "name": {
                         "type": "string",
                         "maxLength": 128,
                         "minLength": 1,
-                        "description": "Human-readable display name. Allows spaces and punctuation. 1\u2013128 chars."
+                        "description": "Human-readable display name. Allows spaces and punctuation. 1–128 chars."
                     },
                     "glueConfiguration": {
                         "$ref": "#/components/schemas/GlueConfiguration"
@@ -22661,7 +24233,7 @@
                         "type": "string",
                         "maxLength": 128,
                         "minLength": 1,
-                        "description": "Human-readable display name. Allows spaces and punctuation. 1\u2013128 chars."
+                        "description": "Human-readable display name. Allows spaces and punctuation. 1–128 chars."
                     },
                     "s3Prefixes": {
                         "type": "array",
@@ -22670,7 +24242,7 @@
                             "maxLength": 1024,
                             "minLength": 1,
                             "pattern": "^(?!/)(?!.*\\.\\.)[A-Za-z0-9_./-]+$",
-                            "description": "Relative S3 key prefix \u2014 no leading slash, no \"..\" traversal, no s3:// URI.\nExamples: \"documents/\", \"data/reports/2024/\""
+                            "description": "Relative S3 key prefix — no leading slash, no \"..\" traversal, no s3:// URI.\nExamples: \"documents/\", \"data/reports/2024/\""
                         },
                         "maxItems": 1000,
                         "description": "S3 key prefixes to ingest. Used only for the S3 sub-type, where they\npoint into the caller-owned sourceBucketArn. Ignored for upload sources,\nwhose prefix is derived server-side from uploadId."
@@ -23030,14 +24602,14 @@
             },
             "CustomConnectorConfiguration": {
                 "type": "object",
-                "description": "Custom Athena Query Federation connector configuration \u2014 the\nCUSTOM_CONNECTOR sub-type. The connector is a Lambda the customer authors\nand deploys in their own account, which this service registers as a\nLambda-backed Athena data catalog in its own account; both discovery and\nserve-time queries run through Athena against that catalog.\n\nUnlike GlueConfiguration there is no Glue database behind the source, so\nthere is no catalogId and no cross-account IAM role to assume: the customer\ngrants access on the connector Lambda's own resource policy instead. There\nis also no region member \u2014 the connector must live in this deployment's\nregion (see connectorFunctionArn).",
+                "description": "Custom Athena Query Federation connector configuration — the\nCUSTOM_CONNECTOR sub-type. The connector is a Lambda the customer authors\nand deploys in their own account, which this service registers as a\nLambda-backed Athena data catalog in its own account; both discovery and\nserve-time queries run through Athena against that catalog.\n\nUnlike GlueConfiguration there is no Glue database behind the source, so\nthere is no catalogId and no cross-account IAM role to assume: the customer\ngrants access on the connector Lambda's own resource policy instead. There\nis also no region member — the connector must live in this deployment's\nregion (see connectorFunctionArn).",
                 "properties": {
                     "connectorFunctionArn": {
                         "type": "string",
                         "maxLength": 2048,
                         "minLength": 20,
                         "pattern": "^arn:aws[a-z-]*:lambda:[a-z0-9-]+:\\d{12}:function:[a-zA-Z0-9_-]+(:(\\$LATEST|[a-zA-Z0-9_-]+))?$",
-                        "description": "ARN of the connector Lambda. ONE Lambda serves both metadata and record\nrequests \u2014 what Athena calls a composite handler. The ARN's region must\nequal this deployment's own region, because Athena can only invoke a\ndata-source connector co-located with the query.\n\nAthena also accepts a split metadata/record PAIR of Lambdas, which this\nmember was once one half of. The pair is deliberately not modelled: the\nreference connector and the CDK template customers are given both deploy a\nsingle composite Lambda, so a second ARN asked every customer to reason\nabout a distinction almost none of them would make \u2014 and an ARN placed in\nthe wrong one of two adjacent members fails at query time rather than at\nonboarding. Restoring it is purely additive (one optional member, plus the\nrecord-function catalog parameter) if a customer ever needs the split form."
+                        "description": "ARN of the connector Lambda. ONE Lambda serves both metadata and record\nrequests — what Athena calls a composite handler. The ARN's region must\nequal this deployment's own region, because Athena can only invoke a\ndata-source connector co-located with the query.\n\nAthena also accepts a split metadata/record PAIR of Lambdas, which this\nmember was once one half of. The pair is deliberately not modelled: the\nreference connector and the CDK template customers are given both deploy a\nsingle composite Lambda, so a second ARN asked every customer to reason\nabout a distinction almost none of them would make — and an ARN placed in\nthe wrong one of two adjacent members fails at query time rather than at\nonboarding. Restoring it is purely additive (one optional member, plus the\nrecord-function catalog parameter) if a customer ever needs the split form."
                     },
                     "databaseName": {
                         "type": "string",
@@ -23120,11 +24692,11 @@
                     },
                     "glueConnectionName": {
                         "type": "string",
-                        "description": "Name of the Glue Connection that backs Athena federated queries\nfor this data source. Read-only and system-managed: populated\nonly for JDBC sub-types (PostgreSQL, MySQL, Redshift, Oracle, SQL\nServer, Snowflake) on first scan and removed when the source is\ndeleted. Null for S3/Iceberg-backed Glue databases \u2014 those are\nqueried via Athena's native AwsDataCatalog.\n\nTo query the source via Athena, pair this with the namespace's\n`athenaWorkgroupName` and the `athenaDataCatalogName` below. See\nthe Athena Queryability section of `packages/sources/README.md`\nfor examples."
+                        "description": "Name of the Glue Connection that backs Athena federated queries\nfor this data source. Read-only and system-managed: populated\nonly for JDBC sub-types (PostgreSQL, MySQL, Redshift, Oracle, SQL\nServer, Snowflake) on first scan and removed when the source is\ndeleted. Null for S3/Iceberg-backed Glue databases — those are\nqueried via Athena's native AwsDataCatalog.\n\nTo query the source via Athena, pair this with the namespace's\n`athenaWorkgroupName` and the `athenaDataCatalogName` below. See\nthe Athena Queryability section of `packages/sources/README.md`\nfor examples."
                     },
                     "athenaDataCatalogName": {
                         "type": "string",
-                        "description": "Name of the Athena data catalog registered for this source. Read-only\nand system-managed, derived from `{resource-prefix}ds_{sourceId}`. Null\nfor S3/Iceberg-backed Glue databases, which are queried through Athena's\nnative `AwsDataCatalog`.\n\nThe addressing differs by sub-type, because the two catalogs are not the\nsame kind of object:\n\n- JDBC sub-types: a managed Glue federated catalog, NESTED under\n  `AwsDataCatalog`, and equal to `glueConnectionName`. Query it as\n  `AwsDataCatalog.<athenaDataCatalogName>.<schema>.<table>`.\n- CUSTOM_CONNECTOR: a LAMBDA-type Athena catalog bound to the customer's\n  connector Lambda. It is a TOP-LEVEL catalog, not nested, so query it as\n  `<athenaDataCatalogName>.<databaseName>.<table>`.\n- DATABRICKS_SQL_WAREHOUSE: also a TOP-LEVEL LAMBDA-type catalog, addressed\n  the same way, but bound to the ONE connector Lambda this deployment\n  operates \u2014 every such catalog in the environment shares that handler ARN,\n  and the catalog name is what selects the source's workspace and\n  credential. `databaseName` is the Unity Catalog schema.\n\nRun the query inside the namespace's Athena workgroup (see\nNamespaceDetail.athenaWorkgroupName)."
+                        "description": "Name of the Athena data catalog registered for this source. Read-only\nand system-managed, derived from `{resource-prefix}ds_{sourceId}`. Null\nfor S3/Iceberg-backed Glue databases, which are queried through Athena's\nnative `AwsDataCatalog`.\n\nThe addressing differs by sub-type, because the two catalogs are not the\nsame kind of object:\n\n- JDBC sub-types: a managed Glue federated catalog, NESTED under\n  `AwsDataCatalog`, and equal to `glueConnectionName`. Query it as\n  `AwsDataCatalog.<athenaDataCatalogName>.<schema>.<table>`.\n- CUSTOM_CONNECTOR: a LAMBDA-type Athena catalog bound to the customer's\n  connector Lambda. It is a TOP-LEVEL catalog, not nested, so query it as\n  `<athenaDataCatalogName>.<databaseName>.<table>`.\n- DATABRICKS_SQL_WAREHOUSE: also a TOP-LEVEL LAMBDA-type catalog, addressed\n  the same way, but bound to the ONE connector Lambda this deployment\n  operates — every such catalog in the environment shares that handler ARN,\n  and the catalog name is what selects the source's workspace and\n  credential. `databaseName` is the Unity Catalog schema.\n\nRun the query inside the namespace's Athena workgroup (see\nNamespaceDetail.athenaWorkgroupName)."
                     },
                     "rescanSchedule": {
                         "$ref": "#/components/schemas/RescanSchedule"
@@ -23136,7 +24708,7 @@
             },
             "DatabricksSqlWarehouseConfiguration": {
                 "type": "object",
-                "description": "Databricks SQL Warehouse source \u2014 the DATABRICKS_SQL_WAREHOUSE sub-type.\nDiscovery and queries both run through Athena against a connector Lambda this\nservice deploys, which resolves this configuration from the Athena catalog\nname it is invoked under. Nothing here is deployed by the customer.\n\nIts own shape rather than an extra DatabaseEngine on JdbcConfiguration, whose\n@required `host`/`port` have no meaning for a warehouse addressed by an HTTP\npath and which has no place for the Unity Catalog catalog.",
+                "description": "Databricks SQL Warehouse source — the DATABRICKS_SQL_WAREHOUSE sub-type.\nDiscovery and queries both run through Athena against a connector Lambda this\nservice deploys, which resolves this configuration from the Athena catalog\nname it is invoked under. Nothing here is deployed by the customer.\n\nIts own shape rather than an extra DatabaseEngine on JdbcConfiguration, whose\n@required `host`/`port` have no meaning for a warehouse addressed by an HTTP\npath and which has no place for the Unity Catalog catalog.",
                 "properties": {
                     "workspaceHostname": {
                         "type": "string",
@@ -23164,7 +24736,7 @@
                         "maxLength": 255,
                         "minLength": 1,
                         "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
-                        "description": "Unity Catalog schema this source exposes. Exactly one per source \u2014 the same\none-database-per-source model GlueConfiguration and\nCustomConnectorConfiguration use. Lowercased at registration."
+                        "description": "Unity Catalog schema this source exposes. Exactly one per source — the same\none-database-per-source model GlueConfiguration and\nCustomConnectorConfiguration use. Lowercased at registration."
                     },
                     "credentialSecretArn": {
                         "type": "string",
@@ -23251,6 +24823,52 @@
                     }
                 }
             },
+            "DocumentChunk": {
+                "type": "object",
+                "description": "One text chunk of a document.",
+                "properties": {
+                    "chunkId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier of the chunk; also the entity URI suffix used by its embedding."
+                    },
+                    "page": {
+                        "type": "number",
+                        "description": "1-based page number the chunk came from (1 for plain-text sources)."
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Chunk text exactly as indexed."
+                    },
+                    "charStart": {
+                        "type": "number",
+                        "description": "Inclusive character offset of the chunk in the normalised document text."
+                    },
+                    "charEnd": {
+                        "type": "number",
+                        "description": "Exclusive character offset of the chunk in the normalised document text."
+                    }
+                },
+                "required": [
+                    "charEnd",
+                    "charStart",
+                    "chunkId",
+                    "page",
+                    "text"
+                ]
+            },
+            "DocumentMetadata": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "minLength": 0,
+                    "description": "Value of a caller-metadata entry."
+                },
+                "description": "Free-form document metadata carried through ingestion."
+            },
             "DocumentSourceDetail": {
                 "type": "object",
                 "description": "Type-specific detail for DOCUMENTS sources.",
@@ -23262,7 +24880,7 @@
                             "maxLength": 1024,
                             "minLength": 1,
                             "pattern": "^(?!/)(?!.*\\.\\.)[A-Za-z0-9_./-]+$",
-                            "description": "Relative S3 key prefix \u2014 no leading slash, no \"..\" traversal, no s3:// URI.\nExamples: \"documents/\", \"data/reports/2024/\""
+                            "description": "Relative S3 key prefix — no leading slash, no \"..\" traversal, no s3:// URI.\nExamples: \"documents/\", \"data/reports/2024/\""
                         },
                         "description": "S3 key prefixes ingested for this source."
                     },
@@ -23323,6 +24941,52 @@
                         "description": "Distinct chunk nodes inserted into the Neptune graph. Bounded by the true\nchunk count. Null until the KG build has run."
                     }
                 }
+            },
+            "DocumentStatus": {
+                "type": "string",
+                "description": "Lifecycle status of an ingested document.",
+                "enum": [
+                    "UPLOADED",
+                    "PROCESSING",
+                    "INDEXED",
+                    "FAILED"
+                ]
+            },
+            "DocumentSummary": {
+                "type": "object",
+                "description": "One document in the namespace's ingestion registry.",
+                "properties": {
+                    "documentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier assigned by UploadDocument."
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Display title (caller-supplied, else the filename)."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/DocumentStatus"
+                    },
+                    "chunkCount": {
+                        "type": "number",
+                        "description": "Number of chunks written for this document."
+                    },
+                    "updatedAt": {
+                        "type": "number",
+                        "description": "Timestamp of the last status change.",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "chunkCount",
+                    "documentId",
+                    "status",
+                    "title",
+                    "updatedAt"
+                ]
             },
             "DownloadOntologyResponseContent": {
                 "type": "object",
@@ -23425,11 +25089,11 @@
                         },
                         "maxItems": 100,
                         "minItems": 0,
-                        "description": "Explicit entity-class vocabulary handed to the extraction LLM. When\nnon-empty, overrides both graphrag's hardcoded news/finance defaults\nAND the corpus-inferred fallback \u2014 the exact labels supplied here are\nthe ones the extractor uses to type entities. Case-sensitive, spaced\n(e.g. \"Policy\", \"Claim\", \"Loss Ratio\"). Leave empty to fall back to\ninferEntityClassifications."
+                        "description": "Explicit entity-class vocabulary handed to the extraction LLM. When\nnon-empty, overrides both graphrag's hardcoded news/finance defaults\nAND the corpus-inferred fallback — the exact labels supplied here are\nthe ones the extractor uses to type entities. Case-sensitive, spaced\n(e.g. \"Policy\", \"Claim\", \"Loss Ratio\"). Leave empty to fall back to\ninferEntityClassifications."
                     },
                     "inferEntityClassifications": {
                         "type": "boolean",
-                        "description": "Whether to derive the entity-class vocabulary from this corpus at ingest\nstart rather than inheriting graphrag's hardcoded news/finance defaults\n(\"Company\", \"Sports Team\", \"Creative Work\", \u2026). Ignored when\npreferredEntityClassifications is set. Defaults to true."
+                        "description": "Whether to derive the entity-class vocabulary from this corpus at ingest\nstart rather than inheriting graphrag's hardcoded news/finance defaults\n(\"Company\", \"Sports Team\", \"Creative Work\", …). Ignored when\npreferredEntityClassifications is set. Defaults to true."
                     },
                     "preferredTopics": {
                         "type": "array",
@@ -23441,7 +25105,7 @@
                         },
                         "maxItems": 100,
                         "minItems": 0,
-                        "description": "Explicit TOPIC vocabulary handed to the extraction LLM. Topics are the\nthematic groupings chunks are assigned to \u2014 they become ``__Topic__``\nnodes and are later induced as ``skos:Concept`` \u2014 as distinct from\npreferredEntityClassifications, which types the entities themselves\n(``__Entity__.class``, induced as ``owl:Class``).\n\nThe extractor prefers a listed topic when one matches the content in\nmeaning and specificity, and invents a name otherwise, so this is a\nsteer rather than a closed set. Case-sensitive, spaces allowed\n(e.g. \"Black Tie Gala\", \"Everyday Elegance\").\n\nLeave empty (the default) to let the extractor name every topic from the\nchunk text. There is deliberately no ``inferTopics`` flag: the toolkit\nhas no topic equivalent of the entity-classification inference pass, so\nan empty list already *is* \"let the model decide\"."
+                        "description": "Explicit TOPIC vocabulary handed to the extraction LLM. Topics are the\nthematic groupings chunks are assigned to — they become ``__Topic__``\nnodes and are later induced as ``skos:Concept`` — as distinct from\npreferredEntityClassifications, which types the entities themselves\n(``__Entity__.class``, induced as ``owl:Class``).\n\nThe extractor prefers a listed topic when one matches the content in\nmeaning and specificity, and invents a name otherwise, so this is a\nsteer rather than a closed set. Case-sensitive, spaces allowed\n(e.g. \"Black Tie Gala\", \"Everyday Elegance\").\n\nLeave empty (the default) to let the extractor name every topic from the\nchunk text. There is deliberately no ``inferTopics`` flag: the toolkit\nhas no topic equivalent of the entity-classification inference pass, so\nan empty list already *is* \"let the model decide\"."
                     },
                     "enableTableExtraction": {
                         "type": "boolean",
@@ -23451,7 +25115,7 @@
                         "type": "number",
                         "maximum": 4096,
                         "minimum": 0,
-                        "description": "Chunk size (in tokens) for the SentenceSplitter that splits staged\ndocuments into extraction/embedding units. Larger values keep more\ncontext (a full table row + header, a full policy clause) in one\nchunk. **`0` means \"use the graphrag-toolkit default (256)\"** \u2014 the\nsentinel that survives the state-machine \u2192 ECS env-var pipe without\na special-cased missing-field state. Set a positive value (e.g. 1024\nfor dense/tabular corpora) to override."
+                        "description": "Chunk size (in tokens) for the SentenceSplitter that splits staged\ndocuments into extraction/embedding units. Larger values keep more\ncontext (a full table row + header, a full policy clause) in one\nchunk. **`0` means \"use the graphrag-toolkit default (256)\"** — the\nsentinel that survives the state-machine → ECS env-var pipe without\na special-cased missing-field state. Set a positive value (e.g. 1024\nfor dense/tabular corpora) to override."
                     },
                     "chunkOverlap": {
                         "type": "number",
@@ -23474,11 +25138,89 @@
             },
             "ExtractionMode": {
                 "type": "string",
-                "description": "Extraction mode \u2014 mirrors ExtractionMode in constants.py.",
+                "description": "Extraction mode — mirrors ExtractionMode in constants.py.",
                 "enum": [
                     "continuous",
                     "separated"
                 ]
+            },
+            "FactCandidate": {
+                "type": "object",
+                "description": "One subject-predicate-object candidate extracted from a document chunk.",
+                "properties": {
+                    "candidateId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier assigned at extraction time."
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Subject IRI or literal label as extracted."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "description": "Predicate IRI or label as extracted."
+                    },
+                    "object": {
+                        "type": "string",
+                        "description": "Object IRI or literal label as extracted."
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "description": "Extractor confidence in [0, 1].",
+                        "format": "float"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/FactCandidateStatus"
+                    },
+                    "documentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Document the candidate was extracted from."
+                    },
+                    "chunkId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Chunk the candidate was extracted from."
+                    },
+                    "evidence": {
+                        "type": "string",
+                        "description": "Source sentence the candidate was extracted from."
+                    }
+                },
+                "required": [
+                    "candidateId",
+                    "confidence",
+                    "object",
+                    "predicate",
+                    "status",
+                    "subject"
+                ]
+            },
+            "FactCandidateStatus": {
+                "type": "string",
+                "description": "Review status of an extracted fact candidate.",
+                "enum": [
+                    "PENDING",
+                    "APPROVED",
+                    "REJECTED"
+                ]
+            },
+            "FactOverrides": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "minLength": 1,
+                    "description": "Replacement value for one fact field."
+                },
+                "description": "Overrides applied to the fact written when a candidate is approved. Keys are\n`subject`, `predicate` and `object`; absent keys keep the candidate values."
             },
             "FetchOntologyRequestContent": {
                 "type": "object",
@@ -23625,7 +25367,7 @@
             },
             "GetGraphClassResponseContent": {
                 "type": "object",
-                "description": "A node in the ontology graph \u2014 a class, property, or individual \u2014 with its\nIRI, kind, namespace, associated labels/comments, and outgoing edges.",
+                "description": "A node in the ontology graph — a class, property, or individual — with its\nIRI, kind, namespace, associated labels/comments, and outgoing edges.",
                 "properties": {
                     "uri": {
                         "type": "string",
@@ -23665,7 +25407,7 @@
                         "items": {
                             "type": "string"
                         },
-                        "description": "Alternative labels (skos:altLabel) \u2014 carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
+                        "description": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
                     },
                     "graphUris": {
                         "type": "array",
@@ -23676,7 +25418,7 @@
                     },
                     "isMapped": {
                         "type": "boolean",
-                        "description": "Whether this vertex carries the ``coa:isMapped`` marker \u2014 i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL\u2192SPARQL / NL\u2192SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
+                        "description": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
                     },
                     "superseded": {
                         "$ref": "#/components/schemas/SupersededAnnotations"
@@ -23697,7 +25439,7 @@
             },
             "GetGraphDatatypePropertyResponseContent": {
                 "type": "object",
-                "description": "A node in the ontology graph \u2014 a class, property, or individual \u2014 with its\nIRI, kind, namespace, associated labels/comments, and outgoing edges.",
+                "description": "A node in the ontology graph — a class, property, or individual — with its\nIRI, kind, namespace, associated labels/comments, and outgoing edges.",
                 "properties": {
                     "uri": {
                         "type": "string",
@@ -23737,7 +25479,7 @@
                         "items": {
                             "type": "string"
                         },
-                        "description": "Alternative labels (skos:altLabel) \u2014 carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
+                        "description": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
                     },
                     "graphUris": {
                         "type": "array",
@@ -23748,7 +25490,7 @@
                     },
                     "isMapped": {
                         "type": "boolean",
-                        "description": "Whether this vertex carries the ``coa:isMapped`` marker \u2014 i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL\u2192SPARQL / NL\u2192SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
+                        "description": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
                     },
                     "superseded": {
                         "$ref": "#/components/schemas/SupersededAnnotations"
@@ -23769,7 +25511,7 @@
             },
             "GetGraphObjectPropertyResponseContent": {
                 "type": "object",
-                "description": "A node in the ontology graph \u2014 a class, property, or individual \u2014 with its\nIRI, kind, namespace, associated labels/comments, and outgoing edges.",
+                "description": "A node in the ontology graph — a class, property, or individual — with its\nIRI, kind, namespace, associated labels/comments, and outgoing edges.",
                 "properties": {
                     "uri": {
                         "type": "string",
@@ -23809,7 +25551,7 @@
                         "items": {
                             "type": "string"
                         },
-                        "description": "Alternative labels (skos:altLabel) \u2014 carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
+                        "description": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
                     },
                     "graphUris": {
                         "type": "array",
@@ -23820,7 +25562,7 @@
                     },
                     "isMapped": {
                         "type": "boolean",
-                        "description": "Whether this vertex carries the ``coa:isMapped`` marker \u2014 i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL\u2192SPARQL / NL\u2192SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
+                        "description": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
                     },
                     "superseded": {
                         "$ref": "#/components/schemas/SupersededAnnotations"
@@ -24042,14 +25784,14 @@
                         "items": {
                             "$ref": "#/components/schemas/OntologyPropertySummary"
                         },
-                        "description": "Object properties \u2014 relationships between classes (domain \u2192 range class)."
+                        "description": "Object properties — relationships between classes (domain → range class)."
                     },
                     "datatypeProperties": {
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/OntologyPropertySummary"
                         },
-                        "description": "Datatype properties \u2014 attributes of a class with a literal range."
+                        "description": "Datatype properties — attributes of a class with a literal range."
                     },
                     "totalClasses": {
                         "type": "number",
@@ -24213,7 +25955,7 @@
                     },
                     "acceptError": {
                         "type": "string",
-                        "description": "Error message from the most recent failed accept attempt.\nPopulated when an ``accepting`` \u2192 ``pending`` rollback occurred;\ncleared on the next ``AcceptProposal`` call."
+                        "description": "Error message from the most recent failed accept attempt.\nPopulated when an ``accepting`` → ``pending`` rollback occurred;\ncleared on the next ``AcceptProposal`` call."
                     }
                 },
                 "required": [
@@ -24288,7 +26030,7 @@
             },
             "GetSourceOutput": {
                 "type": "object",
-                "description": "Full source record returned by GetSource.\nUses sourceType as a discriminator \u2014 branch on it to access type-specific detail:\n  DATABASE  \u2192 databaseDetails is populated; documentDetails is absent.\n  DOCUMENTS \u2192 documentDetails is populated; databaseDetails is absent.",
+                "description": "Full source record returned by GetSource.\nUses sourceType as a discriminator — branch on it to access type-specific detail:\n  DATABASE  → databaseDetails is populated; documentDetails is absent.\n  DOCUMENTS → documentDetails is populated; databaseDetails is absent.",
                 "properties": {
                     "sourceId": {
                         "type": "string",
@@ -24395,21 +26137,21 @@
                     },
                     "tablesFailed": {
                         "type": "number",
-                        "description": "Number of tables the scan listed but could not read.\n\nAbsent when none failed, rather than zero, so it can be used directly to\nfilter for degraded scans. A non-zero value means the scan SUCCEEDED but\nis incomplete: those tables carry no columns, no comments, and no declared\nkeys, and AI enrichment will have generated descriptions over the gap \u2014 so\na reviewer must not read the result as complete. Only connectors that read\neach table separately can report this; one that returns a table's schema in\nthe same call that lists it cannot partially fail."
+                        "description": "Number of tables the scan listed but could not read.\n\nAbsent when none failed, rather than zero, so it can be used directly to\nfilter for degraded scans. A non-zero value means the scan SUCCEEDED but\nis incomplete: those tables carry no columns, no comments, and no declared\nkeys, and AI enrichment will have generated descriptions over the gap — so\na reviewer must not read the result as complete. Only connectors that read\neach table separately can report this; one that returns a table's schema in\nthe same call that lists it cannot partially fail."
                     },
                     "failedTables": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
-                        "description": "The unreadable tables as `database.table`, capped in length.\n\nA signal for diagnosis, not an inventory \u2014 `tablesFailed` is the exact\nfigure and this list may be shorter than it."
+                        "description": "The unreadable tables as `database.table`, capped in length.\n\nA signal for diagnosis, not an inventory — `tablesFailed` is the exact\nfigure and this list may be shorter than it."
                     },
                     "filterWarnings": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
-                        "description": "Warnings about the source's filters, absent when none. Set when a filter\nthat looks like a regular expression matched nothing \u2014 filters are globs,\nso the scan succeeded without the intended filtering."
+                        "description": "Warnings about the source's filters, absent when none. Set when a filter\nthat looks like a regular expression matched nothing — filters are globs,\nso the scan succeeded without the intended filtering."
                     }
                 },
                 "required": [
@@ -24469,7 +26211,7 @@
                     },
                     "added": {
                         "type": "boolean",
-                        "description": "True when the current re-scan discovered this table for the first time\n(it did not exist in the last approved scan). It therefore has no\nold-vs-new diff \u2014 the whole table is new. Absent/false otherwise."
+                        "description": "True when the current re-scan discovered this table for the first time\n(it did not exist in the last approved scan). It therefore has no\nold-vs-new diff — the whole table is new. Absent/false otherwise."
                     }
                 },
                 "required": [
@@ -24512,7 +26254,7 @@
                         "maxLength": 1024,
                         "minLength": 1,
                         "pattern": "^(?!/)(?!.*\\.\\.)[A-Za-z0-9_./-]+$",
-                        "description": "Relative S3 key prefix \u2014 no leading slash, no \"..\" traversal, no s3:// URI.\nExamples: \"documents/\", \"data/reports/2024/\""
+                        "description": "Relative S3 key prefix — no leading slash, no \"..\" traversal, no s3:// URI.\nExamples: \"documents/\", \"data/reports/2024/\""
                     },
                     "uploadUrls": {
                         "type": "array",
@@ -24587,7 +26329,7 @@
                         "type": "string",
                         "maxLength": 1024,
                         "minLength": 1,
-                        "description": "Passed to Glue `GetTables` as its native `Expression` (a regular\nexpression) \u2014 the one filter that is not a glob."
+                        "description": "Passed to Glue `GetTables` as its native `Expression` (a regular\nexpression) — the one filter that is not a glob."
                     },
                     "tableExcludeFilter": {
                         "type": "string",
@@ -24636,7 +26378,7 @@
             },
             "GlueExecutionEngine": {
                 "type": "string",
-                "description": "Execution engine choice for a Glue/Iceberg source. A deliberately narrow\nenum (only the engines valid for a Glue source) so the onboarding UI/API\ncannot select an engine \u2014 e.g. direct JDBC \u2014 that doesn't apply to Glue.",
+                "description": "Execution engine choice for a Glue/Iceberg source. A deliberately narrow\nenum (only the engines valid for a Glue source) so the onboarding UI/API\ncannot select an engine — e.g. direct JDBC — that doesn't apply to Glue.",
                 "enum": [
                     "ATHENA",
                     "REDSHIFT"
@@ -24816,7 +26558,7 @@
             },
             "GroundingMode": {
                 "type": "string",
-                "description": "Grounding mode \u2014 how aggressively induced classes are aligned to existing\nontologies. NONE disables grounding; STANDARD auto-grounds exact-name\nmatches; ENHANCED (default) always defers to the LLM reranker for\ndomain verification.",
+                "description": "Grounding mode — how aggressively induced classes are aligned to existing\nontologies. NONE disables grounding; STANDARD auto-grounds exact-name\nmatches; ENHANCED (default) always defers to the LLM reranker for\ndomain verification.",
                 "enum": [
                     "NONE",
                     "STANDARD",
@@ -24967,7 +26709,7 @@
             },
             "InductionJobStatus": {
                 "type": "string",
-                "description": "Induction job status.\n\nThe first group of stages (PENDING through FAILED) covers the structured\ninduction pipeline (induce_catalog). The second group covers the\nunstructured induction pipeline stage progression\n(querying_neptune \u2192 sampling \u2192 generating_descriptions \u2192 resolving_iris \u2192\napplying_rules \u2192 entailment \u2192 serializing \u2192 storing \u2192 completed | failed).",
+                "description": "Induction job status.\n\nThe first group of stages (PENDING through FAILED) covers the structured\ninduction pipeline (induce_catalog). The second group covers the\nunstructured induction pipeline stage progression\n(querying_neptune → sampling → generating_descriptions → resolving_iris →\napplying_rules → entailment → serializing → storing → completed | failed).",
                 "enum": [
                     "pending",
                     "fetching_metadata",
@@ -25139,7 +26881,7 @@
             },
             "IngestJob": {
                 "type": "object",
-                "description": "Async ingest job handle / status \u2014 returned by ingest-from-s3 (202) and\nthe ingest-status poll. Typed so FE/BE share one contract.",
+                "description": "Async ingest job handle / status — returned by ingest-from-s3 (202) and\nthe ingest-status poll. Typed so FE/BE share one contract.",
                 "properties": {
                     "jobId": {
                         "type": "string",
@@ -25293,13 +27035,13 @@
                         "type": "string",
                         "maxLength": 1024,
                         "minLength": 1,
-                        "description": "Schema/table filter: one or more shell globs, separated by `|` or `,`, each\nmatched against the WHOLE name. `*` matches any characters, `?` one\ncharacter, `[abc]` one of a set. Examples: `sales_*`, `public|analytics`,\n`constructor*,results`. Not a regular expression \u2014 `^`, `$` and `.*` are\nmatched literally. The one exception is a Glue Data Catalog source's\n`tableFilter`, which is passed to Glue as its native expression syntax."
+                        "description": "Schema/table filter: one or more shell globs, separated by `|` or `,`, each\nmatched against the WHOLE name. `*` matches any characters, `?` one\ncharacter, `[abc]` one of a set. Examples: `sales_*`, `public|analytics`,\n`constructor*,results`. Not a regular expression — `^`, `$` and `.*` are\nmatched literally. The one exception is a Glue Data Catalog source's\n`tableFilter`, which is passed to Glue as its native expression syntax."
                     },
                     "tableExcludeFilter": {
                         "type": "string",
                         "maxLength": 1024,
                         "minLength": 1,
-                        "description": "Schema/table filter: one or more shell globs, separated by `|` or `,`, each\nmatched against the WHOLE name. `*` matches any characters, `?` one\ncharacter, `[abc]` one of a set. Examples: `sales_*`, `public|analytics`,\n`constructor*,results`. Not a regular expression \u2014 `^`, `$` and `.*` are\nmatched literally. The one exception is a Glue Data Catalog source's\n`tableFilter`, which is passed to Glue as its native expression syntax."
+                        "description": "Schema/table filter: one or more shell globs, separated by `|` or `,`, each\nmatched against the WHOLE name. `*` matches any characters, `?` one\ncharacter, `[abc]` one of a set. Examples: `sales_*`, `public|analytics`,\n`constructor*,results`. Not a regular expression — `^`, `$` and `.*` are\nmatched literally. The one exception is a Glue Data Catalog source's\n`tableFilter`, which is passed to Glue as its native expression syntax."
                     },
                     "credentialSecretArn": {
                         "type": "string",
@@ -25331,7 +27073,7 @@
                     "role": {
                         "type": "string",
                         "maxLength": 1024,
-                        "description": "Snowflake only: optional Snowflake RBAC role name to assume for the\nsession (a Snowflake construct \u2014 not an AWS IAM role; see crossAccountRoleArn)."
+                        "description": "Snowflake only: optional Snowflake RBAC role name to assume for the\nsession (a Snowflake construct — not an AWS IAM role; see crossAccountRoleArn)."
                     }
                 },
                 "required": [
@@ -25366,12 +27108,78 @@
                     },
                     "pendingDeletion": {
                         "type": "boolean",
-                        "description": "The item's removal state after the keep. Always false \u2014 the item is\nno longer pending deletion."
+                        "description": "The item's removal state after the keep. Always false — the item is\nno longer pending deletion."
                     }
                 },
                 "required": [
                     "pendingDeletion",
                     "tableId"
+                ]
+            },
+            "ListDocumentChunksResponseContent": {
+                "type": "object",
+                "description": "Standard pagination output",
+                "properties": {
+                    "nextToken": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "minLength": 1,
+                        "description": "Opaque token for fetching the next page; absent when there are no more results."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentChunk"
+                        },
+                        "description": "Page of chunks, ordered by `charStart`."
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "ListDocumentsResponseContent": {
+                "type": "object",
+                "description": "Standard pagination output",
+                "properties": {
+                    "nextToken": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "minLength": 1,
+                        "description": "Opaque token for fetching the next page; absent when there are no more results."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentSummary"
+                        },
+                        "description": "Page of document summaries."
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "ListFactCandidatesResponseContent": {
+                "type": "object",
+                "description": "Standard pagination output",
+                "properties": {
+                    "nextToken": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "minLength": 1,
+                        "description": "Opaque token for fetching the next page; absent when there are no more results."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FactCandidate"
+                        },
+                        "description": "Page of candidates, newest first."
+                    }
+                },
+                "required": [
+                    "items"
                 ]
             },
             "ListFoundationalOntologiesResponseContent": {
@@ -25880,11 +27688,11 @@
                     },
                     "definedBy": {
                         "type": "string",
-                        "description": "Set by server \u2014 principal who created/updated the metric."
+                        "description": "Set by server — principal who created/updated the metric."
                     },
                     "effectiveFrom": {
                         "type": "string",
-                        "description": "Set by server \u2014 date the metric became effective."
+                        "description": "Set by server — date the metric became effective."
                     }
                 },
                 "required": [
@@ -25906,7 +27714,7 @@
                         "type": "string",
                         "maxLength": 10000,
                         "minLength": 1,
-                        "description": "SQL expression. Must be a full SELECT statement (or set operation) \u2014\ne.g. \"SELECT COUNT(*) AS total FROM orders\". Bare aggregate fragments\nlike \"COUNT(*)\" are rejected: the serve-time SQL firewall only executes\ntop-level SELECT statements, and onboarding validates the same shape."
+                        "description": "SQL expression. Must be a full SELECT statement (or set operation) —\ne.g. \"SELECT COUNT(*) AS total FROM orders\". Bare aggregate fragments\nlike \"COUNT(*)\" are rejected: the serve-time SQL firewall only executes\ntop-level SELECT statements, and onboarding validates the same shape."
                     }
                 },
                 "required": [
@@ -25998,7 +27806,7 @@
                     },
                     "athenaWorkgroupName": {
                         "type": "string",
-                        "description": "Name of the Athena workgroup created for this namespace\n(read-only, system-managed). Use this workgroup when querying\ndata sources via Athena federation. Format: `{resource-prefix}{namespaceId}`.\nNull when workgroup provisioning could not be confirmed\n(e.g., SSM parameter missing) \u2014 in that case Athena queries\nagainst this namespace's federated catalogs are not yet supported\nand a re-creation is required to enable them."
+                        "description": "Name of the Athena workgroup created for this namespace\n(read-only, system-managed). Use this workgroup when querying\ndata sources via Athena federation. Format: `{resource-prefix}{namespaceId}`.\nNull when workgroup provisioning could not be confirmed\n(e.g., SSM parameter missing) — in that case Athena queries\nagainst this namespace's federated catalogs are not yet supported\nand a re-creation is required to enable them."
                     },
                     "datasourceExternalId": {
                         "type": "string",
@@ -26009,7 +27817,7 @@
                     },
                     "vkgHealthReason": {
                         "type": "string",
-                        "description": "Human-readable explanation for a non-HEALTHY vkgHealth, when known\n(e.g. \"container health check failing\", \"no running task\"). Absent when\nHEALTHY. Coarse by design \u2014 the precise container-side cause is in the\nVKG service /health response and its CloudWatch logs."
+                        "description": "Human-readable explanation for a non-HEALTHY vkgHealth, when known\n(e.g. \"container health check failing\", \"no running task\"). Absent when\nHEALTHY. Coarse by design — the precise container-side cause is in the\nVKG service /health response and its CloudWatch logs."
                     }
                 },
                 "required": [
@@ -26441,7 +28249,7 @@
             },
             "ProposalStatus": {
                 "type": "string",
-                "description": "Proposal status.\n\n``inducing`` is the FIRST in-flight state: the induction was triggered and\na background worker is building the ontology. A stub proposal row is written\nat trigger time (so the run is visible in the proposals list immediately and\nsurvives a browser refresh); the same row is upserted to ``pending`` when the\nworker finishes, or to ``failed`` if it errors. Clients poll ``ListProposals``\nto observe the transition.\n\n``accepting`` is a later in-flight state: the user submitted ``AcceptProposal``\nand a background worker is merging the ontology. It is followed by\n``embeddingsSync`` while the just-written embeddings become searchable in the\n(eventually-consistent) vector index. The status then flips to ``accepted``\non success, or to ``acceptFailed`` with ``acceptError`` naming the pipeline\nstep that failed. An ``acceptFailed`` proposal is re-acceptable \u2014 the accept\npipeline is idempotent on re-run \u2014 so the client may submit\n``AcceptProposal`` again once the cause is resolved. Clients poll\n``GetProposal`` to observe the transitions.",
+                "description": "Proposal status.\n\n``inducing`` is the FIRST in-flight state: the induction was triggered and\na background worker is building the ontology. A stub proposal row is written\nat trigger time (so the run is visible in the proposals list immediately and\nsurvives a browser refresh); the same row is upserted to ``pending`` when the\nworker finishes, or to ``failed`` if it errors. Clients poll ``ListProposals``\nto observe the transition.\n\n``accepting`` is a later in-flight state: the user submitted ``AcceptProposal``\nand a background worker is merging the ontology. It is followed by\n``embeddingsSync`` while the just-written embeddings become searchable in the\n(eventually-consistent) vector index. The status then flips to ``accepted``\non success, or to ``acceptFailed`` with ``acceptError`` naming the pipeline\nstep that failed. An ``acceptFailed`` proposal is re-acceptable — the accept\npipeline is idempotent on re-run — so the client may submit\n``AcceptProposal`` again once the cause is resolved. Clients poll\n``GetProposal`` to observe the transitions.",
                 "enum": [
                     "inducing",
                     "pending",
@@ -26595,7 +28403,7 @@
             },
             "ProposalValidationTier": {
                 "type": "string",
-                "description": "Validation tier identifier \u2014 selects which validators to run.",
+                "description": "Validation tier identifier — selects which validators to run.",
                 "enum": [
                     "tier1_blocking",
                     "tier2_scoring",
@@ -26675,6 +28483,37 @@
                     "ATHENA",
                     "JDBC",
                     "REDSHIFT"
+                ]
+            },
+            "RejectFactCandidateRequestContent": {
+                "type": "object",
+                "properties": {
+                    "actor": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Identity of the rejecting principal; defaults to the caller."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "description": "Why the candidate was rejected."
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
+            "RejectFactCandidateResponseContent": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/FactCandidateStatus"
+                    }
+                },
+                "required": [
+                    "status"
                 ]
             },
             "RejectProposalsRequestContent": {
@@ -26759,7 +28598,7 @@
                         "items": {
                             "$ref": "#/components/schemas/DatatypeRepairChange"
                         },
-                        "description": "The (before \u2192 after) rewrites applied (or, on a dry run, that would\nbe applied), for the preview / post-repair summary."
+                        "description": "The (before → after) rewrites applied (or, on a dry run, that would\nbe applied), for the preview / post-repair summary."
                     },
                     "dryRun": {
                         "type": "boolean",
@@ -27271,7 +29110,7 @@
             },
             "SparqlConfiguration": {
                 "type": "object",
-                "description": "RDF/SPARQL graph source configuration \u2014 the RDF_SPARQL sub-type. Instance\ndata (A-Box) lives natively as triples in a SPARQL store and is answered at\nserve time by NL\u2192SPARQL executed directly against `dataEndpoint` (no Glue\ncatalog, no VKG/SQL). There is no schema discovery: the ontology (T-Box) is\nimported separately and points its classes at this source by name.\n\nRegistration only verifies the endpoint is reachable (no scan). Persisted as\nthe source `configuration` blob; serve and the verify Lambda both read it.\nCross-field rules enforced server-side: `store = neptune` requires\n`authMode = sigv4` and forbids `credentialSecretArn`.",
+                "description": "RDF/SPARQL graph source configuration — the RDF_SPARQL sub-type. Instance\ndata (A-Box) lives natively as triples in a SPARQL store and is answered at\nserve time by NL→SPARQL executed directly against `dataEndpoint` (no Glue\ncatalog, no VKG/SQL). There is no schema discovery: the ontology (T-Box) is\nimported separately and points its classes at this source by name.\n\nRegistration only verifies the endpoint is reachable (no scan). Persisted as\nthe source `configuration` blob; serve and the verify Lambda both read it.\nCross-field rules enforced server-side: `store = neptune` requires\n`authMode = sigv4` and forbids `credentialSecretArn`.",
                 "properties": {
                     "store": {
                         "$ref": "#/components/schemas/SparqlStore"
@@ -27320,7 +29159,7 @@
             },
             "SparqlStore": {
                 "type": "string",
-                "description": "SPARQL engine behind an RDF_SPARQL source \u2014 a dialect one level below the\nsub-type, the way DatabaseEngine sits below JDBC_DATABASE. It selects the\nserve-time client and the registration-time reachability probe; adding an\nengine adds a member here plus one client and one probe, never a new\nsub-type. Values are lowercase because they are persisted verbatim in the\nsource `configuration` blob.",
+                "description": "SPARQL engine behind an RDF_SPARQL source — a dialect one level below the\nsub-type, the way DatabaseEngine sits below JDBC_DATABASE. It selects the\nserve-time client and the registration-time reachability probe; adding an\nengine adds a member here plus one client and one probe, never a new\nsub-type. Values are lowercase because they are persisted verbatim in the\nsource `configuration` blob.",
                 "enum": [
                     "neptune"
                 ]
@@ -27375,7 +29214,7 @@
                         "type": "number",
                         "maximum": 8192,
                         "minimum": 1,
-                        "description": "Output-token cap for the ENHANCED-mode LLM grounding rerank.\nRaise it when a reasoning model truncates its JSON answer (the\nrerank fails loud naming this knob). Omitted \u2192 server default (1000)."
+                        "description": "Output-token cap for the ENHANCED-mode LLM grounding rerank.\nRaise it when a reasoning model truncates its JSON answer (the\nrerank fails loud naming this knob). Omitted → server default (1000)."
                     },
                     "strategy": {
                         "$ref": "#/components/schemas/InductionStrategy"
@@ -27473,7 +29312,7 @@
                     },
                     "pendingRelationships": {
                         "type": "number",
-                        "description": "Number of inferred foreign keys on this table with\n``reviewStatus=PENDING_REVIEW`` \u2014 relationships that a cross-source\ninference pass has proposed and a steward has not yet decided on.\nNon-zero on tables whose parent source is already ``APPROVED``\nsignals that the source's Approve button has already been clicked\nbut a later cross-source pass has since found new relationships to\nreview; the steward can drill in per-table and use per-relationship\nreview (``PATCH /keys``) or per-table Approve to settle them.\nAbsent when zero to keep response bodies small."
+                        "description": "Number of inferred foreign keys on this table with\n``reviewStatus=PENDING_REVIEW`` — relationships that a cross-source\ninference pass has proposed and a steward has not yet decided on.\nNon-zero on tables whose parent source is already ``APPROVED``\nsignals that the source's Approve button has already been clicked\nbut a later cross-source pass has since found new relationships to\nreview; the steward can drill in per-table and use per-relationship\nreview (``PATCH /keys``) or per-table Approve to settle them.\nAbsent when zero to keep response bodies small."
                     },
                     "reviewStatus": {
                         "$ref": "#/components/schemas/ReviewStatus"
@@ -27705,7 +29544,7 @@
                     },
                     "ontologyUploaded": {
                         "type": "boolean",
-                        "description": "Set true when the revised OWL ontology was uploaded directly to S3\nvia a presigned PUT (see GetProposalUploadUrls) instead of being sent\ninline in `ontologyTurtle` \u2014 for large proposals exceeding the API\npayload cap. Defaults to false (inline)."
+                        "description": "Set true when the revised OWL ontology was uploaded directly to S3\nvia a presigned PUT (see GetProposalUploadUrls) instead of being sent\ninline in `ontologyTurtle` — for large proposals exceeding the API\npayload cap. Defaults to false (inline)."
                     },
                     "r2rmlUploaded": {
                         "type": "boolean",
@@ -27781,7 +29620,7 @@
                         "type": "string",
                         "maxLength": 128,
                         "minLength": 1,
-                        "description": "Human-readable display name. Allows spaces and punctuation. 1\u2013128 chars."
+                        "description": "Human-readable display name. Allows spaces and punctuation. 1–128 chars."
                     },
                     "glueConfiguration": {
                         "$ref": "#/components/schemas/GlueConfiguration"
@@ -27877,6 +29716,77 @@
                 "required": [
                     "reviewStatus",
                     "tableId"
+                ]
+            },
+            "UploadDocumentRequestContent": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "maxLength": 512,
+                        "minLength": 1,
+                        "description": "Original filename, including extension."
+                    },
+                    "contentType": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 1,
+                        "description": "MIME type of the uploaded bytes, e.g. `text/plain`."
+                    },
+                    "contentBase64": {
+                        "type": "string",
+                        "maxLength": 10485760,
+                        "minLength": 1,
+                        "description": "Base64-encoded document content."
+                    },
+                    "contentSha256": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "minLength": 64,
+                        "description": "SHA-256 of the content (lowercase hex). Optional when\n`contentBase64` is supplied — if present it must match the decoded\nbytes, and is rejected rather than ignored when it does not."
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 512,
+                        "minLength": 1,
+                        "description": "Display title; defaults to `filename`."
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/DocumentMetadata"
+                    }
+                },
+                "required": [
+                    "contentType",
+                    "filename"
+                ]
+            },
+            "UploadDocumentResponseContent": {
+                "type": "object",
+                "properties": {
+                    "documentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier of the stored document."
+                    },
+                    "version": {
+                        "type": "number",
+                        "description": "Document version (1 for the first upload of these bytes)."
+                    },
+                    "contentHash": {
+                        "type": "string",
+                        "description": "SHA-256 of the stored bytes, lowercase hex."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/DocumentStatus"
+                    }
+                },
+                "required": [
+                    "contentHash",
+                    "documentId",
+                    "status",
+                    "version"
                 ]
             },
             "UploadFileRequest": {
@@ -28129,7 +30039,7 @@
             },
             "VkgHealthStatus": {
                 "type": "string",
-                "description": "Health of the namespace's VKG translation service. HEALTHY: running and able\nto translate. UNAVAILABLE: exists but not serving. PROVISIONING: service is\nstarting up (deployment in progress, not yet serving) \u2014 expected to become\nHEALTHY shortly. UNKNOWN: not deployed yet or state undetermined.",
+                "description": "Health of the namespace's VKG translation service. HEALTHY: running and able\nto translate. UNAVAILABLE: exists but not serving. PROVISIONING: service is\nstarting up (deployment in progress, not yet serving) — expected to become\nHEALTHY shortly. UNKNOWN: not deployed yet or state undetermined.",
                 "enum": [
                     "HEALTHY",
                     "DEGRADED",

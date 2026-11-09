@@ -8,6 +8,11 @@ import {
   AcceptProposalCommand,
 } from "./commands/AcceptProposalCommand";
 import {
+  type ApproveFactCandidateCommandInput,
+  type ApproveFactCandidateCommandOutput,
+  ApproveFactCandidateCommand,
+} from "./commands/ApproveFactCandidateCommand";
+import {
   type ApproveSourceCommandInput,
   type ApproveSourceCommandOutput,
   ApproveSourceCommand,
@@ -222,6 +227,21 @@ import {
   KeepRescanRemovalCommand,
 } from "./commands/KeepRescanRemovalCommand";
 import {
+  type ListDocumentChunksCommandInput,
+  type ListDocumentChunksCommandOutput,
+  ListDocumentChunksCommand,
+} from "./commands/ListDocumentChunksCommand";
+import {
+  type ListDocumentsCommandInput,
+  type ListDocumentsCommandOutput,
+  ListDocumentsCommand,
+} from "./commands/ListDocumentsCommand";
+import {
+  type ListFactCandidatesCommandInput,
+  type ListFactCandidatesCommandOutput,
+  ListFactCandidatesCommand,
+} from "./commands/ListFactCandidatesCommand";
+import {
   type ListFoundationalOntologiesCommandInput,
   type ListFoundationalOntologiesCommandOutput,
   ListFoundationalOntologiesCommand,
@@ -312,6 +332,11 @@ import {
   PutSourceRescanScheduleCommand,
 } from "./commands/PutSourceRescanScheduleCommand";
 import {
+  type RejectFactCandidateCommandInput,
+  type RejectFactCandidateCommandOutput,
+  RejectFactCandidateCommand,
+} from "./commands/RejectFactCandidateCommand";
+import {
   type RejectProposalsCommandInput,
   type RejectProposalsCommandOutput,
   RejectProposalsCommand,
@@ -387,6 +412,11 @@ import {
   UpdateSourceTableMetadataCommand,
 } from "./commands/UpdateSourceTableMetadataCommand";
 import {
+  type UploadDocumentCommandInput,
+  type UploadDocumentCommandOutput,
+  UploadDocumentCommand,
+} from "./commands/UploadDocumentCommand";
+import {
   type UploadOntologyCommandInput,
   type UploadOntologyCommandOutput,
   UploadOntologyCommand,
@@ -402,6 +432,9 @@ import {
   ValidateProposalCommand,
 } from "./commands/ValidateProposalCommand";
 import { ControlPlaneServiceClient } from "./ControlPlaneServiceClient";
+import { paginateListDocumentChunks } from "./pagination/ListDocumentChunksPaginator";
+import { paginateListDocuments } from "./pagination/ListDocumentsPaginator";
+import { paginateListFactCandidates } from "./pagination/ListFactCandidatesPaginator";
 import { paginateListInducedDatasources } from "./pagination/ListInducedDatasourcesPaginator";
 import { paginateListInductionJobs } from "./pagination/ListInductionJobsPaginator";
 import { paginateListMetrics } from "./pagination/ListMetricsPaginator";
@@ -418,6 +451,12 @@ import { paginateListSourceTables } from "./pagination/ListSourceTablesPaginator
 const commands = {
   GetSystemHealthCommand,
   HealthCheckCommand,
+  ApproveFactCandidateCommand,
+  ListDocumentChunksCommand,
+  ListDocumentsCommand,
+  ListFactCandidatesCommand,
+  RejectFactCandidateCommand,
+  UploadDocumentCommand,
   CreateGrantCommand,
   CreatePlatformGrantCommand,
   DeleteGrantCommand,
@@ -501,6 +540,9 @@ const commands = {
   UpdateSourceTableMetadataCommand,
 };
 const paginators = {
+  paginateListDocumentChunks,
+  paginateListDocuments,
+  paginateListFactCandidates,
   paginateListNamespaceGrants,
   paginateListPlatformGrants,
   paginateListPrincipalGrants,
@@ -550,6 +592,108 @@ export interface ControlPlaneService {
     args: HealthCheckCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: HealthCheckCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ApproveFactCandidateCommand}
+   */
+  approveFactCandidate(
+    args: ApproveFactCandidateCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ApproveFactCandidateCommandOutput>;
+  approveFactCandidate(
+    args: ApproveFactCandidateCommandInput,
+    cb: (err: any, data?: ApproveFactCandidateCommandOutput) => void
+  ): void;
+  approveFactCandidate(
+    args: ApproveFactCandidateCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ApproveFactCandidateCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListDocumentChunksCommand}
+   */
+  listDocumentChunks(
+    args: ListDocumentChunksCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListDocumentChunksCommandOutput>;
+  listDocumentChunks(
+    args: ListDocumentChunksCommandInput,
+    cb: (err: any, data?: ListDocumentChunksCommandOutput) => void
+  ): void;
+  listDocumentChunks(
+    args: ListDocumentChunksCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListDocumentChunksCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListDocumentsCommand}
+   */
+  listDocuments(
+    args: ListDocumentsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListDocumentsCommandOutput>;
+  listDocuments(
+    args: ListDocumentsCommandInput,
+    cb: (err: any, data?: ListDocumentsCommandOutput) => void
+  ): void;
+  listDocuments(
+    args: ListDocumentsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListDocumentsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListFactCandidatesCommand}
+   */
+  listFactCandidates(
+    args: ListFactCandidatesCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListFactCandidatesCommandOutput>;
+  listFactCandidates(
+    args: ListFactCandidatesCommandInput,
+    cb: (err: any, data?: ListFactCandidatesCommandOutput) => void
+  ): void;
+  listFactCandidates(
+    args: ListFactCandidatesCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListFactCandidatesCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RejectFactCandidateCommand}
+   */
+  rejectFactCandidate(
+    args: RejectFactCandidateCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RejectFactCandidateCommandOutput>;
+  rejectFactCandidate(
+    args: RejectFactCandidateCommandInput,
+    cb: (err: any, data?: RejectFactCandidateCommandOutput) => void
+  ): void;
+  rejectFactCandidate(
+    args: RejectFactCandidateCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RejectFactCandidateCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link UploadDocumentCommand}
+   */
+  uploadDocument(
+    args: UploadDocumentCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<UploadDocumentCommandOutput>;
+  uploadDocument(
+    args: UploadDocumentCommandInput,
+    cb: (err: any, data?: UploadDocumentCommandOutput) => void
+  ): void;
+  uploadDocument(
+    args: UploadDocumentCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: UploadDocumentCommandOutput) => void
   ): void;
 
   /**
@@ -1931,6 +2075,39 @@ export interface ControlPlaneService {
     options: __HttpHandlerOptions,
     cb: (err: any, data?: UpdateSourceTableMetadataCommandOutput) => void
   ): void;
+
+  /**
+   * @see {@link ListDocumentChunksCommand}
+   * @param args - command input.
+   * @param paginationConfig - optional pagination config.
+   * @returns AsyncIterable of {@link ListDocumentChunksCommandOutput}.
+   */
+  paginateListDocumentChunks(
+    args: ListDocumentChunksCommandInput,
+    paginationConfig?: Omit<PaginationConfiguration, "client">
+  ): Paginator<ListDocumentChunksCommandOutput>;
+
+  /**
+   * @see {@link ListDocumentsCommand}
+   * @param args - command input.
+   * @param paginationConfig - optional pagination config.
+   * @returns AsyncIterable of {@link ListDocumentsCommandOutput}.
+   */
+  paginateListDocuments(
+    args: ListDocumentsCommandInput,
+    paginationConfig?: Omit<PaginationConfiguration, "client">
+  ): Paginator<ListDocumentsCommandOutput>;
+
+  /**
+   * @see {@link ListFactCandidatesCommand}
+   * @param args - command input.
+   * @param paginationConfig - optional pagination config.
+   * @returns AsyncIterable of {@link ListFactCandidatesCommandOutput}.
+   */
+  paginateListFactCandidates(
+    args: ListFactCandidatesCommandInput,
+    paginationConfig?: Omit<PaginationConfiguration, "client">
+  ): Paginator<ListFactCandidatesCommandOutput>;
 
   /**
    * @see {@link ListNamespaceGrantsCommand}

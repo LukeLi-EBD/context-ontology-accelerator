@@ -1,4 +1,4 @@
-# Auto-generated — models only (see smithy-generate.sh)
+﻿# Auto-generated — models only (see smithy-generate.sh)
 from coa_data_layer_server.models.access_denied_error_response_content import AccessDeniedErrorResponseContent
 from coa_data_layer_server.models.confidence_score import ConfidenceScore
 from coa_data_layer_server.models.conformance_warning import ConformanceWarning

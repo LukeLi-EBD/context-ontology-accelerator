@@ -11,6 +11,12 @@ use aws.protocols#restJson1
 use com.amazon.semanticcontext.common#InternalServerError
 use com.amazon.semanticcontext.common#ServiceUnavailableError
 use com.amazon.semanticcontext.common#ValidationError
+use com.amazon.semanticcontext.documents#ApproveFactCandidate
+use com.amazon.semanticcontext.documents#ListDocumentChunks
+use com.amazon.semanticcontext.documents#ListDocuments
+use com.amazon.semanticcontext.documents#ListFactCandidates
+use com.amazon.semanticcontext.documents#RejectFactCandidate
+use com.amazon.semanticcontext.documents#UploadDocument
 use com.amazon.semanticcontext.grant#CreateGrant
 use com.amazon.semanticcontext.grant#CreatePlatformGrant
 use com.amazon.semanticcontext.grant#DeleteGrant
@@ -172,6 +178,14 @@ service ControlPlaneService {
         PutSourceRescanSchedule
         PutSourceEventRescan
         UpdateSourceMetadata
+        // ── Document ingestion ──────────────────────────────────────────
+        UploadDocument
+        ListDocuments
+        ListDocumentChunks
+        // ── Fact candidates (extraction review) ─────────────────────────
+        ListFactCandidates
+        ApproveFactCandidate
+        RejectFactCandidate
         // ── Metric service ──────────────────────────────────────────────
         CreateMetric
         GetMetric

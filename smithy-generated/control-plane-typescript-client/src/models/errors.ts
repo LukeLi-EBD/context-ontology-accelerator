@@ -71,26 +71,6 @@ export class ValidationError extends __BaseException {
 }
 
 /**
- * Returned with HTTP 403 when the caller lacks permission to perform the requested operation.
- * @public
- */
-export class AccessDeniedError extends __BaseException {
-  readonly name = "AccessDeniedError" as const;
-  readonly $fault = "client" as const;
-  /**
-   * @internal
-   */
-  constructor(opts: __ExceptionOptionType<AccessDeniedError, __BaseException>) {
-    super({
-      name: "AccessDeniedError",
-      $fault: "client",
-      ...opts,
-    });
-    Object.setPrototypeOf(this, AccessDeniedError.prototype);
-  }
-}
-
-/**
  * Returned with HTTP 409 when a request conflicts with the current state of the resource, such as a duplicate.
  * @public
  */
@@ -127,5 +107,25 @@ export class NotFoundError extends __BaseException {
       ...opts,
     });
     Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+/**
+ * Returned with HTTP 403 when the caller lacks permission to perform the requested operation.
+ * @public
+ */
+export class AccessDeniedError extends __BaseException {
+  readonly name = "AccessDeniedError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<AccessDeniedError, __BaseException>) {
+    super({
+      name: "AccessDeniedError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, AccessDeniedError.prototype);
   }
 }

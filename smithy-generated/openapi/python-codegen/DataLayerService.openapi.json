@@ -319,7 +319,7 @@
         },
         "/namespaces/{namespaceId}/query": {
             "post": {
-                "description": "Answer a natural-language question against the namespace. Routes through the\ntiered resolver (metric match \u2192 structured query \u2192 knowledge-base retrieval)\nand returns a typed result with confidence and an execution trace.",
+                "description": "Answer a natural-language question against the namespace. Routes through the\ntiered resolver (metric match → structured query → knowledge-base retrieval)\nand returns a typed result with confidence and an execution trace.",
                 "operationId": "Query",
                 "requestBody": {
                     "content": {
@@ -489,7 +489,7 @@
         },
         "/namespaces/{namespaceId}/schema": {
             "get": {
-                "description": "Describe the namespace's queryable schema: classes and their properties\nacross every ontology loaded into the namespace (induced, foundational,\nuploaded). Proxies to the ontology-engine ``/graph/schema`` route via the\nontology-api-proxy Lambda \u2014 the same source the MCP ``describe_schema``\ntool reads, so an agent and a UI see the same schema.",
+                "description": "Describe the namespace's queryable schema: classes and their properties\nacross every ontology loaded into the namespace (induced, foundational,\nuploaded). Proxies to the ontology-engine ``/graph/schema`` route via the\nontology-api-proxy Lambda — the same source the MCP ``describe_schema``\ntool reads, so an agent and a UI see the same schema.",
                 "operationId": "DescribeSchema",
                 "parameters": [
                     {
@@ -892,7 +892,7 @@
             },
             "DimensionFilter": {
                 "type": "object",
-                "description": "A filter constraining a query to rows matching a dimension value, with an\noptional comparison operator (defaults to equality).\n\nServer-side invariants NOT expressible as Smithy traits, enforced at\nvalidation (a violation is a 400, see the Context Manager's InvokeRequest):\n  - `name` must be non-blank, and is trimmed before use.\n  - `name` is matched case-insensitively, and must be UNIQUE across the list \u2014\n    a mapping cannot express two values for one dimension. (`@uniqueItems`\n    would not capture this: it compares whole structures, so two filters on\n    the same name with different values would still pass.)\n  - every filter must be applicable by the resolved metric; a filter the\n    metric cannot apply fails closed rather than being dropped.",
+                "description": "A filter constraining a query to rows matching a dimension value, with an\noptional comparison operator (defaults to equality).\n\nServer-side invariants NOT expressible as Smithy traits, enforced at\nvalidation (a violation is a 400, see the Context Manager's InvokeRequest):\n  - `name` must be non-blank, and is trimmed before use.\n  - `name` is matched case-insensitively, and must be UNIQUE across the list —\n    a mapping cannot express two values for one dimension. (`@uniqueItems`\n    would not capture this: it compares whole structures, so two filters on\n    the same name with different values would still pass.)\n  - every filter must be applicable by the resolved metric; a filter the\n    metric cannot apply fails closed rather than being dropped.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -916,7 +916,7 @@
             },
             "DimensionOperator": {
                 "type": "string",
-                "description": "Comparison operator applied by a DimensionFilter.\n\nEquality is the only supported comparison: Tier-1 binds the value as a bare\nSQL literal into a governed metric's template, which expresses `=` and nothing\nelse. Declared as an enum rather than a free-form String so a client asking\nfor an unsupported comparison is rejected by the contract instead of having it\nsilently applied as equality \u2014 a wrong answer returned with a 200.",
+                "description": "Comparison operator applied by a DimensionFilter.\n\nEquality is the only supported comparison: Tier-1 binds the value as a bare\nSQL literal into a governed metric's template, which expresses `=` and nothing\nelse. Declared as an enum rather than a free-form String so a client asking\nfor an unsupported comparison is rejected by the contract instead of having it\nsilently applied as equality — a wrong answer returned with a 200.",
                 "enum": [
                     "="
                 ]
@@ -1145,7 +1145,7 @@
             },
             "NoResultErrorResponseContent": {
                 "type": "object",
-                "description": "Returned with HTTP 404 when a pinned tier produced no data for the query \u2014\na \"no results\" outcome rather than a server error.",
+                "description": "Returned with HTTP 404 when a pinned tier produced no data for the query —\na \"no results\" outcome rather than a server error.",
                 "properties": {
                     "message": {
                         "type": "string",
@@ -1345,7 +1345,7 @@
             },
             "QueryStrategy": {
                 "type": "string",
-                "description": "Which Tier-2 engine answers a structured query. Absent = the serve default\n(``nl_to_sql_first``).\n\nThis is a DIFFERENT axis from ``mode``: ``mode`` chooses whether the whole\nT1\u2192T2\u2192T3 cascade is replaced by the Tier-3 reasoning loop, while ``strategy``\nchooses which engine answers within Tier 2. Both were called \"agentic\" before\nthe rebrand, which is why the distinction is spelled out here.\n\nAn explicit value is caller intent and is never overridden by automatic tier\ngating or per-query Tier-2 pruning.",
+                "description": "Which Tier-2 engine answers a structured query. Absent = the serve default\n(``nl_to_sql_first``).\n\nThis is a DIFFERENT axis from ``mode``: ``mode`` chooses whether the whole\nT1→T2→T3 cascade is replaced by the Tier-3 reasoning loop, while ``strategy``\nchooses which engine answers within Tier 2. Both were called \"agentic\" before\nthe rebrand, which is why the distinction is spelled out here.\n\nAn explicit value is caller intent and is never overridden by automatic tier\ngating or per-query Tier-2 pruning.",
                 "enum": [
                     "best",
                     "ontop",

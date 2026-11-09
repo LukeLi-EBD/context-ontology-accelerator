@@ -3,8 +3,10 @@ import type { DocumentType as __DocumentType } from "@smithy/types";
 
 import type {
   DatabaseEngine,
+  DocumentStatus,
   ExportFormat,
   ExtractionMode,
+  FactCandidateStatus,
   GlueExecutionEngine,
   GraphVertexKind,
   GroundingMode,
@@ -119,6 +121,458 @@ export interface HealthCheckOutput {
    * @public
    */
   status: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ApproveFactCandidateInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  candidateId: string | undefined;
+
+  /**
+   * Identity of the approving principal; defaults to the caller.
+   * @public
+   */
+  actor?: string | undefined;
+
+  /**
+   * Values overriding the extracted subject/predicate/object.
+   * @public
+   */
+  factOverrides?: Record<string, string> | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ApproveFactCandidateOutput {
+  /**
+   * Identifier of the written fact.
+   * @public
+   */
+  factId: string | undefined;
+
+  /**
+   * Candidate status after the call (`APPROVED`).
+   * @public
+   */
+  status: FactCandidateStatus | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListDocumentChunksInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Document whose chunks to list.
+   * @public
+   */
+  documentId: string | undefined;
+
+  /**
+   * Pagination token from a previous response.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Maximum chunks per page (default and maximum 200).
+   * @public
+   */
+  maxResults?: number | undefined;
+}
+
+/**
+ * One text chunk of a document.
+ * @public
+ */
+export interface DocumentChunk {
+  /**
+   * Identifier of the chunk; also the entity URI suffix used by its embedding.
+   * @public
+   */
+  chunkId: string | undefined;
+
+  /**
+   * 1-based page number the chunk came from (1 for plain-text sources).
+   * @public
+   */
+  page: number | undefined;
+
+  /**
+   * Chunk text exactly as indexed.
+   * @public
+   */
+  text: string | undefined;
+
+  /**
+   * Inclusive character offset of the chunk in the normalised document text.
+   * @public
+   */
+  charStart: number | undefined;
+
+  /**
+   * Exclusive character offset of the chunk in the normalised document text.
+   * @public
+   */
+  charEnd: number | undefined;
+}
+
+/**
+ * Standard pagination output
+ * @public
+ */
+export interface ListDocumentChunksOutput {
+  /**
+   * Opaque token for fetching the next page; absent when there are no more results.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Page of chunks, ordered by `charStart`.
+   * @public
+   */
+  items: DocumentChunk[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListDocumentsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Optional lifecycle-status filter.
+   * @public
+   */
+  status?: DocumentStatus | undefined;
+
+  /**
+   * Pagination token from a previous response.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Maximum documents per page (default and maximum 100).
+   * @public
+   */
+  maxResults?: number | undefined;
+}
+
+/**
+ * One document in the namespace's ingestion registry.
+ * @public
+ */
+export interface DocumentSummary {
+  /**
+   * Identifier assigned by UploadDocument.
+   * @public
+   */
+  documentId: string | undefined;
+
+  /**
+   * Display title (caller-supplied, else the filename).
+   * @public
+   */
+  title: string | undefined;
+
+  /**
+   * Current lifecycle status.
+   * @public
+   */
+  status: DocumentStatus | undefined;
+
+  /**
+   * Number of chunks written for this document.
+   * @public
+   */
+  chunkCount: number | undefined;
+
+  /**
+   * Timestamp of the last status change (RFC 3339).
+   *
+   * Declared as a string, like the other summary types in this service, so
+   * the wire value is the stored RFC 3339 text rather than an epoch number.
+   * @public
+   */
+  updatedAt: string | undefined;
+
+  /**
+   * Why ingestion failed. Present only when `status` is `FAILED`.
+   * @public
+   */
+  errorMessage?: string | undefined;
+}
+
+/**
+ * Standard pagination output
+ * @public
+ */
+export interface ListDocumentsOutput {
+  /**
+   * Opaque token for fetching the next page; absent when there are no more results.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Page of document summaries.
+   * @public
+   */
+  items: DocumentSummary[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListFactCandidatesInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Only candidates extracted from this document.
+   * @public
+   */
+  documentId?: string | undefined;
+
+  /**
+   * Only candidates in this review status (default: all).
+   * @public
+   */
+  status?: FactCandidateStatus | undefined;
+
+  /**
+   * Pagination token from a previous response.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Maximum candidates per page (default and maximum 200).
+   * @public
+   */
+  maxResults?: number | undefined;
+}
+
+/**
+ * One subject-predicate-object candidate extracted from a document chunk.
+ * @public
+ */
+export interface FactCandidate {
+  /**
+   * Identifier assigned at extraction time.
+   * @public
+   */
+  candidateId: string | undefined;
+
+  /**
+   * Subject IRI or literal label as extracted.
+   * @public
+   */
+  subject: string | undefined;
+
+  /**
+   * Predicate IRI or label as extracted.
+   * @public
+   */
+  predicate: string | undefined;
+
+  /**
+   * Object IRI or literal label as extracted.
+   * @public
+   */
+  object: string | undefined;
+
+  /**
+   * Extractor confidence in [0, 1].
+   * @public
+   */
+  confidence: number | undefined;
+
+  /**
+   * Review status.
+   * @public
+   */
+  status: FactCandidateStatus | undefined;
+
+  /**
+   * Document the candidate was extracted from.
+   * @public
+   */
+  documentId?: string | undefined;
+
+  /**
+   * Chunk the candidate was extracted from.
+   * @public
+   */
+  chunkId?: string | undefined;
+
+  /**
+   * Source sentence the candidate was extracted from.
+   * @public
+   */
+  evidence?: string | undefined;
+}
+
+/**
+ * Standard pagination output
+ * @public
+ */
+export interface ListFactCandidatesOutput {
+  /**
+   * Opaque token for fetching the next page; absent when there are no more results.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Page of candidates, newest first.
+   * @public
+   */
+  items: FactCandidate[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface RejectFactCandidateInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  candidateId: string | undefined;
+
+  /**
+   * Identity of the rejecting principal; defaults to the caller.
+   * @public
+   */
+  actor?: string | undefined;
+
+  /**
+   * Why the candidate was rejected.
+   * @public
+   */
+  reason: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface RejectFactCandidateOutput {
+  /**
+   * Candidate status after the call (`REJECTED`).
+   * @public
+   */
+  status: FactCandidateStatus | undefined;
+}
+
+/**
+ * @public
+ */
+export interface UploadDocumentInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Original filename, including extension.
+   * @public
+   */
+  filename: string | undefined;
+
+  /**
+   * MIME type of the uploaded bytes, e.g. `text/plain`.
+   * @public
+   */
+  contentType: string | undefined;
+
+  /**
+   * Base64-encoded document content.
+   * @public
+   */
+  contentBase64?: string | undefined;
+
+  /**
+   * SHA-256 of the content (lowercase hex). Optional when
+   * `contentBase64` is supplied — if present it must match the decoded
+   * bytes, and is rejected rather than ignored when it does not.
+   * @public
+   */
+  contentSha256?: string | undefined;
+
+  /**
+   * Display title; defaults to `filename`.
+   * @public
+   */
+  title?: string | undefined;
+
+  /**
+   * Caller metadata stored on the document row.
+   * @public
+   */
+  metadata?: Record<string, string> | undefined;
+}
+
+/**
+ * @public
+ */
+export interface UploadDocumentOutput {
+  /**
+   * Identifier of the stored document.
+   * @public
+   */
+  documentId: string | undefined;
+
+  /**
+   * Document version (1 for the first upload of these bytes).
+   * @public
+   */
+  version: number | undefined;
+
+  /**
+   * SHA-256 of the stored bytes, lowercase hex.
+   * @public
+   */
+  contentHash: string | undefined;
+
+  /**
+   * Lifecycle status at response time (`UPLOADED` or `PROCESSING`).
+   * @public
+   */
+  status: DocumentStatus | undefined;
 }
 
 /**

@@ -2147,6 +2147,1545 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/candidates": {
+            "get": {
+                "description": "List extracted fact candidates awaiting review (or filtered by status).",
+                "operationId": "ListFactCandidates",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListFactCandidates_example1": {
+                                "summary": "List pending candidates",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "query",
+                        "description": "Only candidates extracted from this document.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Only candidates extracted from this document."
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Only candidates in this review status (default: all).",
+                        "schema": {
+                            "$ref": "#/components/schemas/FactCandidateStatus"
+                        },
+                        "examples": {
+                            "ListFactCandidates_example1": {
+                                "summary": "List pending candidates",
+                                "description": "",
+                                "value": "PENDING"
+                            }
+                        }
+                    },
+                    {
+                        "name": "nextToken",
+                        "in": "query",
+                        "description": "Pagination token from a previous response.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "minLength": 1,
+                            "description": "Pagination token from a previous response."
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum candidates per page (default and maximum 200).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 200,
+                            "minimum": 1,
+                            "description": "Maximum candidates per page (default and maximum 200)."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListFactCandidates 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListFactCandidatesResponseContent"
+                                },
+                                "examples": {
+                                    "ListFactCandidates_example1": {
+                                        "summary": "List pending candidates",
+                                        "description": "",
+                                        "value": {
+                                            "items": []
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidCandidates",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListFactCandidates_example1": {
+                                "summary": "List pending candidates",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/candidates/{candidateId}/approve": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidCandidatesCandidateidApprove",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Approve a candidate: write the fact to the ledger and project it into the\nnamespace A-Box graph. Idempotent per candidate; a second approval answers\n409 with the fact id already written.",
+                "operationId": "ApproveFactCandidate",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ApproveFactCandidateRequestContent"
+                            },
+                            "examples": {
+                                "ApproveFactCandidate_example1": {
+                                    "summary": "Approve a candidate",
+                                    "description": "",
+                                    "value": {}
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ApproveFactCandidate_example1": {
+                                "summary": "Approve a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ApproveFactCandidate 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApproveFactCandidateResponseContent"
+                                },
+                                "examples": {
+                                    "ApproveFactCandidate_example1": {
+                                        "summary": "Approve a candidate",
+                                        "description": "",
+                                        "value": {
+                                            "factId": "4d5e6f70-8192-4a3b-9c4d-5e6f708192a3",
+                                            "status": "APPROVED"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ConflictError 409 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConflictErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/candidates/{candidateId}/reject": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidCandidatesCandidateidReject",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Reject a candidate. The row is kept for audit; nothing is written to the\nfact ledger or the A-Box graph.",
+                "operationId": "RejectFactCandidate",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RejectFactCandidateRequestContent"
+                            },
+                            "examples": {
+                                "RejectFactCandidate_example1": {
+                                    "summary": "Reject a candidate",
+                                    "description": "",
+                                    "value": {
+                                        "reason": "Predicate is too generic to publish."
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "candidateId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RejectFactCandidate_example1": {
+                                "summary": "Reject a candidate",
+                                "description": "",
+                                "value": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RejectFactCandidate 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RejectFactCandidateResponseContent"
+                                },
+                                "examples": {
+                                    "RejectFactCandidate_example1": {
+                                        "summary": "Reject a candidate",
+                                        "description": "",
+                                        "value": {
+                                            "status": "REJECTED"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/documents": {
+            "get": {
+                "description": "List documents registered in the namespace, newest first.",
+                "operationId": "ListDocuments",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocuments_example1": {
+                                "summary": "List the namespace's documents",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Optional lifecycle-status filter.",
+                        "schema": {
+                            "$ref": "#/components/schemas/DocumentStatus"
+                        }
+                    },
+                    {
+                        "name": "nextToken",
+                        "in": "query",
+                        "description": "Pagination token from a previous response.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "minLength": 1,
+                            "description": "Pagination token from a previous response."
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum documents per page (default and maximum 100).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "description": "Maximum documents per page (default and maximum 100)."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListDocuments 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListDocumentsResponseContent"
+                                },
+                                "examples": {
+                                    "ListDocuments_example1": {
+                                        "summary": "List the namespace's documents",
+                                        "description": "",
+                                        "value": {
+                                            "items": []
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidDocuments",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "UploadDocument_example1": {
+                                "summary": "Upload a plain-text policy",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST,GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Store a document's bytes and register it for ingestion.\n\n`contentBase64` carries the bytes. The content hash is computed server-side\nfrom the decoded bytes, so the returned `contentHash` is always the hash of\nwhat was stored; `contentSha256`, when supplied, is verified against it.\nRe-uploading identical bytes into the same namespace answers 409 with the\nexisting document id.",
+                "operationId": "UploadDocument",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UploadDocumentRequestContent"
+                            },
+                            "examples": {
+                                "UploadDocument_example1": {
+                                    "summary": "Upload a plain-text policy",
+                                    "description": "",
+                                    "value": {
+                                        "filename": "loan-policy.txt",
+                                        "contentType": "text/plain",
+                                        "contentBase64": "5L+d6K+B6LS35qy+5pS/562W"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "UploadDocument_example1": {
+                                "summary": "Upload a plain-text policy",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "UploadDocument 201 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadDocumentResponseContent"
+                                },
+                                "examples": {
+                                    "UploadDocument_example1": {
+                                        "summary": "Upload a plain-text policy",
+                                        "description": "",
+                                        "value": {
+                                            "documentId": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d",
+                                            "version": 1,
+                                            "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                            "status": "PROCESSING"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ConflictError 409 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConflictErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/documents/{documentId}/chunks": {
+            "get": {
+                "description": "List the chunks of one document in document order.",
+                "operationId": "ListDocumentChunks",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "path",
+                        "description": "Document whose chunks to list.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Document whose chunks to list."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "nextToken",
+                        "in": "query",
+                        "description": "Pagination token from a previous response.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 8192,
+                            "minLength": 1,
+                            "description": "Pagination token from a previous response."
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum chunks per page (default and maximum 200).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 200,
+                            "minimum": 1,
+                            "description": "Maximum chunks per page (default and maximum 200)."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListDocumentChunks 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListDocumentChunksResponseContent"
+                                },
+                                "examples": {
+                                    "ListDocumentChunks_example1": {
+                                        "summary": "List one document's chunks",
+                                        "description": "",
+                                        "value": {
+                                            "items": [
+                                                {
+                                                    "chunkId": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                                    "page": 1,
+                                                    "text": "示例切片文本",
+                                                    "charStart": 0,
+                                                    "charEnd": 6
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidDocumentsDocumentidChunks",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "path",
+                        "description": "Document whose chunks to list.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Document whose chunks to list."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListDocumentChunks_example1": {
+                                "summary": "List one document's chunks",
+                                "description": "",
+                                "value": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/export-osi": {
             "get": {
                 "description": "Export metric definitions as an OSI (Open Semantic Interchange) YAML document.",
@@ -22187,6 +23726,39 @@
                     "message"
                 ]
             },
+            "ApproveFactCandidateRequestContent": {
+                "type": "object",
+                "properties": {
+                    "actor": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Identity of the approving principal; defaults to the caller."
+                    },
+                    "factOverrides": {
+                        "$ref": "#/components/schemas/FactOverrides"
+                    }
+                }
+            },
+            "ApproveFactCandidateResponseContent": {
+                "type": "object",
+                "properties": {
+                    "factId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier of the written fact."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/FactCandidateStatus"
+                    }
+                },
+                "required": [
+                    "factId",
+                    "status"
+                ]
+            },
             "ApproveSourceResponseContent": {
                 "type": "object",
                 "properties": {
@@ -23257,6 +24829,52 @@
                     }
                 }
             },
+            "DocumentChunk": {
+                "type": "object",
+                "description": "One text chunk of a document.",
+                "properties": {
+                    "chunkId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier of the chunk; also the entity URI suffix used by its embedding."
+                    },
+                    "page": {
+                        "type": "number",
+                        "description": "1-based page number the chunk came from (1 for plain-text sources)."
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Chunk text exactly as indexed."
+                    },
+                    "charStart": {
+                        "type": "number",
+                        "description": "Inclusive character offset of the chunk in the normalised document text."
+                    },
+                    "charEnd": {
+                        "type": "number",
+                        "description": "Exclusive character offset of the chunk in the normalised document text."
+                    }
+                },
+                "required": [
+                    "charEnd",
+                    "charStart",
+                    "chunkId",
+                    "page",
+                    "text"
+                ]
+            },
+            "DocumentMetadata": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "minLength": 0,
+                    "description": "Value of a caller-metadata entry."
+                },
+                "description": "Free-form document metadata carried through ingestion."
+            },
             "DocumentSourceDetail": {
                 "type": "object",
                 "description": "Type-specific detail for DOCUMENTS sources.",
@@ -23329,6 +24947,55 @@
                         "description": "Distinct chunk nodes inserted into the Neptune graph. Bounded by the true\nchunk count. Null until the KG build has run."
                     }
                 }
+            },
+            "DocumentStatus": {
+                "type": "string",
+                "description": "Lifecycle status of an ingested document.",
+                "enum": [
+                    "UPLOADED",
+                    "PROCESSING",
+                    "INDEXED",
+                    "FAILED"
+                ]
+            },
+            "DocumentSummary": {
+                "type": "object",
+                "description": "One document in the namespace's ingestion registry.",
+                "properties": {
+                    "documentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier assigned by UploadDocument."
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Display title (caller-supplied, else the filename)."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/DocumentStatus"
+                    },
+                    "chunkCount": {
+                        "type": "number",
+                        "description": "Number of chunks written for this document."
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "description": "Timestamp of the last status change (RFC 3339).\n\nDeclared as a string, like the other summary types in this service, so\nthe wire value is the stored RFC 3339 text rather than an epoch number."
+                    },
+                    "errorMessage": {
+                        "type": "string",
+                        "description": "Why ingestion failed. Present only when `status` is `FAILED`."
+                    }
+                },
+                "required": [
+                    "chunkCount",
+                    "documentId",
+                    "status",
+                    "title",
+                    "updatedAt"
+                ]
             },
             "DownloadOntologyResponseContent": {
                 "type": "object",
@@ -23487,6 +25154,84 @@
                     "continuous",
                     "separated"
                 ]
+            },
+            "FactCandidate": {
+                "type": "object",
+                "description": "One subject-predicate-object candidate extracted from a document chunk.",
+                "properties": {
+                    "candidateId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier assigned at extraction time."
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Subject IRI or literal label as extracted."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "description": "Predicate IRI or label as extracted."
+                    },
+                    "object": {
+                        "type": "string",
+                        "description": "Object IRI or literal label as extracted."
+                    },
+                    "confidence": {
+                        "type": "number",
+                        "description": "Extractor confidence in [0, 1].",
+                        "format": "float"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/FactCandidateStatus"
+                    },
+                    "documentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Document the candidate was extracted from."
+                    },
+                    "chunkId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Chunk the candidate was extracted from."
+                    },
+                    "evidence": {
+                        "type": "string",
+                        "description": "Source sentence the candidate was extracted from."
+                    }
+                },
+                "required": [
+                    "candidateId",
+                    "confidence",
+                    "object",
+                    "predicate",
+                    "status",
+                    "subject"
+                ]
+            },
+            "FactCandidateStatus": {
+                "type": "string",
+                "description": "Review status of an extracted fact candidate.",
+                "enum": [
+                    "PENDING",
+                    "APPROVED",
+                    "REJECTED"
+                ]
+            },
+            "FactOverrides": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "minLength": 1,
+                    "description": "Replacement value for one fact field."
+                },
+                "description": "Overrides applied to the fact written when a candidate is approved. Keys are\n`subject`, `predicate` and `object`; absent keys keep the candidate values."
             },
             "FetchOntologyRequestContent": {
                 "type": "object",
@@ -25394,6 +27139,72 @@
                     "tableId"
                 ]
             },
+            "ListDocumentChunksResponseContent": {
+                "type": "object",
+                "description": "Standard pagination output",
+                "properties": {
+                    "nextToken": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "minLength": 1,
+                        "description": "Opaque token for fetching the next page; absent when there are no more results."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentChunk"
+                        },
+                        "description": "Page of chunks, ordered by `charStart`."
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "ListDocumentsResponseContent": {
+                "type": "object",
+                "description": "Standard pagination output",
+                "properties": {
+                    "nextToken": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "minLength": 1,
+                        "description": "Opaque token for fetching the next page; absent when there are no more results."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DocumentSummary"
+                        },
+                        "description": "Page of document summaries."
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
+            "ListFactCandidatesResponseContent": {
+                "type": "object",
+                "description": "Standard pagination output",
+                "properties": {
+                    "nextToken": {
+                        "type": "string",
+                        "maxLength": 8192,
+                        "minLength": 1,
+                        "description": "Opaque token for fetching the next page; absent when there are no more results."
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FactCandidate"
+                        },
+                        "description": "Page of candidates, newest first."
+                    }
+                },
+                "required": [
+                    "items"
+                ]
+            },
             "ListFoundationalOntologiesResponseContent": {
                 "type": "object",
                 "properties": {
@@ -26700,6 +28511,37 @@
                     "REDSHIFT"
                 ]
             },
+            "RejectFactCandidateRequestContent": {
+                "type": "object",
+                "properties": {
+                    "actor": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Identity of the rejecting principal; defaults to the caller."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "description": "Why the candidate was rejected."
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
+            "RejectFactCandidateResponseContent": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "$ref": "#/components/schemas/FactCandidateStatus"
+                    }
+                },
+                "required": [
+                    "status"
+                ]
+            },
             "RejectProposalsRequestContent": {
                 "type": "object",
                 "properties": {
@@ -27900,6 +29742,77 @@
                 "required": [
                     "reviewStatus",
                     "tableId"
+                ]
+            },
+            "UploadDocumentRequestContent": {
+                "type": "object",
+                "properties": {
+                    "filename": {
+                        "type": "string",
+                        "maxLength": 512,
+                        "minLength": 1,
+                        "description": "Original filename, including extension."
+                    },
+                    "contentType": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 1,
+                        "description": "MIME type of the uploaded bytes, e.g. `text/plain`."
+                    },
+                    "contentBase64": {
+                        "type": "string",
+                        "maxLength": 10485760,
+                        "minLength": 1,
+                        "description": "Base64-encoded document content."
+                    },
+                    "contentSha256": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "minLength": 64,
+                        "description": "SHA-256 of the content (lowercase hex). Optional when\n`contentBase64` is supplied — if present it must match the decoded\nbytes, and is rejected rather than ignored when it does not."
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 512,
+                        "minLength": 1,
+                        "description": "Display title; defaults to `filename`."
+                    },
+                    "metadata": {
+                        "$ref": "#/components/schemas/DocumentMetadata"
+                    }
+                },
+                "required": [
+                    "contentType",
+                    "filename"
+                ]
+            },
+            "UploadDocumentResponseContent": {
+                "type": "object",
+                "properties": {
+                    "documentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Identifier of the stored document."
+                    },
+                    "version": {
+                        "type": "number",
+                        "description": "Document version (1 for the first upload of these bytes)."
+                    },
+                    "contentHash": {
+                        "type": "string",
+                        "description": "SHA-256 of the stored bytes, lowercase hex."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/DocumentStatus"
+                    }
+                },
+                "required": [
+                    "contentHash",
+                    "documentId",
+                    "status",
+                    "version"
                 ]
             },
             "UploadFileRequest": {

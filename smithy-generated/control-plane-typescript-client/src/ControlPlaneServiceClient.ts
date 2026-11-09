@@ -63,6 +63,10 @@ import {
   resolveHttpAuthSchemeConfig,
 } from "./auth/httpAuthSchemeProvider";
 import type { AcceptProposalCommandInput, AcceptProposalCommandOutput } from "./commands/AcceptProposalCommand";
+import type {
+  ApproveFactCandidateCommandInput,
+  ApproveFactCandidateCommandOutput,
+} from "./commands/ApproveFactCandidateCommand";
 import type { ApproveSourceCommandInput, ApproveSourceCommandOutput } from "./commands/ApproveSourceCommand";
 import type {
   BulkDeleteMetricsCommandInput,
@@ -152,6 +156,15 @@ import type {
   KeepRescanRemovalCommandOutput,
 } from "./commands/KeepRescanRemovalCommand";
 import type {
+  ListDocumentChunksCommandInput,
+  ListDocumentChunksCommandOutput,
+} from "./commands/ListDocumentChunksCommand";
+import type { ListDocumentsCommandInput, ListDocumentsCommandOutput } from "./commands/ListDocumentsCommand";
+import type {
+  ListFactCandidatesCommandInput,
+  ListFactCandidatesCommandOutput,
+} from "./commands/ListFactCandidatesCommand";
+import type {
   ListFoundationalOntologiesCommandInput,
   ListFoundationalOntologiesCommandOutput,
 } from "./commands/ListFoundationalOntologiesCommand";
@@ -205,6 +218,10 @@ import type {
   PutSourceRescanScheduleCommandInput,
   PutSourceRescanScheduleCommandOutput,
 } from "./commands/PutSourceRescanScheduleCommand";
+import type {
+  RejectFactCandidateCommandInput,
+  RejectFactCandidateCommandOutput,
+} from "./commands/RejectFactCandidateCommand";
 import type { RejectProposalsCommandInput, RejectProposalsCommandOutput } from "./commands/RejectProposalsCommand";
 import type { RejectSourceCommandInput, RejectSourceCommandOutput } from "./commands/RejectSourceCommand";
 import type {
@@ -244,6 +261,7 @@ import type {
   UpdateSourceTableMetadataCommandInput,
   UpdateSourceTableMetadataCommandOutput,
 } from "./commands/UpdateSourceTableMetadataCommand";
+import type { UploadDocumentCommandInput, UploadDocumentCommandOutput } from "./commands/UploadDocumentCommand";
 import type { UploadOntologyCommandInput, UploadOntologyCommandOutput } from "./commands/UploadOntologyCommand";
 import type { ValidateMetricCommandInput, ValidateMetricCommandOutput } from "./commands/ValidateMetricCommand";
 import type { ValidateProposalCommandInput, ValidateProposalCommandOutput } from "./commands/ValidateProposalCommand";
@@ -263,6 +281,7 @@ export { __Client };
  */
 export type ServiceInputTypes =
   | AcceptProposalCommandInput
+  | ApproveFactCandidateCommandInput
   | ApproveSourceCommandInput
   | BulkDeleteMetricsCommandInput
   | CancelProposalCommandInput
@@ -309,6 +328,9 @@ export type ServiceInputTypes =
   | InferConstraintsCommandInput
   | IngestOntologyFromS3CommandInput
   | KeepRescanRemovalCommandInput
+  | ListDocumentChunksCommandInput
+  | ListDocumentsCommandInput
+  | ListFactCandidatesCommandInput
   | ListFoundationalOntologiesCommandInput
   | ListInducedDatasourcesCommandInput
   | ListInductionJobsCommandInput
@@ -327,6 +349,7 @@ export type ServiceInputTypes =
   | LoadFoundationalOntologyCommandInput
   | PutSourceEventRescanCommandInput
   | PutSourceRescanScheduleCommandInput
+  | RejectFactCandidateCommandInput
   | RejectProposalsCommandInput
   | RejectSourceCommandInput
   | RepairProposalDatatypesCommandInput
@@ -342,6 +365,7 @@ export type ServiceInputTypes =
   | UpdateSourceMetadataCommandInput
   | UpdateSourceTableKeysCommandInput
   | UpdateSourceTableMetadataCommandInput
+  | UploadDocumentCommandInput
   | UploadOntologyCommandInput
   | ValidateMetricCommandInput
   | ValidateProposalCommandInput;
@@ -351,6 +375,7 @@ export type ServiceInputTypes =
  */
 export type ServiceOutputTypes =
   | AcceptProposalCommandOutput
+  | ApproveFactCandidateCommandOutput
   | ApproveSourceCommandOutput
   | BulkDeleteMetricsCommandOutput
   | CancelProposalCommandOutput
@@ -397,6 +422,9 @@ export type ServiceOutputTypes =
   | InferConstraintsCommandOutput
   | IngestOntologyFromS3CommandOutput
   | KeepRescanRemovalCommandOutput
+  | ListDocumentChunksCommandOutput
+  | ListDocumentsCommandOutput
+  | ListFactCandidatesCommandOutput
   | ListFoundationalOntologiesCommandOutput
   | ListInducedDatasourcesCommandOutput
   | ListInductionJobsCommandOutput
@@ -415,6 +443,7 @@ export type ServiceOutputTypes =
   | LoadFoundationalOntologyCommandOutput
   | PutSourceEventRescanCommandOutput
   | PutSourceRescanScheduleCommandOutput
+  | RejectFactCandidateCommandOutput
   | RejectProposalsCommandOutput
   | RejectSourceCommandOutput
   | RepairProposalDatatypesCommandOutput
@@ -430,6 +459,7 @@ export type ServiceOutputTypes =
   | UpdateSourceMetadataCommandOutput
   | UpdateSourceTableKeysCommandOutput
   | UpdateSourceTableMetadataCommandOutput
+  | UploadDocumentCommandOutput
   | UploadOntologyCommandOutput
   | ValidateMetricCommandOutput
   | ValidateProposalCommandOutput;

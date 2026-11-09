@@ -3,6 +3,56 @@
  * @public
  * @enum
  */
+export const FactCandidateStatus = {
+  /**
+   * Approved; a fact row and an A-Box triple exist.
+   */
+  APPROVED: "APPROVED",
+  /**
+   * Awaiting steward review.
+   */
+  PENDING: "PENDING",
+  /**
+   * Rejected; kept for audit, never projected into the A-Box.
+   */
+  REJECTED: "REJECTED",
+} as const;
+/**
+ * @public
+ */
+export type FactCandidateStatus = (typeof FactCandidateStatus)[keyof typeof FactCandidateStatus];
+
+/**
+ * @public
+ * @enum
+ */
+export const DocumentStatus = {
+  /**
+   * Ingestion failed; the document row keeps the error reason.
+   */
+  FAILED: "FAILED",
+  /**
+   * Chunks, embeddings and fact candidates exist.
+   */
+  INDEXED: "INDEXED",
+  /**
+   * Ingestion (chunking/embedding/extraction) in progress.
+   */
+  PROCESSING: "PROCESSING",
+  /**
+   * Bytes stored, ingestion not started.
+   */
+  UPLOADED: "UPLOADED",
+} as const;
+/**
+ * @public
+ */
+export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus];
+
+/**
+ * @public
+ * @enum
+ */
 export const PrincipalType = {
   /**
    * A non-human agent identity (e.g. a service or automation).

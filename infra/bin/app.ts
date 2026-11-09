@@ -333,6 +333,13 @@ async function deploy(): Promise<void> {
       "/namespaces/{namespaceId}/sources/{sourceId}/event-rescan": `/${prefix}/sources/api-fn-arn`,
       "/namespaces/{namespaceId}/sources/{sourceId}/metadata": `/${prefix}/sources/api-fn-arn`,
       "/namespaces/{namespaceId}/sources/upload-urls": `/${prefix}/sources/api-fn-arn`,
+      // Document ingestion + fact-candidate review (documents.smithy); the
+      // same paths the local bridge maps to the sources handler.
+      "/namespaces/{namespaceId}/documents": `/${prefix}/sources/api-fn-arn`,
+      "/namespaces/{namespaceId}/documents/{documentId}/chunks": `/${prefix}/sources/api-fn-arn`,
+      "/namespaces/{namespaceId}/candidates": `/${prefix}/sources/api-fn-arn`,
+      "/namespaces/{namespaceId}/candidates/{candidateId}/approve": `/${prefix}/sources/api-fn-arn`,
+      "/namespaces/{namespaceId}/candidates/{candidateId}/reject": `/${prefix}/sources/api-fn-arn`,
       "/roles": `/${prefix}/namespace/platform-roles-api-fn-arn`,
       "/namespaces/{namespaceId}/roles": `/${prefix}/namespace/roles-api-fn-arn`,
       "/namespaces/{namespaceId}/roles/{roleId}": `/${prefix}/namespace/roles-api-fn-arn`,
