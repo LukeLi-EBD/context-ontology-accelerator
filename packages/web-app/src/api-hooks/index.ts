@@ -42,6 +42,22 @@ export { useUpdateSourceTableKeys } from "./use-update-source-table-keys";
 export { useKeepRescanRemoval } from "./use-keep-rescan-removal";
 export { useUpdateSourceColumnMetadata } from "./use-update-source-column-metadata";
 export { useListMetrics, useImportOsi, useExportOsi } from "./use-metrics";
+export { useListDocuments } from "./use-list-documents";
+export { useListDocumentChunks } from "./use-list-document-chunks";
+export { useListFactCandidates } from "./use-list-fact-candidates";
+export type { FactCandidateFilters } from "./use-list-fact-candidates";
+export { useUploadDocument } from "./use-upload-document";
+export { useReviewFactCandidate } from "./use-review-fact-candidate";
+export { useChunkVectorSearch } from "./use-chunk-vector-search";
+export {
+  useVerifyAboxFact,
+  DOCUMENT_ABOX_ONTOLOGY_ID,
+} from "./use-verify-abox-fact";
+export type { AboxFactVerification } from "./use-verify-abox-fact";
+export type {
+  ChunkEmbedding,
+  ChunkVectorSearchResult,
+} from "./use-chunk-vector-search";
 export { useGetOntologyUploadUrl } from "./use-get-ontology-upload-url";
 export { useIngestOntologyFromS3 } from "./use-ingest-ontology-from-s3";
 export { useGetIngestStatus } from "./use-get-ingest-status";

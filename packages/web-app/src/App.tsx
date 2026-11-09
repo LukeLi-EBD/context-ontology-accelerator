@@ -35,6 +35,10 @@ import { GraphSearchPage } from "./pages/ontology/GraphSearch";
 import { InducedOntologyDetailPage } from "./pages/ontology/InducedOntologyDetail";
 import { OntologyClassDetailPage } from "./pages/ontology/OntologyClassDetail";
 import { MetricList } from "./pages/MetricList";
+import DocumentsPage from "./pages/DocumentsPage";
+import DocumentDetailPage from "./pages/DocumentDetailPage";
+import CandidatesPage from "./pages/CandidatesPage";
+import RetrievalPage from "./pages/RetrievalPage";
 import { IdentityPage } from "./pages/IdentityPage";
 import { SystemHealthPage } from "./pages/SystemHealthPage";
 import { MetricDetail } from "./pages/MetricDetail";
@@ -190,6 +194,11 @@ function AppShell() {
           text: t("Sources"),
           href: `${nsPath}/sources`,
         },
+        {
+          type: "link" as const,
+          text: t("Documents"),
+          href: `${nsPath}/documents`,
+        },
       ],
     },
     {
@@ -210,6 +219,16 @@ function AppShell() {
           type: "link" as const,
           text: t("Metrics"),
           href: `${nsPath}/metrics`,
+        },
+        {
+          type: "link" as const,
+          text: t("Candidates"),
+          href: `${nsPath}/candidates`,
+        },
+        {
+          type: "link" as const,
+          text: t("Retrieval"),
+          href: `${nsPath}/retrieval`,
         },
       ],
     },
@@ -614,6 +633,22 @@ function AppShell() {
               <Route
                 path="/namespaces/:namespaceId/ontology/induced/class"
                 element={<OntologyClassDetailPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/documents"
+                element={<DocumentsPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/documents/:documentId"
+                element={<DocumentDetailPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/candidates"
+                element={<CandidatesPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/retrieval"
+                element={<RetrievalPage />}
               />
               <Route
                 path="/namespaces/:namespaceId/metrics"

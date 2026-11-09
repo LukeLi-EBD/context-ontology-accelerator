@@ -2449,6 +2449,89 @@ export const MESSAGES_JA = {
   "the query reached outside the source's graph":
     "クエリがソースのグラフの外側を参照しました",
   "the result could not be bounded": "結果の上限を設定できませんでした",
+  // Documents / chunks / candidates / retrieval pages.
+  Candidates: "候補",
+  Retrieval: "検索",
+  "Loading documents": "文書を読み込み中",
+  "Upload a document and follow its ingestion: chunks, extraction, and review.":
+    "文書をアップロードし、チャンク化・抽出・レビューの流れを追跡します。",
+  "Upload document": "文書をアップロード",
+  Indexed: "インデックス済み",
+  Chunks: "チャンク",
+  "No documents": "文書がありません",
+  "Upload a document to start ingestion.":
+    "文書をアップロードすると取り込みが始まります。",
+  "Upload file": "ファイルをアップロード",
+  "Paste text": "テキストを貼り付け",
+  "File name": "ファイル名",
+  Content: "内容",
+  "Paste the document text here.": "ここに文書のテキストを貼り付けてください。",
+  "Choose file": "ファイルを選択",
+  "Drop file to upload": "ファイルをドロップしてアップロード",
+  "Remove file {index}": "ファイル {index} を削除",
+  "Show fewer files": "ファイルを少なく表示",
+  "Show more files": "ファイルをさらに表示",
+  "Document title": "文書タイトル",
+  "Title is optional; the filename is used when empty.":
+    "タイトルは任意です。空の場合はファイル名を使用します。",
+  "Document uploaded: {documentId}": "文書をアップロードしました: {documentId}",
+  "This document already exists in this namespace.":
+    "同じ内容の文書がこの名前空間に既に存在します。",
+  "Failed to upload document: {message}":
+    "文書のアップロードに失敗しました: {message}",
+  "Loading chunks": "チャンクを読み込み中",
+  "Open in retrieval": "検索で開く",
+  Chunk: "チャンク",
+  Page: "ページ",
+  Characters: "文字範囲",
+  "Chunk text": "チャンク本文",
+  "No chunks yet": "チャンクがまだありません",
+  "Chunks appear here once ingestion has finished.":
+    "取り込みが完了するとここにチャンクが表示されます。",
+  "Load more chunks": "チャンクをさらに読み込む",
+  "Back to documents": "文書一覧に戻る",
+  "Ingestion failed": "取り込みに失敗しました",
+  "Loading candidates": "候補を読み込み中",
+  "Candidates extracted from this namespace's documents. Approving one writes the fact and projects it into the graph.":
+    "この名前空間の文書から抽出された候補です。承認するとファクトが書き込まれ、グラフに反映されます。",
+  Subject: "主語",
+  Object: "目的語",
+  Document: "文書",
+  "No candidates": "候補がありません",
+  "Candidates appear here after a document has been ingested.":
+    "文書の取り込みが完了するとここに候補が表示されます。",
+  "Load more candidates": "候補をさらに読み込む",
+  "Reject candidate": "候補を却下",
+  "Reason for rejection": "却下理由",
+  "A reason is required.": "理由は必須です。",
+  "This candidate is no longer pending.": "この候補は既に処理済みです。",
+  "Failed to review candidate: {message}":
+    "候補のレビューに失敗しました: {message}",
+  "Candidate approved: {factId}": "候補を承認しました: {factId}",
+  "Candidate rejected.": "候補を却下しました。",
+  "Reads a chunk's stored embedding and runs a real k-NN search with it. The query vector and the hits both come from the vector store.":
+    "チャンクに保存された埋め込みを読み取り、それを使って実際の k-NN 検索を実行します。クエリベクトルも検索結果もベクトルストアから取得します。",
+  "Vector retrieval": "ベクトル検索",
+  "Select a document": "文書を選択",
+  "Search this vector": "このベクトルで検索",
+  "Top matches": "上位の一致",
+  "Query vector: {uri} ({dimensions} dimensions)":
+    "クエリベクトル: {uri}（{dimensions} 次元）",
+  Rank: "順位",
+  "Matched this chunk": "このチャンクに一致",
+  "Other chunk": "他のチャンク",
+  "Run a search to see the hits.": "検索を実行すると一致結果が表示されます。",
+  "Chunk vector is not indexed yet.":
+    "このチャンクのベクトルはまだインデックスされていません。",
+  "Failed to run retrieval: {message}": "検索に失敗しました: {message}",
+  "Verify A-Box": "A-Box を確認",
+  "A-Box triple verified: {uri} in {graph}.":
+    "A-Box のトリプルを確認しました: {uri}（{graph}）。",
+  "No A-Box triple found for this fact yet.":
+    "このファクトの A-Box トリプルはまだ見つかりません。",
+  "A-Box verification failed: {message}":
+    "A-Box の確認に失敗しました: {message}",
+  "Select a document to inspect": "確認する文書を選択してください",
   'Must be an absolute http(s) IRI without spaces or any of < > " { } | \\ ^ `.':
     '空白および < > " { } | \\ ^ ` のいずれも含まない、絶対 http(s) IRI を指定してください。',
 } as const;
