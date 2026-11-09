@@ -265,7 +265,7 @@ class PublishTests(unittest.TestCase):
         if publish_existing:
             body["publishExisting"] = True
         response = self.client.post(
-            f"/api/ontology/imports/{import_id}/publish", json=body
+            f"/ontology/imports/{import_id}/publish", json=body
         )
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()

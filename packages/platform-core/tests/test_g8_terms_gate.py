@@ -893,14 +893,14 @@ class PublishGateTests(unittest.TestCase):
         self.assertEqual(stored["purposeVerified"], False)
         self.assertNotIn(self.smoke_token, response.text)
 
-    def test_17_wrong_token_on_api_alias_is_blocked_and_recorded_as_forged(self):
+    def test_17_wrong_token_on_publish_is_blocked_and_recorded_as_forged(self):
         self.registry.set_terms_gate(TermsConfig(gate="warn"))
         self._set_mark()
         record = self._import(NO_TERMS_TTL, "g8wrongtoken")
         version_id = _import_version_id(record["importId"])
         wrong = "wrong-" + uuid.uuid4().hex
         response = self.client.post(
-            f"/api/ontology/imports/{record['importId']}/publish",
+            f"/ontology/imports/{record['importId']}/publish",
             json={
                 "dryRun": False, "acknowledgeBreaking": True,
                 "actor": "smoke-selftest", "purpose": "smoke",

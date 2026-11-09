@@ -3336,7 +3336,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # ---- G-01: versioned TTL import --------------------------------------
 
     @app.post("/ontology/import")
-    @app.post("/api/ontology/import")
     async def ontology_import(request: Request) -> dict[str, Any]:
         """G-01 first half: parse the uploaded ontology and return real counts.
 
@@ -3423,7 +3422,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return persist_import(result, merged, raw, runtime.metadata, runtime.graph)
 
     @app.get("/ontology/imports/{import_id}")
-    @app.get("/api/ontology/imports/{import_id}")
     def ontology_import_record(import_id: str) -> dict[str, Any]:
         record = get_import_record(runtime.metadata, import_id)
         if record is None:
@@ -3436,7 +3434,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return record
 
     @app.post("/ontology/imports/{import_id}/publish")
-    @app.post("/api/ontology/imports/{import_id}/publish")
     def ontology_import_publish(
         import_id: str,
         request: Request,
@@ -3472,7 +3469,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         )
 
     @app.put("/ontology/shapes")
-    @app.put("/api/ontology/shapes")
     async def ontology_shapes_deploy(
         request: Request,
         namespace: str = Query(...),
@@ -3512,7 +3508,6 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         )
 
     @app.get("/ontology/shapes")
-    @app.get("/api/ontology/shapes")
     def ontology_shapes_list() -> dict[str, Any]:
         return runtime.shapes.list()
 
