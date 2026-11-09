@@ -21,6 +21,7 @@ from coa_ports import (
     ContextManagerPort,
     EventBusPort,
     IdentityPort,
+    MetadataStorePort,
     ObjectStorePort,
     SchedulerPort,
     SchemaProvider,
@@ -156,6 +157,13 @@ def _metadata_pg(settings: Settings) -> Any:
     store = MetadataPg(settings.require("COA_METADATA_PG_DSN", interface="MetadataStorePort"))
     store.open(retry_seconds=settings.get_float("COA_METADATA_PG_OPEN_TIMEOUT_S", default=10.0))
     return store
+
+
+def _metadata_store(settings: Settings) -> Any:
+    """Wrap ``MetadataPg`` so the interface has ``probe`` and COA errors."""
+    from coa_local_providers.shells import MetadataStoreShell
+
+    return MetadataStoreShell(_metadata_pg(settings), provider="postgres")
 
 
 def _env_secrets(_settings: Settings) -> Any:
@@ -353,10 +361,9 @@ SPECS: tuple[InterfaceSpec, ...] = (
         name="MetadataStorePort",
         key="COA_PROVIDER_METADATA_STORE",
         context="本体 / 控制面",
-        required_methods=("query", "execute"),
-        expects_async=False,
-        providers=_providers(_done("postgres", _metadata_pg), _todo("dynamodb", _AWS)),
-        notes="平台 MetadataPg 有 migrate 无 probe，与端口差 1 个方法",
+        protocol=MetadataStorePort,
+        providers=_providers(_done("postgres", _metadata_store), _todo("dynamodb", _AWS)),
+        notes="薄壳已落地：MetadataPg 的 list[dict] 转 tuple[Mapping]，补 probe（S9）",
     ),
     InterfaceSpec(
         name="SecretProvider",

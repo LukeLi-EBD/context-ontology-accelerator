@@ -13,6 +13,8 @@ root (``coa_runtime``) and by nobody else.
 
 from __future__ import annotations
 
+from .metadata_store import MetadataStoreShell
+from .object_store import ObjectStoreShell
 from .secret_env import EnvSecretShell
 
-__all__ = ["EnvSecretShell"]
+__all__ = ["EnvSecretShell", "MetadataStoreShell", "ObjectStoreShell"]
