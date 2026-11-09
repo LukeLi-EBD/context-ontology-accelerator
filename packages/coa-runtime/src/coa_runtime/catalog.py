@@ -69,6 +69,8 @@ class InterfaceSpec:
         required_methods: Method names checked when no protocol exists.
         expects_async: ``True``/``False`` enforces the call style of
             ``required_methods``; ``None`` skips the check.
+        port_location: Module that owns the Protocol when it lives outside
+            ``coa_ports`` (plan §7.2 exceptions). Empty means ``coa_ports``.
         providers: Provider name -> spec. Insertion order is the documented order.
     """
 
@@ -79,6 +81,7 @@ class InterfaceSpec:
     protocol: type | None = None
     required_methods: tuple[str, ...] = ()
     expects_async: bool | None = None
+    port_location: str = ""
     notes: str = ""
 
     @property
@@ -207,9 +210,11 @@ SPECS: tuple[InterfaceSpec, ...] = (
         name="ControlPlaneStore",
         key="COA_PROVIDER_CONTROL_PLANE_STORE",
         context="控制面",
-        required_methods=("get_item", "put_item"),
-        expects_async=True,
+        required_methods=("get", "put", "query", "update", "delete"),
+        expects_async=False,
+        port_location="coa_control_plane.ports",
         providers=_providers(_todo("postgres"), _todo("dynamodb", _AWS)),
+        notes="同步 DynamoDB item 语义，镜像 coa_common.dao.DatastoreDAO；阶段 7 实现",
     ),
     InterfaceSpec(
         name="ConfigProvider",
@@ -284,8 +289,9 @@ SPECS: tuple[InterfaceSpec, ...] = (
         name="OcrPort",
         key="COA_PROVIDER_OCR",
         context="文档摄入",
-        required_methods=("extract",),
+        required_methods=("extract", "health_check"),
         expects_async=True,
+        port_location="coa_serve.ports",
         providers=_providers(_todo("local"), _todo("textract", _AWS)),
     ),
     # ── 10 reused interfaces (plan §7.1) ──

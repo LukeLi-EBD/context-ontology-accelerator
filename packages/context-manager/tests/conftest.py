@@ -6,9 +6,18 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
+# Import the package from the source tree when the suite is run without an
+# editable install; ``coa_ports`` is a sibling package with the same need.
+_PACKAGES = Path(__file__).resolve().parents[2]
+for _path in (str(_PACKAGES / "context-manager" / "src"), str(_PACKAGES / "coa-ports" / "src")):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 
 @pytest.fixture(autouse=True)
