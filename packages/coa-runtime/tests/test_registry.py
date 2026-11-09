@@ -283,6 +283,7 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
         "OntologyLookup": ["graph"],
         "QueryExecutor": ["postgres"],
         "SecretProvider": ["env", "secretsmanager"],
+        "SessionMetadata": ["postgres"],
         "VectorClient": ["platform-pgvector"],
         "WarehouseAdminPort": ["postgres"],
     }

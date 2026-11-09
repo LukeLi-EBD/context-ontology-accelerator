@@ -64,6 +64,55 @@ def resolve_vector_client() -> Any:
     return _resolve("VectorClient")
 
 
+class PortEmbedding:
+    """The single-text ``embed`` COA's clients call, over the ``Embedding`` port.
+
+    The port's ``embed`` is batch-shaped (``list[str] -> list[list[float]]``),
+    while every call site here embeds one query or one document chunk. This
+    adapter is that shape conversion and nothing else.
+    """
+
+    provider = "catalog"
+
+    def __init__(self, inner: Any) -> None:
+        self._inner = inner
+
+    async def embed(self, text: str) -> list[float]:
+        vectors = await self._inner.embed([text])
+        if not vectors:
+            raise ValueError("embedding provider returned no vector")
+        return list(vectors[0])
+
+
+class ChatWithPortEmbedding:
+    """Chat stays on its client; ``embed`` is served by the embedding port.
+
+    ``converse``/``converse_stream``/``health_check``/``model_id``/``close``
+    delegate to the chat client, so every existing call site is unchanged. Only
+    the embedding call is redirected — the two Bedrock surfaces are separate
+    port shapes and are injected separately.
+    """
+
+    def __init__(self, chat: Any, embedding: Any) -> None:
+        self._chat = chat
+        self._embedding = embedding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._chat, name)
+
+    async def embed(self, text: str) -> list[float]:
+        return await self._embedding.embed(text)
+
+
+def resolve_embedding_client() -> PortEmbedding:
+    """``COA_PROVIDER_EMBEDDING`` -> the single-text embedding adapter.
+
+    Required: a missing key or an unknown provider raises at init, exactly like
+    the graph/vector keys. There is no fallback to Bedrock embeddings.
+    """
+    return PortEmbedding(_resolve("Embedding"))
+
+
 def resolve_authorization_port() -> Any | None:
     """``COA_PROVIDER_AUTHORIZATION`` -> the policy/grant source, or ``None``.
 
@@ -80,9 +129,36 @@ def resolve_authorization_port() -> Any | None:
     return _resolve("AuthorizationPolicies")
 
 
+def resolve_session_metadata(config: Any) -> Any | None:
+    """``COA_PROVIDER_SESSION_METADATA`` -> the session discovery index.
+
+    ``None`` only when nothing is configured at all (the index is optional and
+    was already off in that case): no provider key and no
+    ``SESSION_METADATA_TABLE``. With the key unset but the table configured, the
+    legacy DynamoDB store is kept. A key that is set but cannot be resolved
+    raises, so a typo or a missing DSN never silently disables the index.
+    """
+    from coa_runtime.settings import Settings
+
+    if Settings.from_environ().get("COA_PROVIDER_SESSION_METADATA") is not None:
+        return _resolve("SessionMetadata")
+    if not config.session_metadata_table:
+        return None
+    from ..session_metadata import SessionMetadataStore
+
+    return SessionMetadataStore(
+        table_name=config.session_metadata_table,
+        region=config.bedrock_region,
+    )
+
+
 __all__ = [
+    "ChatWithPortEmbedding",
     "GraphClientAdapter",
+    "PortEmbedding",
     "resolve_authorization_port",
+    "resolve_embedding_client",
     "resolve_graph_client",
+    "resolve_session_metadata",
     "resolve_vector_client",
 ]

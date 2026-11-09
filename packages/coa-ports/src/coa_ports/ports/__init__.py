@@ -18,6 +18,7 @@ from .orchestration import (
     WorkflowPort,
 )
 from .storage import GraphStorePort, MetadataStorePort, ObjectStorePort, SecretProvider
+from .session import SessionMetadataPort
 
 __all__ = [
     "AuthorizationPort",
@@ -36,6 +37,7 @@ __all__ = [
     "SchemaProvider",
     "SecretProvider",
     "ServiceRegistryPort",
+    "SessionMetadataPort",
     "TaskQueuePort",
     "WarehouseAdminPort",
     "WorkflowPort",

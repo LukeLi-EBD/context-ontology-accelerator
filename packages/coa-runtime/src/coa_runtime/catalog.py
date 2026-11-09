@@ -30,6 +30,7 @@ from coa_ports import (
     SchemaProvider,
     SecretProvider,
     ServiceRegistryPort,
+    SessionMetadataPort,
     TaskQueuePort,
     WarehouseAdminPort,
     WorkflowPort,
@@ -341,6 +342,15 @@ def _authorization_file(settings: Settings) -> Any:
     )
 
 
+def _session_metadata_pg(settings: Settings) -> Any:
+    """Session discovery index in a local PG table (the DynamoDB table's shape)."""
+    from coa_local_providers.session_metadata_pg import SessionMetadataPg
+
+    return SessionMetadataPg(
+        settings.require("COA_SESSION_METADATA_PG_DSN", interface="SessionMetadata")
+    )
+
+
 def _graph_ontology_lookup(settings: Settings) -> Any:
     """Ontology class existence via a synchronous SPARQL ASK on Oxigraph."""
     from coa_metrics.ontology_lookup_graph import GraphOntologyLookup
@@ -504,6 +514,18 @@ SPECS: tuple[InterfaceSpec, ...] = (
             _todo("dynamodb", _AWS),
         ),
         notes="替代 Roles / ResourceRoleMappings 两张表；未配置时 Cedar 保持原有 fail-closed",
+    ),
+    InterfaceSpec(
+        name="SessionMetadata",
+        key="COA_PROVIDER_SESSION_METADATA",
+        context="控制面 / 问答与检索",
+        protocol=SessionMetadataPort,
+        expects_async=True,
+        providers=_providers(
+            _done("postgres", _session_metadata_pg, "本机 PG 表 public.coa_session_metadata"),
+            _todo("dynamodb", _AWS),
+        ),
+        notes="会话发现索引（最近/列表/归属）；消息内容仍在 AgentCore Memory",
     ),
     # ── 10 reused interfaces (plan §7.1) ──
     InterfaceSpec(

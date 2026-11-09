@@ -31,7 +31,13 @@ from pydantic import ValidationError
 from .clients.athena import AthenaQueryExecutor
 from .clients.bedrock import BedrockLLMClient
 from .clients.composite_executor import CompositeQueryExecutor
-from .clients.ports import resolve_graph_client, resolve_vector_client
+from .clients.ports import (
+    ChatWithPortEmbedding,
+    resolve_embedding_client,
+    resolve_graph_client,
+    resolve_session_metadata,
+    resolve_vector_client,
+)
 from .clients.sparql_clients import SparqlClientCache
 from .config import ServiceConfig, load_config
 from .exceptions import (
@@ -56,7 +62,6 @@ from .session_actions import (
     handle_get_session_history,
     handle_list_sessions,
 )
-from .session_metadata import SessionMetadataStore
 from .sse_emitter import SSEEmitter
 from .step_ids import StepId
 from .tier1.metric_resolver import MetricResolver
@@ -104,7 +109,7 @@ _config: ServiceConfig | None = None
 _guardrail_provider: GuardrailConfigProvider | None = None
 _orchestrator: Orchestrator | None = None
 _session_manager: SessionManager | None = None
-_session_metadata: SessionMetadataStore | None = None
+_session_metadata: Any | None = None
 _sources_registry: SourcesRegistry | None = None
 _nl_to_sparql: NLtoSPARQL | None = None
 _sparql_client_cache: SparqlClientCache | None = None
@@ -225,12 +230,9 @@ async def _ensure_initialized():
                 region=config.bedrock_region,
             )
 
-        # Session metadata store (optional — requires SESSION_METADATA_TABLE)
-        if config.session_metadata_table:
-            _session_metadata = SessionMetadataStore(
-                table_name=config.session_metadata_table,
-                region=config.bedrock_region,
-            )
+        # Session metadata store (optional — SESSION_METADATA_TABLE, or the
+        # COA_PROVIDER_SESSION_METADATA port when a non-AWS store is configured).
+        _session_metadata = resolve_session_metadata(config)
 
         # Build client layer. Graph and vector come from the runtime catalog
         # (COA_PROVIDER_GRAPH / COA_PROVIDER_VECTOR); a missing key is an explicit
@@ -238,6 +240,9 @@ async def _ensure_initialized():
         graph_client = resolve_graph_client()
         vector_client = resolve_vector_client()
         bedrock_client = BedrockLLMClient(model_id=config.bedrock_model_id, region=config.bedrock_region)
+        # Embeddings come from COA_PROVIDER_EMBEDDING (bge-local locally); chat
+        # stays on the Bedrock client until a chat-shaped local provider exists.
+        bedrock_client = ChatWithPortEmbedding(bedrock_client, resolve_embedding_client())
         # VKG endpoint used as template: "://vkg." is replaced with "://vkg-{ns}." per request
 
         from .clients.sources_registry import SourcesRegistry

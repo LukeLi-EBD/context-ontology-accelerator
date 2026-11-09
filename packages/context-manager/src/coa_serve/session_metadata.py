@@ -5,6 +5,9 @@
 
 Lightweight index for session discovery (most-recent lookup, listing).
 Message content stays in AgentCore Memory; this stores only ordering metadata.
+
+``SessionMetadata`` is the shared DTO from ``coa_ports`` (also returned by the
+PostgreSQL provider), re-exported here so existing imports keep working.
 """
 
 from __future__ import annotations
@@ -14,12 +17,12 @@ import contextlib
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 from datetime import UTC, datetime
 
 import boto3
 import structlog
 from coa_common import sync_boto_config
+from coa_ports.dto import SessionMetadataRecord as SessionMetadata
 from ulid import ULID
 
 logger = structlog.get_logger(__name__)
@@ -33,21 +36,6 @@ _EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="session-meta")
 def _build_ns_composite(namespace_id: str, last_active_at: str) -> str:
     """Build composite sort key: '{namespaceId}#{lastActiveAt}'."""
     return f"{namespace_id}#{last_active_at}"
-
-
-@dataclass(frozen=True)
-class SessionMetadata:
-    """Metadata record for a single chat session."""
-
-    user_id: str
-    session_id: str
-    created_at: str
-    last_active_at: str
-    status: str
-    message_count: int
-    ttl: int
-    namespace_id: str = ""
-    title: str = ""
 
 
 class SessionMetadataStore:

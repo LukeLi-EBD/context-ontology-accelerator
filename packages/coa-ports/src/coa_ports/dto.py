@@ -51,6 +51,21 @@ class AuthorizationDecision:
 
 
 @dataclass(frozen=True)
+class SessionMetadataRecord:
+    """Discovery metadata for one chat session (content stays in AgentCore Memory)."""
+
+    user_id: str
+    session_id: str
+    created_at: str
+    last_active_at: str
+    status: str
+    message_count: int
+    ttl: int
+    namespace_id: str = ""
+    title: str = ""
+
+
+@dataclass(frozen=True)
 class PrincipalGrant:
     """One grant as stored in the ResourceRoleMappings table.
 
@@ -342,6 +357,7 @@ __all__ = [
     "SchemaClass",
     "SchemaSnapshot",
     "ServiceEndpoint",
+    "SessionMetadataRecord",
     "WorkflowRun",
     "WorkflowStatus",
 ]
