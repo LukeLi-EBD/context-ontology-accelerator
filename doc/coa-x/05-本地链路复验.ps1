@@ -277,6 +277,9 @@ $env:COA_METRIC_INDEX_PG_DSN              = $PgDsn
 $env:COA_PROVIDER_EMBEDDING               = "bge-local"
 $env:COA_EMBEDDING_BGE_ENDPOINT           = "http://127.0.0.1:$EmbedPort/v1"
 $env:COA_PROVIDER_LLM                     = "openai-http"
+# 本地显式开启「先到先得 + 短尾」：一条腿给出可接受结果后就不再等另一条。
+# 仅本地复验这样设；AWS 部署保持默认（gather），因为那会改变线上选优语义与 p50/p99。
+$env:SERVE_TIER2_PARALLEL_MODE            = "first_win"
 if ($LlmProvider -eq "local") {
     $env:COA_LLM_HTTP_BASE_URL            = $LlmUrl
     $env:COA_LLM_HTTP_MODEL               = "qwen2.5-0.5b"
