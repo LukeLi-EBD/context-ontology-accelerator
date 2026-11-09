@@ -304,6 +304,17 @@ if ($started.Count -gt 0) {
     [System.IO.File]::WriteAllText($PidFile, $json, (New-Object System.Text.UTF8Encoding($false)))
 }
 
+# 4.5) fact ledger reconciliation (read-only). A difference is a warning, not a
+# stack failure: repairing it is always an explicit `reconcile_fact_ledger.py --fix`.
+try {
+    & $Python (Join-Path $Tools "reconcile_fact_ledger.py") 2>&1 | ForEach-Object { Write-Host ("  {0}" -f $_) }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [warn] fact ledger books disagree: review, then run tools\reconcile_fact_ledger.py --fix"
+    }
+} catch {
+    Write-Host ("  [warn] fact ledger reconcile did not run: {0}" -f $_.Exception.Message)
+}
+
 # 5) summary
 Write-Host ""
 Write-Host "Stack is up:"

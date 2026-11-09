@@ -26,6 +26,18 @@ from .ports import Manifest
 IRI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:[^<>\"{}|^`\\\s]+$")
 STATES = ("active", "retracted", "superseded")
 SOURCE_KINDS = ("extraction", "manual", "import")
+# Adjudication is append-only in `fact_event`; the undo events point back at the
+# adjudication they reverse, so the console can show both (what was decided and
+# whether it still holds) without a second table.
+ADJUDICATION_ACTIONS = ("conflict_kept", "conflict_accepted", "merged")
+UNDO_ACTIONS = ("resolution_undo", "unmerged")
+_ADJUDICATION_LABELS = {
+    "conflict_kept": "keep",
+    "conflict_accepted": "keep_both",
+    "merged": "merge",
+    "resolution_undo": "undo",
+    "unmerged": "undo",
+}
 PLATFORM_GRAPH_PREFIX = "urn:platform:"
 # Document facts are materialised into the COA A-Box graph
 # ``{NDB_GRAPH_URI_BASE}/{namespace}/{ontology}``.  The ledger has to record the
@@ -162,9 +174,10 @@ class FactLedger:
             capabilities=[
                 "fact.record", "fact.retract", "fact.retract_by_source",
                 "fact.restore", "fact.list", "fact.conflicts",
+                "fact.conflict_adjudications",
                 "fact.conflict_resolve", "fact.conflict_undo",
                 "fact.conflict_batch", "fact.audit_export", "fact.audit_verify",
-                "fact.audit_replay",
+                "fact.audit_replay", "fact.annotate",
             ],
             limits={"maxLimit": 500},
             notes={
@@ -1145,6 +1158,150 @@ class FactLedger:
             return entries
         return [entry for entry in entries if entry["pending"]]
 
+    def adjudications(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Latest adjudication per (subject, predicate), plus its own history.
+
+        `conflicts()` only sees live groups, so a `keep` or `merge` decision makes
+        its conflict disappear from that list.  The console still needs to show
+        what was decided, by whom and when -- and to offer undo.  This read model
+        walks the append-only event chain instead of the current row state.
+        """
+        rows = self._meta.query(
+            """
+            SELECT e.event_id, e.fact_id, e.action, e.actor, e.reason, e.payload,
+                   e.created_at, f.subject_iri, f.predicate_iri
+              FROM platform.fact_event e
+              JOIN platform.fact_assertion f ON f.fact_id = e.fact_id
+             WHERE e.action = ANY(%s)
+             ORDER BY e.event_id DESC
+            """,
+            (list(ADJUDICATION_ACTIONS + UNDO_ACTIONS),),
+        )
+        grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        order: list[tuple[str, str]] = []
+        for row in rows:
+            key = (row["subject_iri"], row["predicate_iri"])
+            if key not in grouped:
+                grouped[key] = []
+                order.append(key)
+            grouped[key].append(row)
+
+        entries: list[dict[str, Any]] = []
+        for subject, predicate in order[: max(int(limit), 0)]:
+            history = grouped[(subject, predicate)]
+            latest = history[0]
+            undone = latest["action"] in UNDO_ACTIONS
+            anchor = (
+                next(
+                    (item for item in history[1:] if item["action"] in ADJUDICATION_ACTIONS),
+                    None,
+                )
+                if undone
+                else latest
+            )
+            anchor_payload = dict(anchor.get("payload") or {}) if anchor else {}
+            reference = anchor or latest
+            entries.append(
+                {
+                    "subject": subject,
+                    "predicate": predicate,
+                    "eventId": int(anchor["event_id"]) if anchor else None,
+                    "action": _ADJUDICATION_LABELS.get(anchor["action"]) if anchor else None,
+                    "actor": reference.get("actor"),
+                    "reason": reference.get("reason"),
+                    "at": reference["created_at"].isoformat(),
+                    "status": "undone" if undone else "in_effect",
+                    "kept": anchor_payload.get("kept"),
+                    "values": anchor_payload.get("values") or [],
+                    "object": anchor_payload.get("object"),
+                    "undoneBy": (
+                        {
+                            "eventId": int(latest["event_id"]),
+                            "actor": latest.get("actor"),
+                            "reason": latest.get("reason"),
+                            "at": latest["created_at"].isoformat(),
+                        }
+                        if undone
+                        else None
+                    ),
+                    "history": [
+                        {
+                            "eventId": int(item["event_id"]),
+                            "action": _ADJUDICATION_LABELS.get(item["action"], item["action"]),
+                            "actor": item.get("actor"),
+                            "reason": item.get("reason"),
+                            "at": item["created_at"].isoformat(),
+                            "payload": dict(item.get("payload") or {}),
+                        }
+                        for item in history[:10]
+                    ],
+                    "effective": self._effective_state(subject, predicate),
+                }
+            )
+        return entries
+
+    def _effective_state(self, subject: str, predicate: str) -> dict[str, Any]:
+        rows = self._meta.query(
+            """
+            SELECT object_value, accepted_conflict
+              FROM platform.fact_assertion
+             WHERE state = 'active' AND subject_iri = %s AND predicate_iri = %s
+             ORDER BY object_value
+            """,
+            (subject, predicate),
+        )
+        values = sorted({row["object_value"] for row in rows})
+        return {
+            "activeCount": len(rows),
+            "values": values,
+            "conflict": len(values) > 1,
+            "acceptedConflict": any(bool(row["accepted_conflict"]) for row in rows),
+        }
+
+    def annotate(
+        self,
+        fact_id: str,
+        action: str,
+        actor: str = "reconcile",
+        reason: str | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Append an audit marker to the chain without touching the assertion.
+
+        Reconciliation repairs (identity drift, missing candidate status) must be
+        visible in the same hash chain as every other fact event, not in a
+        side-channel log.  This never changes `state` or the graph.
+        """
+        if not fact_id:
+            raise _err(
+                "InvalidArgument", "factId is required", "E_FACT_NOT_FOUND",
+                field="factId",
+            )
+        if not action:
+            raise _err(
+                "InvalidArgument", "action is required", "E_FACT_EVENT",
+                field="action",
+            )
+        if not actor:
+            raise _err(
+                "InvalidArgument", "actor is required for an audit marker",
+                "E_FACT_EVENT", field="actor",
+            )
+        self.ensure_chain()
+        if self._fetch(fact_id) is None:
+            raise _err(
+                "NotFound", f"fact not found: {fact_id}", "E_FACT_NOT_FOUND",
+                factId=fact_id,
+            )
+        with self._meta.tx() as tx:
+            event_id = self._event(
+                tx, fact_id, action, actor, reason, None, dict(payload or {})
+            )
+        return {
+            "factId": fact_id, "eventId": event_id, "action": action,
+            "actor": actor, "reason": reason, "payload": payload or {},
+        }
+
     def reconcile_purges(self) -> int:
         """Backfill purge events for facts removed before S12 (OQ-45).
 
@@ -1349,7 +1506,7 @@ class FactLedger:
 
     def _event(self, tx: Any, fact_id: str, action: str, actor: str | None,
                reason: str | None, batch_id: str | None,
-               payload: dict[str, Any]) -> str:
+               payload: dict[str, Any]) -> int:
         last = tx.query(
             "SELECT event_id, hash FROM platform.fact_event ORDER BY event_id DESC LIMIT 1"
         )
@@ -1372,7 +1529,7 @@ class FactLedger:
             "UPDATE platform.fact_event SET hash = %s WHERE event_id = %s",
             (digest, event_id),
         )
-        return digest
+        return event_id
 
     def ensure_chain(self) -> int:
         """Backfill prev_event/hash for events written before S9. Idempotent."""

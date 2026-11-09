@@ -87,6 +87,44 @@ export interface FactConflictList {
   count: number;
   pending: number;
   includeAccepted?: boolean;
+  /** Latest adjudication per (s,p), including the ones `keep`/`merge` removed from `conflicts`. */
+  adjudications?: FactAdjudication[];
+}
+
+export interface FactAdjudicationEvent {
+  eventId: number;
+  action: string;
+  actor?: string | null;
+  reason?: string | null;
+  at: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface FactAdjudication {
+  subject: string;
+  predicate: string;
+  eventId: number | null;
+  action: string | null;
+  actor?: string | null;
+  reason?: string | null;
+  at: string;
+  status: "in_effect" | "undone" | string;
+  kept?: string | null;
+  values: string[];
+  object?: string | null;
+  undoneBy?: {
+    eventId: number;
+    actor?: string | null;
+    reason?: string | null;
+    at: string;
+  } | null;
+  history: FactAdjudicationEvent[];
+  effective: {
+    activeCount: number;
+    values: string[];
+    conflict: boolean;
+    acceptedConflict: boolean;
+  };
 }
 
 export interface FactListQuery {
@@ -160,4 +198,41 @@ export async function restoreFact(
     `${root(namespace)}/${encodeURIComponent(factId)}/restore`,
     { actor: input.actor, reason: input.reason },
   );
+}
+
+export interface ResolveConflictInput {
+  subject: string;
+  predicate: string;
+  action: "keep" | "keep_both" | "merge";
+  actor: string;
+  reason?: string;
+  keep?: string;
+  mergedObject?: string;
+  mergedObjectKind?: string;
+  graph?: string;
+}
+
+export async function resolveFactConflict(
+  client: ApiClient,
+  namespace: string,
+  input: ResolveConflictInput,
+): Promise<Record<string, unknown>> {
+  return client.post<Record<string, unknown>>(`${root(namespace)}/conflicts/resolve`, input);
+}
+
+export interface UndoConflictInput {
+  eventId?: number;
+  subject?: string;
+  predicate?: string;
+  actor: string;
+  reason?: string;
+  dryRun?: boolean;
+}
+
+export async function undoFactConflict(
+  client: ApiClient,
+  namespace: string,
+  input: UndoConflictInput,
+): Promise<Record<string, unknown>> {
+  return client.post<Record<string, unknown>>(`${root(namespace)}/conflicts/undo`, input);
 }

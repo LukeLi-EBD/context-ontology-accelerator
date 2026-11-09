@@ -19,8 +19,11 @@ import {
   getFact,
   listFactConflicts,
   listFacts,
+  resolveFactConflict,
   restoreFact,
   retractFact,
+  undoFactConflict,
+  type FactAdjudication,
   type FactConflict,
   type FactRecord,
 } from "../../services/fact-ledger";
@@ -46,6 +49,21 @@ function sourceText(fact: FactRecord): string {
   return [source.kind, source.documentId, source.candidateId].filter(Boolean).join(" / ") || "-";
 }
 
+function conflictKey(item: { subject: string; predicate: string }): string {
+  return `${item.subject}|${item.predicate}`;
+}
+
+function actionText(action: string | null): string {
+  if (action === "keep") return "保留一方";
+  if (action === "keep_both") return "都保留";
+  if (action === "merge") return "合并";
+  return action ?? "-";
+}
+
+function shortTime(value: string): string {
+  return value.length >= 19 ? value.slice(0, 19).replace("T", " ") : value;
+}
+
 export function FactsPage() {
   const { namespaceId } = useParams<{ namespaceId: string }>();
   const api = useApiClient();
@@ -64,6 +82,8 @@ export function FactsPage() {
   const [conflictOnly, setConflictOnly] = useState(false);
   const [facts, setFacts] = useState<FactRecord[]>([]);
   const [conflicts, setConflicts] = useState<FactConflict[]>([]);
+  const [adjudications, setAdjudications] = useState<FactAdjudication[]>([]);
+  const [keepChoice, setKeepChoice] = useState<Record<string, string>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FactRecord | null>(null);
   const [actor, setActor] = useState("");
@@ -86,8 +106,9 @@ export function FactsPage() {
         limit: 100,
       });
       setFacts(data.items ?? []);
-      const groups = await listFactConflicts(api, namespaceId, false);
+      const groups = await listFactConflicts(api, namespaceId, true);
       setConflicts(groups.conflicts ?? []);
+      setAdjudications(groups.adjudications ?? []);
     } catch (err) {
       setError(`读取事实账本失败：${errorText(err)}`);
     } finally {
@@ -118,7 +139,7 @@ export function FactsPage() {
   const requireActor = (): string => {
     const value = actor.trim();
     if (!value) {
-      throw new Error("操作人（actor）必填：撤回/恢复必须留痕，不能留空");
+      throw new Error("操作人（actor）必填：裁决/撤销/撤回/恢复必须留痕，不能留空");
     }
     return value;
   };
@@ -146,6 +167,63 @@ export function FactsPage() {
       setError(
         `${kind === "retract" ? "撤回" : "恢复"}失败：${errorText(err)}`,
       );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const decide = async (kind: "keep" | "keep_both", conflict: FactConflict) => {
+    if (!namespaceId) return;
+    const key = `decide:${conflictKey(conflict)}`;
+    setBusy(key);
+    setError(null);
+    setNotice(null);
+    try {
+      const who = requireActor();
+      const keepValue =
+        keepChoice[conflictKey(conflict)] ?? conflict.values?.[0] ?? undefined;
+      if (kind === "keep" && !keepValue) {
+        throw new Error("这条冲突没有可选宾语，无法「保留一方」");
+      }
+      await resolveFactConflict(api, namespaceId, {
+        subject: conflict.subject,
+        predicate: conflict.predicate,
+        action: kind,
+        actor: who,
+        reason: reason || undefined,
+        keep: kind === "keep" ? keepValue : undefined,
+      });
+      setNotice(
+        kind === "keep"
+          ? `已保留 ${keepValue}（actor=${who}），可撤销`
+          : `已接受冲突（都保留，actor=${who}），可撤销`,
+      );
+      await loadFacts();
+    } catch (err) {
+      setError(`裁决失败：${errorText(err)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const undoAdjudication = async (entry: FactAdjudication) => {
+    if (!namespaceId) return;
+    setBusy(`undo:${entry.eventId}`);
+    setError(null);
+    setNotice(null);
+    try {
+      const who = requireActor();
+      await undoFactConflict(api, namespaceId, {
+        eventId: entry.eventId ?? undefined,
+        subject: entry.subject,
+        predicate: entry.predicate,
+        actor: who,
+        reason: reason || undefined,
+      });
+      setNotice(`已撤销裁决（${actionText(entry.action)}，actor=${who}）：冲突回到待裁决`);
+      await loadFacts();
+    } catch (err) {
+      setError(`撤销裁决失败：${errorText(err)}`);
     } finally {
       setBusy(null);
     }
@@ -210,6 +288,16 @@ export function FactsPage() {
               />
             </FormField>
           </ColumnLayout>
+          <FormField
+            label="理由（写入时进入审计）"
+            description="裁决与撤销都会把这段文字写进账本事件链"
+          >
+            <Input
+              value={reason}
+              onChange={({ detail: change }) => setReason(change.value)}
+              placeholder="为什么这样裁决 / 撤销"
+            />
+          </FormField>
           <SpaceBetween direction="horizontal" size="m">
             <Button variant="primary" onClick={() => void loadFacts()} loading={listBusy}>
               查询
@@ -408,10 +496,125 @@ export function FactsPage() {
               id: "pending",
               header: "待裁决",
               cell: (item) => (item.pending ? "是" : "已接受"),
-              width: 90,
+              width: 100,
+            },
+            {
+              id: "keep",
+              header: "保留哪一方",
+              cell: (item) => {
+                const chosen = keepChoice[conflictKey(item)] ?? item.values?.[0] ?? "";
+                return (
+                  <Select
+                    ariaLabel={`保留取值 ${conflictKey(item)}`}
+                    selectedOption={
+                      item.values?.includes(chosen)
+                        ? { label: chosen, value: chosen }
+                        : null
+                    }
+                    onChange={({ detail: change }) =>
+                      setKeepChoice((prev) => ({
+                        ...prev,
+                        [conflictKey(item)]: change.selectedOption?.value ?? "",
+                      }))
+                    }
+                    options={(item.values ?? []).map((value) => ({ label: value, value }))}
+                    placeholder="选择要保留的值"
+                  />
+                );
+              },
+            },
+            {
+              id: "actions",
+              header: "裁决",
+              cell: (item) => (
+                <SpaceBetween direction="horizontal" size="xs">
+                  <Button
+                    disabled={!item.pending}
+                    loading={busy === `decide:${conflictKey(item)}`}
+                    onClick={() => void decide("keep", item)}
+                  >
+                    保留所选
+                  </Button>
+                  <Button
+                    disabled={!item.pending}
+                    loading={busy === `decide:${conflictKey(item)}`}
+                    onClick={() => void decide("keep_both", item)}
+                  >
+                    都保留
+                  </Button>
+                </SpaceBetween>
+              ),
             },
           ]}
-          empty={<Box textAlign="center">当前没有未裁决冲突</Box>}
+          empty={<Box textAlign="center">当前没有冲突</Box>}
+        />
+      </Container>
+
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description="来自账本事件链：判成什么、谁判的、什么时候，以及是否仍生效"
+          >
+            最近裁决（{adjudications.length}）
+          </Header>
+        }
+      >
+        <Table
+          items={adjudications}
+          columnDefinitions={[
+            { id: "subject", header: "主语", cell: (item) => item.subject },
+            { id: "predicate", header: "谓词", cell: (item) => item.predicate },
+            {
+              id: "action",
+              header: "判定",
+              cell: (item) => actionText(item.action),
+              width: 110,
+            },
+            {
+              id: "result",
+              header: "判定结果",
+              cell: (item) =>
+                item.object ?? item.kept ?? ((item.values ?? []).join(" | ") || "-"),
+            },
+            { id: "actor", header: "操作人", cell: (item) => item.actor ?? "-", width: 120 },
+            { id: "reason", header: "理由", cell: (item) => item.reason ?? "-" },
+            { id: "at", header: "时间", cell: (item) => shortTime(item.at), width: 180 },
+            {
+              id: "status",
+              header: "状态",
+              cell: (item) =>
+                item.status === "in_effect"
+                  ? "生效中"
+                  : `已撤销（${item.undoneBy?.actor ?? "-"} @ ${shortTime(
+                      item.undoneBy?.at ?? "",
+                    )}${item.undoneBy?.reason ? `：${item.undoneBy.reason}` : ""}）`,
+              width: 240,
+            },
+            {
+              id: "history",
+              header: "事件链",
+              cell: (item) =>
+                (item.history ?? [])
+                  .map((event) => `${event.action}@${shortTime(event.at)} by ${event.actor ?? "-"}`)
+                  .join(" → ") || "-",
+            },
+            {
+              id: "undo",
+              header: "撤销",
+              cell: (item) => (
+                <Button
+                  disabled={item.status !== "in_effect"}
+                  loading={busy === `undo:${item.eventId}`}
+                  onClick={() => void undoAdjudication(item)}
+                >
+                  撤销裁决
+                </Button>
+              ),
+              width: 120,
+            },
+          ]}
+          empty={<Box textAlign="center">还没有裁决记录</Box>}
         />
       </Container>
     </SpaceBetween>

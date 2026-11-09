@@ -602,6 +602,11 @@ ROUTES: list[tuple[str, str]] = [
     # segment is contract shape rather than a partition key.
     ("/namespaces/{namespaceId}/facts", KERNEL),
     ("/namespaces/{namespaceId}/facts/conflicts", KERNEL),
+    # Adjudication is a write on the same ledger. These literal paths must be
+    # registered before the `{factId}` placeholder; `_compile_routes` sorts
+    # literal-heavy templates first.
+    ("/namespaces/{namespaceId}/facts/conflicts/resolve", KERNEL),
+    ("/namespaces/{namespaceId}/facts/conflicts/undo", KERNEL),
     ("/namespaces/{namespaceId}/facts/{factId}", KERNEL),
     ("/namespaces/{namespaceId}/facts/{factId}/retract", KERNEL),
     ("/namespaces/{namespaceId}/facts/{factId}/restore", KERNEL),
@@ -932,6 +937,35 @@ def _kernel_translate(
     if "/facts" in template:
         fact_id = path_params.get("factId", "")
         q = query or {}
+        if template.endswith("/facts/conflicts/resolve"):
+            # Same fields as the kernel's resolve endpoint; drop empty ones so the
+            # kernel's defaults (actor=operator, mergedObjectKind=iri) still apply.
+            forwarded = {
+                key: payload[key]
+                for key in (
+                    "subject", "predicate", "action", "actor", "reason", "keep",
+                    "mergedObject", "mergedObjectKind", "graph", "sourceDocumentId",
+                )
+                if payload.get(key) not in (None, "")
+            }
+            return (
+                "POST",
+                "/facts/conflicts/resolve",
+                json.dumps(forwarded, ensure_ascii=False).encode("utf-8"),
+            )
+        if template.endswith("/facts/conflicts/undo"):
+            forwarded = {
+                key: payload[key]
+                for key in ("eventId", "subject", "predicate", "actor", "reason")
+                if payload.get(key) not in (None, "")
+            }
+            if "dryRun" in payload:
+                forwarded["dryRun"] = bool(payload.get("dryRun"))
+            return (
+                "POST",
+                "/facts/conflicts/undo",
+                json.dumps(forwarded, ensure_ascii=False).encode("utf-8"),
+            )
         if template.endswith("/facts/conflicts"):
             suffix = (
                 "?includeAccepted=true"

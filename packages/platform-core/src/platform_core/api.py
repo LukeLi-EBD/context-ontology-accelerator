@@ -2788,6 +2788,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return {
             "conflicts": items, "count": len(items),
             "pending": len(pending), "includeAccepted": includeAccepted,
+            # `keep`/`merge` remove the group from `conflicts`, so the console
+            # reads its undo entry point from the chain rather than from the
+            # live groups.
+            "adjudications": runtime.facts.adjudications(),
         }
 
     @app.post("/facts/conflicts/resolve")
