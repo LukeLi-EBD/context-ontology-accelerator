@@ -244,6 +244,15 @@ _SHARED_RULES = (
     "about. If that entity's table and its joined tables have no such column, do not use a column "
     "of another entity (a part's unit cost is not a service job's cost). Return exactly: "
     "SELECT 'NOT_ANSWERABLE_FIELD: no <measure> field for <entity>' AS answer\n"
+    # A question that is not about data at all (how the model is structured, what a term
+    # means, why something is modelled a way) has no SQL answer. Without this rule the
+    # writer does the worst thing available: puts the explanation in a quoted literal and
+    # calls it a row, which reads as a confident data answer downstream.
+    "- If the question is not a data query at all — it asks how the model is structured, what "
+    "a term or class means, or why something is modelled a certain way — do not put the "
+    "explanation in a quoted literal and call it a row. Return exactly: "
+    "SELECT 'NOT_ANSWERABLE_CONCEPT: <what was asked> is a concept/modelling question, not a "
+    "data query' AS answer\n"
     # Output-shape conventions — cheap, high-frequency correctness fixes measured on
     # BIRD (result-set equality is exact, so column shape / literal format matter):
     "- SELECT EXACTLY the column(s) the question asks for and nothing more — do not add "

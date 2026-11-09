@@ -48,6 +48,17 @@ def _context() -> StrategyContext:
     [
         (REFUSAL_SPARQL, "NOT_ANSWERABLE_FIELD: no cost field for service job"),
         (
+            'SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_CONCEPT: how is PARTY modelled?" AS ?answer) }',
+            "NOT_ANSWERABLE_CONCEPT: how is PARTY modelled?",
+        ),
+        # Models put a PREFIX prolog in front of the statement (observed against Ark);
+        # the refusal must still be recognised instead of failing translation.
+        (
+            'PREFIX ind: <https://w3id.org/fsldm/core#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n\n'
+            'SELECT ?answer WHERE {\n  BIND("NOT_ANSWERABLE_CONCEPT: how is PARTY modelled?" AS ?answer)\n}',
+            "NOT_ANSWERABLE_CONCEPT: how is PARTY modelled?",
+        ),
+        (
             'select ?answer where {bind("NOT_ANSWERABLE_RANGE: it\'s  outside\ndata" as ?answer)} LIMIT 10',
             "NOT_ANSWERABLE_RANGE: it's outside data",
         ),

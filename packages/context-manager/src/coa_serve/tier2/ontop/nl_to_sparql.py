@@ -364,7 +364,12 @@ _SYSTEM_PROMPT = (
     "   - A measure (cost, price, amount, duration) must come from a property of the entity asked\n"
     "     about. If that class and the classes it joins to have no such property, do not use a\n"
     "     property of another entity. Return exactly:\n"
-    '     SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_FIELD: no <measure> field for <entity>" AS ?answer) }\n\n'
+    '     SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_FIELD: no <measure> field for <entity>" AS ?answer) }\n'
+    "   - A question that is not about data at all (how the model is structured, what a term or\n"
+    "     class means, why something is modelled a way) has no SPARQL answer. Do not put the\n"
+    "     explanation in a literal and call it a row. Return exactly:\n"
+    '     SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_CONCEPT: <what was asked> is a '
+    'concept/modelling question, not a data query" AS ?answer) }\n\n'
     "REMEMBER: When comparing categories, ALWAYS use SUM(IF(...)) in ONE flat query. "
     "NEVER use nested subqueries { SELECT ... WHERE { ... } }."
 )

@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""A NOT_ANSWERABLE_RANGE row is a final Tier-2 answer; a NOT_ANSWERABLE_FIELD row is final only without documents."""
+"""A NOT_ANSWERABLE_RANGE row is a final Tier-2 answer; NOT_ANSWERABLE_FIELD and NOT_ANSWERABLE_CONCEPT rows are final only without documents."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from coa_serve.models import InvokeRequest
 from coa_serve.tier2.strategy import (
+    NOT_ANSWERABLE_CONCEPT,
     NOT_ANSWERABLE_FIELD,
     NOT_ANSWERABLE_RANGE,
     StrategyContext,
@@ -52,6 +53,8 @@ def _result(rows, confidence=0.1, sql=REFUSAL_SQL, strategy=StrategyOption.NL_TO
             True,
         ),
         ([{"answer": "  NOT_ANSWERABLE_FIELD: no cost field for service job"}], True),
+        ([{"answer": "NOT_ANSWERABLE_CONCEPT: what does party mean?"}], True),
+        ([{"answer": "NOT_ANSWERABLE: the old, kind-less refusal"}], True),
         ([{"ANSWER": "NOT_ANSWERABLE_RANGE: engines may upper-case the alias"}], True),
         ([["NOT_ANSWERABLE_RANGE: positional row"]], True),
         ([{"msg": "NOT_ANSWERABLE_RANGE: not the answer column"}], False),
@@ -140,21 +143,35 @@ RANGE_SQL = (
     "SELECT 'NOT_ANSWERABLE_RANGE: March 2031 is outside the data; the plan covers 2026-01 to 2029-12' AS answer"
 )
 FIELD_ROW = [{"answer": "NOT_ANSWERABLE_FIELD: no cost field for service job"}]
+CONCEPT_ROW = [{"answer": "NOT_ANSWERABLE_CONCEPT: why is one PARTY built per natural person?"}]
+CONCEPT_SQL = "SELECT 'NOT_ANSWERABLE_CONCEPT: why is one PARTY built per natural person?' AS answer"
+BARE_ROW = [
+    {
+        "answer": "NOT_ANSWERABLE: 该问题为 FS-LDM 建模概念问题，非数据查询；"
+        "同一自然人只建一条 PARTY 实例，身份差异由 RoleAssignment 承载。"
+    }
+]
+BARE_SQL = (
+    "SELECT 'NOT_ANSWERABLE: 该问题为 FS-LDM 建模概念问题，非数据查询；"
+    "同一自然人只建一条 PARTY 实例，身份差异由 RoleAssignment 承载。' AS answer"
+)
 
 
 def test_kind_is_read_from_the_prefix():
     assert not_answerable_kind(_result(RANGE_ROW, sql=RANGE_SQL)) == NOT_ANSWERABLE_RANGE
     assert not_answerable_kind(_result(FIELD_ROW)) == NOT_ANSWERABLE_FIELD
+    assert not_answerable_kind(_result(CONCEPT_ROW, sql=CONCEPT_SQL)) == NOT_ANSWERABLE_CONCEPT
     assert not_answerable_kind(_result([{"answer": "42"}])) is None
 
 
-def test_the_unkinded_prefix_is_not_a_refusal():
-    # The prompts now ask for a kind; a bare NOT_ANSWERABLE: row is treated as ordinary data.
+def test_the_unkinded_prefix_is_read_as_concept():
+    # Older prompts asked for a bare prefix. Such a row is still a refusal, and it takes the
+    # document-capable route (concept) rather than being presented as a data answer.
+    bare = "NOT_ANSWERABLE: no cost field for service job"
     sql = "SELECT 'NOT_ANSWERABLE: no cost field for service job' AS answer"
-    assert (
-        is_not_answerable_result(_result([{"answer": "NOT_ANSWERABLE: no cost field for service job"}], sql=sql))
-        is False
-    )
+    result = _result([{"answer": bare}], sql=sql)
+    assert is_not_answerable_result(result) is True
+    assert not_answerable_kind(result) == NOT_ANSWERABLE_CONCEPT
 
 
 @pytest.mark.asyncio
@@ -194,6 +211,49 @@ async def test_field_refusal_falls_to_tier_3_when_documents_may_answer(with_regi
     orch, parts = _make_orchestrator(sources_registry=registry, return_parts=True)
     parts["strategy_resolve"].return_value = _result(FIELD_ROW, confidence=confidence)
     response = await orch.resolve(InvokeRequest(query="What did service job 1234 cost?", namespace="demo"))
+
+    assert response.result.tier == 3
+    assert parts["knowledge_retriever"].resolve.await_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("confidence", [0.1, 0.9])
+@pytest.mark.parametrize("with_registry", [True, False])
+async def test_concept_refusal_falls_to_tier_3_when_documents_may_answer(with_registry, confidence):
+    # A concept question is not a data answer; a document (or the synthesis tier) may still
+    # explain it, so it must not stop at Tier 2 with a refusal row.
+    registry = (
+        _registry_with_composition(has_structured_source=True, has_unstructured_source=True) if with_registry else None
+    )
+    orch, parts = _make_orchestrator(sources_registry=registry, return_parts=True)
+    parts["strategy_resolve"].return_value = _result(CONCEPT_ROW, sql=CONCEPT_SQL, confidence=confidence)
+    response = await orch.resolve(InvokeRequest(query="Why is one PARTY built per person?", namespace="demo"))
+
+    assert response.result.tier == 3
+    assert parts["knowledge_retriever"].resolve.await_count == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("confidence", [0.1, 0.9])
+async def test_concept_refusal_is_final_when_the_namespace_has_no_documents(confidence):
+    registry = _registry_with_composition(has_structured_source=True, has_unstructured_source=False)
+    orch, parts = _make_orchestrator(sources_registry=registry, return_parts=True)
+    parts["strategy_resolve"].return_value = _result(CONCEPT_ROW, sql=CONCEPT_SQL, confidence=confidence)
+    response = await orch.resolve(InvokeRequest(query="Why is one PARTY built per person?", namespace="demo"))
+
+    assert response.result.tier == 2
+    assert parts["knowledge_retriever"].resolve.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_bare_prefix_answer_from_an_older_prompt_now_falls_to_tier_3():
+    # The Ark request that exposed this bug returned a bare NOT_ANSWERABLE: row carrying the
+    # whole explanation; it was ranked as a confident data answer. With documents present it
+    # must now be recognised as a refusal and fall through to Tier 3.
+    registry = _registry_with_composition(has_structured_source=True, has_unstructured_source=True)
+    orch, parts = _make_orchestrator(sources_registry=registry, return_parts=True)
+    parts["strategy_resolve"].return_value = _result(BARE_ROW, sql=BARE_SQL, confidence=0.5)
+    response = await orch.resolve(InvokeRequest(query="为什么同一自然人只建一条 PARTY？", namespace="demo"))
 
     assert response.result.tier == 3
     assert parts["knowledge_retriever"].resolve.await_count == 1

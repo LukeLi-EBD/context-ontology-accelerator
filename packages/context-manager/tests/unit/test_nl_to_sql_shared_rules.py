@@ -17,6 +17,7 @@ pytestmark = pytest.mark.unit
 NOT_ANSWERABLE_SQL = (
     "SELECT 'NOT_ANSWERABLE_FIELD: no cost field for service job' AS answer",
     "SELECT 'NOT_ANSWERABLE_RANGE: March 2031 is outside the data; plan covers 2026-01 to 2029-12' AS answer",
+    "SELECT 'NOT_ANSWERABLE_CONCEPT: what does party mean?' AS answer",
 )
 
 
@@ -39,6 +40,7 @@ def test_unconditional_coalesce_rule_is_gone():
         # out-of-range periods and missing measures
         "SELECT 'NOT_ANSWERABLE_RANGE: <what was asked> is outside the data; <table> covers <range>' AS answer",
         "SELECT 'NOT_ANSWERABLE_FIELD: no <measure> field for <entity>' AS answer",
+        "SELECT 'NOT_ANSWERABLE_CONCEPT: <what was asked> is a concept/modelling question, not a data query' AS answer",
     ],
 )
 def test_rule_is_in_the_system_prompt_for_every_dialect(phrase):

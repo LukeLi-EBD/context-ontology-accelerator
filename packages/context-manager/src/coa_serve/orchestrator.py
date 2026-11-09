@@ -37,6 +37,7 @@ from .tier2.sql_firewall import FirewallResult, SQLFirewall
 from .tier2.strategy import (
     DEFAULT_STRATEGY,
     EMPTY_RESULT_CONFIDENCE_FLOOR,
+    NOT_ANSWERABLE_CONCEPT,
     NOT_ANSWERABLE_FIELD,
     StrategyContext,
     StrategyOption,
@@ -762,13 +763,16 @@ class Orchestrator:
             # but also covers non-empty low-confidence results.
             # A NOT_ANSWERABLE_RANGE row (a period the tables do not cover) is final whatever
             # confidence the writer reported: the tables are the authority, and documents often
-            # mention other periods. A NOT_ANSWERABLE_FIELD row (no column holds the measure) is
-            # final only when the namespace has no unstructured source; otherwise a document may
-            # hold the answer, so it falls through to Tier 3 whatever confidence the writer
+            # mention other periods. A NOT_ANSWERABLE_FIELD row (no column holds the measure) or a
+            # NOT_ANSWERABLE_CONCEPT row (the question is not a data query at all) is final only
+            # when the namespace has no unstructured source; otherwise a document or the synthesis
+            # tier may hold the answer, so it falls through to Tier 3 whatever confidence the writer
             # reported (a writer sure that no column exists can still report a high confidence).
             refusal_kind = not_answerable_kind(result)
-            field_to_tier3 = refusal_kind == NOT_ANSWERABLE_FIELD and has_unstructured_source
-            keep_refusal = refusal_kind is not None and not field_to_tier3
+            document_may_answer = (
+                refusal_kind in (NOT_ANSWERABLE_FIELD, NOT_ANSWERABLE_CONCEPT) and has_unstructured_source
+            )
+            keep_refusal = refusal_kind is not None and not document_may_answer
             low_confidence = result.confidence < EMPTY_RESULT_CONFIDENCE_FLOOR
             if keep_refusal and low_confidence:
                 logger.info(
@@ -778,9 +782,12 @@ class Orchestrator:
                     strategy=result.strategy_name,
                     namespace=namespace,
                 )
-            if tier_override != 2 and not keep_refusal and (field_to_tier3 or low_confidence):
+            if tier_override != 2 and not keep_refusal and (document_may_answer or low_confidence):
                 logger.info(
-                    "tier2_not_answerable_field_fallthrough" if field_to_tier3 else "tier2_low_confidence_fallthrough",
+                    "tier2_not_answerable_field_fallthrough"
+                    if document_may_answer
+                    else "tier2_low_confidence_fallthrough",
+                    kind=refusal_kind,
                     tier2_confidence=result.confidence,
                     row_count=result.row_count,
                     strategy=result.strategy_name,

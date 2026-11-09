@@ -47,10 +47,16 @@ _RETRYABLE_VKG_PATTERNS = (
 
 
 # The refusal the Ontop prompt asks for when the data cannot answer: one BIND of a literal that
-# starts with NOT_ANSWERABLE_RANGE: or NOT_ANSWERABLE_FIELD:, and no triple patterns. It touches no
-# table, so it is not translated or executed.
+# starts with NOT_ANSWERABLE_RANGE:, NOT_ANSWERABLE_FIELD: or NOT_ANSWERABLE_CONCEPT:, and no triple
+# patterns. It touches no table, so it is not translated or executed.
+#
+# A PREFIX prolog is optional and ignored: models routinely copy the prompt's prefix lines ahead
+# of the statement (observed against Ark), and an anchored ``^\s*SELECT`` would otherwise miss the
+# refusal, burn the validation retries, and end with a translation error instead of a refusal.
 _NOT_ANSWERABLE_SPARQL_RE = re.compile(
-    r'^\s*SELECT\s+\?answer\s+WHERE\s*\{\s*BIND\s*\(\s*"((?-i:NOT_ANSWERABLE_(?:RANGE|FIELD):)[^"]*)"\s+AS\s+\?answer\s*\)\s*\}\s*(?:LIMIT\s+\d+\s*)?$',
+    r"^\s*(?:PREFIX\s+[^\s:]*:\s*<[^>]*>\s*)*"
+    r'SELECT\s+\?answer\s+WHERE\s*\{\s*BIND\s*\(\s*"((?-i:NOT_ANSWERABLE_(?:RANGE|FIELD|CONCEPT):)'
+    r'[^"]*)"\s+AS\s+\?answer\s*\)\s*\}\s*(?:LIMIT\s+\d+\s*)?$',
     re.IGNORECASE,
 )
 

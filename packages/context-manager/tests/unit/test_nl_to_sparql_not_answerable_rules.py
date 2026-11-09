@@ -18,6 +18,7 @@ NOT_ANSWERABLE_SPARQL = (
     'SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_RANGE: March 2031 is outside the data; '
     'Plan covers 2026-01" AS ?answer) }',
     'SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_FIELD: no cost field for service job" AS ?answer) }',
+    'SELECT ?answer WHERE { BIND("NOT_ANSWERABLE_CONCEPT: how is PARTY modelled?" AS ?answer) }',
 )
 
 
@@ -29,6 +30,7 @@ NOT_ANSWERABLE_SPARQL = (
         "A SUM over no matching rows returns 0",
         'BIND("NOT_ANSWERABLE_RANGE: <what was asked> is outside the data; <class> covers <range>" AS ?answer)',
         'BIND("NOT_ANSWERABLE_FIELD: no <measure> field for <entity>" AS ?answer)',
+        'BIND("NOT_ANSWERABLE_CONCEPT: <what was asked> is a concept/modelling question, not a data query" AS ?answer)',
     ],
 )
 def test_rule_is_in_the_sparql_system_prompt(phrase):
