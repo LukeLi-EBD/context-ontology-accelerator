@@ -29,13 +29,13 @@ from coa_metrics.api.contract import (
     check_string,
 )
 from coa_metrics.neptune_client import MetricNeptuneClient, new_metric_graph_client
-from coa_metrics.opensearch_client import MetricOpenSearchClient
+from coa_metrics.metric_index import MetricIndexSync, build_metric_index
 
 setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 logger = structlog.get_logger(__name__)
 
 _neptune: MetricNeptuneClient | None = None
-_opensearch: MetricOpenSearchClient | None = None
+_opensearch: MetricIndexSync | None = None
 
 
 def _get_neptune() -> MetricNeptuneClient:
@@ -45,10 +45,10 @@ def _get_neptune() -> MetricNeptuneClient:
     return _neptune
 
 
-def _get_opensearch() -> MetricOpenSearchClient:
+def _get_opensearch() -> MetricIndexSync:
     global _opensearch  # noqa: PLW0603
     if _opensearch is None:
-        _opensearch = MetricOpenSearchClient()
+        _opensearch = build_metric_index()
     return _opensearch
 
 
@@ -117,7 +117,7 @@ def _check_bounds(names: Any, filter_criteria: Any, delete_all: Any) -> str | No
 def _delete_all(
     namespace: str,
     neptune: MetricNeptuneClient,
-    opensearch: MetricOpenSearchClient,
+    opensearch: MetricIndexSync,
 ) -> dict[str, Any]:
     """Delete ALL metrics for the namespace (authoritative, no name enumeration).
 
@@ -145,7 +145,7 @@ def _delete_by_names(
     namespace: str,
     names: list[str],
     neptune: MetricNeptuneClient,
-    opensearch: MetricOpenSearchClient,
+    opensearch: MetricIndexSync,
 ) -> dict[str, Any]:
     """Delete metrics by explicit name list."""
     deleted = 0
@@ -176,7 +176,7 @@ def _delete_by_filter(
     namespace: str,
     filter_criteria: dict[str, Any],
     neptune: MetricNeptuneClient,
-    opensearch: MetricOpenSearchClient,
+    opensearch: MetricIndexSync,
 ) -> dict[str, Any]:
     """Delete metrics matching filter criteria."""
     data_source_id = filter_criteria.get("dataSourceId")

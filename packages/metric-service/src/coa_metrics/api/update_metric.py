@@ -37,7 +37,7 @@ from coa_metrics.neptune_client import (
     MetricNeptuneClient,
     new_metric_graph_client,
 )
-from coa_metrics.opensearch_client import MetricOpenSearchClient
+from coa_metrics.metric_index import MetricIndexSync, build_metric_index
 from coa_metrics.source_status import (
     SourceValidationUnavailableError,
     build_validation_lookup,
@@ -55,7 +55,7 @@ setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 logger = structlog.get_logger(__name__)
 
 _neptune: MetricNeptuneClient | None = None
-_opensearch: MetricOpenSearchClient | None = None
+_opensearch: MetricIndexSync | None = None
 _eventbridge: Any | None = None
 
 
@@ -66,10 +66,10 @@ def _get_neptune() -> MetricNeptuneClient:
     return _neptune
 
 
-def _get_opensearch() -> MetricOpenSearchClient:
+def _get_opensearch() -> MetricIndexSync:
     global _opensearch  # noqa: PLW0603
     if _opensearch is None:
-        _opensearch = MetricOpenSearchClient()
+        _opensearch = build_metric_index()
     return _opensearch
 
 
