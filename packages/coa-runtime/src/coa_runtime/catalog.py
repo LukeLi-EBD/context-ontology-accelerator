@@ -638,7 +638,15 @@ SPECS: tuple[InterfaceSpec, ...] = (
         context="问答与检索 / 数据源接入",
         required_methods=("execute",),
         expects_async=True,
-        providers=_providers(_done("postgres", _postgres_executor), _todo("athena", _AWS)),
+        providers=_providers(
+            _done(
+                "postgres",
+                _postgres_executor,
+                "单一 DSN；namespace/data_source_id 接收但不分库，调用级 timeout 不生效",
+            ),
+            _todo("athena", _AWS),
+            _todo("redshift", _AWS),
+        ),
     ),
     InterfaceSpec(
         name="WarehouseAdminPort",

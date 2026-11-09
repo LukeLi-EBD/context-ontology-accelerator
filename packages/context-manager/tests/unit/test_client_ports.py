@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import pytest
-from coa_runtime.errors import ConfigurationError
+from coa_runtime.errors import (
+    ConfigurationError,
+    MissingConfigurationError,
+    ProviderNotAvailableError,
+)
 from coa_serve.clients.ports import (
     ChatWithPortEmbedding,
     GraphClientAdapter,
     PortEmbedding,
     resolve_embedding_client,
+    resolve_query_executor,
 )
 
 
@@ -74,6 +79,28 @@ def test_embedding_provider_must_be_configured(monkeypatch):
     monkeypatch.delenv("COA_PROVIDER_EMBEDDING", raising=False)
     with pytest.raises(ConfigurationError):
         resolve_embedding_client()
+
+
+@pytest.mark.unit
+def test_query_executor_unset_keeps_the_legacy_composite(monkeypatch):
+    monkeypatch.delenv("COA_PROVIDER_QUERY_EXECUTOR", raising=False)
+    assert resolve_query_executor() is None
+
+
+@pytest.mark.unit
+def test_query_executor_requires_its_dsn_instead_of_falling_back(monkeypatch):
+    monkeypatch.setenv("COA_PROVIDER_QUERY_EXECUTOR", "postgres")
+    monkeypatch.delenv("COA_EXECUTOR_POSTGRES_DSN", raising=False)
+    with pytest.raises(MissingConfigurationError) as excinfo:
+        resolve_query_executor()
+    assert excinfo.value.key == "COA_EXECUTOR_POSTGRES_DSN"
+
+
+@pytest.mark.unit
+def test_query_executor_athena_is_unimplemented_not_an_aws_fallback(monkeypatch):
+    monkeypatch.setenv("COA_PROVIDER_QUERY_EXECUTOR", "athena")
+    with pytest.raises(ProviderNotAvailableError):
+        resolve_query_executor()
 
 
 @pytest.mark.unit

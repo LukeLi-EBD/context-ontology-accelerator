@@ -35,6 +35,7 @@ from .clients.ports import (
     resolve_chat_client,
     resolve_embedding_client,
     resolve_graph_client,
+    resolve_query_executor,
     resolve_session_metadata,
     resolve_vector_client,
 )
@@ -252,59 +253,71 @@ async def _ensure_initialized():
             region=config.bedrock_region,
         )
         _sources_registry = sources_registry
-        athena_executor = AthenaQueryExecutor(region=config.bedrock_region, sources_registry=sources_registry)
+        # SQL execution: COA_PROVIDER_QUERY_EXECUTOR (postgres locally) replaces the
+        # whole Athena/JDBC/Redshift composite. With no key the legacy AWS composite
+        # is built exactly as before, so production is unchanged. Both the Tier-2
+        # strategy and the Tier-1 metric path run SQLFirewall before execute, so the
+        # port executor does not duplicate that check.
+        query_executor = resolve_query_executor()
+        if query_executor is not None:
+            logger.info(
+                "query_executor_port",
+                provider=os.environ.get("COA_PROVIDER_QUERY_EXECUTOR", ""),
+            )
+        else:
+            athena_executor = AthenaQueryExecutor(region=config.bedrock_region, sources_registry=sources_registry)
 
-        # single-vs-cross-source dispatcher (Serve LLD §2.2.1 Option D).
-        # Direct JDBC is the DEFAULT fast path for single-source queries (one
-        # catalog, all-qualified tables, a resolvable DATABASE source) because
-        # direct asyncpg (~20-50ms p50) avoids Athena's federation cold-start;
-        # complex/federated/cross-source queries use Athena. The composite only
-        # routes to JDBC after confirming the source is a DATABASE source
-        # (has_jdbc_endpoint gate) — Glue-native/S3 sources always use Athena.
-        # Built by default when a data-sources table is configured; set
-        # SCL_DISABLE_JDBC_DISPATCH=true as an operational off-switch (composite
-        # then degrades to Athena-only = the prior behaviour).
-        source_db_executor = None
-        jdbc_disabled = os.environ.get("SCL_DISABLE_JDBC_DISPATCH", "").lower() == "true"
-        if not jdbc_disabled and config.data_sources_table:
-            try:
-                from .clients.source_db import SourceDBQueryExecutor
+            # single-vs-cross-source dispatcher (Serve LLD §2.2.1 Option D).
+            # Direct JDBC is the DEFAULT fast path for single-source queries (one
+            # catalog, all-qualified tables, a resolvable DATABASE source) because
+            # direct asyncpg (~20-50ms p50) avoids Athena's federation cold-start;
+            # complex/federated/cross-source queries use Athena. The composite only
+            # routes to JDBC after confirming the source is a DATABASE source
+            # (has_jdbc_endpoint gate) — Glue-native/S3 sources always use Athena.
+            # Built by default when a data-sources table is configured; set
+            # SCL_DISABLE_JDBC_DISPATCH=true as an operational off-switch (composite
+            # then degrades to Athena-only = the prior behaviour).
+            source_db_executor = None
+            jdbc_disabled = os.environ.get("SCL_DISABLE_JDBC_DISPATCH", "").lower() == "true"
+            if not jdbc_disabled and config.data_sources_table:
+                try:
+                    from .clients.source_db import SourceDBQueryExecutor
 
-                source_db_executor = SourceDBQueryExecutor(
-                    data_sources_table=config.data_sources_table,
-                    region=config.bedrock_region,
-                    sources_registry=sources_registry,
-                )
-                logger.info("jdbc_dispatch_enabled")
-            except Exception as exc:
-                logger.warning("source_db_executor_unavailable", error=type(exc).__name__)
+                    source_db_executor = SourceDBQueryExecutor(
+                        data_sources_table=config.data_sources_table,
+                        region=config.bedrock_region,
+                        sources_registry=sources_registry,
+                    )
+                    logger.info("jdbc_dispatch_enabled")
+                except Exception as exc:
+                    logger.warning("source_db_executor_unavailable", error=type(exc).__name__)
 
-        # Redshift Serverless executor for Glue/Iceberg sources that opt
-        # into Redshift execution (queryEngine=REDSHIFT). Built by default when a
-        # data-sources table is configured; set SCL_DISABLE_REDSHIFT_DISPATCH=true
-        # as an operational off-switch (composite then routes those sources to
-        # Athena — the prior behaviour). Never regresses non-Redshift sources.
-        redshift_executor = None
-        redshift_disabled = os.environ.get("SCL_DISABLE_REDSHIFT_DISPATCH", "").lower() == "true"
-        if not redshift_disabled and config.data_sources_table:
-            try:
-                from .clients.redshift_data import RedshiftDataAPIExecutor
+            # Redshift Serverless executor for Glue/Iceberg sources that opt
+            # into Redshift execution (queryEngine=REDSHIFT). Built by default when a
+            # data-sources table is configured; set SCL_DISABLE_REDSHIFT_DISPATCH=true
+            # as an operational off-switch (composite then routes those sources to
+            # Athena — the prior behaviour). Never regresses non-Redshift sources.
+            redshift_executor = None
+            redshift_disabled = os.environ.get("SCL_DISABLE_REDSHIFT_DISPATCH", "").lower() == "true"
+            if not redshift_disabled and config.data_sources_table:
+                try:
+                    from .clients.redshift_data import RedshiftDataAPIExecutor
 
-                redshift_executor = RedshiftDataAPIExecutor(
-                    sources_registry=sources_registry,
-                    region=config.bedrock_region,
-                )
-                logger.info("redshift_dispatch_enabled")
-            except Exception as exc:
-                logger.warning("redshift_executor_unavailable", error=type(exc).__name__)
+                    redshift_executor = RedshiftDataAPIExecutor(
+                        sources_registry=sources_registry,
+                        region=config.bedrock_region,
+                    )
+                    logger.info("redshift_dispatch_enabled")
+                except Exception as exc:
+                    logger.warning("redshift_executor_unavailable", error=type(exc).__name__)
 
-        query_executor = CompositeQueryExecutor(
-            athena_executor=athena_executor,
-            source_db_executor=source_db_executor,
-            firewall=SQLFirewall(),
-            sources_registry=sources_registry,
-            redshift_executor=redshift_executor,
-        )
+            query_executor = CompositeQueryExecutor(
+                athena_executor=athena_executor,
+                source_db_executor=source_db_executor,
+                firewall=SQLFirewall(),
+                sources_registry=sources_registry,
+                redshift_executor=redshift_executor,
+            )
 
         # Build tier resolvers
         metric_resolver = MetricResolver(neptune_client=graph_client)

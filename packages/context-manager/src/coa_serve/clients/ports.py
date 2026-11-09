@@ -132,6 +132,22 @@ def resolve_chat_client(config: Any) -> Any:
     )
 
 
+def resolve_query_executor() -> Any | None:
+    """``COA_PROVIDER_QUERY_EXECUTOR`` -> the SQL executor, else ``None``.
+
+    ``None`` keeps the legacy Athena/JDBC/Redshift composite, which is what an
+    AWS deployment without the key still needs. A configured key resolves through
+    the catalog and never falls back: ``athena``/``redshift`` are registered but
+    unimplemented there and raise ``ProviderNotAvailableError`` instead of
+    quietly building an AWS client.
+    """
+    from coa_runtime.settings import Settings
+
+    if Settings.from_environ().get("COA_PROVIDER_QUERY_EXECUTOR") is not None:
+        return _resolve("QueryExecutor")
+    return None
+
+
 def resolve_embedding_client() -> PortEmbedding:
     """``COA_PROVIDER_EMBEDDING`` -> the single-text embedding adapter.
 
@@ -188,6 +204,7 @@ __all__ = [
     "resolve_chat_client",
     "resolve_embedding_client",
     "resolve_graph_client",
+    "resolve_query_executor",
     "resolve_session_metadata",
     "resolve_vector_client",
 ]
