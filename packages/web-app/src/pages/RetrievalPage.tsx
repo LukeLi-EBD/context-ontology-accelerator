@@ -10,7 +10,6 @@ import {
   useListDocumentChunks,
   useListDocuments,
 } from "@api-hooks";
-import type { ChunkEmbedding } from "@api-hooks";
 import Alert from "@cloudscape-design/components/alert";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
@@ -23,14 +22,16 @@ import type { SelectProps } from "@cloudscape-design/components/select";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Table from "@cloudscape-design/components/table";
-import type { DocumentChunk, DocumentSummary } from "@coa/control-plane-client";
+import type {
+  DocumentChunk,
+  DocumentSummary,
+  EmbeddingRecord,
+} from "@coa/control-plane-client";
 import { useAppI18n } from "../i18n/LocaleProvider";
 
-function metadataString(
-  metadata: Record<string, unknown> | null | undefined,
-  key: string,
-): string {
-  const value = metadata?.[key];
+function metadataString(metadata: unknown, key: string): string {
+  if (!metadata || typeof metadata !== "object") return "";
+  const value = (metadata as Record<string, unknown>)[key];
   return value === undefined || value === null ? "" : String(value);
 }
 
@@ -108,7 +109,7 @@ export default function RetrievalPage() {
     });
   }
 
-  const hits: ChunkEmbedding[] = search.data?.hits ?? [];
+  const hits: EmbeddingRecord[] = search.data?.hits ?? [];
 
   return (
     <SpaceBetween size="l">
@@ -208,15 +209,15 @@ export default function RetrievalPage() {
       </Container>
 
       {search.data ? (
-        <Table<ChunkEmbedding>
+        <Table<EmbeddingRecord>
           variant="container"
           header={
             <Header
               variant="h2"
               counter={`(${hits.length})`}
               description={t("Query vector: {uri} ({dimensions} dimensions)", {
-                uri: search.data.embedding.entity_uri,
-                dimensions: search.data.embedding.dimensions,
+                uri: search.data.embedding.entityUri ?? "",
+                dimensions: search.data.embedding.dimensions ?? 0,
               })}
             >
               {t("Top matches")}
@@ -257,7 +258,7 @@ export default function RetrievalPage() {
               header: t("Chunk text"),
               cell: (item) => {
                 const hitChunkId = metadataString(item.metadata, "chunk_id");
-                return chunksById.get(hitChunkId)?.text ?? item.entity_uri;
+                return chunksById.get(hitChunkId)?.text ?? item.entityUri ?? "";
               },
               minWidth: 400,
             },

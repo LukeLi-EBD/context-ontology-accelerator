@@ -17,6 +17,8 @@ use com.amazon.semanticcontext.documents#ListDocuments
 use com.amazon.semanticcontext.documents#ListFactCandidates
 use com.amazon.semanticcontext.documents#RejectFactCandidate
 use com.amazon.semanticcontext.documents#UploadDocument
+use com.amazon.semanticcontext.embeddings#GetEntityEmbeddings
+use com.amazon.semanticcontext.embeddings#SearchEmbeddings
 use com.amazon.semanticcontext.grant#CreateGrant
 use com.amazon.semanticcontext.grant#CreatePlatformGrant
 use com.amazon.semanticcontext.grant#DeleteGrant
@@ -234,6 +236,9 @@ service ControlPlaneService {
         GetGraphObjectProperty
         GetGraphDatatypeProperty
         GetOntologyOverview
+        // ── Entity embeddings ───────────────────────────────────────────
+        GetEntityEmbeddings
+        SearchEmbeddings
     ]
     errors: [
         ValidationError

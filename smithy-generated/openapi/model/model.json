@@ -1627,6 +1627,30 @@
                     "target": "com.amazon.semanticcontext#HealthCheck"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.documents#ApproveFactCandidate"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.documents#ListDocumentChunks"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.documents#ListDocuments"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.documents#ListFactCandidates"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.documents#RejectFactCandidate"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.documents#UploadDocument"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.embeddings#GetEntityEmbeddings"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.embeddings#SearchEmbeddings"
+                },
+                {
                     "target": "com.amazon.semanticcontext.grant#CreateGrant"
                 },
                 {
@@ -3896,6 +3920,1336 @@
                 "smithy.api#documentation": "Returned with HTTP 502 when the virtual knowledge graph fails to execute the\ngenerated SPARQL query.\n\nCarries a fixed, client-safe message only. The failing query and the\nbackend's own error text are deliberately not returned: they name internal\nschema objects and endpoints. Operators correlate a failure through the\nrequest id instead.",
                 "smithy.api#error": "server",
                 "smithy.api#httpError": 502
+            }
+        },
+        "com.amazon.semanticcontext.documents#ApproveFactCandidate": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.documents#ApproveFactCandidateInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.documents#ApproveFactCandidateOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#ConflictError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Approve a candidate: write the fact to the ledger and project it into the\nnamespace A-Box graph. Idempotent per candidate; a second approval answers\n409 with the fact id already written.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Approve a candidate",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "candidateId": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
+                        },
+                        "output": {
+                            "factId": "4d5e6f70-8192-4a3b-9c4d-5e6f708192a3",
+                            "status": "APPROVED"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/candidates/{candidateId}/approve",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#ApproveFactCandidateInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "candidateId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "actor": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Identity of the approving principal; defaults to the caller.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "factOverrides": {
+                    "target": "com.amazon.semanticcontext.documents#FactOverrides",
+                    "traits": {
+                        "smithy.api#documentation": "Values overriding the extracted subject/predicate/object.",
+                        "smithy.api#length": {
+                            "min": 0,
+                            "max": 3
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ApproveFactCandidateOutput": {
+            "type": "structure",
+            "members": {
+                "factId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier of the written fact.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#FactCandidateStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Candidate status after the call (`APPROVED`).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentChunk": {
+            "type": "structure",
+            "members": {
+                "chunkId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier of the chunk; also the entity URI suffix used by its embedding.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "page": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "1-based page number the chunk came from (1 for plain-text sources).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "text": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Chunk text exactly as indexed.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "charStart": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Inclusive character offset of the chunk in the normalised document text.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "charEnd": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Exclusive character offset of the chunk in the normalised document text.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One text chunk of a document."
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentChunkList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.documents#DocumentChunk"
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentMetadata": {
+            "type": "map",
+            "key": {
+                "target": "com.amazon.semanticcontext.documents#MetadataKey"
+            },
+            "value": {
+                "target": "com.amazon.semanticcontext.documents#MetadataValue"
+            },
+            "traits": {
+                "smithy.api#documentation": "Free-form document metadata carried through ingestion."
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentStatus": {
+            "type": "enum",
+            "members": {
+                "UPLOADED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Bytes stored, ingestion not started.",
+                        "smithy.api#enumValue": "UPLOADED"
+                    }
+                },
+                "PROCESSING": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Ingestion (chunking/embedding/extraction) in progress.",
+                        "smithy.api#enumValue": "PROCESSING"
+                    }
+                },
+                "INDEXED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Chunks, embeddings and fact candidates exist.",
+                        "smithy.api#enumValue": "INDEXED"
+                    }
+                },
+                "FAILED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Ingestion failed; the document row keeps the error reason.",
+                        "smithy.api#enumValue": "FAILED"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Lifecycle status of an ingested document."
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentSummary": {
+            "type": "structure",
+            "members": {
+                "documentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier assigned by UploadDocument.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "title": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display title (caller-supplied, else the filename).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Current lifecycle status.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "chunkCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of chunks written for this document.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "updatedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Timestamp of the last status change (RFC 3339).\n\nDeclared as a string, like the other summary types in this service, so\nthe wire value is the stored RFC 3339 text rather than an epoch number.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "errorMessage": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why ingestion failed. Present only when `status` is `FAILED`."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One document in the namespace's ingestion registry."
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentSummaryList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.documents#DocumentSummary"
+            }
+        },
+        "com.amazon.semanticcontext.documents#DocumentTitle": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Human-readable document title. Defaults to the uploaded filename.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 512
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#FactCandidate": {
+            "type": "structure",
+            "members": {
+                "candidateId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier assigned at extraction time.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Subject IRI or literal label as extracted.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "predicate": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Predicate IRI or label as extracted.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "object": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Object IRI or literal label as extracted.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "confidence": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Extractor confidence in [0, 1].",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#FactCandidateStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Review status.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "documentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Document the candidate was extracted from."
+                    }
+                },
+                "chunkId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Chunk the candidate was extracted from."
+                    }
+                },
+                "evidence": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source sentence the candidate was extracted from."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One subject-predicate-object candidate extracted from a document chunk."
+            }
+        },
+        "com.amazon.semanticcontext.documents#FactCandidateList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.documents#FactCandidate"
+            }
+        },
+        "com.amazon.semanticcontext.documents#FactCandidateStatus": {
+            "type": "enum",
+            "members": {
+                "PENDING": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Awaiting steward review.",
+                        "smithy.api#enumValue": "PENDING"
+                    }
+                },
+                "APPROVED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Approved; a fact row and an A-Box triple exist.",
+                        "smithy.api#enumValue": "APPROVED"
+                    }
+                },
+                "REJECTED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Rejected; kept for audit, never projected into the A-Box.",
+                        "smithy.api#enumValue": "REJECTED"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Review status of an extracted fact candidate."
+            }
+        },
+        "com.amazon.semanticcontext.documents#FactOverrideKey": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Field name of a fact override (`subject`, `predicate` or `object`).",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 32
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#FactOverrideValue": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Replacement value for one fact field.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 2048
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#FactOverrides": {
+            "type": "map",
+            "key": {
+                "target": "com.amazon.semanticcontext.documents#FactOverrideKey"
+            },
+            "value": {
+                "target": "com.amazon.semanticcontext.documents#FactOverrideValue"
+            },
+            "traits": {
+                "smithy.api#documentation": "Overrides applied to the fact written when a candidate is approved. Keys are\n`subject`, `predicate` and `object`; absent keys keep the candidate values."
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListDocumentChunks": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.documents#ListDocumentChunksInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.documents#ListDocumentChunksOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "List the chunks of one document in document order.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List one document's chunks",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "documentId": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
+                        },
+                        "output": {
+                            "items": [
+                                {
+                                    "chunkId": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                    "page": 1,
+                                    "text": "示例切片文本",
+                                    "charStart": 0,
+                                    "charEnd": 6
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/documents/{documentId}/chunks"
+                },
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "maxResults",
+                    "items": "items"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListDocumentChunksInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "documentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Document whose chunks to list.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "nextToken": {
+                    "target": "com.amazon.semanticcontext.common#PaginationToken",
+                    "traits": {
+                        "smithy.api#documentation": "Pagination token from a previous response.",
+                        "smithy.api#httpQuery": "nextToken"
+                    }
+                },
+                "maxResults": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum chunks per page (default and maximum 200).",
+                        "smithy.api#httpQuery": "maxResults",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 200
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListDocumentChunksOutput": {
+            "type": "structure",
+            "mixins": [
+                {
+                    "target": "com.amazon.semanticcontext.common#PaginatedOutput"
+                }
+            ],
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentChunkList",
+                    "traits": {
+                        "smithy.api#documentation": "Page of chunks, ordered by `charStart`.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListDocuments": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.documents#ListDocumentsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.documents#ListDocumentsOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "List documents registered in the namespace, newest first.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List the namespace's documents",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                        },
+                        "output": {
+                            "items": []
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/documents"
+                },
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "maxResults",
+                    "items": "items"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListDocumentsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Optional lifecycle-status filter.",
+                        "smithy.api#httpQuery": "status"
+                    }
+                },
+                "nextToken": {
+                    "target": "com.amazon.semanticcontext.common#PaginationToken",
+                    "traits": {
+                        "smithy.api#documentation": "Pagination token from a previous response.",
+                        "smithy.api#httpQuery": "nextToken"
+                    }
+                },
+                "maxResults": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum documents per page (default and maximum 100).",
+                        "smithy.api#httpQuery": "maxResults",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 100
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListDocumentsOutput": {
+            "type": "structure",
+            "mixins": [
+                {
+                    "target": "com.amazon.semanticcontext.common#PaginatedOutput"
+                }
+            ],
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentSummaryList",
+                    "traits": {
+                        "smithy.api#documentation": "Page of document summaries.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListFactCandidates": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.documents#ListFactCandidatesInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.documents#ListFactCandidatesOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "List extracted fact candidates awaiting review (or filtered by status).",
+                "smithy.api#examples": [
+                    {
+                        "title": "List pending candidates",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "status": "PENDING"
+                        },
+                        "output": {
+                            "items": []
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/candidates"
+                },
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "maxResults",
+                    "items": "items"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListFactCandidatesInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "documentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Only candidates extracted from this document.",
+                        "smithy.api#httpQuery": "documentId"
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#FactCandidateStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Only candidates in this review status (default: all).",
+                        "smithy.api#httpQuery": "status"
+                    }
+                },
+                "nextToken": {
+                    "target": "com.amazon.semanticcontext.common#PaginationToken",
+                    "traits": {
+                        "smithy.api#documentation": "Pagination token from a previous response.",
+                        "smithy.api#httpQuery": "nextToken"
+                    }
+                },
+                "maxResults": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum candidates per page (default and maximum 200).",
+                        "smithy.api#httpQuery": "maxResults",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 200
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#ListFactCandidatesOutput": {
+            "type": "structure",
+            "mixins": [
+                {
+                    "target": "com.amazon.semanticcontext.common#PaginatedOutput"
+                }
+            ],
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.documents#FactCandidateList",
+                    "traits": {
+                        "smithy.api#documentation": "Page of candidates, newest first.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#MetadataKey": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Key of a caller-metadata entry.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 128
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#MetadataValue": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Value of a caller-metadata entry.",
+                "smithy.api#length": {
+                    "min": 0,
+                    "max": 2048
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#RejectFactCandidate": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.documents#RejectFactCandidateInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.documents#RejectFactCandidateOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Reject a candidate. The row is kept for audit; nothing is written to the\nfact ledger or the A-Box graph.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Reject a candidate",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "candidateId": "3c4d5e6f-7081-492a-8b3c-4d5e6f708192",
+                            "reason": "Predicate is too generic to publish."
+                        },
+                        "output": {
+                            "status": "REJECTED"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/candidates/{candidateId}/reject",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#RejectFactCandidateInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "candidateId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "actor": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Identity of the rejecting principal; defaults to the caller.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "reason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why the candidate was rejected.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 1024
+                        },
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#RejectFactCandidateOutput": {
+            "type": "structure",
+            "members": {
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#FactCandidateStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Candidate status after the call (`REJECTED`).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#UploadDocument": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.documents#UploadDocumentInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.documents#UploadDocumentOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#ConflictError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Store a document's bytes and register it for ingestion.\n\n`contentBase64` carries the bytes. The content hash is computed server-side\nfrom the decoded bytes, so the returned `contentHash` is always the hash of\nwhat was stored; `contentSha256`, when supplied, is verified against it.\nRe-uploading identical bytes into the same namespace answers 409 with the\nexisting document id.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Upload a plain-text policy",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "filename": "loan-policy.txt",
+                            "contentType": "text/plain",
+                            "contentBase64": "5L+d6K+B6LS35qy+5pS/562W"
+                        },
+                        "output": {
+                            "documentId": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d",
+                            "version": 1,
+                            "contentHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                            "status": "PROCESSING"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/documents",
+                    "code": 201
+                }
+            }
+        },
+        "com.amazon.semanticcontext.documents#UploadDocumentInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "filename": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Original filename, including extension.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 512
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "contentType": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "MIME type of the uploaded bytes, e.g. `text/plain`.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 255
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "contentBase64": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Base64-encoded document content.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 10485760
+                        }
+                    }
+                },
+                "contentSha256": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "SHA-256 of the content (lowercase hex). Optional when\n`contentBase64` is supplied — if present it must match the decoded\nbytes, and is rejected rather than ignored when it does not.",
+                        "smithy.api#length": {
+                            "min": 64,
+                            "max": 64
+                        }
+                    }
+                },
+                "title": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentTitle",
+                    "traits": {
+                        "smithy.api#documentation": "Display title; defaults to `filename`."
+                    }
+                },
+                "metadata": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentMetadata",
+                    "traits": {
+                        "smithy.api#documentation": "Caller metadata stored on the document row.",
+                        "smithy.api#length": {
+                            "min": 0,
+                            "max": 20
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.documents#UploadDocumentOutput": {
+            "type": "structure",
+            "members": {
+                "documentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier of the stored document.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "version": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Document version (1 for the first upload of these bytes).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "contentHash": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "SHA-256 of the stored bytes, lowercase hex.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.documents#DocumentStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Lifecycle status at response time (`UPLOADED` or `PROCESSING`).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#DoubleList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#Double",
+                "traits": {
+                    "smithy.api#documentation": "One component. Bounded well outside the range any supported embedding\nmodel produces; the bound exists to keep an absurd payload from being\nforwarded to the vector store.",
+                    "smithy.api#range": {
+                        "min": -1000,
+                        "max": 1000
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Dense float vector.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 8192
+                }
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingEntityType": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Entity type an embedding row was written for (e.g. `class`, `property`,\n`chunk`).",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 64
+                }
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingListOutput": {
+            "type": "structure",
+            "members": {
+                "embeddings": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingRecordList",
+                    "traits": {
+                        "smithy.api#documentation": "Matching embedding rows.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Envelope for the embedding reads. The engine returns a bare array; the\ngateway wraps it in this structure to give the contract a typed output."
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingMetadata": {
+            "type": "document",
+            "traits": {
+                "smithy.api#documentation": "Free-form metadata attached to an embedding row (document/chunk provenance\nfor chunk vectors). Values keep their JSON type, so this is a document\nrather than a string map."
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingModelId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Identifier of the model that produced the vectors (e.g. a local BGE model\nid).",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 256
+                }
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingRecord": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Row identity. Empty for k-NN hits, which carry no stable external id.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology (or A-Box/namespace) the vector belongs to.",
+                        "smithy.api#jsonName": "ontology_id",
+                        "smithy.api#required": {}
+                    }
+                },
+                "entityUri": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "URI of the embedded entity.",
+                        "smithy.api#jsonName": "entity_uri",
+                        "smithy.api#required": {}
+                    }
+                },
+                "entityType": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingEntityType",
+                    "traits": {
+                        "smithy.api#documentation": "Entity type the row was written for.",
+                        "smithy.api#jsonName": "entity_type",
+                        "smithy.api#required": {}
+                    }
+                },
+                "embeddingType": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingType",
+                    "traits": {
+                        "smithy.api#documentation": "Kind of vector in this row.",
+                        "smithy.api#jsonName": "embedding_type",
+                        "smithy.api#required": {}
+                    }
+                },
+                "modelId": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingModelId",
+                    "traits": {
+                        "smithy.api#documentation": "Model that produced the vector.",
+                        "smithy.api#jsonName": "model_id",
+                        "smithy.api#required": {}
+                    }
+                },
+                "dimensions": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Vector length.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "text": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source text, when the row was written from text (chunk rows carry it)."
+                    }
+                },
+                "createdAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Row creation timestamp (RFC 3339); empty for k-NN hits.",
+                        "smithy.api#jsonName": "created_at"
+                    }
+                },
+                "metadata": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingMetadata",
+                    "traits": {
+                        "smithy.api#documentation": "Provenance metadata, e.g. chunk/document ids for chunk vectors."
+                    }
+                },
+                "vector": {
+                    "target": "com.amazon.semanticcontext.embeddings#DoubleList",
+                    "traits": {
+                        "smithy.api#documentation": "The raw vector.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One stored embedding, vector included.\n\nMember names mirror the engine's snake_case JSON through `@jsonName`; the\ncamelCase names here are the contract's own spelling."
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingRecordList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.embeddings#EmbeddingRecord"
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#EmbeddingType": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Kind of vector held by one embedding row (e.g. `lexical`, `structural`,\n`chunk`).",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 64
+                }
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#GetEntityEmbeddings": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.embeddings#GetEntityEmbeddingsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.embeddings#EmbeddingListOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Return every stored embedding (vector included) for one entity URI.\n\nChunk vectors are addressed as `urn:coa:chunk:<chunkId>`; filtering by\n`entityType: \"chunk\"` and `embeddingType: \"chunk\"` narrows the scan.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Read a chunk's vector",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "entityUri": "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                            "entityType": "chunk",
+                            "embeddingType": "chunk"
+                        },
+                        "output": {
+                            "embeddings": [
+                                {
+                                    "id": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                    "ontologyId": "urn:coa:abox:documents",
+                                    "entityUri": "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                    "entityType": "chunk",
+                                    "embeddingType": "chunk",
+                                    "modelId": "BAAI/bge-m3",
+                                    "dimensions": 1024,
+                                    "createdAt": "2026-11-10T08:00:00Z",
+                                    "vector": [
+                                        0.1,
+                                        0.2,
+                                        0.3
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#GetEntityEmbeddingsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "entityUri": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Entity URI whose vectors to read.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 2048
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "entityType": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingEntityType",
+                    "traits": {
+                        "smithy.api#documentation": "Only rows written for this entity type.",
+                        "smithy.api#httpQuery": "entity_type"
+                    }
+                },
+                "embeddingType": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingType",
+                    "traits": {
+                        "smithy.api#documentation": "Only rows of this vector kind.",
+                        "smithy.api#httpQuery": "embedding_type"
+                    }
+                },
+                "modelId": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingModelId",
+                    "traits": {
+                        "smithy.api#documentation": "Only rows produced by this model.",
+                        "smithy.api#httpQuery": "model_id"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#SearchEmbeddings": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.embeddings#SearchEmbeddingsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.embeddings#EmbeddingListOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "k-nearest-neighbour search over a namespace's stored vectors.\n\nThe caller supplies the query vector (the web app reuses the vector already\nstored for a chunk); no embedding is computed server-side.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Search the five nearest chunk vectors",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "vector": [
+                                0.1,
+                                0.2,
+                                0.3
+                            ],
+                            "entityType": "chunk",
+                            "embeddingType": "chunk",
+                            "modelId": "BAAI/bge-m3",
+                            "topK": 5
+                        },
+                        "output": {
+                            "embeddings": []
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/embeddings/search",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.embeddings#SearchEmbeddingsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "vector": {
+                    "target": "com.amazon.semanticcontext.embeddings#DoubleList",
+                    "traits": {
+                        "smithy.api#documentation": "Query vector. Must have the same dimensionality as the stored rows.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "embeddingType": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingType",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict the search to this vector kind.",
+                        "smithy.api#jsonName": "embedding_type",
+                        "smithy.api#required": {}
+                    }
+                },
+                "modelId": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingModelId",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict the search to vectors from this model.",
+                        "smithy.api#jsonName": "model_id",
+                        "smithy.api#required": {}
+                    }
+                },
+                "entityType": {
+                    "target": "com.amazon.semanticcontext.embeddings#EmbeddingEntityType",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict the search to this entity type (engine default: `class`).",
+                        "smithy.api#jsonName": "entity_type"
+                    }
+                },
+                "ontologyId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict the search to one ontology's named graph.",
+                        "smithy.api#jsonName": "ontology_id",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 2048
+                        }
+                    }
+                },
+                "topK": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of nearest rows to return (engine default: 10).",
+                        "smithy.api#jsonName": "top_k",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 100
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
             }
         },
         "com.amazon.semanticcontext.grant#ColumnDenylist": {
@@ -8635,7 +9989,8 @@
                 "graphUris": {
                     "target": "com.amazon.semanticcontext.ontologygraph#StringList",
                     "traits": {
-                        "smithy.api#documentation": "IRIs of the named graphs the vertex is defined in. A class IRI asserted\nin more than one ontology (e.g. a shared IRI referenced by both\nschema.org and FIBO) lists every source graph, not just one."
+                        "smithy.api#documentation": "IRIs of the named graphs the vertex is defined in. A class IRI asserted\nin more than one ontology (e.g. a shared IRI referenced by both\nschema.org and FIBO) lists every source graph, not just one.",
+                        "smithy.api#jsonName": "graph_uris"
                     }
                 }
             },

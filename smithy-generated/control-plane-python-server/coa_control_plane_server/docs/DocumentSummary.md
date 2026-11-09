@@ -10,7 +10,8 @@ Name | Type | Description | Notes
 **title** | **str** | Display title (caller-supplied, else the filename). | 
 **status** | [**DocumentStatus**](DocumentStatus.md) |  | 
 **chunk_count** | **float** | Number of chunks written for this document. | 
-**updated_at** | **float** | Timestamp of the last status change. | 
+**updated_at** | **str** | Timestamp of the last status change (RFC 3339).  Declared as a string, like the other summary types in this service, so the wire value is the stored RFC 3339 text rather than an epoch number. | 
+**error_message** | **str** | Why ingestion failed. Present only when &#x60;status&#x60; is &#x60;FAILED&#x60;. | [optional] 
 
 ## Example
 

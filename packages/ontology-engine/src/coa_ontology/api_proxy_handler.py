@@ -156,6 +156,36 @@ _QUERY_ALIASES: dict[str, dict[str, str]] = {
     },
 }
 
+# Reads whose upstream body is a bare JSON array while the Smithy output is the
+# ``EmbeddingListOutput`` structure (``{"embeddings": [...]}``). restJson1
+# requires an operation output to be a structure, so the gateway conforms the
+# upstream array here instead of the contract modelling the response as a
+# free-form document. Nothing else about these responses is rewritten.
+_EMBEDDING_LIST_RESOURCES = frozenset(
+    {
+        "/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}",
+        "/namespaces/{namespaceId}/embeddings/search",
+    }
+)
+
+
+def _envelope_embedding_list(resource: str, status: int, body: str) -> str:
+    """Wrap an embedding read's bare JSON array in the contract's envelope.
+
+    Leaves the body untouched for any other resource, for non-2xx statuses and
+    for bodies that are not a JSON array, so a backend error or an unexpected
+    payload passes through exactly as received.
+    """
+    if resource not in _EMBEDDING_LIST_RESOURCES or not 200 <= status < 300:
+        return body
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        return body
+    if not isinstance(payload, list):
+        return body
+    return json.dumps({"embeddings": payload})
+
 
 def _handle_system_health() -> dict:
     """Aggregate backend health: direct checks + ontology-engine /readiness."""
@@ -351,7 +381,7 @@ def _forward(event: dict, *, timeout: float) -> dict:
             return {
                 "statusCode": resp.status,
                 "headers": _CORS_HEADERS,
-                "body": resp_body,
+                "body": _envelope_embedding_list(resource, resp.status, resp_body),
             }
     except HTTPError as e:
         # The ontology engine's own error body (its FastAPI ``detail``) is this

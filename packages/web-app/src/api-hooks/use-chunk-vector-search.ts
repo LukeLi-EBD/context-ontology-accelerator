@@ -2,25 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useMutation } from "@tanstack/react-query";
-import { useApiClient } from "@components/ApiClientProvider";
-
-/** One embedding row returned by the ontology engine, vector included. */
-export interface ChunkEmbedding {
-  id: string;
-  ontology_id: string;
-  entity_uri: string;
-  entity_type: string;
-  embedding_type: string;
-  model_id: string;
-  dimensions: number;
-  created_at: string;
-  vector: number[];
-  metadata?: Record<string, unknown> | null;
-}
+import {
+  GetEntityEmbeddingsCommand,
+  SearchEmbeddingsCommand,
+} from "@coa/control-plane-client";
+import type { EmbeddingRecord } from "@coa/control-plane-client";
+import { useControlPlaneClient } from "@components/ControlPlaneClientProvider";
 
 export interface ChunkVectorSearchResult {
-  embedding: ChunkEmbedding;
-  hits: ChunkEmbedding[];
+  embedding: EmbeddingRecord;
+  hits: EmbeddingRecord[];
 }
 
 function chunkEntityUri(chunkId: string): string {
@@ -29,33 +20,38 @@ function chunkEntityUri(chunkId: string): string {
 
 /**
  * Reads the stored vector of one chunk and uses it as the query for a real
- * k-NN search. Both calls go through the existing ontology embeddings routes;
- * no client-side embedding or fake hit list is involved.
+ * k-NN search. Both calls go through the generated control-plane client
+ * (GetEntityEmbeddings / SearchEmbeddings); no client-side embedding or fake
+ * hit list is involved.
  */
 export function useChunkVectorSearch(namespaceId: string) {
-  const apiClient = useApiClient();
+  const client = useControlPlaneClient();
 
   return useMutation<ChunkVectorSearchResult, Error, string>({
     mutationFn: async (chunkId) => {
-      const entityUri = encodeURIComponent(chunkEntityUri(chunkId));
-      const rows = await apiClient.get<ChunkEmbedding[]>(
-        `/namespaces/${encodeURIComponent(namespaceId)}/embeddings/by-entity/${entityUri}?entity_type=chunk&embedding_type=chunk`,
+      const stored = await client.send(
+        new GetEntityEmbeddingsCommand({
+          namespaceId,
+          entityUri: chunkEntityUri(chunkId),
+          entityType: "chunk",
+          embeddingType: "chunk",
+        }),
       );
-      const embedding = rows[0];
+      const embedding = stored.embeddings?.[0];
       if (!embedding || !embedding.vector?.length) {
         throw new Error("CHUNK_VECTOR_NOT_FOUND");
       }
-      const hits = await apiClient.post<ChunkEmbedding[]>(
-        `/namespaces/${encodeURIComponent(namespaceId)}/embeddings/search`,
-        {
+      const nearest = await client.send(
+        new SearchEmbeddingsCommand({
+          namespaceId,
           vector: embedding.vector,
-          entity_type: "chunk",
-          embedding_type: "chunk",
-          model_id: embedding.model_id,
-          top_k: 5,
-        },
+          entityType: "chunk",
+          embeddingType: "chunk",
+          modelId: embedding.modelId,
+          topK: 5,
+        }),
       );
-      return { embedding, hits };
+      return { embedding, hits: nearest.embeddings ?? [] };
     },
   });
 }

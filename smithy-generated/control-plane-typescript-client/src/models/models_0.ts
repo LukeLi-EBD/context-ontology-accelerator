@@ -576,6 +576,176 @@ export interface UploadDocumentOutput {
 }
 
 /**
+ * One stored embedding, vector included.
+ *
+ * Member names mirror the engine's snake_case JSON through `@jsonName`; the
+ * camelCase names here are the contract's own spelling.
+ * @public
+ */
+export interface EmbeddingRecord {
+  /**
+   * Row identity. Empty for k-NN hits, which carry no stable external id.
+   * @public
+   */
+  id: string | undefined;
+
+  /**
+   * Ontology (or A-Box/namespace) the vector belongs to.
+   * @public
+   */
+  ontologyId: string | undefined;
+
+  /**
+   * URI of the embedded entity.
+   * @public
+   */
+  entityUri: string | undefined;
+
+  /**
+   * Entity type the row was written for.
+   * @public
+   */
+  entityType: string | undefined;
+
+  /**
+   * Kind of vector in this row.
+   * @public
+   */
+  embeddingType: string | undefined;
+
+  /**
+   * Model that produced the vector.
+   * @public
+   */
+  modelId: string | undefined;
+
+  /**
+   * Vector length.
+   * @public
+   */
+  dimensions: number | undefined;
+
+  /**
+   * Source text, when the row was written from text (chunk rows carry it).
+   * @public
+   */
+  text?: string | undefined;
+
+  /**
+   * Row creation timestamp (RFC 3339); empty for k-NN hits.
+   * @public
+   */
+  createdAt?: string | undefined;
+
+  /**
+   * Provenance metadata, e.g. chunk/document ids for chunk vectors.
+   * @public
+   */
+  metadata?: __DocumentType | undefined;
+
+  /**
+   * The raw vector.
+   * @public
+   */
+  vector: number[] | undefined;
+}
+
+/**
+ * Envelope for the embedding reads. The engine returns a bare array; the
+ * gateway wraps it in this structure to give the contract a typed output.
+ * @public
+ */
+export interface EmbeddingListOutput {
+  /**
+   * Matching embedding rows.
+   * @public
+   */
+  embeddings: EmbeddingRecord[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetEntityEmbeddingsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Entity URI whose vectors to read.
+   * @public
+   */
+  entityUri: string | undefined;
+
+  /**
+   * Only rows written for this entity type.
+   * @public
+   */
+  entityType?: string | undefined;
+
+  /**
+   * Only rows of this vector kind.
+   * @public
+   */
+  embeddingType?: string | undefined;
+
+  /**
+   * Only rows produced by this model.
+   * @public
+   */
+  modelId?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface SearchEmbeddingsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Query vector. Must have the same dimensionality as the stored rows.
+   * @public
+   */
+  vector: number[] | undefined;
+
+  /**
+   * Restrict the search to this vector kind.
+   * @public
+   */
+  embeddingType: string | undefined;
+
+  /**
+   * Restrict the search to vectors from this model.
+   * @public
+   */
+  modelId: string | undefined;
+
+  /**
+   * Restrict the search to this entity type (engine default: `class`).
+   * @public
+   */
+  entityType?: string | undefined;
+
+  /**
+   * Restrict the search to one ontology's named graph.
+   * @public
+   */
+  ontologyId?: string | undefined;
+
+  /**
+   * Number of nearest rows to return (engine default: 10).
+   * @public
+   */
+  topK?: number | undefined;
+}
+
+/**
  * The request body for creating a namespace-scoped grant, binding a principal to
  * a role and optionally scoping data access via a table allowlist, column denylist, and allowed-metrics list.
  * @public

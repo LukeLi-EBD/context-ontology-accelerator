@@ -3686,6 +3686,540 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}": {
+            "get": {
+                "description": "Return every stored embedding (vector included) for one entity URI.\n\nChunk vectors are addressed as `urn:coa:chunk:<chunkId>`; filtering by\n`entityType: \"chunk\"` and `embeddingType: \"chunk\"` narrows the scan.",
+                "operationId": "GetEntityEmbeddings",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetEntityEmbeddings_example1": {
+                                "summary": "Read a chunk's vector",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "entityUri",
+                        "in": "path",
+                        "description": "Entity URI whose vectors to read.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "Entity URI whose vectors to read."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetEntityEmbeddings_example1": {
+                                "summary": "Read a chunk's vector",
+                                "description": "",
+                                "value": "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "entity_type",
+                        "in": "query",
+                        "description": "Only rows written for this entity type.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "description": "Only rows written for this entity type."
+                        },
+                        "examples": {
+                            "GetEntityEmbeddings_example1": {
+                                "summary": "Read a chunk's vector",
+                                "description": "",
+                                "value": "chunk"
+                            }
+                        }
+                    },
+                    {
+                        "name": "embedding_type",
+                        "in": "query",
+                        "description": "Only rows of this vector kind.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "description": "Only rows of this vector kind."
+                        },
+                        "examples": {
+                            "GetEntityEmbeddings_example1": {
+                                "summary": "Read a chunk's vector",
+                                "description": "",
+                                "value": "chunk"
+                            }
+                        }
+                    },
+                    {
+                        "name": "model_id",
+                        "in": "query",
+                        "description": "Only rows produced by this model.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 256,
+                            "minLength": 1,
+                            "description": "Only rows produced by this model."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetEntityEmbeddings 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetEntityEmbeddingsResponseContent"
+                                },
+                                "examples": {
+                                    "GetEntityEmbeddings_example1": {
+                                        "summary": "Read a chunk's vector",
+                                        "description": "",
+                                        "value": {
+                                            "embeddings": [
+                                                {
+                                                    "id": "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                                    "ontologyId": "urn:coa:abox:documents",
+                                                    "entityUri": "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d",
+                                                    "entityType": "chunk",
+                                                    "embeddingType": "chunk",
+                                                    "modelId": "BAAI/bge-m3",
+                                                    "dimensions": 1024,
+                                                    "createdAt": "2026-11-10T08:00:00Z",
+                                                    "vector": [
+                                                        0.1,
+                                                        0.2,
+                                                        0.3
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidEmbeddingsBy_entityEntityuri",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetEntityEmbeddings_example1": {
+                                "summary": "Read a chunk's vector",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "entityUri",
+                        "in": "path",
+                        "description": "Entity URI whose vectors to read.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "Entity URI whose vectors to read."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetEntityEmbeddings_example1": {
+                                "summary": "Read a chunk's vector",
+                                "description": "",
+                                "value": "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/embeddings/search": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidEmbeddingsSearch",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "SearchEmbeddings_example1": {
+                                "summary": "Search the five nearest chunk vectors",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "k-nearest-neighbour search over a namespace's stored vectors.\n\nThe caller supplies the query vector (the web app reuses the vector already\nstored for a chunk); no embedding is computed server-side.",
+                "operationId": "SearchEmbeddings",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SearchEmbeddingsRequestContent"
+                            },
+                            "examples": {
+                                "SearchEmbeddings_example1": {
+                                    "summary": "Search the five nearest chunk vectors",
+                                    "description": "",
+                                    "value": {
+                                        "vector": [
+                                            0.1,
+                                            0.2,
+                                            0.3
+                                        ],
+                                        "entityType": "chunk",
+                                        "embeddingType": "chunk",
+                                        "modelId": "BAAI/bge-m3",
+                                        "topK": 5
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "SearchEmbeddings_example1": {
+                                "summary": "Search the five nearest chunk vectors",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SearchEmbeddings 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SearchEmbeddingsResponseContent"
+                                },
+                                "examples": {
+                                    "SearchEmbeddings_example1": {
+                                        "summary": "Search the five nearest chunk vectors",
+                                        "description": "",
+                                        "value": {
+                                            "embeddings": []
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/namespaces/{namespaceId}/export-osi": {
             "get": {
                 "description": "Export metric definitions as an OSI (Open Semantic Interchange) YAML document.",
@@ -25032,6 +25566,80 @@
                     "tableName"
                 ]
             },
+            "EmbeddingRecord": {
+                "type": "object",
+                "description": "One stored embedding, vector included.\n\nMember names mirror the engine's snake_case JSON through `@jsonName`; the\ncamelCase names here are the contract's own spelling.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Row identity. Empty for k-NN hits, which carry no stable external id."
+                    },
+                    "ontology_id": {
+                        "type": "string",
+                        "description": "Ontology (or A-Box/namespace) the vector belongs to."
+                    },
+                    "entity_uri": {
+                        "type": "string",
+                        "description": "URI of the embedded entity."
+                    },
+                    "entity_type": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "description": "Entity type the row was written for."
+                    },
+                    "embedding_type": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "description": "Kind of vector in this row."
+                    },
+                    "model_id": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Model that produced the vector."
+                    },
+                    "dimensions": {
+                        "type": "number",
+                        "description": "Vector length."
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Source text, when the row was written from text (chunk rows carry it)."
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "description": "Row creation timestamp (RFC 3339); empty for k-NN hits."
+                    },
+                    "metadata": {
+                        "description": "Provenance metadata, e.g. chunk/document ids for chunk vectors."
+                    },
+                    "vector": {
+                        "type": "array",
+                        "items": {
+                            "type": "number",
+                            "maximum": 1000,
+                            "minimum": -1000,
+                            "description": "One component. Bounded well outside the range any supported embedding\nmodel produces; the bound exists to keep an absurd payload from being\nforwarded to the vector store.",
+                            "format": "double"
+                        },
+                        "maxItems": 8192,
+                        "minItems": 1,
+                        "description": "The raw vector."
+                    }
+                },
+                "required": [
+                    "dimensions",
+                    "embedding_type",
+                    "entity_type",
+                    "entity_uri",
+                    "id",
+                    "model_id",
+                    "ontology_id",
+                    "vector"
+                ]
+            },
             "EventRescanConfig": {
                 "type": "object",
                 "description": "Event-driven rescan configuration for a DATABASE source. When enabled (Glue\nsources only), upstream Glue Data Catalog changes to the source's database\nautomatically trigger an EVENT-trigger rescan; the schema-diff keeps it\nnon-destructive and repeated events are coalesced.",
@@ -25374,6 +25982,22 @@
                 "required": [
                     "key",
                     "title"
+                ]
+            },
+            "GetEntityEmbeddingsResponseContent": {
+                "type": "object",
+                "description": "Envelope for the embedding reads. The engine returns a bare array; the\ngateway wraps it in this structure to give the contract a typed output.",
+                "properties": {
+                    "embeddings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EmbeddingRecord"
+                        },
+                        "description": "Matching embedding rows."
+                    }
+                },
+                "required": [
+                    "embeddings"
                 ]
             },
             "GetGraphClassResponseContent": {
@@ -29002,6 +29626,75 @@
                     "MANUAL",
                     "SCHEDULED",
                     "EVENT"
+                ]
+            },
+            "SearchEmbeddingsRequestContent": {
+                "type": "object",
+                "properties": {
+                    "vector": {
+                        "type": "array",
+                        "items": {
+                            "type": "number",
+                            "maximum": 1000,
+                            "minimum": -1000,
+                            "description": "One component. Bounded well outside the range any supported embedding\nmodel produces; the bound exists to keep an absurd payload from being\nforwarded to the vector store.",
+                            "format": "double"
+                        },
+                        "maxItems": 8192,
+                        "minItems": 1,
+                        "description": "Query vector. Must have the same dimensionality as the stored rows."
+                    },
+                    "embedding_type": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "description": "Restrict the search to this vector kind."
+                    },
+                    "model_id": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Restrict the search to vectors from this model."
+                    },
+                    "entity_type": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "minLength": 1,
+                        "description": "Restrict the search to this entity type (engine default: `class`)."
+                    },
+                    "ontology_id": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Restrict the search to one ontology's named graph."
+                    },
+                    "top_k": {
+                        "type": "number",
+                        "maximum": 100,
+                        "minimum": 1,
+                        "description": "Number of nearest rows to return (engine default: 10)."
+                    }
+                },
+                "required": [
+                    "embedding_type",
+                    "model_id",
+                    "vector"
+                ]
+            },
+            "SearchEmbeddingsResponseContent": {
+                "type": "object",
+                "description": "Envelope for the embedding reads. The engine returns a bare array; the\ngateway wraps it in this structure to give the contract a typed output.",
+                "properties": {
+                    "embeddings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EmbeddingRecord"
+                        },
+                        "description": "Matching embedding rows."
+                    }
+                },
+                "required": [
+                    "embeddings"
                 ]
             },
             "ServiceUnavailableErrorResponseContent": {

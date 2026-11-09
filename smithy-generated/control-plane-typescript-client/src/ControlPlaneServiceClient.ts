@@ -97,6 +97,10 @@ import type { DeleteSourceCommandInput, DeleteSourceCommandOutput } from "./comm
 import type { DownloadOntologyCommandInput, DownloadOntologyCommandOutput } from "./commands/DownloadOntologyCommand";
 import type { ExportOsiCommandInput, ExportOsiCommandOutput } from "./commands/ExportOsiCommand";
 import type { FetchOntologyCommandInput, FetchOntologyCommandOutput } from "./commands/FetchOntologyCommand";
+import type {
+  GetEntityEmbeddingsCommandInput,
+  GetEntityEmbeddingsCommandOutput,
+} from "./commands/GetEntityEmbeddingsCommand";
 import type { GetGraphClassCommandInput, GetGraphClassCommandOutput } from "./commands/GetGraphClassCommand";
 import type {
   GetGraphDatatypePropertyCommandInput,
@@ -237,6 +241,7 @@ import type {
   ReviewSourceTableCommandInput,
   ReviewSourceTableCommandOutput,
 } from "./commands/ReviewSourceTableCommand";
+import type { SearchEmbeddingsCommandInput, SearchEmbeddingsCommandOutput } from "./commands/SearchEmbeddingsCommand";
 import type { StartInductionCommandInput, StartInductionCommandOutput } from "./commands/StartInductionCommand";
 import type { UpdateMetricCommandInput, UpdateMetricCommandOutput } from "./commands/UpdateMetricCommand";
 import type { UpdateNamespaceCommandInput, UpdateNamespaceCommandOutput } from "./commands/UpdateNamespaceCommand";
@@ -300,6 +305,7 @@ export type ServiceInputTypes =
   | DownloadOntologyCommandInput
   | ExportOsiCommandInput
   | FetchOntologyCommandInput
+  | GetEntityEmbeddingsCommandInput
   | GetGraphClassCommandInput
   | GetGraphDatatypePropertyCommandInput
   | GetGraphObjectPropertyCommandInput
@@ -356,6 +362,7 @@ export type ServiceInputTypes =
   | RescanSourceCommandInput
   | ReviewSourceColumnCommandInput
   | ReviewSourceTableCommandInput
+  | SearchEmbeddingsCommandInput
   | StartInductionCommandInput
   | UpdateMetricCommandInput
   | UpdateNamespaceCommandInput
@@ -394,6 +401,7 @@ export type ServiceOutputTypes =
   | DownloadOntologyCommandOutput
   | ExportOsiCommandOutput
   | FetchOntologyCommandOutput
+  | GetEntityEmbeddingsCommandOutput
   | GetGraphClassCommandOutput
   | GetGraphDatatypePropertyCommandOutput
   | GetGraphObjectPropertyCommandOutput
@@ -450,6 +458,7 @@ export type ServiceOutputTypes =
   | RescanSourceCommandOutput
   | ReviewSourceColumnCommandOutput
   | ReviewSourceTableCommandOutput
+  | SearchEmbeddingsCommandOutput
   | StartInductionCommandOutput
   | UpdateMetricCommandOutput
   | UpdateNamespaceCommandOutput

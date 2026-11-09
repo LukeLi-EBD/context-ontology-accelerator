@@ -54,10 +54,7 @@ export {
   DOCUMENT_ABOX_ONTOLOGY_ID,
 } from "./use-verify-abox-fact";
 export type { AboxFactVerification } from "./use-verify-abox-fact";
-export type {
-  ChunkEmbedding,
-  ChunkVectorSearchResult,
-} from "./use-chunk-vector-search";
+export type { ChunkVectorSearchResult } from "./use-chunk-vector-search";
 export { useGetOntologyUploadUrl } from "./use-get-ontology-upload-url";
 export { useIngestOntologyFromS3 } from "./use-ingest-ontology-from-s3";
 export { useGetIngestStatus } from "./use-get-ingest-status";

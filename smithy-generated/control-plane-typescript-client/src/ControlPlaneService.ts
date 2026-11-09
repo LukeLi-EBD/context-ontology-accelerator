@@ -99,6 +99,11 @@ import {
   FetchOntologyCommand,
 } from "./commands/FetchOntologyCommand";
 import {
+  type GetEntityEmbeddingsCommandInput,
+  type GetEntityEmbeddingsCommandOutput,
+  GetEntityEmbeddingsCommand,
+} from "./commands/GetEntityEmbeddingsCommand";
+import {
   type GetGraphClassCommandInput,
   type GetGraphClassCommandOutput,
   GetGraphClassCommand,
@@ -367,6 +372,11 @@ import {
   ReviewSourceTableCommand,
 } from "./commands/ReviewSourceTableCommand";
 import {
+  type SearchEmbeddingsCommandInput,
+  type SearchEmbeddingsCommandOutput,
+  SearchEmbeddingsCommand,
+} from "./commands/SearchEmbeddingsCommand";
+import {
   type StartInductionCommandInput,
   type StartInductionCommandOutput,
   StartInductionCommand,
@@ -457,6 +467,8 @@ const commands = {
   ListFactCandidatesCommand,
   RejectFactCandidateCommand,
   UploadDocumentCommand,
+  GetEntityEmbeddingsCommand,
+  SearchEmbeddingsCommand,
   CreateGrantCommand,
   CreatePlatformGrantCommand,
   DeleteGrantCommand,
@@ -694,6 +706,40 @@ export interface ControlPlaneService {
     args: UploadDocumentCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: UploadDocumentCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetEntityEmbeddingsCommand}
+   */
+  getEntityEmbeddings(
+    args: GetEntityEmbeddingsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetEntityEmbeddingsCommandOutput>;
+  getEntityEmbeddings(
+    args: GetEntityEmbeddingsCommandInput,
+    cb: (err: any, data?: GetEntityEmbeddingsCommandOutput) => void
+  ): void;
+  getEntityEmbeddings(
+    args: GetEntityEmbeddingsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetEntityEmbeddingsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link SearchEmbeddingsCommand}
+   */
+  searchEmbeddings(
+    args: SearchEmbeddingsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<SearchEmbeddingsCommandOutput>;
+  searchEmbeddings(
+    args: SearchEmbeddingsCommandInput,
+    cb: (err: any, data?: SearchEmbeddingsCommandOutput) => void
+  ): void;
+  searchEmbeddings(
+    args: SearchEmbeddingsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: SearchEmbeddingsCommandOutput) => void
   ): void;
 
   /**
