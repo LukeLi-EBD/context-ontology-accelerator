@@ -628,34 +628,34 @@ class TestStrictReaderErrorSemantics:
     maps only ``ParameterNotFound`` to ``""``.
     """
 
-    def _client_error(self, code: str):
-        from botocore.exceptions import ClientError
+    def _port_error(self, code: str):
+        """A ``PortError`` shaped like a failed ``ConfigProvider.get``."""
+        from coa_ports import PortError, PortErrorCode
 
-        return ClientError({"Error": {"Code": code, "Message": code}}, "GetParameter")
+        port_code = (
+            PortErrorCode.NOT_FOUND if code == "ParameterNotFound" else PortErrorCode.INTERNAL
+        )
+        return PortError(port_code, code, provider="ssm", provider_code=code)
 
     def test_parameter_not_found_maps_to_empty(self, monkeypatch):
-        from unittest.mock import MagicMock
+        from types import SimpleNamespace
 
         from coa_serve import config as cfg
 
-        client = MagicMock()
-        client.get_parameter.side_effect = self._client_error("ParameterNotFound")
-        monkeypatch.setattr(cfg.boto3, "client", lambda *a, **k: client)
-        monkeypatch.setattr(cfg, "resolve_region", lambda: "us-east-1")
+        provider = SimpleNamespace(get=lambda name: (_ for _ in ()).throw(self._port_error("ParameterNotFound")))
+        monkeypatch.setattr(cfg, "_config_provider", lambda: provider)
         assert cfg._read_ssm_parameter_strict("/coa/bedrock/guardrail-id") == ""
 
     @pytest.mark.parametrize("code", ["ThrottlingException", "AccessDeniedException"])
     def test_real_error_raises_not_swallowed(self, monkeypatch, code):
-        from unittest.mock import MagicMock
+        from types import SimpleNamespace
 
-        from botocore.exceptions import ClientError
+        from coa_ports import PortError
         from coa_serve import config as cfg
 
-        client = MagicMock()
-        client.get_parameter.side_effect = self._client_error(code)
-        monkeypatch.setattr(cfg.boto3, "client", lambda *a, **k: client)
-        monkeypatch.setattr(cfg, "resolve_region", lambda: "us-east-1")
-        with pytest.raises(ClientError):
+        provider = SimpleNamespace(get=lambda name: (_ for _ in ()).throw(self._port_error(code)))
+        monkeypatch.setattr(cfg, "_config_provider", lambda: provider)
+        with pytest.raises(PortError):
             cfg._read_ssm_parameter_strict("/coa/bedrock/guardrail-id")
 
     def test_provider_retains_last_known_good_when_strict_reader_raises(self):
@@ -666,7 +666,7 @@ class TestStrictReaderErrorSemantics:
 
         def strict_getter(name: str, *, required: bool = False) -> str:
             if state["raise"]:
-                raise self._client_error("AccessDeniedException")
+                raise self._port_error("AccessDeniedException")
             return "gr-live" if name.endswith("/bedrock/guardrail-id") else ""
 
         clock = _FakeClock()

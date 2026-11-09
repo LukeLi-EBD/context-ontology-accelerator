@@ -179,6 +179,41 @@ def _env_config(settings: Settings) -> Any:
     return EnvironmentConfigProvider(settings.snapshot())
 
 
+def _sync_client_config() -> Any:
+    """The customer-path botocore policy (fail-fast, <=1 retry) the services used."""
+    from coa_common import sync_boto_config
+
+    return sync_boto_config()
+
+
+def _ssm_config(settings: Settings) -> Any:
+    from coa_local_providers.aws import SsmConfig
+
+    return SsmConfig(
+        region=settings.get("AWS_REGION") or settings.get("AWS_DEFAULT_REGION"),
+        client_config=_sync_client_config(),
+    )
+
+
+def _secretsmanager(settings: Settings) -> Any:
+    from coa_local_providers.aws import SecretsManagerSecret
+
+    return SecretsManagerSecret(
+        region=settings.get("AWS_REGION") or settings.get("AWS_DEFAULT_REGION"),
+        client_config=_sync_client_config(),
+    )
+
+
+def _s3_object_store(settings: Settings) -> Any:
+    from coa_local_providers.aws import S3ObjectStore
+
+    return S3ObjectStore(
+        region=settings.get("AWS_REGION") or settings.get("AWS_DEFAULT_REGION"),
+        probe_bucket=settings.get("COA_OBJECT_STORE_PROBE_BUCKET") or "",
+        client_config=_sync_client_config(),
+    )
+
+
 # ── the catalog ─────────────────────────────────────────────────────────────
 
 _SHELL = "薄壳未落地（阶段 1 第 3 步）"
@@ -230,7 +265,7 @@ SPECS: tuple[InterfaceSpec, ...] = (
         key="COA_PROVIDER_CONFIG",
         context="全部上下文",
         protocol=ConfigProvider,
-        providers=_providers(_done("env", _env_config, "进程环境变量"), _todo("ssm", _AWS)),
+        providers=_providers(_done("env", _env_config, "进程环境变量"), _done("ssm", _ssm_config, "AWS SSM")),
     ),
     InterfaceSpec(
         name="TaskQueuePort",
@@ -355,7 +390,7 @@ SPECS: tuple[InterfaceSpec, ...] = (
         key="COA_PROVIDER_OBJECT_STORE",
         context="文档摄入 / 数据源接入",
         protocol=ObjectStorePort,
-        providers=_providers(_todo("fs"), _todo("pg"), _todo("s3", _AWS)),
+        providers=_providers(_todo("fs"), _todo("pg"), _done("s3", _s3_object_store, "AWS S3")),
     ),
     InterfaceSpec(
         name="MetadataStorePort",
@@ -370,7 +405,7 @@ SPECS: tuple[InterfaceSpec, ...] = (
         key="COA_PROVIDER_SECRETS",
         context="全部上下文",
         protocol=SecretProvider,
-        providers=_providers(_done("env", _env_secrets), _todo("secretsmanager", _AWS)),
+        providers=_providers(_done("env", _env_secrets), _done("secretsmanager", _secretsmanager, "AWS Secrets Manager")),
     ),
     InterfaceSpec(
         name="DataSourceLookup",

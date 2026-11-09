@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 
 dependencies = [
     "coa-common",
+    "coa-ports",
+    "coa-runtime",
     # Unicode extended grapheme clusters (UAX #29) for multilingual query tokenization.
     "regex==2026.5.9",
     "bedrock-agentcore==1.18.1",
@@ -78,3 +80,5 @@ markers = [
 
 [tool.uv.sources]
 coa-common = { workspace = true }
+coa-ports = { workspace = true }
+coa-runtime = { workspace = true }

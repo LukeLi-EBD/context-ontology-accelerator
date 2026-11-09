@@ -194,10 +194,28 @@ def _get_bucket() -> str:
     return bucket_name
 
 
+_object_store: Any = None
+
+
+def _get_object_store() -> Any:
+    """Resolve the ``ObjectStorePort`` once, at first read.
+
+    Only the read path goes through the port: ``_write_to_s3`` needs the
+    version id S3 returns from ``put_object`` and ``ObjectInfo`` does not carry
+    it yet, so the staging write stays on the raw client.
+    """
+    global _object_store  # noqa: PLW0603
+    if _object_store is None:
+        from coa_runtime.registry import resolve
+
+        _object_store = resolve("ObjectStorePort")
+    return _object_store
+
+
 def _read_from_s3(s3_key: str) -> str:
     """Read OSI YAML content from S3. Raises on failure."""
-    response = _get_s3_client().get_object(Bucket=_get_bucket(), Key=s3_key)
-    content = response["Body"].read().decode("utf-8")
+    body, _info = _get_object_store().get(_get_bucket(), s3_key)
+    content = body.decode("utf-8")
     logger.info("s3_content_read", s3_key=s3_key, size_bytes=len(content))
     return content
 

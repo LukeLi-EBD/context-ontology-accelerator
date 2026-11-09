@@ -1,11 +1,20 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""SSM Parameter Store helpers for SMUS configuration."""
+"""SSM-backed configuration lookups for SMUS.
+
+The SSM client now comes from the ``ConfigProvider`` port (provider ``ssm``),
+resolved per call exactly like the previous ``boto3.client`` call: no shared
+client is created and no default provider is assumed. A missing
+``COA_PROVIDER_CONFIG`` raises the catalog's configuration error on first use.
+"""
 
 from __future__ import annotations
 
-import boto3
+import os
+
+from coa_runtime.registry import resolve
+from coa_runtime.settings import Settings
 
 
 def get_smus_domain_id(ssm_prefix: str, region_name: str | None = None) -> str:
@@ -13,7 +22,8 @@ def get_smus_domain_id(ssm_prefix: str, region_name: str | None = None) -> str:
 
     Args:
         ssm_prefix: SSM path prefix (e.g. ``/coa``).
-        region_name: AWS region. Defaults to the SDK default chain.
+        region_name: Overrides ``AWS_REGION`` for this lookup. Omitted means
+            the environment's region, as before.
 
     Returns:
         The SMUS domain ID string.
@@ -22,9 +32,10 @@ def get_smus_domain_id(ssm_prefix: str, region_name: str | None = None) -> str:
         ValueError: if the parameter is missing or empty.
     """
     param_name = f"{ssm_prefix}/smus/domain-id"
-    ssm = boto3.client("ssm", region_name=region_name)
-    resp = ssm.get_parameter(Name=param_name)
-    value = resp.get("Parameter", {}).get("Value", "")
+    environment = dict(os.environ)
+    if region_name:
+        environment["AWS_REGION"] = region_name
+    value = resolve("ConfigProvider", Settings(environment)).get(param_name)
     if not value:
         raise ValueError(f"SMUS domain ID not found at SSM parameter: {param_name}")
     return value

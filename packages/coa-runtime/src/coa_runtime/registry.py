@@ -247,6 +247,22 @@ def default_registry() -> ProviderRegistry:
     return ProviderRegistry(catalog())
 
 
+_REGISTRY: ProviderRegistry | None = None
+
+
+def resolve(interface: str, settings: Settings | None = None) -> Any:
+    """Resolve one interface through the shared registry.
+
+    Services call this lazily, at the point they used to construct an AWS
+    client, so a missing ``COA_PROVIDER_*`` key fails at first use with the
+    catalog's error instead of silently falling back.
+    """
+    global _REGISTRY
+    if _REGISTRY is None:
+        _REGISTRY = default_registry()
+    return _REGISTRY.resolve(interface, settings or Settings.from_environ())
+
+
 __all__ = [
     "MISSING",
     "NOT_AVAILABLE",
@@ -256,4 +272,5 @@ __all__ = [
     "Resolution",
     "Status",
     "default_registry",
+    "resolve",
 ]

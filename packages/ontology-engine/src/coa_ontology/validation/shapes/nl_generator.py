@@ -12,7 +12,6 @@ import logging
 import os
 import re
 
-import boto3
 from coa_common.bedrock import DEFAULT_MODEL_ID, BedrockClient
 from coa_common.config import resolve_region
 from coa_common.guardrail_metrics import COMPONENT_ONTOLOGY_SHAPES
@@ -50,8 +49,12 @@ def _resolve_guardrail_id() -> str | None:
     if not _GUARDRAIL_SSM_PARAM:
         return None
     try:
-        ssm = boto3.client("ssm", region_name=_AWS_REGION)
-        return ssm.get_parameter(Name=_GUARDRAIL_SSM_PARAM)["Parameter"]["Value"]
+        from coa_runtime.registry import resolve
+        from coa_runtime.settings import Settings
+
+        environment = dict(os.environ)
+        environment["AWS_REGION"] = _AWS_REGION
+        return resolve("ConfigProvider", Settings(environment)).get(_GUARDRAIL_SSM_PARAM)
     except Exception:
         log.warning("Failed to resolve guardrail from SSM %s — proceeding without", _GUARDRAIL_SSM_PARAM, exc_info=True)
         return None

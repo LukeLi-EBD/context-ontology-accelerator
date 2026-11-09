@@ -31,26 +31,6 @@ def test_session_metadata_dynamodb_uses_sync_config():
         assert kwargs["config"].read_timeout == 8
 
 
-def test_source_db_secretsmanager_uses_sync_config():
-    from coa_serve.clients import source_db
-
-    with patch.object(source_db.boto3, "client") as mock_client:
-        source_db.SourceDBQueryExecutor(data_sources_table="t", region="us-east-1", sources_registry=object())
-        _, kwargs = mock_client.call_args
-        assert kwargs["config"].read_timeout == 8
-
-
-def test_sparql_example_loader_s3_uses_sync_config():
-    import boto3
-    from coa_serve.tier2.ontop import sparql_example_loader as sel
-
-    loader = sel.FewShotExampleLoader(bucket="b", region="us-east-1")
-    with patch.object(boto3, "client") as mock_client:
-        loader._client()
-        _, kwargs = mock_client.call_args
-        assert kwargs["config"].read_timeout == 8
-
-
 def test_opensearch_proxy_lambda_uses_sync_config(monkeypatch):
     # The direct AOSS client (and its transient-fault retry) now lives in the
     # shared coa_common.opensearch.AossVectorClient. The only

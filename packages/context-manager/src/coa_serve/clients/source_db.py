@@ -44,9 +44,8 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-import boto3
 import structlog
-from coa_common import resolve_region, sync_boto_config
+from coa_common import resolve_region
 
 from ..tier2.sql_firewall import SQLFirewall
 from .base import QueryResult, instrumented
@@ -150,7 +149,7 @@ class SourceDBQueryExecutor:
         self._sources = sources_registry or SourcesRegistry(
             table_name=self._table_name, region=self._region, executor=_EXECUTOR
         )
-        self._secrets = boto3.client("secretsmanager", region_name=self._region, config=sync_boto_config())
+        self._secrets = None  # resolved lazily through the SecretProvider port
         # Cached connection handle per "namespace:data_source" key. The value is
         # whatever the engine's adapter returns from open_connection (a SQLAlchemy
         # AsyncEngine for asyncpg/aiomysql, a pytds handle for SQL Server); the
@@ -167,6 +166,20 @@ class SourceDBQueryExecutor:
         # injection with the engine's own dialect.
         self._dialect_cache: dict[str, str] = {}
         self._cache_lock = asyncio.Lock()
+
+    def _secret_provider(self):
+        """Resolve ``SecretProvider`` once, at first credential lookup.
+
+        Resolution is lazy so importing this module (and every handler that
+        imports it) does not require ``COA_PROVIDER_SECRETS`` to be set; the
+        first real lookup fails loudly if it is missing, per the catalog's
+        no-default rule.
+        """
+        if self._secrets is None:
+            from coa_runtime.registry import resolve
+
+            self._secrets = resolve("SecretProvider")
+        return self._secrets
 
     async def close(self) -> None:
         """Dispose all cached connections and release resources."""
@@ -365,13 +378,13 @@ class SourceDBQueryExecutor:
             raise ValueError(f"Invalid secret ARN format for {namespace}/{data_source_id}")
 
         schema = _resolve_search_path(item, config, engine_type)
-        secret_response = await loop.run_in_executor(
+        secret_json = await loop.run_in_executor(
             _EXECUTOR,
-            lambda arn=secret_arn: self._secrets.get_secret_value(SecretId=arn),
+            lambda arn=secret_arn: self._secret_provider().get(arn),
         )
 
         try:
-            raw = json.loads(secret_response["SecretString"])
+            raw = json.loads(secret_json)
             return DBCredentials(
                 username=raw["username"],
                 password=raw["password"],

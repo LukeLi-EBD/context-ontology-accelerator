@@ -24,6 +24,17 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
+def _fake_store(content: bytes):
+    """An ``ObjectStorePort`` fake for the worker's head+get pair."""
+    from coa_ports import ObjectInfo
+
+    store = MagicMock()
+    info = ObjectInfo(bucket="b", key="k", size=len(content))
+    store.head.return_value = info
+    store.get.return_value = (content, info)
+    return store
+
+
 def _run(monkeypatch, *, wait_spy):
     """Drive the worker with all I/O collaborators mocked; return the ordered
     list of ingest-job states the worker wrote."""
@@ -43,13 +54,11 @@ def _run(monkeypatch, *, wait_spy):
         lambda ns, oid: {"class_count": 2, "embedding_count": 2},
     )
 
-    # S3 get_object → small turtle payload.
-    s3 = MagicMock()
-    s3.get_object.return_value = {
-        "ContentLength": 64,
-        "Body": MagicMock(read=lambda: b"@prefix ex: <http://ex/> . ex:A a <http://www.w3.org/2002/07/owl#Class> ."),
-    }
-    monkeypatch.setattr("boto3.client", lambda *a, **k: s3)
+    # ObjectStorePort → small turtle payload.
+    store = _fake_store(
+        b"@prefix ex: <http://ex/> . ex:A a <http://www.w3.org/2002/07/owl#Class> ."
+    )
+    monkeypatch.setattr("coa_runtime.registry.resolve", lambda *a, **k: store)
 
     monkeypatch.setattr(mod, "_stores", lambda ns: (MagicMock(), MagicMock()))
     # Patch the inner seams the shared helper calls, NOT the helper itself, so
@@ -98,16 +107,14 @@ def test_worker_enters_wait_only_after_embeddings_sync(monkeypatch):
         captured["at_wait"] = list(transitions)
         return True
 
-    s3 = MagicMock()
-    s3.get_object.return_value = {
-        "ContentLength": 64,
-        "Body": MagicMock(read=lambda: b"@prefix ex: <http://ex/> . ex:A a <http://www.w3.org/2002/07/owl#Class> ."),
-    }
+    store = _fake_store(
+        b"@prefix ex: <http://ex/> . ex:A a <http://www.w3.org/2002/07/owl#Class> ."
+    )
 
     with (
         patch.object(mod.dynamo_store, "update_ingest_job", _update_ingest_job),
         patch.object(mod.dynamo_store, "get_ontology_registry", lambda ns, oid: {}),
-        patch("boto3.client", lambda *a, **k: s3),
+        patch("coa_runtime.registry.resolve", lambda *a, **k: store),
         patch.object(mod, "_stores", lambda ns: (MagicMock(), MagicMock())),
         patch.object(
             ingest_mod,
@@ -147,12 +154,11 @@ def test_worker_reports_validation_failures_to_the_author(monkeypatch):
     def _reject(**kw):
         raise ingest_mod.IngestValidationError('Class http://ex/A: No data source named "g"', findings=[])
 
-    s3 = MagicMock()
-    s3.get_object.return_value = {"ContentLength": 8, "Body": MagicMock(read=lambda: b"@prefix ex: <http://ex/> .")}
+    store = _fake_store(b"@prefix ex: <http://ex/> .")
     with (
         patch.object(mod.dynamo_store, "update_ingest_job", _update_ingest_job),
         patch.object(mod, "_fail_ingest_stub", lambda ns, oid, msg: stub_failures.append(msg)),
-        patch("boto3.client", lambda *a, **k: s3),
+        patch("coa_runtime.registry.resolve", lambda *a, **k: store),
         patch.object(mod, "_stores", lambda ns: (MagicMock(), MagicMock())),
         patch.object(ingest_mod, "ingest_ontology", _reject),
     ):

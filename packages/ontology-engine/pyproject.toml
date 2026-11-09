@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 
 dependencies = [
     "coa-common",
+    "coa-ports",
+    "coa-runtime",
     "coa-control-plane-server",
     "fastapi>=0.115",
     "uvicorn>=0.30",
@@ -76,4 +78,6 @@ omit = [
 
 [tool.uv.sources]
 coa-common = { workspace = true }
+coa-ports = { workspace = true }
+coa-runtime = { workspace = true }
 coa-control-plane-server = { workspace = true }

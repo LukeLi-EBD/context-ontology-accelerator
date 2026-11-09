@@ -267,14 +267,28 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
         if any(provider.implemented for provider in spec.providers.values())
     }
     assert implemented == {
-        "ConfigProvider": ["env"],
+        "ConfigProvider": ["env", "ssm"],
         "Embedding": ["bge-local", "external-http"],
         "GraphClient": ["fuseki", "oxigraph"],
         "MetadataStorePort": ["postgres"],
+        "ObjectStorePort": ["s3"],
         "QueryExecutor": ["postgres"],
-        "SecretProvider": ["env"],
+        "SecretProvider": ["env", "secretsmanager"],
         "VectorClient": ["platform-pgvector"],
     }
+
+
+def test_aws_factories_install_the_fail_fast_botocore_policy() -> None:
+    """``ssm``/``secretsmanager``/``s3`` keep the customer-path sync config."""
+    specs = catalog()
+    for interface, provider in (
+        ("ConfigProvider", "ssm"),
+        ("SecretProvider", "secretsmanager"),
+        ("ObjectStorePort", "s3"),
+    ):
+        implementation = specs[interface].providers[provider].factory(Settings({"AWS_REGION": "eu-west-1"}))
+        assert implementation._region == "eu-west-1"
+        assert implementation._client_config.read_timeout == 8
 
 
 def test_every_context_names_known_interfaces() -> None:

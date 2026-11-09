@@ -19,8 +19,17 @@ import pytest
 @pytest.mark.unit
 @patch("coa_serve.clients.sources_registry.boto3")
 class TestSourceDBQueryExecutor:
-    @patch("coa_serve.clients.source_db.boto3")
-    def test_validate_namespace_rejects_invalid(self, mock_boto3, _reg):
+    @pytest.fixture(autouse=True)
+    def _fake_secret_provider(self):
+        """Secrets go through ``SecretProvider``; return the test credential JSON."""
+        from coa_serve.clients.source_db import SourceDBQueryExecutor
+
+        provider = MagicMock()
+        provider.get.return_value = '{"username":"user","password":"pass"}'
+        with patch.object(SourceDBQueryExecutor, "_secret_provider", return_value=provider):
+            yield provider
+
+    def test_validate_namespace_rejects_invalid(self, _reg):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
         executor = SourceDBQueryExecutor(data_sources_table="test-table")
@@ -32,16 +41,14 @@ class TestSourceDBQueryExecutor:
         executor._validate_namespace("demo")
         executor._validate_namespace("my-namespace_v2")
 
-    @patch("coa_serve.clients.source_db.boto3")
-    def test_validate_namespace_rejects_a_trailing_newline(self, mock_boto3, _reg):
+    def test_validate_namespace_rejects_a_trailing_newline(self, _reg):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
         executor = SourceDBQueryExecutor(data_sources_table="test-table")
         with pytest.raises(ValueError, match="Invalid namespace"):
             executor._validate_namespace("demo\n")
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_execute_rejects_invalid_timeout(self, mock_boto3, _reg):
+    async def test_execute_rejects_invalid_timeout(self, _reg):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
         executor = SourceDBQueryExecutor(data_sources_table="test-table")
@@ -61,8 +68,7 @@ class TestSourceDBQueryExecutor:
                 timeout_seconds=999,
             )
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_execute_rejects_non_select(self, mock_boto3, _reg):
+    async def test_execute_rejects_non_select(self, _reg):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
         from coa_serve.tier2.sql_firewall import UnsafeSQLError
 
@@ -74,8 +80,7 @@ class TestSourceDBQueryExecutor:
                 data_source_id="ds1",
             )
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_execute_delegates_to_adapter(self, mock_boto3, _reg):
+    async def test_execute_delegates_to_adapter(self, _reg):
         """execute() resolves ONE adapter and delegates inject_limit + run to it.
 
         This is the core of the maintainability refactor: the executor holds no
@@ -109,16 +114,14 @@ class TestSourceDBQueryExecutor:
         assert result.rows == [{"a": 1}]
         assert result.columns == ["a"]
 
-    @patch("coa_serve.clients.source_db.boto3")
-    def test_resolve_credentials_rejects_invalid_arn(self, mock_boto3, _reg):
+    def test_resolve_credentials_rejects_invalid_arn(self, _reg):
         from coa_serve.clients.source_db import _SECRET_ARN_PATTERN
 
         assert not _SECRET_ARN_PATTERN.match("not-an-arn")
         assert not _SECRET_ARN_PATTERN.match("arn:aws:s3:::my-bucket")
         assert _SECRET_ARN_PATTERN.match("arn:aws:secretsmanager:us-east-1:123456789012:secret:coa/db-creds-abc123")
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_uses_new_key_schema(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_uses_new_key_schema(self, _reg):
         """_resolve_credentials reads connection info from config blob, auth from secret."""
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
@@ -137,9 +140,6 @@ class TestSourceDBQueryExecutor:
         mock_dynamodb.Table.return_value = mock_table
         _reg.resource.return_value = mock_dynamodb
 
-        mock_secrets = MagicMock()
-        mock_secrets.get_secret_value.return_value = {"SecretString": '{"username":"user","password":"pass"}'}
-        mock_source_boto3.client.return_value = mock_secrets
 
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
         creds = await executor._resolve_credentials("my-ns", "ds-uuid")
@@ -150,8 +150,7 @@ class TestSourceDBQueryExecutor:
         assert creds.port == 5432
         assert creds.database == "mydb"
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_handles_dict_configuration(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_handles_dict_configuration(self, _reg):
         """_resolve_credentials handles configuration already parsed as a dict (not a JSON string)."""
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
@@ -172,9 +171,6 @@ class TestSourceDBQueryExecutor:
         mock_dynamodb.Table.return_value = mock_table
         _reg.resource.return_value = mock_dynamodb
 
-        mock_secrets = MagicMock()
-        mock_secrets.get_secret_value.return_value = {"SecretString": '{"username":"user","password":"pass"}'}
-        mock_source_boto3.client.return_value = mock_secrets
 
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
         creds = await executor._resolve_credentials("my-ns", "ds-uuid")
@@ -182,8 +178,9 @@ class TestSourceDBQueryExecutor:
         assert creds.host == "db.example.com"
         assert creds.database == "mydb"
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_validates_search_path_before_secret_fetch(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_validates_search_path_before_secret_fetch(
+        self, _reg, _fake_secret_provider
+    ):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
@@ -203,10 +200,9 @@ class TestSourceDBQueryExecutor:
         with pytest.raises(ValueError, match="list of schema identifiers"):
             await executor._resolve_credentials("my-ns", "ds-uuid")
 
-        executor._secrets.get_secret_value.assert_not_called()
+        assert not _fake_secret_provider.get.called
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_defaults_port_per_engine(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_defaults_port_per_engine(self, _reg):
         """When the config omits ``port``, the engine adapter's default_port is used.
 
         MySQL -> 3306, SQL Server -> 1433 (vs the historical PostgreSQL 5432).
@@ -231,9 +227,6 @@ class TestSourceDBQueryExecutor:
         mock_dynamodb = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
         _reg.resource.return_value = mock_dynamodb
-        mock_secrets = MagicMock()
-        mock_secrets.get_secret_value.return_value = {"SecretString": '{"username":"u","password":"p"}'}
-        mock_source_boto3.client.return_value = mock_secrets
 
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
 
@@ -247,8 +240,7 @@ class TestSourceDBQueryExecutor:
         assert creds.port == 1433
         assert creds.engine_type == "SQLSERVER"
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_raises_on_missing_credential_secret_arn(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_raises_on_missing_credential_secret_arn(self, _reg):
         """Raises ValueError when credentialSecretArn is missing from the item."""
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
@@ -263,14 +255,12 @@ class TestSourceDBQueryExecutor:
         mock_dynamodb = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
         _reg.resource.return_value = mock_dynamodb
-        mock_source_boto3.client.return_value = MagicMock()
 
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
         with pytest.raises(ValueError, match="Missing.*credentialSecretArn"):
             await executor._resolve_credentials("ns", "ds")
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_raises_on_incomplete_config(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_raises_on_incomplete_config(self, _reg):
         """Missing host or databaseName raises 'Incomplete connection config'.
 
         port can't be falsy (it defaults to the engine's default_port), so this
@@ -285,7 +275,6 @@ class TestSourceDBQueryExecutor:
         mock_dynamodb = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
         _reg.resource.return_value = mock_dynamodb
-        mock_source_boto3.client.return_value = MagicMock()
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
 
         base = {
@@ -303,8 +292,7 @@ class TestSourceDBQueryExecutor:
         with pytest.raises(ValueError, match="Incomplete connection config"):
             await executor._resolve_credentials("ns", "ds")
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_resolve_credentials_raises_on_malformed_arn(self, mock_source_boto3, _reg):
+    async def test_resolve_credentials_raises_on_malformed_arn(self, _reg):
         """A well-formed-but-non-secretsmanager ARN reaching _resolve_credentials is
         rejected (exercises the code path, not just the regex constant)."""
         from coa_serve.clients.source_db import SourceDBQueryExecutor
@@ -325,13 +313,11 @@ class TestSourceDBQueryExecutor:
         mock_dynamodb = MagicMock()
         mock_dynamodb.Table.return_value = mock_table
         _reg.resource.return_value = mock_dynamodb
-        mock_source_boto3.client.return_value = MagicMock()
         executor = SourceDBQueryExecutor(data_sources_table="coa-dev-sources")
         with pytest.raises(ValueError, match="Invalid secret ARN"):
             await executor._resolve_credentials("ns", "ds")
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_execute_reports_truncated_only_when_over_max_rows(self, mock_boto3, _reg):
+    async def test_execute_reports_truncated_only_when_over_max_rows(self, _reg):
         """A result of EXACTLY max_rows is NOT truncated; over max_rows IS.
 
         The executor caps the injected LIMIT at max_rows + 1, so the adapter can
@@ -361,8 +347,7 @@ class TestSourceDBQueryExecutor:
         assert result.row_count == 3
         assert len(result.rows) == 3
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_health_check_returns_error_on_failure(self, mock_source_boto3, _reg):
+    async def test_health_check_returns_error_on_failure(self, _reg):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
         mock_table = MagicMock()
@@ -386,8 +371,7 @@ class TestSourceDBQueryExecutor:
     # Connection cache — now delegates disposal to the per-key adapter.
     # ------------------------------------------------------------------
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_close_disposes_via_adapter(self, mock_boto3, _reg):
+    async def test_close_disposes_via_adapter(self, _reg):
         """close() calls the cached adapter's close() for every cached connection."""
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
@@ -408,8 +392,7 @@ class TestSourceDBQueryExecutor:
         assert len(executor._schema_cache) == 0
         assert len(executor._dialect_cache) == 0
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_get_connection_evicts_lru_and_closes_via_adapter(self, mock_boto3, _reg):
+    async def test_get_connection_evicts_lru_and_closes_via_adapter(self, _reg):
         """Over MAX_CONN_CACHE_SIZE, the oldest handle is popped AND disposed via its
         adapter, and its schema/dialect/adapter entries are dropped in lockstep."""
         from coa_serve.clients import source_db as source_db_mod
@@ -457,8 +440,7 @@ class TestSourceDBQueryExecutor:
         assert "ns:ds0" not in executor._dialect_cache
         assert len(executor._conn_cache) == source_db_mod.MAX_CONN_CACHE_SIZE
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_get_connection_caches_adapter_schema_dialect(self, mock_boto3, _reg):
+    async def test_get_connection_caches_adapter_schema_dialect(self, _reg):
         """_get_connection resolves the adapter by engine and caches all four fields.
 
         A REDSHIFT source resolves the RedshiftAdapter (dialect ``redshift``); the
@@ -494,8 +476,7 @@ class TestSourceDBQueryExecutor:
         assert executor._dialect_cache["ns:ds"] == "redshift"
         assert executor._schema_cache["ns:ds"] == "analytics"
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_get_connection_concurrent_misses_open_only_once(self, mock_boto3, _reg):
+    async def test_get_connection_concurrent_misses_open_only_once(self, _reg):
         """Concurrent cache MISSES on the same key must open exactly ONE connection —
         the cache lock serializes them so a burst can't exhaust the source DB's pool."""
         import asyncio
@@ -542,8 +523,7 @@ class TestSourceDBQueryExecutor:
         assert all(conn is shared_handle for _, conn, _, _ in results)
         assert len(executor._conn_cache) == 1
 
-    @patch("coa_serve.clients.source_db.boto3")
-    async def test_eviction_close_failure_does_not_break_new_connection(self, mock_boto3, _reg):
+    async def test_eviction_close_failure_does_not_break_new_connection(self, _reg):
         """If disposing the evicted connection raises, the caller opening a NEW
         connection still succeeds — the close error is logged, not propagated."""
         from coa_serve.clients import source_db as source_db_mod

@@ -849,15 +849,30 @@ def _accumulated_r2rml(ontology_id: str, namespace: str) -> str | None:
     return r2rml_turtle
 
 
-def _put_induced_turtle(namespace: str, ontology_id: str, turtle: str, s3=None) -> None:
-    """Write the induced ontology's Turtle to ``induced/<id>.ttl`` (the ``latest/`` VKG copy is not touched)."""
-    import boto3
+_object_store = None
 
-    if s3 is None:
-        s3 = boto3.client("s3", region_name=os.environ.get("AWS_REGION", "us-east-1"))
+
+def _s3():
+    """Resolve the ``ObjectStorePort`` once, at the first persist."""
+    global _object_store  # noqa: PLW0603
+    if _object_store is None:
+        from coa_runtime.registry import resolve
+
+        _object_store = resolve("ObjectStorePort")
+    return _object_store
+
+
+def _put_induced_turtle(namespace: str, ontology_id: str, turtle: str, store=None) -> None:
+    """Write the induced ontology's Turtle to ``induced/<id>.ttl`` (the ``latest/`` VKG copy is not touched)."""
+    if store is None:
+        store = _s3()
     key = f"{_S3_PREFIX}/{namespace}/induced/{_ontology_short_id(ontology_id)}.ttl"
-    s3.put_object(Bucket=_S3_BUCKET, Key=key, Body=turtle.encode("utf-8"), ContentType="text/turtle")
+    _s3_put(store, key, turtle.encode("utf-8"), "text/turtle")
     _log.info("s3 persist: wrote %s (%d bytes)", key, len(turtle))
+
+
+def _s3_put(store, key: str, body: bytes, content_type: str) -> None:
+    store.put(_S3_BUCKET, key, body, content_type)
 
 
 def _persist_induced_to_s3(
@@ -876,8 +891,6 @@ def _persist_induced_to_s3(
       s3://{bucket}/{prefix}/{namespace}/latest/ontology.ttl       (VKG consumption)
       s3://{bucket}/{prefix}/{namespace}/latest/mappings.r2rml     (VKG consumption)
     """
-    import boto3
-
     from coa_ontology.stores.neptune_db_graph import _gsp_get_turtle
 
     try:
@@ -893,18 +906,13 @@ def _persist_induced_to_s3(
         # 3. Write to S3
         short_id = _ontology_short_id(ontology_id)
 
-        s3 = boto3.client("s3", region_name=os.environ.get("AWS_REGION", "us-east-1"))
+        store = _s3()
         base_key = f"{_S3_PREFIX}/{namespace}/induced/{short_id}"
 
-        _put_induced_turtle(namespace, ontology_id, ontology_turtle, s3=s3)
+        _put_induced_turtle(namespace, ontology_id, ontology_turtle, store=store)
 
         if r2rml_turtle:
-            s3.put_object(
-                Bucket=_S3_BUCKET,
-                Key=f"{base_key}.r2rml.ttl",
-                Body=r2rml_turtle.encode("utf-8"),
-                ContentType="text/turtle",
-            )
+            _s3_put(store, f"{base_key}.r2rml.ttl", r2rml_turtle.encode("utf-8"), "text/turtle")
             _log.info("s3 persist: wrote %s.r2rml.ttl (%d bytes)", base_key, len(r2rml_turtle))
 
         # 4. Write to the VKG-expected "latest/" path so the VKG service
@@ -912,21 +920,11 @@ def _persist_induced_to_s3(
         #    The VKG ontology is cleaned for OWL 2 QL compatibility (Ontop).
         latest_key = f"{_S3_PREFIX}/{namespace}/latest"
         vkg_turtle = _clean_ontology_for_vkg(ontology_turtle, r2rml_turtle=r2rml_turtle)
-        s3.put_object(
-            Bucket=_S3_BUCKET,
-            Key=f"{latest_key}/ontology.ttl",
-            Body=vkg_turtle.encode("utf-8"),
-            ContentType="text/turtle",
-        )
+        _s3_put(store, f"{latest_key}/ontology.ttl", vkg_turtle.encode("utf-8"), "text/turtle")
         _log.info("s3 persist: wrote %s/ontology.ttl (%d bytes)", latest_key, len(vkg_turtle))
 
         if r2rml_turtle:
-            s3.put_object(
-                Bucket=_S3_BUCKET,
-                Key=f"{latest_key}/mappings.r2rml",
-                Body=r2rml_turtle.encode("utf-8"),
-                ContentType="text/turtle",
-            )
+            _s3_put(store, f"{latest_key}/mappings.r2rml", r2rml_turtle.encode("utf-8"), "text/turtle")
             _log.info("s3 persist: wrote %s/mappings.r2rml (%d bytes)", latest_key, len(r2rml_turtle))
 
         # 5. Generate and upload schema.sql from datasource catalog.
@@ -951,12 +949,7 @@ def _persist_induced_to_s3(
                 e,
             )
         if schema_sql:
-            s3.put_object(
-                Bucket=_S3_BUCKET,
-                Key=f"{latest_key}/schema.sql",
-                Body=schema_sql.encode("utf-8"),
-                ContentType="text/sql",
-            )
+            _s3_put(store, f"{latest_key}/schema.sql", schema_sql.encode("utf-8"), "text/sql")
             _log.info("s3 persist: wrote %s/schema.sql (%d bytes)", latest_key, len(schema_sql))
     except Exception:
         # RAISE — do NOT swallow (#467). Warning-and-returning here hid a

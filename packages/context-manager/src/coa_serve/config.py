@@ -12,10 +12,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import boto3
 import structlog
-from botocore.exceptions import ClientError
-from coa_common import resolve_region, sync_boto_config
+from coa_common import resolve_region
+from coa_ports import PortError, PortErrorCode
 
 logger = structlog.get_logger(__name__)
 
@@ -421,8 +420,15 @@ def load_config() -> ServiceConfig:
     )
 
 
+def _config_provider():
+    """Resolve the config port lazily, at the first SSM lookup."""
+    from coa_runtime.registry import resolve
+
+    return resolve("ConfigProvider")
+
+
 def _get_ssm_parameter(name: str, *, required: bool = False) -> str:
-    """Fetch a parameter from SSM Parameter Store.
+    """Fetch a parameter through ``ConfigProvider``.
 
     Args:
         name: The SSM parameter path.
@@ -430,25 +436,27 @@ def _get_ssm_parameter(name: str, *, required: bool = False) -> str:
                   returning a placeholder. Set to True in non-local environments.
     """
     try:
-        region = resolve_region()
-        ssm = boto3.client("ssm", region_name=region, config=sync_boto_config())
-        return ssm.get_parameter(Name=name)["Parameter"]["Value"]
-    except ClientError as e:
-        error_code = e.response["Error"]["Code"]
-        if error_code == "ParameterNotFound":
+        value = _config_provider().get(name)
+    except PortError as exc:
+        if exc.code is not PortErrorCode.NOT_FOUND:
             if required:
-                raise ConfigurationError(f"Required SSM parameter not found: {name}") from e
-            logger.warning("ssm_parameter_not_found", name=name)
+                raise ConfigurationError(
+                    f"Failed to load SSM parameter {name}: {exc.provider_code}"
+                ) from exc
+            logger.error("ssm_parameter_error", name=name, error_code=exc.provider_code)
             return ""
+        value = None
+    except Exception as exc:
         if required:
-            raise ConfigurationError(f"Failed to load SSM parameter {name}: {error_code}") from e
-        logger.error("ssm_parameter_error", name=name, error_code=error_code)
+            raise ConfigurationError(f"Failed to load SSM parameter {name}: {exc}") from exc
+        logger.error("ssm_parameter_unexpected_error", name=name, error=str(exc))
         return ""
-    except Exception as e:
+    if not value:
         if required:
-            raise ConfigurationError(f"Failed to load SSM parameter {name}: {e}") from e
-        logger.error("ssm_parameter_unexpected_error", name=name, error=str(e))
+            raise ConfigurationError(f"Required SSM parameter not found: {name}")
+        logger.warning("ssm_parameter_not_found", name=name)
         return ""
+    return value
 
 
 def _read_ssm_parameter_strict(name: str, *, required: bool = False) -> str:
@@ -468,12 +476,12 @@ def _read_ssm_parameter_strict(name: str, *, required: bool = False) -> str:
     :func:`_get_ssm_parameter` (the guardrail provider passes ``required=False``);
     it does not change behavior — a missing parameter always maps to ``""`` here.
     """
-    region = resolve_region()
-    ssm = boto3.client("ssm", region_name=region, config=sync_boto_config())
+    ssm = _config_provider()
     try:
-        return ssm.get_parameter(Name=name)["Parameter"]["Value"]
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "ParameterNotFound":
+        value = ssm.get(name)
+    except PortError as exc:
+        if exc.code is PortErrorCode.NOT_FOUND:
             logger.warning("ssm_parameter_not_found", name=name)
             return ""
         raise
+    return value or ""

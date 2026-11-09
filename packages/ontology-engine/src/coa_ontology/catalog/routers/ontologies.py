@@ -1518,17 +1518,17 @@ def _run_ingest_from_s3(
     endpoint can read it even after an ECS task restart or across task
     instances.
     """
-    import boto3 as _boto3
+    from coa_runtime.registry import resolve
 
     dynamo_store.update_ingest_job(job_id, IngestJobState.RUNNING, namespace=namespace)
     try:
-        s3 = _boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1"))
-        resp = s3.get_object(Bucket=_ONTOLOGY_BUCKET, Key=s3_key)
-        content_length = resp.get("ContentLength", 0)
+        store = resolve("ObjectStorePort")
+        # ``head`` keeps the size check before the body is read into memory.
+        content_length = store.head(_ONTOLOGY_BUCKET, s3_key).size
         _max_ingest_bytes = 100 * 1024 * 1024  # 100 MB
         if content_length > _max_ingest_bytes:
             raise ValueError(f"File too large ({content_length} bytes, max {_max_ingest_bytes})")
-        content = resp["Body"].read()
+        content, _info = store.get(_ONTOLOGY_BUCKET, s3_key)
 
         graph_store, vector_store = _stores(namespace)
         # Ingest + wait for the embeddings to be searchable before marking the

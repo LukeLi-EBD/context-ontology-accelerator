@@ -13,7 +13,7 @@ pytestmark = pytest.mark.unit
 class TestPersistInducedToS3:
     """Tests for proposals._persist_induced_to_s3."""
 
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_writes_ontology_and_r2rml(self, mock_dynamo, mock_gsp, mock_s3_client):
@@ -33,21 +33,21 @@ class TestPersistInducedToS3:
             "https://coa.amazon.com/graph/my-namespace/encoded-uri",
         )
 
-        assert mock_s3.put_object.call_count == 4
-        calls = mock_s3.put_object.call_args_list
+        assert mock_s3.put.call_count == 4
+        calls = mock_s3.put.call_args_list
         # induced/ writes
-        assert calls[0].kwargs["Key"].endswith(".ttl")
-        assert "my-namespace/induced/" in calls[0].kwargs["Key"]
-        assert b"owl:Class" in calls[0].kwargs["Body"]
-        assert calls[1].kwargs["Key"].endswith(".r2rml.ttl")
-        assert b"TriplesMap" in calls[1].kwargs["Body"]
+        assert calls[0].args[1].endswith(".ttl")
+        assert "my-namespace/induced/" in calls[0].args[1]
+        assert b"owl:Class" in calls[0].args[2]
+        assert calls[1].args[1].endswith(".r2rml.ttl")
+        assert b"TriplesMap" in calls[1].args[2]
         # latest/ writes (VKG consumption)
-        assert calls[2].kwargs["Key"] == "ontologies/my-namespace/latest/ontology.ttl"
-        assert b"owl:Class" in calls[2].kwargs["Body"]
-        assert calls[3].kwargs["Key"] == "ontologies/my-namespace/latest/mappings.r2rml"
-        assert b"TriplesMap" in calls[3].kwargs["Body"]
+        assert calls[2].args[1] == "ontologies/my-namespace/latest/ontology.ttl"
+        assert b"owl:Class" in calls[2].args[2]
+        assert calls[3].args[1] == "ontologies/my-namespace/latest/mappings.r2rml"
+        assert b"TriplesMap" in calls[3].args[2]
 
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_skips_when_no_turtle(self, mock_dynamo, mock_gsp, mock_s3_client):
@@ -58,9 +58,9 @@ class TestPersistInducedToS3:
         mock_s3_client.return_value = mock_s3
 
         _persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
-        mock_s3.put_object.assert_not_called()
+        mock_s3.put.assert_not_called()
 
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_skips_r2rml_when_none(self, mock_dynamo, mock_gsp, mock_s3_client):
@@ -73,12 +73,12 @@ class TestPersistInducedToS3:
 
         _persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
         # induced ontology + latest ontology (no r2rml)
-        assert mock_s3.put_object.call_count == 2
-        keys = [c.kwargs["Key"] for c in mock_s3.put_object.call_args_list]
+        assert mock_s3.put.call_count == 2
+        keys = [c.args[1] for c in mock_s3.put.call_args_list]
         assert any("induced/" in k for k in keys)
         assert any("latest/ontology.ttl" in k for k in keys)
 
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_deduplicates_prefixes(self, mock_dynamo, mock_gsp, mock_s3_client):
@@ -95,15 +95,15 @@ class TestPersistInducedToS3:
         _persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
 
         # Check the induced r2rml (index 1)
-        r2rml_body = mock_s3.put_object.call_args_list[1].kwargs["Body"].decode()
+        r2rml_body = mock_s3.put.call_args_list[1].args[2].decode()
         assert r2rml_body.count("@prefix rr:") == 1
         assert ":TM1" in r2rml_body
         assert ":TM2" in r2rml_body
         # Check the latest r2rml (index 3) has same content
-        latest_r2rml = mock_s3.put_object.call_args_list[3].kwargs["Body"].decode()
+        latest_r2rml = mock_s3.put.call_args_list[3].args[2].decode()
         assert latest_r2rml == r2rml_body
 
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_deduplicates_triplesmaps_across_proposals(self, mock_dynamo, mock_gsp, mock_s3_client):
@@ -127,12 +127,12 @@ class TestPersistInducedToS3:
         _persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
 
         # The latest R2RML (index 3) should have TriplesMap_Claim only once
-        latest_r2rml = mock_s3.put_object.call_args_list[3].kwargs["Body"].decode()
+        latest_r2rml = mock_s3.put.call_args_list[3].args[2].decode()
         assert latest_r2rml.count("TriplesMap_Claim") >= 1
         # Ontop would fail if there are 2 logicalTable nodes — verify only 1
         assert latest_r2rml.count("tableName") == 1
 
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_raises_on_s3_error(self, mock_dynamo, mock_gsp, mock_s3_client):
@@ -148,7 +148,7 @@ class TestPersistInducedToS3:
         mock_gsp.return_value = ":X a owl:Class ."
         mock_dynamo.list_proposals.return_value = []
         mock_s3 = MagicMock()
-        mock_s3.put_object.side_effect = Exception("S3 boom")
+        mock_s3.put.side_effect = Exception("S3 boom")
         mock_s3_client.return_value = mock_s3
 
         with pytest.raises(Exception, match="S3 boom"):
@@ -201,7 +201,7 @@ class TestPersistSchemaSqlFailureIsNonFatalButVisible:
     """
 
     @patch("coa_ontology.proposals._generate_schema_sql")
-    @patch("boto3.client")
+    @patch("coa_ontology.proposals._s3")
     @patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle")
     @patch("coa_ontology.proposals.dynamo_store")
     def test_generation_failure_logs_error_and_skips_schema_sql(
@@ -222,7 +222,7 @@ class TestPersistSchemaSqlFailureIsNonFatalButVisible:
             _persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
 
         # No schema.sql was written (generation failed).
-        keys = [c.kwargs["Key"] for c in mock_s3.put_object.call_args_list]
+        keys = [c.args[1] for c in mock_s3.put.call_args_list]
         assert not any(k.endswith("schema.sql") for k in keys)
         # But the failure is visible as an ERROR log, not silently swallowed.
         assert any("schema.sql generation FAILED" in r.message for r in caplog.records)
@@ -856,7 +856,7 @@ class TestSubstepFailureVisibility:
         from coa_ontology.proposals import _persist_induced_to_s3
 
         with (
-            patch("boto3.client") as mock_client,
+            patch("coa_ontology.proposals._s3") as mock_store,
             patch(
                 "coa_ontology.stores.neptune_db_graph._gsp_get_turtle",
                 return_value=":X a owl:Class .",
@@ -866,6 +866,6 @@ class TestSubstepFailureVisibility:
             patch("coa_ontology.proposals._emit_ontology_published") as mock_emit,
         ):
             mock_ds.list_proposals.return_value = []
-            mock_client.return_value = MagicMock()
+            mock_store.return_value = MagicMock()
             _persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
         mock_emit.assert_not_called()

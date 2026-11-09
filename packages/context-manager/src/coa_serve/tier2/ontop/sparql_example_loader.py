@@ -51,22 +51,22 @@ class FewShotExampleLoader:
     Args:
         bucket: ontology-artifacts bucket name. Empty/None → loader is inert
             (always returns ``[]``), so the prompt falls back to generic examples.
-        region: AWS region for the S3 client.
-        s3_client: optional injected client (tests pass a stub; never raises here).
+        region: AWS region for the S3 provider.
+        object_store: optional injected ``ObjectStorePort`` (tests pass a fake).
     """
 
-    def __init__(self, bucket: str | None = None, region: str | None = None, s3_client=None):
+    def __init__(self, bucket: str | None = None, region: str | None = None, object_store=None):
         """Configure the S3 source for few-shot examples.
 
         Args:
             bucket: Ontology-artifacts bucket. Empty/None makes the loader inert.
                 Defaults to the ``ONTOLOGY_BUCKET`` env var.
-            region: AWS region for the S3 client. Defaults to the resolved region.
-            s3_client: Optional injected S3 client (tests pass a stub).
+            region: AWS region for the S3 provider. Defaults to the resolved region.
+            object_store: Optional injected ``ObjectStorePort`` (tests pass a fake).
         """
         self._bucket = bucket or os.environ.get("ONTOLOGY_BUCKET", "")
         self._region = region or resolve_region()
-        self._s3 = s3_client
+        self._store = object_store
         self._cache: dict[tuple[str, str], list[FewShotExample]] = {}
 
     @property
@@ -75,12 +75,20 @@ class FewShotExampleLoader:
         return bool(self._bucket)
 
     def _client(self):
-        if self._s3 is None:
-            import boto3
-            from coa_common import sync_boto_config
+        """Resolve the ``ObjectStorePort`` once, at first use.
 
-            self._s3 = boto3.client("s3", region_name=self._region, config=sync_boto_config())
-        return self._s3
+        The region override is applied through ``AWS_REGION`` because the
+        composition root owns provider construction.
+        """
+        if self._store is None:
+            from coa_runtime.registry import resolve
+            from coa_runtime.settings import Settings
+
+            environment = dict(os.environ)
+            if self._region:
+                environment["AWS_REGION"] = self._region
+            self._store = resolve("ObjectStorePort", Settings(environment))
+        return self._store
 
     def invalidate(self, namespace: str | None = None) -> None:
         """Clear cache for a namespace (on ontology reload), or all when None."""
@@ -114,9 +122,8 @@ class FewShotExampleLoader:
             return []
 
         try:
-            client = self._client()
-            obj = await asyncio.to_thread(client.get_object, Bucket=self._bucket, Key=key)
-            raw = obj["Body"].read()
+            store = self._client()
+            raw, _info = await asyncio.to_thread(store.get, self._bucket, key)
             data = json.loads(raw)
         except Exception as exc:
             # Missing object (NoSuchKey), access error, or bad JSON — all fall back.
