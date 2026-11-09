@@ -26531,7 +26531,7 @@
                         "type": "string",
                         "description": "Vertex kind (class, object-property, datatype-property, etc.)."
                     },
-                    "graphUris": {
+                    "graph_uris": {
                         "type": "array",
                         "items": {
                             "type": "string"

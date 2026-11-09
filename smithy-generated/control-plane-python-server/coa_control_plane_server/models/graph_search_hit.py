@@ -29,8 +29,8 @@ class GraphSearchHit(BaseModel):
     uri: StrictStr = Field(description="IRI of the matched vertex.")
     label: Optional[StrictStr] = Field(default=None, description="Human-readable label of the matched vertex.")
     kind: StrictStr = Field(description="Vertex kind (class, object-property, datatype-property, etc.).")
-    graph_uris: Optional[List[StrictStr]] = Field(default=None, description="IRIs of the named graphs the vertex is defined in. A class IRI asserted in more than one ontology (e.g. a shared IRI referenced by both schema.org and FIBO) lists every source graph, not just one.", alias="graphUris")
-    __properties: ClassVar[List[str]] = ["uri", "label", "kind", "graphUris"]
+    graph_uris: Optional[List[StrictStr]] = Field(default=None, description="IRIs of the named graphs the vertex is defined in. A class IRI asserted in more than one ontology (e.g. a shared IRI referenced by both schema.org and FIBO) lists every source graph, not just one.")
+    __properties: ClassVar[List[str]] = ["uri", "label", "kind", "graph_uris"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -86,7 +86,7 @@ class GraphSearchHit(BaseModel):
             "uri": obj.get("uri"),
             "label": obj.get("label"),
             "kind": obj.get("kind"),
-            "graphUris": obj.get("graphUris")
+            "graph_uris": obj.get("graph_uris")
         })
         return _obj
 

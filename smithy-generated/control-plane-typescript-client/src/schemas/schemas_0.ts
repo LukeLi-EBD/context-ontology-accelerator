@@ -552,6 +552,7 @@ const _gTl = "glossaryTerms";
 const _gU = "graphUris";
 const _gUr = "graphUri";
 const _gr = "grants";
+const _gu = "graph_uris";
 const _h = "hits";
 const _hE = "httpError";
 const _hP = "httpPath";
@@ -571,6 +572,7 @@ const _inc = "include";
 const _j = "jobs";
 const _jC = "jdbcConfiguration";
 const _jI = "jobId";
+const _jN = "jsonName";
 const _k = "kind";
 const _ke = "key";
 const _l = "label";
@@ -1340,7 +1342,7 @@ export var GraphNeighbor$: StaticStructureSchema = [3, n7, _GN,
 export var GraphSearchHit$: StaticStructureSchema = [3, n7, _GSH,
   0,
   [_ur, _k, _l, _gU],
-  [0, 0, 0, 64 | 0], 2
+  [0, 0, 0, [64 | 0, { [_jN]: _gu }]], 2
 ];
 export var GraphSearchInput$: StaticStructureSchema = [3, n7, _GSI,
   0,
@@ -1350,7 +1352,7 @@ export var GraphSearchInput$: StaticStructureSchema = [3, n7, _GSI,
 export var GraphSearchOutput$: StaticStructureSchema = [3, n7, _GSO,
   0,
   [_h, _tC],
-  [() => GraphSearchHitList, 1], 1
+  [[() => GraphSearchHitList, 0], 1], 1
 ];
 export var GraphVertex$: StaticStructureSchema = [3, n7, _GV,
   0,
@@ -2124,7 +2126,8 @@ var GraphEdgeList: StaticListSchema = [1, n7, _GEL,
   0, () => GraphEdge$
 ];
 var GraphSearchHitList: StaticListSchema = [1, n7, _GSHL,
-  0, () => GraphSearchHit$
+  0, [() => GraphSearchHit$,
+    0]
 ];
 var OntologyClassSummaryList: StaticListSchema = [1, n7, _OCSL,
   0, () => OntologyClassSummary$

@@ -570,6 +570,7 @@ structure GraphSearchHit {
     /// IRIs of the named graphs the vertex is defined in. A class IRI asserted
     /// in more than one ontology (e.g. a shared IRI referenced by both
     /// schema.org and FIBO) lists every source graph, not just one.
+    @jsonName("graph_uris")
     graphUris: StringList
 }
 
