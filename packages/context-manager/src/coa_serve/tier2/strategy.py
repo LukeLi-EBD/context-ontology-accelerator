@@ -19,6 +19,8 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import time
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
@@ -151,6 +153,84 @@ class StructuredQueryStrategy(Protocol):
 
 _PARALLEL_STRATEGY_TIMEOUT_S = 90
 
+# How the parallel ("best") path ends.
+#
+# ``gather`` (default) is the original behaviour: wait for EVERY strategy, then
+# choose by precedence. Its cost is that one slow loser holds the whole response
+# even though its answer can no longer win — measured on the local stack, Ontop
+# took 90s to time out while NL→SQL had already answered at 12.4s, so ~78s of the
+# request was spent watching a strategy that could not be selected.
+#
+# ``first_win`` stops waiting as soon as an acceptable result lands, gives the
+# remaining strategies ``SERVE_TIER2_PARALLEL_TAIL_S`` more seconds to finish
+# (so a near-simultaneous, higher-precedence answer still competes), then cancels
+# them. Selection is unchanged: the same precedence sort runs over whatever
+# arrived. Default stays ``gather`` because first_win changes which answer a
+# request returns whenever the loser would have won on precedence, and the AWS/
+# Bedrock path must keep behaving exactly as before until that is measured:
+# set ``SERVE_TIER2_PARALLEL_MODE=first_win`` to opt in.
+_PARALLEL_MODE_GATHER = "gather"
+_PARALLEL_MODE_FIRST_WIN = "first_win"
+_PARALLEL_FIRST_WIN_ALIASES = frozenset({"first_win", "first-win", "firstwin"})
+
+# Tail after the first acceptable result: long enough for a strategy already in
+# flight to land, short enough that a timed-out loser is not paid for in full.
+# 5s is ~40% of a fast NL→SQL generation on the verified stack, and far below the
+# 90s per-strategy cap it is meant to cut short.
+_DEFAULT_PARALLEL_TAIL_S = 5.0
+
+
+def parallel_first_win_enabled() -> bool:
+    """Whether the parallel path uses first-win + short tail (``SERVE_TIER2_PARALLEL_MODE``).
+
+    Anything other than the first_win spellings — including an unset variable, an
+    empty value, or a typo — resolves to the original ``gather`` behaviour, so a
+    bad value can never silently change winner selection.
+    """
+    return os.environ.get("SERVE_TIER2_PARALLEL_MODE", _PARALLEL_MODE_GATHER).strip().lower() in (
+        _PARALLEL_FIRST_WIN_ALIASES
+    )
+
+
+def parallel_strategy_timeout_s() -> float:
+    """Per-strategy cap in the parallel path (``SERVE_TIER2_STRATEGY_TIMEOUT_S``, default 90).
+
+    Never raises: a bad or non-positive value falls back to the constant, matching
+    the other env knobs in this package.
+    """
+    raw = os.environ.get("SERVE_TIER2_STRATEGY_TIMEOUT_S")
+    if raw is None:
+        return _PARALLEL_STRATEGY_TIMEOUT_S
+    try:
+        requested = float(raw)
+    except (TypeError, ValueError):
+        logger.warning("tier2_strategy_timeout_invalid", value=raw, using=_PARALLEL_STRATEGY_TIMEOUT_S)
+        return _PARALLEL_STRATEGY_TIMEOUT_S
+    if requested <= 0:
+        logger.warning("tier2_strategy_timeout_invalid", value=raw, using=_PARALLEL_STRATEGY_TIMEOUT_S)
+        return _PARALLEL_STRATEGY_TIMEOUT_S
+    return requested
+
+
+def parallel_tail_s() -> float:
+    """Grace period after the first acceptable result (``SERVE_TIER2_PARALLEL_TAIL_S``, default 5).
+
+    ``0`` is legal and means "cancel the losers the moment a winner exists".
+    """
+    raw = os.environ.get("SERVE_TIER2_PARALLEL_TAIL_S")
+    if raw is None:
+        return _DEFAULT_PARALLEL_TAIL_S
+    try:
+        requested = float(raw)
+    except (TypeError, ValueError):
+        logger.warning("tier2_parallel_tail_invalid", value=raw, using=_DEFAULT_PARALLEL_TAIL_S)
+        return _DEFAULT_PARALLEL_TAIL_S
+    if requested < 0:
+        logger.warning("tier2_parallel_tail_invalid", value=raw, using=_DEFAULT_PARALLEL_TAIL_S)
+        return _DEFAULT_PARALLEL_TAIL_S
+    return requested
+
+
 # Ceiling on rows returned to a caller. Raised from 1000 once
 # AthenaClient._get_results learned to follow NextToken across pages — before
 # that, any value above ~1000 was inert because the fetch read a single page and
@@ -247,18 +327,26 @@ def is_degenerate_result(result: StrategyResult) -> bool:
 # A refusal says which kind it is. RANGE: the question names a period the tables do not cover,
 # so the tables are the authority and the refusal is final. FIELD: no column holds the measure,
 # which a document may still answer, so the orchestrator lets it fall through to Tier 3 when the
-# namespace has an unstructured source.
+# namespace has an unstructured source. CONCEPT: the question is not a data query at all (how the
+# model is structured, what a term means), which documents or the synthesis tier can still answer —
+# it takes the same Tier-3 route as FIELD. The bare ``NOT_ANSWERABLE:`` spelling predates the kinds;
+# it is recognised as CONCEPT so an old answer is never presented as a data row, and the prompt now
+# asks for a kind so new refusals never land there.
 NOT_ANSWERABLE_RANGE = "range"
 NOT_ANSWERABLE_FIELD = "field"
+NOT_ANSWERABLE_CONCEPT = "concept"
 _NOT_ANSWERABLE_PREFIXES = {
     "NOT_ANSWERABLE_RANGE:": NOT_ANSWERABLE_RANGE,
     "NOT_ANSWERABLE_FIELD:": NOT_ANSWERABLE_FIELD,
+    "NOT_ANSWERABLE_CONCEPT:": NOT_ANSWERABLE_CONCEPT,
+    "NOT_ANSWERABLE:": NOT_ANSWERABLE_CONCEPT,
 }
 
 # The only statement shape the writer is told to use for a refusal: a bare literal SELECT with
-# one aliased column. Comments and a trailing semicolon are stripped before matching.
+# one aliased column. Comments and a trailing semicolon are stripped before matching. The kind is
+# optional so a bare ``NOT_ANSWERABLE:`` row from an older prompt is still read as a refusal.
 _NOT_ANSWERABLE_SQL_RE = re.compile(
-    r"^select\s+'not_answerable_(?:range|field):(?:[^']|'')*'\s+as\s+\"?answer\"?$",
+    r"^select\s+'not_answerable(?:_(?:range|field|concept))?:(?:[^']|'')*'\s+as\s+\"?answer\"?$",
     re.IGNORECASE,
 )
 _SQL_LINE_COMMENT_RE = re.compile(r"--[^\n]*")
@@ -273,10 +361,11 @@ def _is_bare_not_answerable_sql(sql: str | None) -> bool:
 
 
 def not_answerable_kind(result: StrategyResult) -> str | None:
-    """The refusal kind (``range`` or ``field``) when a strategy answered that the data cannot answer.
+    """The refusal kind (``range``, ``field`` or ``concept``) when a strategy answered that the data cannot answer.
 
     The refusal is exactly one row with one ``answer`` cell that starts with
-    ``NOT_ANSWERABLE_RANGE:`` or ``NOT_ANSWERABLE_FIELD:``, produced by a bare literal
+    ``NOT_ANSWERABLE_RANGE:``, ``NOT_ANSWERABLE_FIELD:`` or ``NOT_ANSWERABLE_CONCEPT:`` (the
+    pre-kind bare ``NOT_ANSWERABLE:`` is read as ``concept``), produced by a bare literal
     ``SELECT '...' AS answer`` statement. All three must hold, so a real data row whose value
     happens to start with the prefix is not taken for a refusal.
 
@@ -323,6 +412,11 @@ def is_low_confidence_empty(result: StrategyResult) -> bool:
     empty result (>= floor) is kept as a valid "no data found" answer.
     """
     return result.row_count == 0 and result.confidence < EMPTY_RESULT_CONFIDENCE_FLOOR
+
+
+def _is_acceptable(result: StrategyResult) -> bool:
+    """Whether a result may win the parallel path (see the confidence gate in ``_resolve_parallel``)."""
+    return not is_low_confidence_empty(result) and not is_degenerate_result(result)
 
 
 def _failed_step_id(strategy_name: str) -> str:
@@ -504,6 +598,79 @@ class StructuredQueryTier:
         logger.info("strategy_all_failed", attempted=attempted)
         return None
 
+    async def _run_first_win(
+        self,
+        strategies: list[StructuredQueryStrategy],
+        coros: list[Awaitable[StrategyResult | None]],
+    ) -> list[StrategyResult | BaseException | None]:
+        """Run the strategies in parallel, stopping at the first acceptable answer plus a short tail.
+
+        The tail keeps a near-simultaneous, higher-precedence strategy in the race
+        (``SERVE_TIER2_PARALLEL_TAIL_S``); after it expires the stragglers are
+        cancelled, which propagates into their in-flight LLM calls. Selection is
+        unchanged: the caller sorts the results that arrived by the same precedence
+        values for whatever arrived. A strategy abandoned after the tail contributes
+        ``None``; the log line names it.
+        """
+        tasks = [asyncio.create_task(coro) for coro in coros]
+        index_of = {task: i for i, task in enumerate(tasks)}
+        results: list[StrategyResult | BaseException | None] = [None] * len(tasks)
+        pending: set[asyncio.Task] = set(tasks)
+        tail_s = parallel_tail_s()
+        settled_at: float | None = None
+        abandoned: list[str] = []
+        try:
+            while pending:
+                done, pending = await asyncio.wait(
+                    pending,
+                    timeout=tail_s if settled_at is not None else None,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                if not done:
+                    break  # the tail expired with strategies still running
+                for task in done:
+                    index = index_of[task]
+                    if task.cancelled():
+                        continue
+                    exc = task.exception()
+                    if exc is not None:
+                        results[index] = exc
+                        # Same terminal set as the gather path: re-raise so the
+                        # orchestrator surfaces the decision instead of falling
+                        # through to another strategy; the finally block cancels
+                        # whatever else is still running.
+                        if isinstance(
+                            exc,
+                            (
+                                AccessDeniedError,
+                                AmbiguousReferenceError,
+                                asyncio.CancelledError,
+                                KeyboardInterrupt,
+                                SystemExit,
+                            ),
+                        ):
+                            raise exc
+                        continue
+                    result = task.result()
+                    results[index] = result
+                    if settled_at is None and isinstance(result, StrategyResult) and _is_acceptable(result):
+                        settled_at = time.monotonic()
+            abandoned = [strategies[index_of[task]].name for task in pending]
+        finally:
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
+        if settled_at is not None:
+            logger.info(
+                "tier2_parallel_first_win",
+                tail_s=tail_s,
+                waited_after_first_answer_s=round(time.monotonic() - settled_at, 3),
+                cancelled=abandoned,
+            )
+        return results
+
     async def _resolve_parallel(
         self, query: str, namespace: str, context: StrategyContext, strategies: list[StructuredQueryStrategy]
     ) -> StrategyResult | None:
@@ -525,12 +692,20 @@ class StructuredQueryTier:
         ]
 
         async def _run_with_timeout(strategy: StructuredQueryStrategy, ctx: StrategyContext) -> StrategyResult | None:
-            return await asyncio.wait_for(strategy.resolve(query, namespace, ctx), timeout=_PARALLEL_STRATEGY_TIMEOUT_S)
+            return await asyncio.wait_for(
+                strategy.resolve(query, namespace, ctx), timeout=parallel_strategy_timeout_s()
+            )
 
-        results = await asyncio.gather(
-            *[_run_with_timeout(s, ctx) for s, ctx in zip(strategies, per_strategy_contexts, strict=True)],
-            return_exceptions=True,
-        )
+        if parallel_first_win_enabled():
+            results = await self._run_first_win(
+                strategies,
+                [_run_with_timeout(s, ctx) for s, ctx in zip(strategies, per_strategy_contexts, strict=True)],
+            )
+        else:
+            results = await asyncio.gather(
+                *[_run_with_timeout(s, ctx) for s, ctx in zip(strategies, per_strategy_contexts, strict=True)],
+                return_exceptions=True,
+            )
 
         # Re-raise terminal exceptions (AccessDenied, ambiguous-reference refusal,
         # cancellation, system exit). A policy denial (403) or an ambiguous-reference
@@ -562,9 +737,7 @@ class StructuredQueryTier:
         # Confidence-gated empty result (option C): prefer results that aren't a
         # low-confidence empty. If every candidate is one, fall through to Tier 3
         # rather than returning a likely-wrong empty answer.
-        acceptable = [
-            (r, ctx) for r, ctx in valid_with_ctx if not is_low_confidence_empty(r) and not is_degenerate_result(r)
-        ]
+        acceptable = [(r, ctx) for r, ctx in valid_with_ctx if _is_acceptable(r)]
         if not acceptable:
             if valid_with_ctx:
                 logger.info(

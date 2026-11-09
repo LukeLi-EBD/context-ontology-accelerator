@@ -14,6 +14,8 @@ Tests cover:
 
 from __future__ import annotations
 
+import asyncio
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -28,6 +30,9 @@ from coa_serve.tier2.strategy import (
     StrategyResult,
     StructuredQueryTier,
     normalize_strategy_option,
+    parallel_first_win_enabled,
+    parallel_strategy_timeout_s,
+    parallel_tail_s,
 )
 from coa_serve.trace import TraceCollector
 
@@ -974,6 +979,132 @@ class TestBackendStrategySelection:
         assert NLtoSQLStrategy.supported_backends == {self.SQL}
         assert AgenticStrategy.supported_backends == {self.SQL}
         assert SparqlStrategy.supported_backends == {self.GRAPH}
+
+
+# ── Parallel first-win mode ───────────────────────────────────────────────
+
+
+def _delayed_strategy(name: str, result: StrategyResult, delay_s: float, calls: list[str]):
+    """A strategy whose resolve sleeps ``delay_s`` before returning ``result``."""
+    strategy = MagicMock()
+    strategy.name = name
+    strategy.supported_backends = frozenset({StructuredBackend.SQL})
+
+    async def _resolve(*_args, **_kwargs):
+        calls.append(name)
+        await asyncio.sleep(delay_s)
+        return result
+
+    strategy.resolve = AsyncMock(side_effect=_resolve)
+    return strategy
+
+
+@pytest.mark.unit
+class TestParallelFirstWin:
+    """``SERVE_TIER2_PARALLEL_MODE`` switches between gather (default) and first-win."""
+
+    @pytest.mark.asyncio
+    async def test_gather_default_still_waits_for_the_slow_winner(self, monkeypatch):
+        monkeypatch.delenv("SERVE_TIER2_PARALLEL_MODE", raising=False)
+        monkeypatch.delenv("SERVE_TIER2_PARALLEL_TAIL_S", raising=False)
+        calls: list[str] = []
+        # NL→SQL ranks first by precedence and is also the slow one: gather must
+        # still return it, exactly as before the switch existed.
+        slow_winner = _delayed_strategy(
+            StrategyOption.NL_TO_SQL, _make_result(StrategyOption.NL_TO_SQL), 0.05, calls
+        )
+        fast_loser = _delayed_strategy(StrategyOption.ONTOP, _make_result(StrategyOption.ONTOP), 0.0, calls)
+        tier = StructuredQueryTier(strategies=[fast_loser, slow_winner])
+
+        winner = await tier.resolve("q", "ns", StrategyContext(trace=TraceCollector()), option="best")
+
+        assert winner.strategy_name == StrategyOption.NL_TO_SQL
+        assert calls == [StrategyOption.ONTOP, StrategyOption.NL_TO_SQL]
+
+    @pytest.mark.asyncio
+    async def test_first_win_returns_the_fast_answer_and_cancels_the_straggler(self, monkeypatch):
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_MODE", "first_win")
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_TAIL_S", "0.05")
+        calls: list[str] = []
+        straggler = _delayed_strategy(
+            StrategyOption.NL_TO_SQL, _make_result(StrategyOption.NL_TO_SQL), 5.0, calls
+        )
+        fast = _delayed_strategy(StrategyOption.ONTOP, _make_result(StrategyOption.ONTOP), 0.0, calls)
+        tier = StructuredQueryTier(strategies=[straggler, fast])
+
+        started = time.monotonic()
+        winner = await tier.resolve("q", "ns", StrategyContext(trace=TraceCollector()), option="best")
+        elapsed = time.monotonic() - started
+
+        assert winner.strategy_name == StrategyOption.ONTOP
+        assert elapsed < 2.0, "the 5s straggler must not be waited out"
+        assert straggler.resolve.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_tail_keeps_a_higher_precedence_answer_that_lands_just_after(self, monkeypatch):
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_MODE", "first_win")
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_TAIL_S", "0.5")
+        calls: list[str] = []
+        slightly_later = _delayed_strategy(
+            StrategyOption.NL_TO_SQL, _make_result(StrategyOption.NL_TO_SQL), 0.1, calls
+        )
+        first = _delayed_strategy(StrategyOption.ONTOP, _make_result(StrategyOption.ONTOP), 0.0, calls)
+        tier = StructuredQueryTier(strategies=[first, slightly_later])
+
+        winner = await tier.resolve("q", "ns", StrategyContext(trace=TraceCollector()), option="best")
+
+        assert winner.strategy_name == StrategyOption.NL_TO_SQL
+
+    @pytest.mark.asyncio
+    async def test_terminal_exception_still_propagates_and_cancels_the_rest(self, monkeypatch):
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_MODE", "first_win")
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_TAIL_S", "0.05")
+        denied = _make_strategy(StrategyOption.NL_TO_SQL, error=AccessDeniedError("denied"))
+        much_later = _delayed_strategy(StrategyOption.ONTOP, _make_result(StrategyOption.ONTOP), 5.0, [])
+        tier = StructuredQueryTier(strategies=[denied, much_later])
+
+        started = time.monotonic()
+        with pytest.raises(AccessDeniedError):
+            await tier.resolve("q", "ns", StrategyContext(trace=TraceCollector()), option="best")
+        assert time.monotonic() - started < 2.0
+
+    @pytest.mark.asyncio
+    async def test_configurable_per_strategy_timeout_cuts_a_hung_strategy(self, monkeypatch):
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_MODE", "first_win")
+        monkeypatch.setenv("SERVE_TIER2_STRATEGY_TIMEOUT_S", "0.05")
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_TAIL_S", "0.05")
+        hung = _delayed_strategy(StrategyOption.NL_TO_SQL, _make_result(StrategyOption.NL_TO_SQL), 5.0, [])
+        tier = StructuredQueryTier(strategies=[hung])
+
+        started = time.monotonic()
+        winner = await tier.resolve("q", "ns", StrategyContext(trace=TraceCollector()), option="best")
+
+        assert winner is None
+        assert time.monotonic() - started < 2.0
+
+    def test_unset_or_unrecognized_mode_keeps_gather(self, monkeypatch):
+        monkeypatch.delenv("SERVE_TIER2_PARALLEL_MODE", raising=False)
+        assert parallel_first_win_enabled() is False
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_MODE", "first_win_typo")
+        assert parallel_first_win_enabled() is False
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_MODE", "first-win")
+        assert parallel_first_win_enabled() is True
+
+    def test_knob_defaults_and_bad_values(self, monkeypatch):
+        monkeypatch.delenv("SERVE_TIER2_STRATEGY_TIMEOUT_S", raising=False)
+        monkeypatch.delenv("SERVE_TIER2_PARALLEL_TAIL_S", raising=False)
+        assert parallel_strategy_timeout_s() == 90
+        assert parallel_tail_s() == 5.0
+
+        monkeypatch.setenv("SERVE_TIER2_STRATEGY_TIMEOUT_S", "not-a-number")
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_TAIL_S", "-1")
+        assert parallel_strategy_timeout_s() == 90
+        assert parallel_tail_s() == 5.0
+
+        monkeypatch.setenv("SERVE_TIER2_STRATEGY_TIMEOUT_S", "30")
+        monkeypatch.setenv("SERVE_TIER2_PARALLEL_TAIL_S", "0")
+        assert parallel_strategy_timeout_s() == 30
+        assert parallel_tail_s() == 0
 
 
 @pytest.mark.unit
