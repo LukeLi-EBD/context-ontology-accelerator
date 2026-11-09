@@ -309,6 +309,32 @@ def _graph_store_oxigraph(settings: Settings) -> Any:
     return GraphStoreShell(store, provider="oxigraph")
 
 
+def _json_data_source_lookup(settings: Settings) -> Any:
+    """Catalog metadata from a JSON snapshot exported by the platform."""
+    from coa_local_providers.json_lookup import JsonDataSourceLookup
+
+    return JsonDataSourceLookup.from_path(
+        settings.require("COA_JSON_CATALOG_SNAPSHOT", interface="DataSourceLookup")
+    )
+
+
+def _graph_ontology_lookup(settings: Settings) -> Any:
+    """Ontology class existence via a synchronous SPARQL ASK on Oxigraph."""
+    from coa_metrics.ontology_lookup_graph import GraphOntologyLookup
+    from platform_core.adapters.graph_oxigraph import OxigraphHttpStore
+
+    store = OxigraphHttpStore(
+        settings.require("COA_GRAPH_OXIGRAPH_URL", interface="OntologyLookup"),
+        timeout_ms=settings.get_int(
+            "COA_GRAPH_OXIGRAPH_TIMEOUT_MS", default=30000, interface="OntologyLookup"
+        ),
+        max_rows=settings.get_int(
+            "COA_GRAPH_OXIGRAPH_MAX_ROWS", default=10000, interface="OntologyLookup"
+        ),
+    )
+    return GraphOntologyLookup(store)
+
+
 # ── the catalog ─────────────────────────────────────────────────────────────
 
 _SHELL = "薄壳未落地（阶段 1 第 3 步）"
@@ -567,17 +593,26 @@ SPECS: tuple[InterfaceSpec, ...] = (
         name="DataSourceLookup",
         key="COA_PROVIDER_DATA_SOURCE_LOOKUP",
         context="数据源接入",
-        required_methods=("lookup",),
-        expects_async=True,
-        providers=_providers(_todo("json-snapshot"), _todo("postgres"), _todo("smus", _AWS)),
+        required_methods=("data_source_exists", "table_exists", "get_table_columns"),
+        expects_async=False,
+        port_location="coa_metrics.lookups",
+        providers=_providers(
+            _done("json-snapshot", _json_data_source_lookup, "JSON 目录快照；只读，无 DB 连接"),
+            _todo("postgres"),
+            _todo("smus", _AWS),
+        ),
     ),
     InterfaceSpec(
         name="OntologyLookup",
         key="COA_PROVIDER_ONTOLOGY_LOOKUP",
         context="本体",
-        required_methods=("lookup",),
-        expects_async=True,
-        providers=_providers(_todo("graph"), _todo("neptune", _AWS)),
+        required_methods=("class_exists",),
+        expects_async=False,
+        port_location="coa_metrics.lookups",
+        providers=_providers(
+            _done("graph", _graph_ontology_lookup, "本地 Oxigraph；同步 ASK，只读"),
+            _todo("neptune", _AWS),
+        ),
     ),
     # ── extra infrastructure interface used by every retrieval path ──
     InterfaceSpec(

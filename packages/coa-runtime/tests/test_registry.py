@@ -268,6 +268,7 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
     }
     assert implemented == {
         "ConfigProvider": ["env", "ssm"],
+        "DataSourceLookup": ["json-snapshot"],
         "Embedding": ["bge-local", "external-http"],
         "GraphAdminPort": ["oxigraph"],
         "GraphClient": ["fuseki", "oxigraph"],
@@ -277,6 +278,7 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
         "MetricGraph": ["neptune", "oxigraph"],
         "MetricIndexPort": ["platform-pg"],
         "ObjectStorePort": ["fs", "s3"],
+        "OntologyLookup": ["graph"],
         "QueryExecutor": ["postgres"],
         "SecretProvider": ["env", "secretsmanager"],
         "VectorClient": ["platform-pgvector"],

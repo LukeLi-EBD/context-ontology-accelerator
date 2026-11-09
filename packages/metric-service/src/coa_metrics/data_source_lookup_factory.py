@@ -64,12 +64,45 @@ def _resolve_project_id(namespace_id: str, namespaces_table: str, region: str) -
     return project_id
 
 
+def _from_provider_port(namespace_id: str) -> DataSourceLookup | None:
+    """Return the provider-catalog implementation when one is selected.
+
+    ``COA_PROVIDER_DATA_SOURCE_LOOKUP`` is optional: when the key is unset or
+    names a provider that is not implemented yet, the SMUS path stays in
+    charge. Only a successful resolution short-circuits it.
+    """
+    try:
+        from coa_runtime.registry import resolve
+    except Exception as exc:  # coa-runtime is not on every deployment's path
+        logger.info("data_source_lookup_port_unavailable", namespace=namespace_id, error=str(exc))
+        return None
+
+    try:
+        resolution = resolve("DataSourceLookup")
+    except Exception as exc:
+        logger.info("data_source_lookup_port_unavailable", namespace=namespace_id, error=str(exc))
+        return None
+
+    lookup = resolution.instance
+    logger.info(
+        "data_source_lookup_from_port",
+        namespace=namespace_id,
+        provider=resolution.provider,
+        implementation=type(lookup).__name__,
+    )
+    return lookup
+
+
 def build_data_source_lookup(namespace_id: str) -> DataSourceLookup | None:
     """Build the SMUS-backed data source lookup for a namespace.
 
     Returns None if required configuration is missing or the namespace has
     no DataZone project.
     """
+    from_port = _from_provider_port(namespace_id)
+    if from_port is not None:
+        return from_port
+
     sources_table = os.environ.get("DATA_SOURCES_TABLE", "")
     namespaces_table = os.environ.get("NAMESPACES_TABLE", "")
     domain_id = os.environ.get("SMUS_DOMAIN_ID", "")

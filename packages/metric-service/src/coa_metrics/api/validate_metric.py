@@ -29,7 +29,7 @@ from pydantic import ValidationError
 from coa_metrics.api.contract import check_metric_label, normalize_label_member
 from coa_metrics.api.validation_errors import format_validation_error
 from coa_metrics.data_source_lookup_factory import build_data_source_lookup
-from coa_metrics.lookups import DataSourceLookup, NeptuneOntologyLookup
+from coa_metrics.lookups import DataSourceLookup, NeptuneOntologyLookup, OntologyLookup
 from coa_metrics.source_status import (
     SourceValidationUnavailableError,
     check_source_approved,
@@ -45,7 +45,7 @@ logger = structlog.get_logger(__name__)
 
 # Per-namespace cache: the SMUS-backed lookup is namespace-scoped.
 _data_source_lookups: dict[str, DataSourceLookup | None] = {}
-_ontology_lookup: NeptuneOntologyLookup | None = None
+_ontology_lookup: OntologyLookup | None = None
 
 
 def _get_data_source_lookup(namespace: str) -> DataSourceLookup | None:
@@ -63,10 +63,28 @@ def _get_data_source_lookup(namespace: str) -> DataSourceLookup | None:
     return _data_source_lookups[namespace]
 
 
-def _get_ontology_lookup() -> NeptuneOntologyLookup | None:
-    """Get or create the ontology lookup. Returns None if Neptune is unavailable."""
+def _get_ontology_lookup() -> OntologyLookup | None:
+    """Get or create the ontology lookup. Returns None if none is reachable.
+
+    A provider selected on the ``OntologyLookup`` port wins; on any resolution
+    failure (key absent, provider unimplemented, bad config) the Neptune client
+    stays the default so existing deployments keep working.
+    """
     global _ontology_lookup  # noqa: PLW0603
     if _ontology_lookup is None:
+        try:
+            from coa_runtime.registry import resolve
+
+            resolution = resolve("OntologyLookup")
+            _ontology_lookup = resolution.instance
+            logger.info(
+                "ontology_lookup_from_port",
+                provider=resolution.provider,
+                implementation=type(_ontology_lookup).__name__,
+            )
+            return _ontology_lookup
+        except Exception as exc:
+            logger.info("ontology_lookup_port_unavailable", error=str(exc))
         try:
             _ontology_lookup = NeptuneOntologyLookup()
         except Exception as exc:
