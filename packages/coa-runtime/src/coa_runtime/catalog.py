@@ -430,7 +430,10 @@ SPECS: tuple[InterfaceSpec, ...] = (
         name="LLMClient",
         key="COA_PROVIDER_LLM",
         context="问答与检索",
-        required_methods=("complete",),
+        # ``converse_stream`` is an async generator (not a coroutine function),
+        # so it cannot go through the ``expects_async`` check; the shell still
+        # exposes it and raises ``PortError(unsupported)`` on use.
+        required_methods=("converse", "health_check"),
         expects_async=True,
         providers=_providers(
             _done("openai-compatible", _llm_shell, "同步 complete_json 的异步薄壳；流式与 embed 显式 unsupported"),

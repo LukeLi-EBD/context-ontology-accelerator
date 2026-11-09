@@ -295,6 +295,17 @@ def test_aws_factories_install_the_fail_fast_botocore_policy() -> None:
         assert implementation._client_config.read_timeout == 8
 
 
+def test_llm_provider_passes_the_catalog_contract_check() -> None:
+    """The shell is declared against the two methods it can actually serve.
+
+    Regression: the spec once required ``complete``, which no LLM provider has,
+    so every ``resolve("LLMClient")`` failed with ``ProviderMismatchError``.
+    """
+    resolution = REGISTRY.resolve("LLMClient", Settings({"COA_PROVIDER_LLM": "openai-compatible"}))
+    assert resolution.provider == "openai-compatible"
+    assert type(resolution.instance).__name__ == "PlatformLLMShell"
+
+
 def test_every_context_names_known_interfaces() -> None:
     known = set(catalog())
     for context, interfaces in CONTEXT_INTERFACES.items():
