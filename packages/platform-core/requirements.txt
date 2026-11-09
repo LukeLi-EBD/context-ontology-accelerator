@@ -1,6 +1,6 @@
 fastapi==0.115.6
 uvicorn==0.34.0
-pydantic==2.10.4
+pydantic==2.13.4
 PyYAML==6.0.2
 rdflib==7.1.4
 httpx==0.28.1
@@ -12,3 +12,6 @@ markitdown[docx,pptx,xlsx]==0.1.9
 python-multipart==0.0.20
 # S5 SHACL validation (pinned; see _design/impl/S5-校验与物化-设计.md §6)
 pyshacl==0.30.1
+# COA contract imports (coa_serve.clients.base) log through structlog; the gateway
+# E2E and contract tests run inside this image (see packages/coa-gateway/README.md).
+structlog==26.1.0
