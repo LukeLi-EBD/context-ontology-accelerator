@@ -54,6 +54,7 @@ members = [
     "packages/ontology-engine",
     "packages/metric-service",
     "packages/vkg",
+    "packages/coa-gateway",
     "packages/mcp-server",
     "packages/sources",
     "libs/common",
