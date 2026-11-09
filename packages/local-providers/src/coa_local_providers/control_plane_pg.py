@@ -390,11 +390,14 @@ class PgDatastoreDAO:
     def get(
         self,
         key: dict[str, Any],
-        projection_expression: str | None = None,
+        projection: list[str] | None = None,
         consistent_read: bool = False,
     ) -> dict[str, Any] | None:
         pk, sk = self._keys(key)
-        return self._fetch(pk, sk)
+        item = self._fetch(pk, sk)
+        if item is None or not projection:
+            return item
+        return {name: item[name] for name in projection if name in item}
 
     def get_attribute(self, key: dict[str, Any], attribute: str) -> Any:
         item = self.get(key)
