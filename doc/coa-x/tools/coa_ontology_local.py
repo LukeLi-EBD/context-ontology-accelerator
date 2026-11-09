@@ -6,8 +6,14 @@ the same code paths and swap only the transports/providers at process start:
 
     COA_PROVIDER_ONTOLOGY_GRAPH     oxigraph | neptune     (required)
     COA_PROVIDER_ONTOLOGY_REGISTRY  postgres | dynamodb    (required)
+    COA_PROVIDER_ONTOLOGY_JOBS      postgres | dynamodb    (required)
+    COA_PROVIDER_ONTOLOGY_OBJECTS   fs | s3                (required)
+    COA_PROVIDER_ONTOLOGY_VECTOR    pgvector | opensearch  (required)
+    COA_PROVIDER_ONTOLOGY_EMBEDDING http | bedrock         (required)
     COA_ONTOLOGY_OXIGRAPH_URL       required for oxigraph
-    COA_CONTROL_PLANE_PG_DSN        required for postgres
+    COA_CONTROL_PLANE_PG_DSN        required for postgres/pgvector
+    COA_LOCAL_OBJECT_ROOT           required for fs
+    COA_EMBEDDING_URL               required for http (default 8081/v1)
     DYNAMODB_TABLE                  logical registry table name
 
 No provider has a default: missing keys abort startup with an explicit error.
@@ -32,6 +38,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -71,6 +78,15 @@ def _configure_environment() -> None:
         "DYNAMODB_DEFAULT_NAMESPACE": "default",
         "ALLOWED_ORIGIN": "http://127.0.0.1:5173",
         "NDB_REGION": "us-east-1",
+        # Local object store (COA_PROVIDER_ONTOLOGY_OBJECTS=fs). Keep artifact
+        # bytes next to the stack's other run state instead of the repo.
+        "COA_LOCAL_OBJECT_ROOT": str(Path(tempfile.gettempdir()) / "coa-local-stack" / "objects"),
+        "COA_LOCAL_OBJECT_BASE": "http://127.0.0.1:8099/_local/objects",
+        # Local embedding service (text-embeddings-inference on 8081).
+        "COA_EMBEDDING_URL": "http://127.0.0.1:8081/v1",
+        "COA_EMBEDDING_MODEL": "BAAI/bge-m3",
+        "COA_EMBEDDING_DIMENSIONS": "1024",
+        "COA_VECTOR_DIMENSIONS": "1024",
     }
     for key, value in defaults.items():
         os.environ.setdefault(key, value)
@@ -83,13 +99,21 @@ def _require(key: str) -> str:
     return value
 
 
-def _install_providers() -> tuple[str, str]:
+def _install_providers() -> tuple[str, str, str, str, str, str]:
+    from coa_local_providers.local_s3 import install_local_s3
+    from coa_local_providers.ontology_embedding_http import install_http_embeddings
+    from coa_local_providers.ontology_jobs_pg import install_ontology_jobs
     from coa_local_providers.ontology_oxigraph import install_ontology_graph_transport
     from coa_local_providers.ontology_registry_pg import install_ontology_registry
+    from coa_local_providers.ontology_vectors_pg import install_pg_vector_store
 
     graph = install_ontology_graph_transport()
     registry = install_ontology_registry()
-    return graph, registry
+    jobs = install_ontology_jobs()
+    objects = install_local_s3()
+    vectors = install_pg_vector_store()
+    embeddings = install_http_embeddings()
+    return graph, registry, jobs, objects, vectors, embeddings
 
 
 def _sparql_count(graph_uri: str, pattern: str) -> int:
@@ -180,13 +204,28 @@ def seed(namespace: str) -> dict:
     }
 
 
+def _require_all_providers() -> None:
+    for key in (
+        "COA_PROVIDER_ONTOLOGY_GRAPH",
+        "COA_PROVIDER_ONTOLOGY_REGISTRY",
+        "COA_PROVIDER_ONTOLOGY_JOBS",
+        "COA_PROVIDER_ONTOLOGY_OBJECTS",
+        "COA_PROVIDER_ONTOLOGY_VECTOR",
+        "COA_PROVIDER_ONTOLOGY_EMBEDDING",
+    ):
+        _require(key)
+
+
 def serve() -> None:
     import uvicorn
 
-    _require("COA_PROVIDER_ONTOLOGY_GRAPH")
-    _require("COA_PROVIDER_ONTOLOGY_REGISTRY")
-    graph, registry = _install_providers()
-    print(f"[coa-ontology-local] graph={graph} registry={registry}", flush=True)
+    _require_all_providers()
+    graph, registry, jobs, objects, vectors, embeddings = _install_providers()
+    print(
+        f"[coa-ontology-local] graph={graph} registry={registry} jobs={jobs} "
+        f"objects={objects} vectors={vectors} embeddings={embeddings}",
+        flush=True,
+    )
 
     from coa_ontology.main import app
 
@@ -205,8 +244,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.seed:
         if not args.namespace:
             raise SystemExit("FATAL: --namespace <uuid> is required with --seed")
-        _require("COA_PROVIDER_ONTOLOGY_GRAPH")
-        _require("COA_PROVIDER_ONTOLOGY_REGISTRY")
+        _require_all_providers()
         _install_providers()
         result = seed(args.namespace)
         print(json.dumps(result, ensure_ascii=False, indent=2))

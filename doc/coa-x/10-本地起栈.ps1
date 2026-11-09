@@ -71,7 +71,7 @@ function Get-ContainerRunning([string]$Name) {
     return ($LASTEXITCODE -eq 0 -and $state.Trim() -eq "true")
 }
 
-function Ensure-Container([string]$Name, [string]$PortMapping) {
+function Ensure-Container([string]$Name, [string[]]$RunArgs) {
     if (Get-ContainerRunning $Name) {
         Write-Host ("  [ok] container {0} already running" -f $Name)
         return
@@ -82,7 +82,9 @@ function Ensure-Container([string]$Name, [string]$PortMapping) {
         docker start $Name | Out-Null
         return
     }
-    throw ("container {0} not found. Create it once with: docker run -d --name {0} {1}" -f $Name, $PortMapping)
+    Write-Host ("  [create] container {0}" -f $Name)
+    docker run -d --name $Name @RunArgs | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw ("failed to create container {0}" -f $Name) }
 }
 
 function Stop-PortOwner([int]$Port, [string]$Marker) {
@@ -123,8 +125,19 @@ if ($Stop) {
 Write-Host "Starting COA local stack"
 
 # 1) containers
-Ensure-Container $PgName "--publish 127.0.0.1:5444:5432 -e POSTGRES_USER=platform -e POSTGRES_PASSWORD=platform_dev -e POSTGRES_DB=platform -v coa-local-pg-data:/var/lib/postgresql/18/docker pgvector/pgvector:pg18-trixie"
-Ensure-Container $OxiName "--publish 7878:7878 -v coa-local-oxigraph-data:/data oxigraph/oxigraph:0.5.7 serve --location /data --bind 0.0.0.0:7878"
+Ensure-Container $PgName @(
+    "--publish", "127.0.0.1:5444:5432",
+    "-e", "POSTGRES_USER=platform",
+    "-e", "POSTGRES_PASSWORD=platform_dev",
+    "-e", "POSTGRES_DB=platform",
+    "-v", "coa-local-pg-data:/var/lib/postgresql/18/docker",
+    "pgvector/pgvector:pg18-trixie"
+)
+Ensure-Container $OxiName @(
+    "--publish", "7878:7878",
+    "-v", "coa-local-oxigraph-data:/data",
+    "oxigraph/oxigraph:0.5.7", "serve", "--location", "/data", "--bind", "0.0.0.0:7878"
+)
 Wait-Port 5444 "coa-local-pg" 60
 Wait-Port 7878 "coa-local-oxigraph" 30
 
@@ -132,11 +145,25 @@ Wait-Port 7878 "coa-local-oxigraph" 30
 $env:COA_PROVIDER_ONTOLOGY_GRAPH   = "oxigraph"
 $env:COA_ONTOLOGY_OXIGRAPH_URL     = "http://127.0.0.1:7878"
 $env:COA_PROVIDER_ONTOLOGY_REGISTRY = "postgres"
+$env:COA_PROVIDER_ONTOLOGY_JOBS     = "postgres"
+$env:COA_PROVIDER_ONTOLOGY_OBJECTS  = "fs"
+$env:COA_PROVIDER_ONTOLOGY_VECTOR   = "pgvector"
+$env:COA_PROVIDER_ONTOLOGY_EMBEDDING = "http"
 $env:COA_CONTROL_PLANE_PG_DSN      = "postgresql://platform:platform_dev@127.0.0.1:5444/platform"
 $env:DYNAMODB_TABLE                = "coa-local-ontologies"
 $env:NDB_GRAPH_URI_BASE            = "https://coa.local/graph"
 $env:COA_ONTOLOGY_PORT             = "8101"
 $env:COA_LOCAL_API_PORT            = "8099"
+# Artifact bytes (S3 role) live beside the stack's logs/pid, served by 8099.
+$env:COA_LOCAL_OBJECT_ROOT         = Join-Path $RunDir "objects"
+$env:COA_LOCAL_OBJECT_BASE         = "http://127.0.0.1:8099/_local/objects"
+# Document uploads (POST /sources/upload-urls) land in their own bucket dir.
+$env:BUCKET_NAME                   = "coa-local-documents"
+# Existing local embedding service (text-embeddings-inference, BAAI/bge-m3).
+$env:COA_EMBEDDING_URL             = "http://127.0.0.1:8081/v1"
+$env:COA_EMBEDDING_MODEL           = "BAAI/bge-m3"
+$env:COA_EMBEDDING_DIMENSIONS      = "1024"
+$env:COA_VECTOR_DIMENSIONS         = "1024"
 
 # 3) optional TTL reload (named graph + registry row)
 if ($Seed) {

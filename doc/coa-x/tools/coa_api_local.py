@@ -27,9 +27,11 @@ import json
 import os
 import re
 import sys
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
@@ -42,9 +44,13 @@ SEED_DIR = REPO / "libs/common/src/coa_authorization/seed"
 # The local MetricGraph provider (oxigraph) and the pg-backed providers reuse
 # platform_core's adapters; PYTHONPATH does not always carry the workspace src,
 # so add it here rather than relying on the launch command.
+_WORKSPACE_SRC = sorted(
+    [*(REPO / "packages").glob("*/src"), *(REPO / "libs").glob("*/src")]
+) + [REPO / "smithy-generated/control-plane-python-server"]
+for _p in reversed(_WORKSPACE_SRC):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 PLATFORM_CORE_SRC = REPO / "packages/platform-core/src"
-if str(PLATFORM_CORE_SRC) not in sys.path:
-    sys.path.insert(0, str(PLATFORM_CORE_SRC))
 
 LOCAL_EMAIL = "local-dev@example.invalid"
 LOCAL_USER = "local-user"
@@ -88,6 +94,13 @@ def _configure_environment() -> None:
         "ROLES_TABLE": "coa-local-roles",
         "RESOURCE_ROLE_MAPPINGS_TABLE": "coa-local-resource-role-mappings",
         "SOURCES_TABLE": "coa-local-sources",
+        # Document ingestion + fact-candidate review (documents.smithy).
+        "DOCUMENTS_TABLE": "coa-local-documents",
+        "DOCUMENT_CHUNKS_TABLE": "coa-local-document-chunks",
+        "FACT_CANDIDATES_TABLE": "coa-local-fact-candidates",
+        "FACTS_TABLE": "coa-local-facts",
+        # A-Box graph namespace used when an approved candidate is materialised.
+        "NDB_GRAPH_URI_BASE": "https://coa.local/graph",
         # The metric service reads the same unified sources table under this name.
         "DATA_SOURCES_TABLE": "coa-local-sources",
         # Client-token idempotency records (POSTs from the web app send a token).
@@ -129,6 +142,10 @@ def _configure_environment() -> None:
         "ATHENA_RESULTS_BUCKET_SSM": "",
         "PROJECT_ACCESS_ROLE_ARN": "",
         "BUCKET_NAME": "",
+        # Local object transport (S3 role). The provider key itself stays
+        # unset here: it is chosen by 10-本地起栈.ps1 and fails closed.
+        "COA_LOCAL_OBJECT_ROOT": os.path.join(tempfile.gettempdir(), "coa-local-stack", "objects"),
+        "COA_LOCAL_OBJECT_BASE": "http://127.0.0.1:8099/_local/objects",
     }
     for key, value in defaults.items():
         os.environ.setdefault(key, value)
@@ -298,6 +315,33 @@ def _role_items() -> list[dict[str, Any]]:
     return items
 
 
+def _install_local_object_store() -> None:
+    """Point the sources upload-url seam at the local object store.
+
+    ``POST /sources/upload-urls`` presigns with ``sources_handler._get_s3()``
+    and the document bucket name; both are module globals resolved at import
+    time. With ``COA_PROVIDER_ONTOLOGY_OBJECTS=fs`` the same filesystem store
+    the ontology artifacts use backs document uploads too, so the presigned
+    URL the UI receives resolves against this bridge instead of AWS.
+    """
+    provider = os.environ.get("COA_PROVIDER_ONTOLOGY_OBJECTS", "").strip().lower()
+    if provider != "fs":
+        print(f"[api] object store -> upstream s3 (provider={provider or 'unset'})", flush=True)
+        return
+
+    from coa_local_providers.local_s3 import LocalS3, default_bucket
+
+    import coa_sources.api.sources_handler as sources_handler
+
+    bucket = os.environ.get("BUCKET_NAME", "").strip() or default_bucket()
+    sources_handler._s3 = LocalS3()
+    sources_handler._BUCKET_NAME = bucket
+    document_routes = sys.modules.get("coa_sources.api.document_routes")
+    if document_routes is not None:  # already imported: it bound the name by value
+        document_routes._BUCKET_NAME = bucket
+    print(f"[api] object store -> fs bucket={bucket}", flush=True)
+
+
 def _install_local_idempotency() -> None:
     """Store client-token idempotency records in PostgreSQL, not DynamoDB.
 
@@ -449,6 +493,11 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/sources/{sourceId}/event-rescan", SOURCES),
     ("/namespaces/{namespaceId}/sources/{sourceId}/metadata", SOURCES),
     ("/namespaces/{namespaceId}/sources/upload-urls", SOURCES),
+    ("/namespaces/{namespaceId}/documents", SOURCES),
+    ("/namespaces/{namespaceId}/documents/{documentId}/chunks", SOURCES),
+    ("/namespaces/{namespaceId}/candidates", SOURCES),
+    ("/namespaces/{namespaceId}/candidates/{candidateId}/approve", SOURCES),
+    ("/namespaces/{namespaceId}/candidates/{candidateId}/reject", SOURCES),
     ("/namespaces/{namespaceId}/metrics", METRICS),
     ("/namespaces/{namespaceId}/metrics/{name}", METRICS),
     ("/namespaces/{namespaceId}/metrics/validate", METRICS),
@@ -561,7 +610,14 @@ def _make_app() -> Any:
     @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
     async def dispatch(request: Request, full_path: str) -> Response:
         origin = request.headers.get("origin")
-        path = "/" + full_path
+        # Match on the *raw* request target: Starlette decodes ``%2F`` into a
+        # literal slash, which would split a path-parameter such as an
+        # ontology URI (``https%3A%2F%2Fw3id.org%2Ffsldm%2Fcodes``) across
+        # segments and make the contract route unreachable. AWS API Gateway
+        # keeps those escapes until the handler reads them, so match raw and
+        # unquote per parameter below.
+        raw_path = request.scope.get("raw_path")
+        path = raw_path.decode("latin-1").split("?", 1)[0] if raw_path else "/" + full_path
         if request.method == "OPTIONS":
             return _cors(Response(status_code=204), origin, request.headers.get("access-control-request-headers"))
 
@@ -573,6 +629,40 @@ def _make_app() -> Any:
                 return _cors(JSONResponse({"error": "namespaceId is required"}, status_code=400), origin)
             item = _seed_demo_catalog(namespace_id)
             return _cors(JSONResponse({"seeded": True, "sourceId": item["sourceId"]}), origin)
+
+        # Local-only object transport (S3 role). Not a business route: it serves
+        # and accepts artifact bytes for presigned URLs minted by the local S3
+        # provider, exactly like S3 does in AWS.
+        if path.startswith("/_local/objects/"):
+            from coa_local_providers.local_s3 import LocalS3, NoSuchKey
+
+            rest = path[len("/_local/objects/") :]
+            bucket, _, key = rest.partition("/")
+            if not bucket or not key:
+                return _cors(JSONResponse({"error": "bucket and key are required"}, status_code=400), origin)
+            client = LocalS3()
+            try:
+                if request.method == "GET":
+                    obj = client.get_object(Bucket=unquote(bucket), Key=unquote(key))
+                    response = Response(content=obj["Body"].read(), media_type=obj["ContentType"])
+                    if obj.get("ContentDisposition"):
+                        response.headers["Content-Disposition"] = obj["ContentDisposition"]
+                    return _cors(response, origin)
+                if request.method in ("PUT", "POST"):
+                    body = await request.body()
+                    client.put_object(
+                        Bucket=unquote(bucket),
+                        Key=unquote(key),
+                        Body=body,
+                        ContentType=request.headers.get("content-type", "application/octet-stream"),
+                    )
+                    return _cors(Response(status_code=200), origin)
+                if request.method == "DELETE":
+                    client.delete_object(Bucket=unquote(bucket), Key=unquote(key))
+                    return _cors(Response(status_code=204), origin)
+            except NoSuchKey:
+                return _cors(JSONResponse({"error": "not found"}, status_code=404), origin)
+            return _cors(JSONResponse({"error": "method not allowed"}, status_code=405), origin)
 
         if path == "/health":
             return _cors(JSONResponse({"status": "ok", "provider": "postgres"}), origin)
@@ -652,6 +742,7 @@ def main() -> None:
     _install_pg_store()
     _install_local_metadata_store()
     _install_local_catalog()
+    _install_local_object_store()
     _install_local_idempotency()
 
     from coa_common.logging import setup_logging
