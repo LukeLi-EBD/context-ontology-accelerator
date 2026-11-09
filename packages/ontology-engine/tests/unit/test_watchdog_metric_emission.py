@@ -90,6 +90,11 @@ class TestHeartbeatEmitContent:
     """The emit publishes both metric names dimensioned by NamespaceId."""
 
     def test_emits_heartbeat_and_memory_bytes(self):
+        import sys
+
+        if sys.platform == "win32":
+            pytest.skip("RSS metric is POSIX-only; Windows dev boxes omit InductionWorkerMemoryBytes")
+
         from coa_common.bedrock_metrics import (
             METRICS_NAMESPACE,
             emit_induction_heartbeat_metrics,

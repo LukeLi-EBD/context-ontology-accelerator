@@ -19,7 +19,10 @@ Usage (phase 1 is a pure library — no callers wired yet):
 
 from __future__ import annotations
 
-import resource
+try:  # POSIX-only stdlib module; the induction worker runs on Linux
+    import resource
+except ImportError:  # pragma: no cover - only reached on a non-POSIX dev box
+    resource = None  # type: ignore[assignment]
 import threading
 
 import boto3
@@ -398,13 +401,19 @@ def emit_induction_job_metrics(
         logger.warning("emit_induction_job_metrics_failed", namespace_id=namespace_id, exc_info=True)
 
 
-def _worker_rss_bytes() -> int:
+def _worker_rss_bytes() -> int | None:
     """Return this process's peak resident-set size in bytes.
 
     ``ru_maxrss`` is a high-water mark (peak RSS since process start), which is
     exactly what OOM observability wants — the pre-kill ramp, not the momentary
     value. On Linux it is reported in kibibytes, so scale by 1024 for bytes.
+
+    Returns ``None`` where the platform has no ``resource`` module (Windows dev
+    boxes): there is no RSS to report, and the heartbeat emitter omits the
+    memory metric instead of publishing a fabricated zero.
     """
+    if resource is None:
+        return None
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
 
 
@@ -431,13 +440,23 @@ def emit_induction_heartbeat_metrics(
     ns_dim = [{"Name": "NamespaceId", "Value": namespace_id}]
     metric_data = [
         {"MetricName": "InductionHeartbeat", "Unit": "Count", "Dimensions": ns_dim, "Value": 1.0},
-        {
-            "MetricName": "InductionWorkerMemoryBytes",
-            "Unit": "Bytes",
-            "Dimensions": ns_dim,
-            "Value": float(_worker_rss_bytes()),
-        },
     ]
+    rss_bytes = _worker_rss_bytes()
+    if rss_bytes is None:
+        logger.warning(
+            "induction_worker_memory_unavailable",
+            namespace_id=namespace_id,
+            reason="resource module is POSIX-only; memory metric omitted",
+        )
+    else:
+        metric_data.append(
+            {
+                "MetricName": "InductionWorkerMemoryBytes",
+                "Unit": "Bytes",
+                "Dimensions": ns_dim,
+                "Value": float(rss_bytes),
+            }
+        )
     try:
         client = cloudwatch_client or _cloudwatch_client(region)
         client.put_metric_data(Namespace=METRICS_NAMESPACE, MetricData=metric_data)
