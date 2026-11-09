@@ -2398,4 +2398,35 @@ def _route(event: dict[str, Any], context: Any = None) -> dict[str, Any]:
             return api_response(400, {"error": "sourceId is required"})
         return _handle_update_metadata(event, namespace_id, source_id)
 
+    # Document ingestion + fact-candidate review (documents.smithy). Imported
+    # lazily so this entry module has no import-time cycle with the route modules.
+    from . import candidate_routes, documents_routes
+
+    if resource == "/namespaces/{namespaceId}/documents" and http_method == "POST":
+        return documents_routes.handle_upload_document(event, namespace_id)
+
+    if resource == "/namespaces/{namespaceId}/documents" and http_method == "GET":
+        return documents_routes.handle_list_documents(event, namespace_id)
+
+    if resource == "/namespaces/{namespaceId}/documents/{documentId}/chunks" and http_method == "GET":
+        document_id = path_params.get("documentId", "")
+        if not document_id:
+            return api_response(400, {"error": "documentId is required"})
+        return documents_routes.handle_list_document_chunks(event, namespace_id, document_id)
+
+    if resource == "/namespaces/{namespaceId}/candidates" and http_method == "GET":
+        return candidate_routes.handle_list_candidates(event, namespace_id)
+
+    if resource == "/namespaces/{namespaceId}/candidates/{candidateId}/approve" and http_method == "POST":
+        candidate_id = path_params.get("candidateId", "")
+        if not candidate_id:
+            return api_response(400, {"error": "candidateId is required"})
+        return candidate_routes.handle_approve_candidate(event, namespace_id, candidate_id)
+
+    if resource == "/namespaces/{namespaceId}/candidates/{candidateId}/reject" and http_method == "POST":
+        candidate_id = path_params.get("candidateId", "")
+        if not candidate_id:
+            return api_response(400, {"error": "candidateId is required"})
+        return candidate_routes.handle_reject_candidate(event, namespace_id, candidate_id)
+
     return api_response(404, {"error": f"Unknown route: {http_method} {resource}"})
