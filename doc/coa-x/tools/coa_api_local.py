@@ -31,7 +31,7 @@ import tempfile
 import uuid
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import quote, unquote, urlencode
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response
@@ -592,6 +592,12 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}/review", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/publish", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/rollback", KERNEL),
+    # Governance console: audit read, chain verification and bundle migration.
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/events", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/verify", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/export", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/inspect", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/import", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -758,6 +764,39 @@ def _kernel_translate(
     if not isinstance(payload, dict):
         payload = {}
 
+    # Bundle migration must be matched before the generic `/import` and
+    # `/export` routes: `.../bundles/import` also ends with `/import`.
+    if template.endswith("/bundles/export"):
+        bundles = _lifecycle_dir() / "bundles"
+        bundles.mkdir(parents=True, exist_ok=True)
+        forwarded = {
+            "out": payload.get("out") or str(bundles),
+            "tag": payload.get("tag") or f"bundle-{uuid.uuid4().hex[:8]}",
+            # `includeInstances` is the contract's name for the A-Box/blobs half.
+            "includeBlobs": bool(
+                payload.get("includeBlobs", payload.get("includeInstances", False))
+            ),
+            "actor": payload.get("actor") or "operator",
+        }
+        return "POST", "/governance/bundle/export", json.dumps(forwarded).encode("utf-8")
+
+    if template.endswith("/bundles/inspect"):
+        q = query or {}
+        path = q.get("path") or q.get("bundleRef")
+        if not path:
+            raise ValueError("inspect requires path or bundleRef")
+        return "GET", f"/governance/bundle/inspect?path={quote(path)}", None
+
+    if template.endswith("/bundles/import"):
+        forwarded = {
+            "bundle": payload.get("bundle") or payload.get("bundleRef"),
+            "database": payload.get("database") or "platform_restore_test",
+            "replace": bool(payload.get("replace", False)),
+            "keepDbOnFailure": bool(payload.get("keepDbOnFailure", False)),
+            "actor": payload.get("actor") or "operator",
+        }
+        return "POST", "/governance/bundle/import", json.dumps(forwarded).encode("utf-8")
+
     if template.endswith("/import"):
         # ImportOntology: register the uploaded TTL as a draft version.
         merged = {**payload}
@@ -842,6 +881,17 @@ def _kernel_translate(
         }
         return "POST", "/governance/rollback-to", json.dumps(forwarded).encode("utf-8")
 
+    if template.endswith("/events"):
+        q = query or {}
+        params = {
+            key: q[key] for key in ("versionId", "action", "limit") if q.get(key)
+        }
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/governance/events{suffix}", None
+
+    if template.endswith("/verify"):
+        return "GET", "/ontology/verify", None
+
     raise ValueError(f"no kernel mapping for {method} {template}")
 
 
@@ -898,7 +948,10 @@ async def _kernel_proxy(
 ) -> Response:
     """Forward one lifecycle request and normalise the contract's field names."""
     body = await request.body()
-    if template.endswith("/import") and request.method == "POST":
+    if (
+        request.method == "POST"
+        and template.endswith("/ontologies/{ontologyId}/import")
+    ):
         status, content, ctype = await _kernel_register_version(template, path_params, body)
         return Response(content=content, status_code=status, media_type=ctype)
     try:
@@ -948,6 +1001,21 @@ async def _kernel_proxy(
             detail.setdefault("graphUri", detail.get("graph"))
             detail.setdefault("statementCount", detail.get("tripleCount"))
             content = json.dumps(detail, ensure_ascii=False).encode("utf-8")
+
+    # ListOntologyEvents: the kernel names the action/timestamp `action` /
+    # `createdAt`; the contract uses `type` / `at`. Keep both so older callers
+    # and the governance console can read either spelling.
+    if status < 300 and request.method == "GET" and template.endswith("/events"):
+        try:
+            events = json.loads(content or b"{}")
+        except ValueError:
+            events = None
+        if isinstance(events, dict):
+            for item in events.get("items") or []:
+                if isinstance(item, dict):
+                    item.setdefault("type", item.get("action"))
+                    item.setdefault("at", item.get("createdAt"))
+            content = json.dumps(events, ensure_ascii=False).encode("utf-8")
     return Response(content=content, status_code=status, media_type=ctype)
 
 

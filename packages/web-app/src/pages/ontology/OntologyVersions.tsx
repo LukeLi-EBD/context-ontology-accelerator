@@ -12,6 +12,7 @@ import { useParams } from "react-router-dom";
 import Alert from "@cloudscape-design/components/alert";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
+import Checkbox from "@cloudscape-design/components/checkbox";
 import Container from "@cloudscape-design/components/container";
 import FormField from "@cloudscape-design/components/form-field";
 import Header from "@cloudscape-design/components/header";
@@ -29,7 +30,9 @@ import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import {
   diffOntologyVersions,
   exportOntologyVersion,
+  getOntologyProposal,
   getOntologyVersion,
+  listOntologyEvents,
   listOntologyProposals,
   listOntologyVersions,
   proposeOntologyVersion,
@@ -38,7 +41,9 @@ import {
   reviewOntologyProposal,
   rollbackOntology,
   type OntologyDiff,
+  type OntologyEvent,
   type OntologyProposal,
+  type OntologyProposalDetail,
   type OntologyVersion,
   type OntologyVersionDetail,
 } from "../../services/ontology-lifecycle";
@@ -73,6 +78,20 @@ function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** One-line summary of an audit payload, leaning on the breaking acknowledgement. */
+function eventDetail(event: OntologyEvent): string {
+  const raw = event.payload?.breakingItems;
+  if (Array.isArray(raw) && raw.length > 0) {
+    const items = raw as { kind?: string; iri?: string }[];
+    return `${items.length} 项：${items
+      .map((item) => `${item.kind ?? "?"} ${item.iri ?? "?"}`)
+      .join("；")}`;
+  }
+  const mode = event.payload?.mode;
+  if (typeof mode === "string") return mode;
+  return event.reason ?? "-";
+}
+
 export function OntologyVersionsPage() {
   const { namespaceId } = useParams();
   const api = useApiClient();
@@ -89,6 +108,22 @@ export function OntologyVersionsPage() {
   const [detail, setDetail] = useState<OntologyVersionDetail | null>(null);
   const [diff, setDiff] = useState<OntologyDiff | null>(null);
   const [detailBusy, setDetailBusy] = useState<string | null>(null);
+  const [actor, setActor] = useState("");
+  const [proposalDetail, setProposalDetail] = useState<OntologyProposalDetail | null>(null);
+  const [proposalBusy, setProposalBusy] = useState<string | null>(null);
+  // The publish gate: opened only after the server refuses with
+  // E_ONTOLOGY_BREAKING. `ackBreaking` starts false on purpose — nothing may
+  // pre-confirm a breaking change.
+  const [gate, setGate] = useState<{
+    version: OntologyVersion;
+    proposalId: string;
+    diff: OntologyDiff;
+  } | null>(null);
+  const [ackBreaking, setAckBreaking] = useState(false);
+  const [publishReason, setPublishReason] = useState("");
+  const [events, setEvents] = useState<OntologyEvent[]>([]);
+  const [eventsBusy, setEventsBusy] = useState(false);
+  const [auditVersionId, setAuditVersionId] = useState<string | null>(null);
 
   useBreadcrumbTrail(
     namespaceId
@@ -154,6 +189,36 @@ export function OntologyVersionsPage() {
     [record, refresh],
   );
 
+  // F103: every governance write carries an explicit actor. An empty field is a
+  // client-side error, not a silent fallback to "operator".
+  const requireActor = useCallback((): string => {
+    const value = actor.trim();
+    if (!value) {
+      throw new Error("操作人（actor）必填：确认动作必须留痕，不能留空");
+    }
+    return value;
+  }, [actor]);
+
+  const loadEvents = useCallback(
+    async (versionId: string) => {
+      if (!namespaceId) return;
+      setEventsBusy(true);
+      setAuditVersionId(versionId);
+      try {
+        const data = await listOntologyEvents(api, namespaceId, appliedOntologyId, {
+          versionId,
+          limit: 50,
+        });
+        setEvents(data.items ?? []);
+      } catch (err) {
+        setError(`读取审计事件失败：${errorText(err)}`);
+      } finally {
+        setEventsBusy(false);
+      }
+    },
+    [api, namespaceId, appliedOntologyId],
+  );
+
   const register = () =>
     run("register", "① 注册版本", async () => {
       const created = await registerOntologyVersion(api, namespaceId!, appliedOntologyId, {
@@ -169,6 +234,7 @@ export function OntologyVersionsPage() {
         versionId: version.id,
         rationale: `UI proposal for ${version.semver}`,
         againstVersion: pointer,
+        actor: requireActor(),
       });
       return `proposalId=${created.proposalId ?? (created as unknown as { id: string }).id} against=${pointer ?? "(none)"}`;
     });
@@ -182,35 +248,145 @@ export function OntologyVersionsPage() {
         proposal.proposalId,
         decision,
         `UI ${decision.toLowerCase()}`,
+        requireActor(),
       );
       return `proposalId=${res.proposalId} result=${JSON.stringify(res)}`;
     });
 
   const publish = (version: OntologyVersion) =>
     run(`publish-${version.id}`, "④ 发布", async () => {
+      const operator = requireActor();
       const approved = proposals.find(
         (p) => p.versionId === version.id && p.status === "approved",
       );
       if (!approved) {
         throw new Error("该版本还没有已通过的提案，先执行 ②③");
       }
-      const res = await publishOntologyVersion(api, namespaceId!, appliedOntologyId, {
-        versionId: version.id,
-        proposalId: approved.proposalId,
-        expectedVersionId: pointer,
-        reason: "UI publish",
-      });
-      return `publishedVersion=${res.publishedVersion} semver=${res.semver}`;
+      try {
+        const res = await publishOntologyVersion(api, namespaceId!, appliedOntologyId, {
+          versionId: version.id,
+          proposalId: approved.proposalId,
+          expectedVersionId: pointer,
+          actor: operator,
+          reason: "UI publish",
+        });
+        setGate(null);
+        setAckBreaking(false);
+        setPublishReason("");
+        await loadEvents(version.id);
+        return `publishedVersion=${res.publishedVersion} semver=${res.semver}`;
+      } catch (err) {
+        // The bridge wraps platform errors as {"error":{"providerCode":...}},
+        // so ApiError.code may be UNKNOWN_ERROR. The 409 plus the provider code
+        // in the raw message is the stable signal for the breaking gate.
+        const breaking =
+          err instanceof ApiError &&
+          err.status === 409 &&
+          /E_ONTOLOGY_BREAKING|breaking changes/i.test(
+            `${err.code} ${err.message}`,
+          );
+        if (breaking) {
+          // The server refused for a reason a human must decide. Load the diff
+          // that the proposal stored and open the confirm panel with the
+          // checkbox off.
+          let loaded: OntologyProposalDetail | null = null;
+          try {
+            loaded = await getOntologyProposal(
+              api,
+              namespaceId!,
+              appliedOntologyId,
+              approved.proposalId,
+            );
+          } catch {
+            // The gate still has to open: the 409 is authoritative even if the
+            // detail read fails.
+          }
+          setGate({
+            version,
+            proposalId: approved.proposalId,
+            diff: loaded?.diff ?? { breaking: true },
+          });
+          setAckBreaking(false);
+          setPublishReason("");
+          setEvents([]);
+          setAuditVersionId(null);
+          throw new Error(
+            "409 E_ONTOLOGY_BREAKING：该版本含破坏性变更，闸门已拦截。" +
+              "请在下方「④ 发布确认」逐项确认后再提交。",
+          );
+        }
+        throw err;
+      }
     });
+
+  const confirmPublish = () => {
+    if (!gate) return;
+    if (!actor.trim()) {
+      setError("操作人（actor）必填：确认动作必须留痕");
+      return;
+    }
+    if (gate.diff.breaking && !ackBreaking) {
+      setError("必须先勾选确认破坏性变更，系统不会默认放行");
+      return;
+    }
+    const target = gate;
+    void run(`publish-${target.version.id}`, "④ 确认发布（含破坏性确认）", async () => {
+      const operator = requireActor();
+      const res = await publishOntologyVersion(api, namespaceId!, appliedOntologyId, {
+        versionId: target.version.id,
+        proposalId: target.proposalId,
+        expectedVersionId: pointer,
+        acknowledgeBreaking: ackBreaking,
+        actor: operator,
+        reason: publishReason.trim() || "UI publish (breaking acknowledged)",
+      });
+      setGate(null);
+      setAckBreaking(false);
+      setPublishReason("");
+      await loadEvents(target.version.id);
+      return `publishedVersion=${res.publishedVersion} semver=${res.semver} acknowledgeBreaking=${ackBreaking}`;
+    });
+  };
 
   const rollback = (version: OntologyVersion) =>
     run(`rollback-${version.id}`, "⑤ 回滚", async () => {
       const res = await rollbackOntology(api, namespaceId!, appliedOntologyId, {
         targetVersionId: version.id,
+        actor: requireActor(),
         reason: "UI rollback",
       });
       return `publishedVersion=${res.publishedVersion} replaced=${res.replacedVersionId}`;
     });
+
+  const openProposal = useCallback(
+    async (proposal: OntologyProposal) => {
+      if (!namespaceId) return;
+      setProposalBusy(proposal.proposalId);
+      setError(null);
+      try {
+        const loaded = await getOntologyProposal(
+          api,
+          namespaceId,
+          appliedOntologyId,
+          proposal.proposalId,
+        );
+        setProposalDetail(loaded);
+        record(
+          "提案详情",
+          `proposalId=${proposal.proposalId} ` +
+            `breaking=${String(loaded.diff?.breaking ?? false)} ` +
+            `+${loaded.diff?.summary?.addedTriples ?? "?"}/-${loaded.diff?.summary?.removedTriples ?? "?"}`,
+          true,
+        );
+      } catch (err) {
+        setProposalDetail(null);
+        setError(`查看提案失败：${errorText(err)}`);
+      } finally {
+        setProposalBusy(null);
+      }
+    },
+    [api, namespaceId, appliedOntologyId, record],
+  );
 
   const openDetail = useCallback(
     async (version: OntologyVersion) => {
@@ -335,6 +511,25 @@ export function OntologyVersionsPage() {
 
       <Container header={<Header variant="h2">当前发布版本</Header>}>
         <Box>{pointer ?? "尚未发布任何版本"}</Box>
+      </Container>
+
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description="提案、评审、发布、回滚都以该身份写入审计；留空时提交会被拒绝。"
+          >
+            操作人（actor）
+          </Header>
+        }
+      >
+        <FormField label="actor（必填）" description="例如 local-dev@example.invalid">
+          <Input
+            value={actor}
+            onChange={({ detail }) => setActor(detail.value)}
+            placeholder="填写操作人"
+          />
+        </FormField>
       </Container>
 
       <Container
@@ -472,6 +667,18 @@ export function OntologyVersionsPage() {
           },
           { id: "summary", header: "变更摘要", cell: (p: OntologyProposal) => p.changeSummary ?? "-" },
           {
+            id: "view",
+            header: "查看",
+            cell: (p: OntologyProposal) => (
+              <Button
+                loading={proposalBusy === p.proposalId}
+                onClick={() => void openProposal(p)}
+              >
+                详情
+              </Button>
+            ),
+          },
+          {
             id: "actions",
             header: "③ 评审",
             cell: (p: OntologyProposal) => (
@@ -497,6 +704,159 @@ export function OntologyVersionsPage() {
         ]}
         empty={<Box textAlign="center" color="inherit">还没有提案。</Box>}
       />
+
+      {proposalDetail && (
+        <Container header={<Header variant="h2">提案详情（F107）</Header>}>
+          <SpaceBetween size="m">
+            <KeyValuePairs
+              columns={3}
+              items={[
+                { label: "proposalId", value: proposalDetail.proposal.proposalId },
+                { label: "versionId", value: proposalDetail.proposal.versionId },
+                { label: "version 状态", value: proposalDetail.versionStatus },
+                { label: "提案状态", value: proposalDetail.proposal.status },
+                {
+                  label: "破坏性变更",
+                  value: proposalDetail.diff?.breaking ? "是" : "否",
+                },
+                {
+                  label: "相对版本",
+                  value: proposalDetail.diff?.from ?? "(首个版本)",
+                },
+              ]}
+            />
+            <KeyValuePairs
+              columns={3}
+              items={[
+                { label: "新增三元组", value: String(proposalDetail.diff?.summary?.addedTriples ?? "-") },
+                { label: "删除三元组", value: String(proposalDetail.diff?.summary?.removedTriples ?? "-") },
+                {
+                  label: "新增/删除类",
+                  value: `${proposalDetail.diff?.summary?.addedClasses?.length ?? 0} / ${
+                    proposalDetail.diff?.summary?.removedClasses?.length ?? 0
+                  }`,
+                },
+              ]}
+            />
+            {(proposalDetail.diff?.breakingItems ?? []).length > 0 && (
+              <Box>
+                <Box variant="awsui-key-label">breaking 项</Box>
+                <SpaceBetween size="xxs">
+                  {(proposalDetail.diff?.breakingItems ?? []).map((item) => (
+                    <Box key={`${item.kind}:${item.iri}`} variant="code">
+                      {item.kind} {item.iri}
+                    </Box>
+                  ))}
+                </SpaceBetween>
+              </Box>
+            )}
+          </SpaceBetween>
+        </Container>
+      )}
+
+      {gate && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description={`versionId=${gate.version.id} proposalId=${gate.proposalId}`}
+            >
+              ④ 发布确认（破坏性变更闸门）
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            <Alert type="warning" header="发布被 409 E_ONTOLOGY_BREAKING 拦住">
+              该版本相对发布基线包含破坏性变更。闸门不会默认放行：必须逐项阅读并勾选确认，
+              确认动作会以 actor 身份写入审计。
+            </Alert>
+            <Box>
+              <Box variant="awsui-key-label">
+                breaking 项（{(gate.diff.breakingItems ?? []).length}）
+              </Box>
+              {(gate.diff.breakingItems ?? []).length > 0 ? (
+                <SpaceBetween size="xxs">
+                  {(gate.diff.breakingItems ?? []).map((item) => (
+                    <Box key={`${item.kind}:${item.iri}`} variant="code">
+                      {item.kind} {item.iri}
+                    </Box>
+                  ))}
+                </SpaceBetween>
+              ) : (
+                <Box color="text-status-inactive">
+                  服务端未返回 breakingItems（仍以 409 代码为准）。
+                </Box>
+              )}
+            </Box>
+            <Checkbox
+              checked={ackBreaking}
+              onChange={({ detail: change }) => setAckBreaking(change.checked)}
+            >
+              我已确认上述破坏性变更，允许发布（不会自动勾选）
+            </Checkbox>
+            <FormField label="发布原因（可选）" description="写入审计 reason">
+              <Input
+                value={publishReason}
+                onChange={({ detail: change }) => setPublishReason(change.value)}
+                placeholder="例如：确认删除 Loan 类，已通知下游"
+              />
+            </FormField>
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                variant="primary"
+                disabled={!ackBreaking}
+                loading={busy === `publish-${gate.version.id}`}
+                onClick={confirmPublish}
+              >
+                确认并发布
+              </Button>
+              <Button
+                onClick={() => {
+                  setGate(null);
+                  setAckBreaking(false);
+                  setPublishReason("");
+                }}
+              >
+                取消
+              </Button>
+            </SpaceBetween>
+            <Box color="text-status-inactive">
+              actor 为空时不能提交；勾选本身不会触发发布，必须再点「确认并发布」。
+            </Box>
+          </SpaceBetween>
+        </Container>
+      )}
+
+      {(events.length > 0 || eventsBusy) && (
+        <Table
+          header={
+            <Header
+              variant="h2"
+              counter={`(${events.length})`}
+              description={`versionId=${auditVersionId ?? "-"}，最近 50 条，来自 /ontology/events`}
+              actions={
+                <Button
+                  loading={eventsBusy}
+                  onClick={() => auditVersionId && void loadEvents(auditVersionId)}
+                >
+                  刷新
+                </Button>
+              }
+            >
+              审计事件
+            </Header>
+          }
+          items={events}
+          columnDefinitions={[
+            { id: "at", header: "时间", cell: (e: OntologyEvent) => e.createdAt ?? e.at ?? "-" },
+            { id: "action", header: "动作", cell: (e: OntologyEvent) => e.action ?? e.type ?? "-" },
+            { id: "actor", header: "actor", cell: (e: OntologyEvent) => e.actor ?? "-" },
+            { id: "version", header: "versionId", cell: (e: OntologyEvent) => e.versionId ?? "-" },
+            { id: "detail", header: "详情", cell: (e: OntologyEvent) => eventDetail(e) },
+          ]}
+          empty={<Box textAlign="center" color="inherit">该版本还没有审计事件。</Box>}
+        />
+      )}
 
       {detail && (
         <Container

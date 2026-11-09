@@ -10,18 +10,22 @@
  * renders the status of each backend component with visual indicators.
  */
 import React, { useCallback, useEffect, useState } from "react";
+import Alert from "@cloudscape-design/components/alert";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
 import ColumnLayout from "@cloudscape-design/components/column-layout";
 import Container from "@cloudscape-design/components/container";
+import FormField from "@cloudscape-design/components/form-field";
 import Header from "@cloudscape-design/components/header";
+import Input from "@cloudscape-design/components/input";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import type { StatusIndicatorProps } from "@cloudscape-design/components/status-indicator";
 
-import { useApiClient } from "@components";
+import { useApiClient, useCurrentNamespace } from "@components";
 import { useAppI18n, type AppTranslate } from "../i18n/LocaleProvider";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
+import { verifyOntology } from "../services/ontology-lifecycle";
 
 interface OntologyInductionHealth {
   graphStore?: string;
@@ -85,10 +89,16 @@ export function SystemHealthPage() {
     { text: t("System Health") },
   ]);
   const apiClient = useApiClient();
+  const { namespaceId: currentNamespaceId } = useCurrentNamespace();
   const [health, setHealth] = useState<SystemHealthResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [verifyNamespace, setVerifyNamespace] = useState(currentNamespaceId ?? "");
+  const [verifyOntologyId, setVerifyOntologyId] = useState("fsldm-local");
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyResult, setVerifyResult] = useState<Record<string, unknown> | null>(null);
 
   const fetchHealth = useCallback(async () => {
     setLoading(true);
@@ -110,6 +120,34 @@ export function SystemHealthPage() {
   useEffect(() => {
     fetchHealth();
   }, [fetchHealth]);
+
+  useEffect(() => {
+    if (!verifyNamespace && currentNamespaceId) {
+      setVerifyNamespace(currentNamespaceId);
+    }
+  }, [currentNamespaceId, verifyNamespace]);
+
+  const doVerifyOntology = async () => {
+    if (!verifyNamespace.trim() || !verifyOntologyId.trim()) {
+      setVerifyError("namespaceId 与 ontologyId 都必须填写");
+      return;
+    }
+    setVerifyBusy(true);
+    setVerifyError(null);
+    try {
+      const result = await verifyOntology(
+        apiClient,
+        verifyNamespace.trim(),
+        verifyOntologyId.trim(),
+      );
+      setVerifyResult(result);
+    } catch (e) {
+      setVerifyResult(null);
+      setVerifyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
 
   const overallStatus: ComponentStatus = loading
     ? "loading"
@@ -226,6 +264,49 @@ export function SystemHealthPage() {
           }
         />
       </ColumnLayout>
+
+      <Header variant="h2">本体质量</Header>
+
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description="VerifyOntology：重算 audit 哈希链，报告断链或缺失事件"
+          >
+            审计链校验
+          </Header>
+        }
+      >
+        <SpaceBetween size="m">
+          <FormField label="namespaceId">
+            <Input
+              value={verifyNamespace}
+              onChange={({ detail }) => setVerifyNamespace(detail.value)}
+            />
+          </FormField>
+          <FormField label="ontologyId">
+            <Input
+              value={verifyOntologyId}
+              onChange={({ detail }) => setVerifyOntologyId(detail.value)}
+            />
+          </FormField>
+          <Button variant="primary" loading={verifyBusy} onClick={() => void doVerifyOntology()}>
+            校验审计链
+          </Button>
+          {verifyError && (
+            <Alert type="error" header="校验失败">
+              {verifyError}
+            </Alert>
+          )}
+          {verifyResult && (
+            <Box variant="code">
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                {JSON.stringify(verifyResult, null, 2)}
+              </pre>
+            </Box>
+          )}
+        </SpaceBetween>
+      </Container>
     </SpaceBetween>
   );
 }
