@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@cloudscape-design/global-styles/index.css";
 import { RuntimeContextProvider } from "@components/RuntimeContext";
 import { ControlPlaneClientProvider } from "@components/ControlPlaneClientProvider";
+import { DataLayerClientProvider } from "@components/DataLayerClientProvider";
 import { ApiClientProvider } from "@components/ApiClientProvider";
 import { Auth } from "@components/Auth";
 import { LocaleProvider } from "./i18n/LocaleProvider";
@@ -21,13 +22,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <RuntimeContextProvider>
           <ControlPlaneClientProvider>
-            <ApiClientProvider>
-              <QueryClientProvider client={queryClient}>
-                <Auth applicationName="Context Ontology Accelerator">
-                  <App />
-                </Auth>
-              </QueryClientProvider>
-            </ApiClientProvider>
+            <DataLayerClientProvider>
+              <ApiClientProvider>
+                <QueryClientProvider client={queryClient}>
+                  <Auth applicationName="Context Ontology Accelerator">
+                    <App />
+                  </Auth>
+                </QueryClientProvider>
+              </ApiClientProvider>
+            </DataLayerClientProvider>
           </ControlPlaneClientProvider>
         </RuntimeContextProvider>
       </BrowserRouter>

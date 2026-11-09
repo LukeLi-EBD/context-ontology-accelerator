@@ -5,11 +5,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
+import { ListMetricsCommand } from "@coa/control-plane-client";
 import { useListMetrics } from "../../../src/api-hooks/use-metrics";
 
-const mockGet = vi.fn();
-vi.mock("../../../src/components/ApiClientProvider", () => ({
-  useApiClient: () => ({ get: mockGet, post: vi.fn(), put: vi.fn(), del: vi.fn() }),
+const mockSend = vi.fn();
+vi.mock("../../../src/components/ControlPlaneClientProvider", () => ({
+  useControlPlaneClient: () => ({ send: mockSend }),
 }));
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -29,7 +30,7 @@ describe("useListMetrics", () => {
   });
 
   it("returns metrics on success", async () => {
-    mockGet.mockResolvedValueOnce({
+    mockSend.mockResolvedValueOnce({
       metrics: [
         {
           name: "revenue",
@@ -49,21 +50,25 @@ describe("useListMetrics", () => {
     expect(result.current.data?.pages[0].metrics[0].name).toBe("revenue");
   });
 
-  it("passes maxResults and nextToken as query params", async () => {
-    mockGet.mockResolvedValueOnce({ metrics: [], nextToken: undefined });
+  it("passes maxResults and the namespace through the ListMetrics command", async () => {
+    mockSend.mockResolvedValueOnce({ metrics: [], nextToken: undefined });
 
     const { result } = renderHook(() => useListMetrics("ns-1", 100), {
       wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockGet).toHaveBeenCalledWith(
-      expect.stringContaining("maxResults=100"),
-    );
+    const command = mockSend.mock.calls[0][0];
+    expect(command).toBeInstanceOf(ListMetricsCommand);
+    expect(command.input).toEqual({
+      namespaceId: "ns-1",
+      maxResults: 100,
+      nextToken: undefined,
+    });
   });
 
   it("reports hasNextPage when nextToken is present", async () => {
-    mockGet.mockResolvedValueOnce({
+    mockSend.mockResolvedValueOnce({
       metrics: [
         {
           name: "m1",
@@ -83,7 +88,7 @@ describe("useListMetrics", () => {
   });
 
   it("reports no next page when nextToken is absent", async () => {
-    mockGet.mockResolvedValueOnce({
+    mockSend.mockResolvedValueOnce({
       metrics: [
         {
           name: "m1",
@@ -105,12 +110,12 @@ describe("useListMetrics", () => {
     const { result } = renderHook(() => useListMetrics(""), { wrapper });
 
     // Should stay in idle/pending state without calling the API
-    expect(mockGet).not.toHaveBeenCalled();
+    expect(mockSend).not.toHaveBeenCalled();
     expect(result.current.data).toBeUndefined();
   });
 
   it("sets error when query fails", async () => {
-    mockGet.mockRejectedValueOnce(new Error("Network error"));
+    mockSend.mockRejectedValueOnce(new Error("Network error"));
 
     const { result } = renderHook(() => useListMetrics("ns-1"), { wrapper });
 

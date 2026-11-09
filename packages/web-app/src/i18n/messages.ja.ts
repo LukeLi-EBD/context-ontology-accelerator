@@ -2532,6 +2532,22 @@ export const MESSAGES_JA = {
   "A-Box verification failed: {message}":
     "A-Box の確認に失敗しました: {message}",
   "Select a document to inspect": "確認する文書を選択してください",
+  "Knowledge-base search": "ナレッジベース検索",
+  "Calls the contract's KBSearch operation and returns ranked chunks with their source documents.":
+    "契約の KBSearch オペレーションを呼び出し、順位付けされたチャンクとそのソース文書を返します。",
+  "Knowledge-base search query": "ナレッジベース検索クエリ",
+  "Ask the knowledge base": "ナレッジベースに質問する",
+  "Source document": "ソース文書",
+  "No chunks matched this query": "このクエリに一致するチャンクはありません",
+  "Ask the namespace": "名前空間に質問",
+  "Runs the contract's Query operation in standard mode and shows the synthesized answer.":
+    "契約の Query オペレーションを標準モードで実行し、合成された回答を表示します。",
+  "Ask a question about this namespace": "この名前空間について質問する",
+  Ask: "質問する",
+  "No synthesized answer (tier {tier}).":
+    "合成された回答はありません（ティア {tier}）。",
+  "Tier {tier} · {chunks} supporting chunks":
+    "ティア {tier} · サポートチャンク {chunks} 件",
   'Must be an absolute http(s) IRI without spaces or any of < > " { } | \\ ^ `.':
     '空白および < > " { } | \\ ^ ` のいずれも含まない、絶対 http(s) IRI を指定してください。',
 } as const;

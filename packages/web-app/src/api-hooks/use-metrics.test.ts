@@ -6,6 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+  BulkDeleteMetricsCommand,
+  ExportOsiCommand,
+  GetOsiUploadUrlCommand,
+  ImportOsiCommand,
+} from "@coa/control-plane-client";
+import {
   BULK_DELETE_NAMES_MAX_ITEMS,
   bulkDeleteInBatches,
   useBulkDeleteMetrics,
@@ -17,19 +23,18 @@ import {
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockPost = vi.fn();
-const mockGet = vi.fn();
+const mockSend = vi.fn();
 
-vi.mock("@components/ApiClientProvider", () => ({
-  useApiClient: () => ({
-    post: mockPost,
-    get: mockGet,
-    put: vi.fn(),
-    del: vi.fn(),
-  }),
+vi.mock("@components/ControlPlaneClientProvider", () => ({
+  useControlPlaneClient: () => ({ send: mockSend }),
 }));
 
 const NS_ID = "550e8400-e29b-41d4-a716-446655440000";
+
+/** Command sent by the n-th `client.send` call. */
+const sentCommand = (n: number) => mockSend.mock.calls[n][0];
+/** Wire input of the n-th `client.send` call. */
+const sentInput = (n: number) => sentCommand(n).input;
 
 function makeHarness() {
   const queryClient = new QueryClient({
@@ -58,7 +63,7 @@ function makeFile(content: string, size?: number): File {
 
 describe("useImportOsiFile", () => {
   beforeEach(() => {
-    mockPost.mockReset();
+    mockSend.mockReset();
     vi.unstubAllGlobals();
   });
 
@@ -67,7 +72,7 @@ describe("useImportOsiFile", () => {
     // Gateway's WAF SizeRestrictions_BODY (8 KB) and 403'd (issue 103).
     const fetchSpy = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchSpy);
-    mockPost
+    mockSend
       .mockResolvedValueOnce({
         uploadUrl: "https://bucket.s3.us-west-2.amazonaws.com/put",
         s3Key: "ns/imports/x/metrics.yaml",
@@ -87,32 +92,30 @@ describe("useImportOsiFile", () => {
     );
 
     // Upload-url requested, browser PUT to S3, then import by s3Key — no inline content.
-    expect(mockPost).toHaveBeenNthCalledWith(
-      1,
-      `/namespaces/${NS_ID}/import-osi/upload-url`,
-      expect.objectContaining({ filename: "metrics.yaml" }),
-    );
+    expect(sentCommand(0)).toBeInstanceOf(GetOsiUploadUrlCommand);
+    expect(sentInput(0)).toEqual({
+      namespaceId: NS_ID,
+      filename: "metrics.yaml",
+    });
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://bucket.s3.us-west-2.amazonaws.com/put",
       expect.objectContaining({ method: "PUT" }),
     );
-    expect(mockPost).toHaveBeenNthCalledWith(
-      2,
-      `/namespaces/${NS_ID}/import-osi`,
-      {
-        s3Key: "ns/imports/x/metrics.yaml",
-      },
-    );
+    expect(sentCommand(1)).toBeInstanceOf(ImportOsiCommand);
+    expect(sentInput(1)).toEqual({
+      namespaceId: NS_ID,
+      s3Key: "ns/imports/x/metrics.yaml",
+    });
     // No call ever carries an inline `content` body.
-    for (const call of mockPost.mock.calls) {
-      expect(call[1]).not.toHaveProperty("content");
+    for (const call of mockSend.mock.calls) {
+      expect(call[0].input).not.toHaveProperty("content");
     }
   });
 
   it("falls back to the pre-signed S3 upload flow for large files", async () => {
     const fetchSpy = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchSpy);
-    mockPost
+    mockSend
       .mockResolvedValueOnce({
         uploadUrl: "https://s3.example/put",
         s3Key: "ns/imports/x/metrics.yaml",
@@ -129,22 +132,20 @@ describe("useImportOsiFile", () => {
 
     await result.current.mutateAsync(makeFile("x", 6 * 1024 * 1024)); // > 5 MB
 
-    expect(mockPost).toHaveBeenNthCalledWith(
-      1,
-      `/namespaces/${NS_ID}/import-osi/upload-url`,
-      expect.objectContaining({ filename: "metrics.yaml" }),
-    );
+    expect(sentCommand(0)).toBeInstanceOf(GetOsiUploadUrlCommand);
+    expect(sentInput(0)).toEqual({
+      namespaceId: NS_ID,
+      filename: "metrics.yaml",
+    });
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://s3.example/put",
       expect.objectContaining({ method: "PUT" }),
     );
-    expect(mockPost).toHaveBeenNthCalledWith(
-      2,
-      `/namespaces/${NS_ID}/import-osi`,
-      {
-        s3Key: "ns/imports/x/metrics.yaml",
-      },
-    );
+    expect(sentCommand(1)).toBeInstanceOf(ImportOsiCommand);
+    expect(sentInput(1)).toEqual({
+      namespaceId: NS_ID,
+      s3Key: "ns/imports/x/metrics.yaml",
+    });
   });
 
   it("invalidates the metrics cache on a COMPLETED import", async () => {
@@ -152,7 +153,7 @@ describe("useImportOsiFile", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, status: 200 }),
     );
-    mockPost
+    mockSend
       .mockResolvedValueOnce({
         uploadUrl: "https://bucket.s3.us-west-2.amazonaws.com/put",
         s3Key: "k",
@@ -179,7 +180,7 @@ describe("useImportOsiFile", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, status: 200 }),
     );
-    mockPost
+    mockSend
       .mockResolvedValueOnce({
         uploadUrl: "https://bucket.s3.us-west-2.amazonaws.com/put",
         s3Key: "k",
@@ -202,7 +203,7 @@ describe("useImportOsiFile", () => {
 
   it("rejects when the upload-url request fails (large file)", async () => {
     vi.stubGlobal("fetch", vi.fn());
-    mockPost.mockRejectedValueOnce(new Error("upload-url failed"));
+    mockSend.mockRejectedValueOnce(new Error("upload-url failed"));
     const { wrapper } = makeHarness();
 
     const { result } = renderHook(() => useImportOsiFile(NS_ID), { wrapper });
@@ -216,7 +217,7 @@ describe("useImportOsiFile", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: false, status: 403 }),
     );
-    mockPost.mockResolvedValueOnce({
+    mockSend.mockResolvedValueOnce({
       uploadUrl: "https://s3.example/put",
       s3Key: "k",
     });
@@ -233,7 +234,7 @@ describe("useImportOsiFile", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, status: 200 }),
     );
-    mockPost
+    mockSend
       .mockResolvedValueOnce({
         uploadUrl: "https://s3.example/put",
         s3Key: "k",
@@ -250,43 +251,45 @@ describe("useImportOsiFile", () => {
 
 describe("useExportOsi", () => {
   beforeEach(() => {
-    mockGet.mockReset();
+    mockSend.mockReset();
   });
 
-  it("calls export-osi with no query string when exporting the full namespace", async () => {
-    mockGet.mockResolvedValueOnce({ content: 'osi_spec_version: "1.0"\n' });
+  it("exports the full namespace when no names are given", async () => {
+    mockSend.mockResolvedValueOnce({ content: 'osi_spec_version: "1.0"\n' });
     const { wrapper } = makeHarness();
 
     const { result } = renderHook(() => useExportOsi(NS_ID), { wrapper });
     await result.current.mutateAsync();
 
-    expect(mockGet).toHaveBeenCalledWith(`/namespaces/${NS_ID}/export-osi`);
+    expect(sentCommand(0)).toBeInstanceOf(ExportOsiCommand);
+    expect(sentInput(0)).toEqual({ namespaceId: NS_ID, names: undefined });
   });
 
-  it("appends a repeated `names` query param for a scoped export", async () => {
-    mockGet.mockResolvedValueOnce({ content: 'osi_spec_version: "1.0"\n' });
+  it("passes a scoped export's names through the command", async () => {
+    mockSend.mockResolvedValueOnce({ content: 'osi_spec_version: "1.0"\n' });
     const { wrapper } = makeHarness();
 
     const { result } = renderHook(() => useExportOsi(NS_ID), { wrapper });
     await result.current.mutateAsync({ names: ["metric_a", "metric_b"] });
 
-    expect(mockGet).toHaveBeenCalledWith(
-      `/namespaces/${NS_ID}/export-osi?names=metric_a&names=metric_b`,
-    );
+    expect(sentInput(0)).toEqual({
+      namespaceId: NS_ID,
+      names: ["metric_a", "metric_b"],
+    });
   });
 
   it("treats an empty names array the same as exporting everything", async () => {
-    mockGet.mockResolvedValueOnce({ content: 'osi_spec_version: "1.0"\n' });
+    mockSend.mockResolvedValueOnce({ content: 'osi_spec_version: "1.0"\n' });
     const { wrapper } = makeHarness();
 
     const { result } = renderHook(() => useExportOsi(NS_ID), { wrapper });
     await result.current.mutateAsync({ names: [] });
 
-    expect(mockGet).toHaveBeenCalledWith(`/namespaces/${NS_ID}/export-osi`);
+    expect(sentInput(0)).toEqual({ namespaceId: NS_ID, names: undefined });
   });
 
   it("rejects when the export request fails", async () => {
-    mockGet.mockRejectedValueOnce(new Error("export-osi failed (500)"));
+    mockSend.mockRejectedValueOnce(new Error("export-osi failed (500)"));
     const { wrapper } = makeHarness();
 
     const { result } = renderHook(() => useExportOsi(NS_ID), { wrapper });
@@ -363,10 +366,10 @@ describe("bulkDeleteInBatches", () => {
 });
 
 describe("useBulkDeleteMetrics", () => {
-  beforeEach(() => mockPost.mockReset());
+  beforeEach(() => mockSend.mockReset());
 
-  it("posts each batch to the bulk-delete endpoint and refreshes the list", async () => {
-    mockPost
+  it("sends each batch through BulkDeleteMetrics and refreshes the list", async () => {
+    mockSend
       .mockResolvedValueOnce({ deleted: BULK_DELETE_NAMES_MAX_ITEMS })
       .mockResolvedValueOnce({ deleted: 1 });
     const { wrapper, queryClient } = makeHarness();
@@ -383,10 +386,11 @@ describe("useBulkDeleteMetrics", () => {
     });
 
     expect(out).toEqual({ deleted: BULK_DELETE_NAMES_MAX_ITEMS + 1 });
-    expect(mockPost).toHaveBeenCalledTimes(2);
-    expect(mockPost.mock.calls[0][0]).toBe(
-      `/namespaces/${NS_ID}/bulk-delete-metrics`,
-    );
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(sentCommand(0)).toBeInstanceOf(BulkDeleteMetricsCommand);
+    expect(sentInput(0)).toMatchObject({ namespaceId: NS_ID });
+    expect(sentInput(0).names).toHaveLength(BULK_DELETE_NAMES_MAX_ITEMS);
+    expect(sentInput(1).names).toHaveLength(1);
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: ["metrics", NS_ID],
     });

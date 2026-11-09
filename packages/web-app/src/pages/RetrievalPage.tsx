@@ -10,6 +10,7 @@ import {
   useListDocumentChunks,
   useListDocuments,
 } from "@api-hooks";
+import { useAskNamespace, useKbSearch } from "@api-hooks/use-retrieval";
 import Alert from "@cloudscape-design/components/alert";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
@@ -17,6 +18,7 @@ import Container from "@cloudscape-design/components/container";
 import Flashbar from "@cloudscape-design/components/flashbar";
 import type { FlashbarProps } from "@cloudscape-design/components/flashbar";
 import Header from "@cloudscape-design/components/header";
+import Input from "@cloudscape-design/components/input";
 import Select from "@cloudscape-design/components/select";
 import type { SelectProps } from "@cloudscape-design/components/select";
 import SpaceBetween from "@cloudscape-design/components/space-between";
@@ -45,6 +47,11 @@ export default function RetrievalPage() {
   const documentId = searchParams.get("documentId") ?? "";
   const chunksQuery = useListDocumentChunks(namespaceId, documentId);
   const search = useChunkVectorSearch(namespaceId);
+  const kbSearch = useKbSearch(namespaceId);
+  const ask = useAskNamespace(namespaceId);
+
+  const [kbQuery, setKbQuery] = useState("");
+  const [question, setQuestion] = useState("");
 
   const [searchedChunkId, setSearchedChunkId] = useState<string | undefined>();
   const [flashItems, setFlashItems] = useState<
@@ -114,6 +121,131 @@ export default function RetrievalPage() {
   return (
     <SpaceBetween size="l">
       <Flashbar items={flashItems} />
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description={t(
+              "Calls the contract's KBSearch operation and returns ranked chunks with their source documents.",
+            )}
+          >
+            {t("Knowledge-base search")}
+          </Header>
+        }
+      >
+        <SpaceBetween size="m">
+          <Input
+            ariaLabel={t("Knowledge-base search query")}
+            placeholder={t("Ask the knowledge base")}
+            value={kbQuery}
+            onChange={({ detail }) => setKbQuery(detail.value)}
+            onKeyDown={(event) => {
+              if (event.detail.key === "Enter" && kbQuery.trim()) {
+                kbSearch.mutate(kbQuery.trim());
+              }
+            }}
+          />
+          <Button
+            variant="primary"
+            loading={kbSearch.isPending}
+            disabled={!kbQuery.trim()}
+            onClick={() => kbSearch.mutate(kbQuery.trim())}
+          >
+            {t("Search")}
+          </Button>
+          {kbSearch.error ? (
+            <Alert type="error">{kbSearch.error.message}</Alert>
+          ) : null}
+          {kbSearch.data ? (
+            <Table
+              variant="embedded"
+              items={kbSearch.data.chunks ?? []}
+              columnDefinitions={[
+                {
+                  id: "text",
+                  header: t("Chunk text"),
+                  cell: (item) => item.text ?? "",
+                  minWidth: 400,
+                },
+                {
+                  id: "document",
+                  header: t("Source document"),
+                  cell: (item) => item.sourceDocumentName ?? "—",
+                  minWidth: 180,
+                },
+                {
+                  id: "score",
+                  header: t("Score"),
+                  cell: (item) =>
+                    item.relevanceScore !== undefined
+                      ? item.relevanceScore.toFixed(4)
+                      : "—",
+                  width: 100,
+                },
+              ]}
+              wrapLines
+              empty={
+                <Box textAlign="center" color="inherit">
+                  <b>{t("No chunks matched this query")}</b>
+                </Box>
+              }
+            />
+          ) : null}
+        </SpaceBetween>
+      </Container>
+
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description={t(
+              "Runs the contract's Query operation in standard mode and shows the synthesized answer.",
+            )}
+          >
+            {t("Ask the namespace")}
+          </Header>
+        }
+      >
+        <SpaceBetween size="m">
+          <Input
+            ariaLabel={t("Question")}
+            placeholder={t("Ask a question about this namespace")}
+            value={question}
+            onChange={({ detail }) => setQuestion(detail.value)}
+            onKeyDown={(event) => {
+              if (event.detail.key === "Enter" && question.trim()) {
+                ask.mutate(question.trim());
+              }
+            }}
+          />
+          <Button
+            variant="primary"
+            loading={ask.isPending}
+            disabled={!question.trim()}
+            onClick={() => ask.mutate(question.trim())}
+          >
+            {t("Ask")}
+          </Button>
+          {ask.error ? <Alert type="error">{ask.error.message}</Alert> : null}
+          {ask.data?.result ? (
+            <SpaceBetween size="xs">
+              <Box variant="p">
+                {ask.data.result.synthesizedAnswer ??
+                  t("No synthesized answer (tier {tier}).", {
+                    tier: ask.data.result.tier ?? 0,
+                  })}
+              </Box>
+              <Box variant="small" color="text-body-secondary">
+                {t("Tier {tier} · {chunks} supporting chunks", {
+                  tier: ask.data.result.tier ?? 0,
+                  chunks: ask.data.result.supportingContent?.length ?? 0,
+                })}
+              </Box>
+            </SpaceBetween>
+          ) : null}
+        </SpaceBetween>
+      </Container>
+
       <Container
         header={
           <Header

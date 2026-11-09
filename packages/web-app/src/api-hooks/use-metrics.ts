@@ -8,17 +8,26 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useApiClient } from "@components/ApiClientProvider";
+import {
+  BulkDeleteMetricsCommand,
+  CreateMetricCommand,
+  DeleteMetricCommand,
+  ExportOsiCommand,
+  GetImportJobCommand,
+  GetMetricCommand,
+  GetOsiUploadUrlCommand,
+  ImportOsiCommand,
+  ListMetricsCommand,
+  UpdateMetricCommand,
+} from "@coa/control-plane-client";
 import type {
+  ImportOsiCommandOutput,
   MetricDefinition as _MetricDefinition,
   MetricDialect as _MetricDialect,
   MetricAiContext as _MetricAiContext,
   CreateMetricInput as _CreateMetricInput,
-  CreateMetricOutput as _CreateMetricOutput,
-  ListMetricsOutput as _ListMetricsOutput,
-  ImportOsiOutput as _ImportOsiOutput,
-  ExportOsiOutput as _ExportOsiOutput,
 } from "@coa/control-plane-client";
+import { useControlPlaneClient } from "@components/ControlPlaneClientProvider";
 
 // Re-export Smithy types with required fields narrowed for UI usage.
 // The generated types mark @required output fields as T | undefined
@@ -67,6 +76,18 @@ export interface ImportOsiOutput {
   status?: "COMPLETED" | "IN_PROGRESS" | "FAILED";
 }
 
+/** Fill the generated output's optional counters before handing it to the UI. */
+function narrowImportOutput(out: ImportOsiCommandOutput): ImportOsiOutput {
+  return {
+    datasetsResolved: out.datasetsResolved ?? 0,
+    metricsCreated: out.metricsCreated ?? 0,
+    metricsUpdated: out.metricsUpdated ?? 0,
+    warnings: out.warnings,
+    jobId: out.jobId,
+    status: out.status,
+  };
+}
+
 export interface ImportJobOutput {
   jobId: string;
   status: "IN_PROGRESS" | "COMPLETED" | "FAILED";
@@ -83,17 +104,22 @@ export interface ExportOsiOutput {
 }
 
 export function useListMetrics(namespaceId: string, maxResults = 50) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
 
   return useInfiniteQuery<ListMetricsOutput, Error>({
     queryKey: ["metrics", namespaceId],
     queryFn: async ({ pageParam }) => {
-      const params = new URLSearchParams();
-      params.set("maxResults", String(maxResults));
-      if (pageParam) params.set("nextToken", pageParam as string);
-      return client.get<ListMetricsOutput>(
-        `/namespaces/${namespaceId}/metrics?${params.toString()}`,
+      const out = await client.send(
+        new ListMetricsCommand({
+          namespaceId,
+          maxResults,
+          nextToken: pageParam as string | undefined,
+        }),
       );
+      return {
+        metrics: (out.metrics ?? []) as MetricDefinition[],
+        nextToken: out.nextToken,
+      };
     },
     getNextPageParam: (lastPage) => lastPage.nextToken,
     initialPageParam: undefined as string | undefined,
@@ -102,28 +128,34 @@ export function useListMetrics(namespaceId: string, maxResults = 50) {
 }
 
 export function useGetMetric(namespaceId: string, name: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
 
   return useQuery<{ metric: MetricDefinition }, Error>({
     queryKey: ["metrics", namespaceId, name],
-    queryFn: () =>
-      client.get<{ metric: MetricDefinition }>(
-        `/namespaces/${namespaceId}/metrics/${name}`,
-      ),
+    queryFn: async () => {
+      const out = await client.send(
+        new GetMetricCommand({ namespaceId, name }),
+      );
+      return { metric: out.metric as MetricDefinition };
+    },
     enabled: !!namespaceId && !!name,
   });
 }
 
 export function useCreateMetric(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<CreateMetricOutput, Error, CreateMetricInput>({
-    mutationFn: (input) =>
-      client.post<CreateMetricOutput>(
-        `/namespaces/${namespaceId}/metrics`,
-        input,
-      ),
+    mutationFn: async (input) => {
+      const out = await client.send(
+        new CreateMetricCommand({ ...input, namespaceId }),
+      );
+      return {
+        metric: out.metric as MetricDefinition,
+        warnings: out.warnings as CreateMetricOutput["warnings"],
+      };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["metrics", namespaceId] });
     },
@@ -131,15 +163,19 @@ export function useCreateMetric(namespaceId: string) {
 }
 
 export function useUpdateMetric(namespaceId: string, name: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<CreateMetricOutput, Error, CreateMetricInput>({
-    mutationFn: (input) =>
-      client.put<CreateMetricOutput>(
-        `/namespaces/${namespaceId}/metrics/${name}`,
-        input,
-      ),
+    mutationFn: async (input) => {
+      const out = await client.send(
+        new UpdateMetricCommand({ ...input, namespaceId, name }),
+      );
+      return {
+        metric: out.metric as MetricDefinition,
+        warnings: out.warnings as CreateMetricOutput["warnings"],
+      };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["metrics", namespaceId] });
       queryClient.invalidateQueries({
@@ -150,12 +186,15 @@ export function useUpdateMetric(namespaceId: string, name: string) {
 }
 
 export function useDeleteMetric(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, string>({
-    mutationFn: (metricName: string) =>
-      client.del<void>(`/namespaces/${namespaceId}/metrics/${metricName}`),
+    mutationFn: async (metricName) => {
+      await client.send(
+        new DeleteMetricCommand({ namespaceId, name: metricName }),
+      );
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["metrics", namespaceId] });
     },
@@ -219,17 +258,17 @@ export async function bulkDeleteInBatches(
 }
 
 export function useBulkDeleteMetrics(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<BulkDeleteOutput, Error, BulkDeleteInput>({
     mutationFn: (input) =>
-      bulkDeleteInBatches(input, (body) =>
-        client.post<BulkDeleteOutput>(
-          `/namespaces/${namespaceId}/bulk-delete-metrics`,
-          body,
-        ),
-      ),
+      bulkDeleteInBatches(input, async (body) => {
+        const out = await client.send(
+          new BulkDeleteMetricsCommand({ ...body, namespaceId }),
+        );
+        return { deleted: out.deleted ?? 0, notFound: out.notFound };
+      }),
     // Settled, not success: a batched delete that fails part-way has still
     // removed the metrics in its earlier batches.
     onSettled: () => {
@@ -239,14 +278,14 @@ export function useBulkDeleteMetrics(namespaceId: string) {
 }
 
 export function useImportOsi(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<ImportOsiOutput, Error, string>({
-    mutationFn: (content: string) =>
-      client.post<ImportOsiOutput>(`/namespaces/${namespaceId}/import-osi`, {
-        content,
-      }),
+    mutationFn: async (content: string) =>
+      narrowImportOutput(
+        await client.send(new ImportOsiCommand({ namespaceId, content })),
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["metrics", namespaceId] });
     },
@@ -255,18 +294,17 @@ export function useImportOsi(namespaceId: string) {
 
 /** Upload file to S3 via pre-signed URL, then call import with s3Key. */
 export function useImportOsiViaS3(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<ImportOsiOutput, Error, File>({
     mutationFn: async (file: File) => {
       // Step 1: Get pre-signed upload URL
-      const { uploadUrl, s3Key } = await client.post<{
-        uploadUrl: string;
-        s3Key: string;
-      }>(`/namespaces/${namespaceId}/import-osi/upload-url`, {
-        filename: file.name,
-      });
+      const presigned = await client.send(
+        new GetOsiUploadUrlCommand({ namespaceId, filename: file.name }),
+      );
+      const uploadUrl = presigned.uploadUrl as string;
+      const s3Key = presigned.s3Key as string;
 
       // Step 2: Upload file to S3
       const uploadResponse = await fetch(uploadUrl, {
@@ -279,9 +317,8 @@ export function useImportOsiViaS3(namespaceId: string) {
       }
 
       // Step 3: Call import with s3Key
-      return client.post<ImportOsiOutput>(
-        `/namespaces/${namespaceId}/import-osi`,
-        { s3Key },
+      return narrowImportOutput(
+        await client.send(new ImportOsiCommand({ namespaceId, s3Key })),
       );
     },
     onSuccess: (result) => {
@@ -306,17 +343,16 @@ export function useImportOsiViaS3(namespaceId: string) {
  *  `public-ui-construct.ts`). The backend still accepts an inline `{content}`
  *  body for non-UI callers under the 8 KB limit — only the UI stopped using it. */
 export function useImportOsiFile(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
 
   return useMutation<ImportOsiOutput, Error, File>({
     mutationFn: async (file: File) => {
-      const { uploadUrl, s3Key } = await client.post<{
-        uploadUrl: string;
-        s3Key: string;
-      }>(`/namespaces/${namespaceId}/import-osi/upload-url`, {
-        filename: file.name,
-      });
+      const presigned = await client.send(
+        new GetOsiUploadUrlCommand({ namespaceId, filename: file.name }),
+      );
+      const uploadUrl = presigned.uploadUrl as string;
+      const s3Key = presigned.s3Key as string;
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
@@ -325,9 +361,8 @@ export function useImportOsiFile(namespaceId: string) {
       if (!uploadResponse.ok) {
         throw new Error(`S3 upload failed: ${uploadResponse.status}`);
       }
-      return client.post<ImportOsiOutput>(
-        `/namespaces/${namespaceId}/import-osi`,
-        { s3Key },
+      return narrowImportOutput(
+        await client.send(new ImportOsiCommand({ namespaceId, s3Key })),
       );
     },
     onSuccess: (result) => {
@@ -340,7 +375,7 @@ export function useImportOsiFile(namespaceId: string) {
 
 /** Poll an import job until it completes. */
 export function useGetImportJob(namespaceId: string, jobId: string | null) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
   const queryClient = useQueryClient();
   const hasInvalidated = React.useRef(false);
 
@@ -351,10 +386,21 @@ export function useGetImportJob(namespaceId: string, jobId: string | null) {
 
   return useQuery<ImportJobOutput, Error>({
     queryKey: ["importJob", namespaceId, jobId],
-    queryFn: () =>
-      client.get<ImportJobOutput>(
-        `/namespaces/${namespaceId}/import-jobs/${jobId}`,
-      ),
+    queryFn: async () => {
+      const out = await client.send(
+        new GetImportJobCommand({ namespaceId, jobId: jobId! }),
+      );
+      return {
+        jobId: out.jobId ?? jobId!,
+        status: out.status as ImportJobOutput["status"],
+        metricsTotal: out.metricsTotal ?? 0,
+        metricsProcessed: out.metricsProcessed ?? 0,
+        metricsCreated: out.metricsCreated ?? 0,
+        metricsUpdated: out.metricsUpdated ?? 0,
+        errors: out.errors,
+        warnings: out.warnings,
+      };
+    },
     enabled: !!namespaceId && !!jobId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -379,18 +425,15 @@ export interface ExportOsiInput {
 }
 
 export function useExportOsi(namespaceId: string) {
-  const client = useApiClient();
+  const client = useControlPlaneClient();
 
   return useMutation<ExportOsiOutput, Error, ExportOsiInput | void>({
-    mutationFn: (input) => {
-      const params = new URLSearchParams();
-      for (const name of input?.names ?? []) {
-        params.append("names", name);
-      }
-      const query = params.toString();
-      return client.get<ExportOsiOutput>(
-        `/namespaces/${namespaceId}/export-osi${query ? `?${query}` : ""}`,
+    mutationFn: async (input) => {
+      const names = input?.names?.length ? input.names : undefined;
+      const out = await client.send(
+        new ExportOsiCommand({ namespaceId, names }),
       );
+      return { content: out.content as string };
     },
   });
 }
