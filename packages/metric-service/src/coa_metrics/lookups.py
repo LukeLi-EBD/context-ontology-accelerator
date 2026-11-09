@@ -620,3 +620,33 @@ class NeptuneOntologyLookup(OntologyLookup):
                 error=str(exc),
             )
             return False  # Fail open — don't block on Neptune errors
+
+
+def build_ontology_lookup() -> OntologyLookup | None:
+    """Resolve the ``OntologyLookup`` port, falling back to the Neptune client.
+
+    Shared by the validate endpoint and the create/update soft-validation path so
+    Check 6 answers with the same implementation everywhere. A configured provider
+    wins; an unset, unknown or unimplemented one leaves the Neptune client in
+    charge, and a Neptune client that cannot be constructed degrades to ``None``
+    (Check 6 skipped), exactly as both call sites did before.
+    """
+    try:
+        from coa_runtime.registry import resolve
+
+        resolution = resolve("OntologyLookup")
+    except Exception as exc:  # no key, unknown provider, or provider not wired
+        logger.info("ontology_lookup_port_unavailable", error=str(exc))
+    else:
+        logger.info(
+            "ontology_lookup_from_port",
+            provider=resolution.provider,
+            implementation=type(resolution.instance).__name__,
+        )
+        return resolution.instance
+
+    try:
+        return NeptuneOntologyLookup()
+    except Exception as exc:
+        logger.warning("ontology_lookup_init_failed", error=str(exc))
+        return None

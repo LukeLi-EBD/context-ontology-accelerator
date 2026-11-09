@@ -28,6 +28,15 @@ logger = structlog.get_logger(__name__)
 # from the request body, so it may only carry characters legal in an IRI.
 _SAFE_CONCEPT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*:[A-Za-z0-9_.:/#\-]+$")
 
+# The namespace is interpolated into the ``STRSTARTS`` prefix that scopes the
+# query to ``{graph_base}/{namespace}/``. ``OxigraphHttpStore.allowed_graph_prefixes``
+# cannot police that: it only inspects literal ``GRAPH <iri>`` / ``FROM <iri>``
+# tokens, while this query binds the graph as ``?g`` at evaluation time. The
+# namespace is the only caller-controlled segment of that prefix, so it has to
+# be a single path segment — no slashes, no traversal, nothing that could widen
+# the prefix to a neighbouring namespace.
+_SAFE_NAMESPACE_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]{0,63}$")
+
 
 class GraphOntologyLookup(OntologyLookup):
     """``class_exists`` backed by a local Oxigraph triple store."""
@@ -42,6 +51,10 @@ class GraphOntologyLookup(OntologyLookup):
         """ASK whether ``class_uri`` is an ``owl:Class`` in this namespace."""
         if not isinstance(class_uri, str) or not _SAFE_CONCEPT_RE.match(class_uri):
             logger.warning("ontology_concept_rejected", class_uri=class_uri, namespace=namespace)
+            return False
+
+        if not isinstance(namespace, str) or not _SAFE_NAMESPACE_RE.match(namespace):
+            logger.warning("ontology_namespace_rejected", namespace=namespace, class_uri=class_uri)
             return False
 
         ns_prefix = f"{self._graph_base}/{namespace}/"

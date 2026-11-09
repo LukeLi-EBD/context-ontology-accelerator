@@ -41,7 +41,7 @@ def validate_soft(
     """
     try:
         from coa_metrics.data_source_lookup_factory import build_data_source_lookup
-        from coa_metrics.lookups import NeptuneOntologyLookup
+        from coa_metrics.lookups import build_ontology_lookup
         from coa_metrics.validator import validate_metric
     except ImportError as exc:
         logger.warning("validator_import_failed", error=str(exc))
@@ -58,10 +58,7 @@ def validate_soft(
     else:
         resolved_data_source_lookup = cast("DataSourceLookup | None", data_source_lookup)
 
-    try:
-        ontology_lookup = NeptuneOntologyLookup()
-    except Exception as exc:
-        logger.warning("ontology_lookup_init_failed", error=str(exc))
+    ontology_lookup = build_ontology_lookup()
 
     try:
         result = validate_metric(

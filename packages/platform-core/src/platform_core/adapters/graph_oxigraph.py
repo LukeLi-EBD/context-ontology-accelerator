@@ -180,7 +180,15 @@ class OxigraphHttpStore:
         return response
 
     def _assert_allowed_graphs(self, sparql: str) -> None:
-        """Reject dataset clauses / GRAPH patterns outside the platform whitelist."""
+        """Reject dataset clauses / ``GRAPH <iri>`` patterns outside the whitelist.
+
+        Scope: literal graph IRIs only. ``GRAPH ?g`` binds graphs at evaluation
+        time and is therefore not decidable by a syntactic check; a caller that
+        queries through a variable must bound the graphs itself (for example
+        ``GraphOntologyLookup`` restricts the namespace it interpolates into
+        ``STRSTARTS``). Do not read this method as covering every graph a query
+        can touch.
+        """
         stripped = _strip_string_literals(sparql)
         for iri in _FROM_RE.findall(stripped) + _GRAPH_RE.findall(stripped):
             if iri in self._allowed_graphs:
