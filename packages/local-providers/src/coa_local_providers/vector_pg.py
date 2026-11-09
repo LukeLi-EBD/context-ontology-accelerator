@@ -146,6 +146,10 @@ def _hit(row: dict[str, Any], backend: str) -> VectorHit:
         score=max(0.0, min(1.0, float(row.get("score", 0.0)))),
         metadata={
             "documentId": row.get("documentId"),
+            # Tier-3 requires provenance on every chunk it keeps; on this backend
+            # the document id is the only stable source identifier the store
+            # returns, so it is published under the same key the RAG index uses.
+            "source_doc": str(row.get("documentId") or ""),
             "pageFrom": row.get("pageFrom"),
             "pageTo": row.get("pageTo"),
             "backend": backend,

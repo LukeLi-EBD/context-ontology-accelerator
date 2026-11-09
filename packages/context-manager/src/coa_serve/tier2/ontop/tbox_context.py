@@ -23,6 +23,7 @@ from ...clients.base import GraphClient
 from ...namespace_language import current_label_preference, row_label
 from ...query_utils import (
     DEFAULT_GRAPH_URI_TEMPLATE,
+    SPARQL_PREFIXES,
     backend_gate,
     build_query_search_plan,
     escape_sparql_string_literal,
@@ -297,6 +298,19 @@ class TBoxContextBuilder:
         # namespace -> (resolved_at_monotonic, graph IRIs). See _MAX_GRAPHS above.
         self._graph_iri_cache: dict[str, tuple[float, list[str]]] = {}
 
+    async def _run(self, sparql: str) -> list[dict[str, Any]]:
+        """Run a T-Box query with the standard vocabulary prefixes declared.
+
+        The queries below are written against ``owl:``/``rdfs:``/``xsd:`` short
+        forms without a prolog of their own, which only a store with implicit
+        prefixes accepts. A conforming SPARQL endpoint (Oxigraph, Fuseki) rejects
+        them with ``Prefix not found``, so the prolog is added here, in one place,
+        and only when the query does not declare prefixes already.
+        """
+        if "PREFIX" not in sparql.upper():
+            sparql = f"{SPARQL_PREFIXES}\n{sparql}"
+        return await self._graph.query(sparql)
+
     async def _resolve_graph_iris(self, namespace: str, graph_uri_prefix: str) -> list[str]:
         """Resolve the namespace's named-graph IRIs so the fetches below can bind ``?g``.
 
@@ -318,7 +332,7 @@ class TBoxContextBuilder:
             return cached[1]
         try:
             rows = await asyncio.wait_for(
-                self._graph.query(named_graphs_sparql(graph_uri_prefix, limit=_MAX_GRAPHS)),
+                self._run(named_graphs_sparql(graph_uri_prefix, limit=_MAX_GRAPHS)),
                 timeout=_GRAPH_RESOLVE_TIMEOUT_S,
             )
             iris = [r["g"] for r in rows if r.get("g") and _is_safe_sparql_uri(r["g"])]
@@ -519,7 +533,7 @@ class TBoxContextBuilder:
         }}
         """
         try:
-            count_result = await self._graph.query(count_sparql)
+            count_result = await self._run(count_sparql)
             if not count_result:
                 return None
             # Neptune client returns flat binding dicts: {"cnt": "75"}
@@ -591,10 +605,10 @@ class TBoxContextBuilder:
         """
 
         try:
-            class_results = await self._graph.query(classes_sparql)
+            class_results = await self._run(classes_sparql)
             if not class_results:
                 return None
-            prop_results = await self._graph.query(props_sparql)
+            prop_results = await self._run(props_sparql)
             if len(prop_results) >= _SPARQL_RESULT_LIMIT:
                 logger.warning(
                     "full_context_properties_truncated",
@@ -666,7 +680,7 @@ class TBoxContextBuilder:
             domain_iris=[u for u in (class_uris or []) if _is_safe_sparql_uri(u)][:_MAX_DOMAIN_ANCHOR_URIS],
         )
         try:
-            results = await self._graph.query(sparql)
+            results = await self._run(sparql)
             # One row per label combination: group by edge (and by class for the
             # end labels) so a multilingual class is one join path, not several.
             edges: dict[tuple[str, str, str], None] = {}
@@ -788,7 +802,7 @@ class TBoxContextBuilder:
         """
 
         try:
-            results = await self._graph.query(sparql)
+            results = await self._run(sparql)
         except Exception as e:
             logger.error("tbox_fetch_failed", namespace=namespace, error=str(e))
             return [], []
@@ -859,7 +873,7 @@ class TBoxContextBuilder:
         """
 
         try:
-            class_results = await self._graph.query(classes_sparql)
+            class_results = await self._run(classes_sparql)
         except Exception as e:
             logger.error("tbox_entity_fetch_failed", namespace=namespace, error=str(e))
             return [], []
@@ -920,7 +934,7 @@ class TBoxContextBuilder:
         """
 
         try:
-            prop_results = await self._graph.query(props_sparql)
+            prop_results = await self._run(props_sparql)
         except Exception as e:
             # A property-list failure only costs column hints; the matched classes
             # are already answerable, so degrade rather than drop them.
@@ -978,7 +992,7 @@ class TBoxContextBuilder:
         }} LIMIT {_SPARQL_RESULT_LIMIT}
         """
         try:
-            results = await self._graph.query(sparql)
+            results = await self._run(sparql)
         except Exception as e:
             logger.warning("aicontext_fetch_failed", namespace=namespace, error=str(e))
             return []
@@ -1120,7 +1134,7 @@ class TBoxContextBuilder:
         """
             async with semaphore:
                 try:
-                    rows = await self._graph.query(sparql)
+                    rows = await self._run(sparql)
                 except Exception as e:
                     logger.warning("tbox_annotations_fetch_failed", namespace=namespace, error=str(e))
                     return []

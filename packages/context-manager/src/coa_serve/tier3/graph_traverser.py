@@ -21,6 +21,7 @@ from ..namespace_language import current_label_preference, row_label
 from ..query_utils import (
     MAX_QUERY_CODEPOINTS,
     MAX_SEARCH_TOKEN_CODEPOINTS,
+    SPARQL_PREFIXES,
     build_query_search_plan,
     escape_sparql_string_literal,
     get_graph_uri_template,
@@ -31,6 +32,17 @@ from ..query_utils import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+def _with_prefixes(sparql: str) -> str:
+    """Declare the vocabularies the traversal queries use in short form.
+
+    The queries below are written with ``rdfs:`` without a prolog, which only a
+    store with implicit prefixes accepts; a conforming endpoint answers
+    ``Prefix not found``. Declaring them here keeps the query text readable.
+    """
+    return sparql if "PREFIX" in sparql.upper() else f"{SPARQL_PREFIXES}\n{sparql}"
+
 
 # Safety gate for a keyword before it is interpolated into a SPARQL string
 # literal (``CONTAINS(LCASE(?label), "…")`` in _build_label_query).
@@ -188,7 +200,9 @@ class GraphTraverser:
             return []
 
         sparql = self._build_label_query(namespace, safe_entities, safe_containers)
-        results = await asyncio.wait_for(self._graph.query(sparql), timeout=_GRAPH_QUERY_TIMEOUT_S)
+        results = await asyncio.wait_for(
+            self._graph.query(_with_prefixes(sparql)), timeout=_GRAPH_QUERY_TIMEOUT_S
+        )
         parsed = self._parse_results(results)
         if len(results) >= _MAX_TRAVERSAL_RESULTS:
             # The row cap was reached, so Neptune's row order decided which matches
@@ -217,7 +231,9 @@ class GraphTraverser:
             return []
 
         sparql = self._build_hop_query(namespace, safe_uris[:10], max_hops)
-        results = await asyncio.wait_for(self._graph.query(sparql), timeout=_GRAPH_QUERY_TIMEOUT_S)
+        results = await asyncio.wait_for(
+            self._graph.query(_with_prefixes(sparql)), timeout=_GRAPH_QUERY_TIMEOUT_S
+        )
         parsed = self._parse_hop_results(results)
         logger.info(
             "graph_traverse_from_uris_done",
