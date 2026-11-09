@@ -160,6 +160,18 @@ def build_lexical_retriever(
     reason, so the other Tier-3 paths keep working.
     """
     if not config.neptune_endpoint or not config.opensearch_endpoint:
+        # graphrag needs a property-graph store URI derived from these fields; the
+        # resolved GraphClient/VectorClient ports are RDF/vector stores and cannot
+        # stand in. Announce it rather than returning None silently.
+        logger.info(
+            "lexical_retriever_unavailable",
+            reason=(
+                "neptune_endpoint/opensearch_endpoint unset; graphrag-toolkit needs "
+                "property-graph store URIs that the local ports do not provide"
+            ),
+            neptune_endpoint_set=bool(config.neptune_endpoint),
+            opensearch_endpoint_set=bool(config.opensearch_endpoint),
+        )
         return None
 
     # Standard-mode path (timeout_s is None): honor LEXICAL_RETRIEVER_TIMEOUT_S so

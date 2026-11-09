@@ -5,11 +5,12 @@
 
 Covers ``coa_serve.tier3.agentic.factory``:
 
-- Endpoint-gated registration (Req 12.5-12.6): with the Neptune / OpenSearch
-  endpoints unconfigured, the strategy / graph / vector tools are OMITTED and a
-  ``structlog`` warning names each omitted tool and the missing endpoint(s); the
-  Ontology_Lookup_Tool is ALWAYS present (Req 12.4).
-- With both store endpoints configured, the full tool set — the seven
+- Port-gated registration (Req 12.5-12.6): the graph / vector tools are gated on
+  the RESOLVED ports, not on the legacy ``neptune_endpoint`` / ``opensearch_endpoint``
+  config fields. Every omission names the missing port and, for the graphrag-backed
+  ``strategy:*`` / ``graph_traversal`` tools, the additional graphrag store/toolkit
+  requirement. The Ontology_Lookup_Tool is ALWAYS present (Req 12.4).
+- With a graphrag store URI and the toolkit installed, the full tool set — the eight
   ``strategy:<value>`` tools plus ``graph_traversal``, ``vector_search``, and
   ``ontology_lookup`` — is registered (Req 2.2, 2.3).
 - Ontology source selection (Req 3.2, 12.7): the file source is selected when
@@ -27,6 +28,7 @@ subprocess test asserts.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
 import sys
@@ -53,6 +55,10 @@ ONTOLOGY_TOOL = "ontology_lookup"
 GRAPH_TOOL = "graph_traversal"
 CHUNK_TOOL = "chunk_window"
 VECTOR_TOOL = "vector_search"
+
+# graphrag-toolkit is an optional extra. The full-registration tests exercise the
+# graphrag-backed ``strategy:*`` tools, so they only run where it is installed.
+_GRAPHRAG_INSTALLED = importlib.util.find_spec("graphrag_toolkit") is not None
 
 
 # ── test doubles ───────────────────────────────────────────────────
@@ -110,57 +116,61 @@ def _omission_events(logs: list[dict]) -> dict[str, dict]:
     }
 
 
-# ── endpoint-gated omission (Req 12.5-12.6) ────────────────────────
+# ── port-gated omission (Req 12.5-12.6) ────────────────────────────
 
 
 @pytest.mark.unit
-class TestEndpointGatedOmission:
-    def test_unconfigured_endpoints_omit_tools_with_warning(self):
-        """No endpoints → only the ontology tool, with a warning per omitted tool."""
+class TestPortGatedOmission:
+    def test_no_ports_omit_endpoint_tools_with_explicit_ports(self):
+        """No graph/vector ports → every endpoint tool omitted, naming the port."""
         config = make_config(neptune_endpoint="", opensearch_endpoint="")
-        clients = make_clients()
+        clients = SimpleNamespace(graph=None, vector=None, llm=FakeLLM())
 
         with structlog.testing.capture_logs() as logs:
             registry = build_tool_registry(config, clients)
 
         # Only the always-on ontology tool survives (Req 12.4).
         assert registry.names() == [ONTOLOGY_TOOL]
-        assert GRAPH_TOOL not in registry.names()
-        assert VECTOR_TOOL not in registry.names()
-        assert not [n for n in registry.names() if n.startswith("strategy:")]
 
-        # Each omitted tool is named with its missing endpoint(s) (Req 12.6).
         omissions = _omission_events(logs)
-        assert GRAPH_TOOL in omissions
-        assert omissions[GRAPH_TOOL]["missing_endpoints"] == ["neptune_endpoint"]
-        assert VECTOR_TOOL in omissions
-        assert "opensearch_endpoint" in omissions[VECTOR_TOOL]["missing_endpoints"]
+        assert omissions[GRAPH_TOOL]["missing_ports"] == ["graph"]
+        assert omissions[VECTOR_TOOL]["missing_ports"] == ["vector"]
         strategy_omission = next(t for t in omissions if t.startswith("strategy:"))
-        assert set(omissions[strategy_omission]["missing_endpoints"]) == {
-            "neptune_endpoint",
-            "opensearch_endpoint",
-        }
+        assert set(omissions[strategy_omission]["missing_ports"]) == {"graph", "vector"}
+        assert "unavailable" in omissions[strategy_omission]["reason"]
 
-    def test_graph_tool_present_vector_omitted_when_only_neptune_set(self):
-        """Neptune-only → graph tool present, vector + strategy tools omitted."""
-        config = make_config(neptune_endpoint="my-neptune:8182", opensearch_endpoint="")
+    def test_ports_up_but_no_graphrag_store_omits_graph_and_strategy(self):
+        """Ports resolving is not enough for the graphrag tools: with no graphrag
+        store URI they are omitted with an explicit reason, while the port-backed
+        vector tool is registered."""
+        config = make_config(neptune_endpoint="", opensearch_endpoint="")
         clients = make_clients()
 
         with structlog.testing.capture_logs() as logs:
             registry = build_tool_registry(config, clients)
 
-        assert GRAPH_TOOL in registry.names()
-        assert VECTOR_TOOL not in registry.names()
-        assert ONTOLOGY_TOOL in registry.names()
-        # No strategy tools (they need opensearch too).
-        assert not [n for n in registry.names() if n.startswith("strategy:")]
+        names = registry.names()
+        assert VECTOR_TOOL in names  # port-backed: the vector port is all it needs
+        assert GRAPH_TOOL not in names  # needs a graphrag graph-store URI
+        assert ONTOLOGY_TOOL in names
+        assert not [n for n in names if n.startswith("strategy:")]
 
         omissions = _omission_events(logs)
-        assert VECTOR_TOOL in omissions
-        assert "opensearch_endpoint" in omissions[VECTOR_TOOL]["missing_endpoints"]
+        assert omissions[GRAPH_TOOL]["missing_ports"] == []
+        assert "graphrag" in omissions[GRAPH_TOOL]["reason"]
+        strategy_omission = next(t for t in omissions if t.startswith("strategy:"))
+        assert omissions[strategy_omission]["missing_ports"] == []
+        assert "graphrag" in omissions[strategy_omission]["reason"]
+
+    def test_graph_tool_present_when_neptune_store_configured(self):
+        """A Neptune endpoint yields the graphrag graph-store URI the tool needs."""
+        config = make_config(neptune_endpoint="my-neptune:8182", opensearch_endpoint="")
+        registry = build_tool_registry(config, make_clients())
+        assert GRAPH_TOOL in registry.names()
+        assert ONTOLOGY_TOOL in registry.names()
 
     def test_vector_omitted_when_embed_client_missing(self):
-        """OpenSearch set but no embed client → vector tool omitted, names embed_client."""
+        """Vector port up but no embed client → vector tool omitted, names embed_client."""
         config = make_config(neptune_endpoint="", opensearch_endpoint="my-aoss")
         clients = SimpleNamespace(graph=object(), vector=object(), llm=None)
 
@@ -169,13 +179,13 @@ class TestEndpointGatedOmission:
 
         assert VECTOR_TOOL not in registry.names()
         omissions = _omission_events(logs)
-        assert "embed_client" in omissions[VECTOR_TOOL]["missing_endpoints"]
+        assert "embed_client" in omissions[VECTOR_TOOL]["missing_ports"]
 
     def test_ontology_tool_always_present(self):
-        """The ontology tool is registered regardless of endpoint configuration."""
-        for neptune, opensearch in (("", ""), ("n:8182", ""), ("", "aoss")):
-            config = make_config(neptune_endpoint=neptune, opensearch_endpoint=opensearch)
-            registry = build_tool_registry(config, make_clients())
+        """The ontology tool is registered regardless of port/endpoint configuration."""
+        for graph, vector in ((None, None), (object(), None), (None, object())):
+            config = make_config(neptune_endpoint="", opensearch_endpoint="")
+            registry = build_tool_registry(config, SimpleNamespace(graph=graph, vector=vector, llm=FakeLLM()))
             assert ONTOLOGY_TOOL in registry.names()
 
 
@@ -184,6 +194,7 @@ class TestEndpointGatedOmission:
 
 @pytest.mark.unit
 class TestFullRegistration:
+    @pytest.mark.skipif(not _GRAPHRAG_INSTALLED, reason="graphrag-toolkit not installed")
     def test_all_tools_present_when_endpoints_configured(self):
         """Both store endpoints set → 7 strategy + graph + vector + ontology.
 
@@ -209,6 +220,7 @@ class TestFullRegistration:
         # 8 strategy + graph + vector + ontology.
         assert len(names) == 11  # nl_to_sql/nl_to_sparql need a StructuredQueryTier (not supplied here)
 
+    @pytest.mark.skipif(not _GRAPHRAG_INSTALLED, reason="graphrag-toolkit not installed")
     def test_chunk_window_registered_when_enabled(self, monkeypatch):
         """AGENTIC_ENABLE_CHUNK_WINDOW=1 + neptune → chunk_window is registered (idea 6)."""
         monkeypatch.setenv("AGENTIC_ENABLE_CHUNK_WINDOW", "1")

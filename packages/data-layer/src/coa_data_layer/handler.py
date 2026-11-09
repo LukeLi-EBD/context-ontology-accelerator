@@ -3,12 +3,17 @@
 
 """Data Layer API Lambda handler — thin adapter between API Gateway and Context Manager.
 
-Validates requests, invokes the Context Manager via AgentCore Runtime (HTTP POST
-to the VPC endpoint with JWT bearer auth), and maps responses to Smithy output shapes.
+Validates requests, invokes the Context Manager, and maps responses to Smithy
+output shapes. The transport is selected by ``COA_PROVIDER_CONTEXT_MANAGER``:
+when set (e.g. ``local-http``), the request goes through the resolved
+``ContextManagerPort`` so no AWS endpoint is involved; when unset, the legacy
+AgentCore Runtime HTTP call is used.
 
 Environment:
-    AGENTCORE_RUNTIME_ARN: AgentCore Runtime ARN for the Context Manager.
-    AWS_REGION: AWS region (used to construct the VPC endpoint hostname).
+    COA_PROVIDER_CONTEXT_MANAGER: ``local-http`` to route through the port.
+    COA_CONTEXT_MANAGER_ENDPOINT: Peer base URL for the ``local-http`` provider.
+    AGENTCORE_RUNTIME_ARN: AgentCore Runtime ARN (legacy transport only).
+    AWS_REGION: AWS region (used to construct the AgentCore endpoint hostname).
 """
 
 from __future__ import annotations
@@ -37,7 +42,10 @@ from coa_data_layer import contract
 
 logger = logging.getLogger(__name__)
 
-RUNTIME_ARN = os.environ["AGENTCORE_RUNTIME_ARN"]
+# Read without indexing: a local run does not use the AgentCore path at all, so
+# importing the module must not fail on an absent AWS var. The AgentCore branch
+# raises a clear error at call time if it is still the selected transport.
+RUNTIME_ARN = os.environ.get("AGENTCORE_RUNTIME_ARN", "")
 REGION = os.environ.get("AWS_REGION", "us-east-1")
 
 # Ontology-api-proxy Lambda that fronts the ontology-engine's FastAPI. The MCP
@@ -47,8 +55,6 @@ REGION = os.environ.get("AWS_REGION", "us-east-1")
 ONTOLOGY_PROXY_LAMBDA_ARN = os.environ.get(ONTOLOGY_PROXY_LAMBDA_ARN_ENV, "")
 
 AGENTCORE_ENDPOINT = f"https://bedrock-agentcore.{REGION}.amazonaws.com"
-ENCODED_ARN = quote(RUNTIME_ARN, safe="")
-INVOKE_URL = f"{AGENTCORE_ENDPOINT}/runtimes/{ENCODED_ARN}/invocations?qualifier=DEFAULT"
 
 # Lambda client for the ontology-api-proxy invocation. Created lazily so that
 # the handler still loads in test environments that don't stub boto3.
@@ -89,10 +95,28 @@ def _parse_first_sse_event(raw: str) -> dict:
 
 
 def _invoke_context_manager(payload: dict, token: str) -> dict:
-    """Invoke the Context Manager via AgentCore Runtime HTTP endpoint."""
+    """Send one contract action to the Context Manager.
+
+    Transport is chosen by ``COA_PROVIDER_CONTEXT_MANAGER``: when set, the request
+    goes through the resolved ``ContextManagerPort`` (e.g. ``local-http`` for a
+    local peer) and no AWS endpoint is involved; when unset, the legacy AgentCore
+    Runtime HTTP call is used.
+    """
+    if os.environ.get("COA_PROVIDER_CONTEXT_MANAGER", "").strip():
+        return _invoke_context_manager_via_port(payload, token)
+    return _invoke_context_manager_via_agentcore(payload, token)
+
+
+def _invoke_context_manager_via_agentcore(payload: dict, token: str) -> dict:
+    """Invoke the Context Manager via the AgentCore Runtime HTTP endpoint."""
+    if not RUNTIME_ARN:
+        raise RuntimeError(
+            "AGENTCORE_RUNTIME_ARN is required when COA_PROVIDER_CONTEXT_MANAGER is unset; "
+            "set it to local-http to use a local context-manager"
+        )
     data = json.dumps(payload).encode("utf-8")
     req = urllib_request.Request(
-        INVOKE_URL,
+        f"{AGENTCORE_ENDPOINT}/runtimes/{quote(RUNTIME_ARN, safe='')}/invocations?qualifier=DEFAULT",
         data=data,
         headers={
             "Content-Type": "application/json",
@@ -105,6 +129,69 @@ def _invoke_context_manager(payload: dict, token: str) -> dict:
     with urllib_request.urlopen(req, timeout=29) as resp:
         raw = resp.read().decode("utf-8")
     return _parse_first_sse_event(raw)
+
+
+# PortErrorCode -> HTTP status, so a port failure reaches the caller through the
+# same ``statusCode >= 400`` branch the AgentCore path already uses.
+_PORT_ERROR_STATUS = {
+    "invalid_argument": 400,
+    "not_found": 404,
+    "conflict": 409,
+    "unsupported": 501,
+    "timeout": 504,
+    "unavailable": 503,
+    "internal": 500,
+}
+
+
+def _invoke_context_manager_via_port(payload: dict, token: str) -> dict:
+    """Invoke the peer through the resolved ``ContextManagerPort`` (no AWS)."""
+    import asyncio
+
+    from coa_ports import ContextAction, ContextRequest, PortError, Principal
+    from coa_runtime.registry import resolve
+    from coa_runtime.settings import Settings
+
+    profile = payload.get("profile") or {}
+    raw_action = str(payload.get("action") or ContextAction.QUERY)
+    try:
+        action = ContextAction(raw_action)
+    except ValueError:
+        action = ContextAction.QUERY
+
+    request = ContextRequest(
+        action=action,
+        namespace_id=str(payload.get("namespace") or ""),
+        query=str(payload.get("query") or ""),
+        principal=Principal(
+            principal_id=str(profile.get("userId") or ""),
+            email=str(profile.get("email") or ""),
+            groups=tuple(profile.get("groups") or ()),
+            global_roles=tuple(profile.get("globalRoles") or ()),
+        ),
+        auth_token=token or "",
+        options=dict(payload.get("options") or {}),
+    )
+
+    manager = resolve("ContextManagerPort", Settings.from_environ()).instance
+
+    async def _call():
+        try:
+            return await manager.invoke(request)
+        finally:
+            aclose = getattr(manager, "aclose", None)
+            if aclose is not None:
+                await aclose()
+
+    try:
+        response = asyncio.run(_call())
+    except PortError as exc:
+        return {
+            "statusCode": _PORT_ERROR_STATUS.get(str(exc.code), 500),
+            "message": exc.message,
+            "error": exc.provider_code or str(exc.code),
+        }
+    return dict(response.body)
 
 
 def _error_response(status_code: int, message: str, **extra) -> dict:

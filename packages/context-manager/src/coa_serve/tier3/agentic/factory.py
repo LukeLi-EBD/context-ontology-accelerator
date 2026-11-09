@@ -18,9 +18,10 @@ omitted Tool and the missing endpoint/config (Req 12.6):
 
 | Tool                       | Registered when                                |
 |----------------------------|------------------------------------------------|
-| ``strategy:<value>`` × 8   | ``neptune_endpoint`` AND ``opensearch_endpoint``|
-| ``graph_traversal``        | ``neptune_endpoint``                            |
-| ``vector_search``          | ``opensearch_endpoint`` AND an embed client     |
+| ``strategy:<value>`` × 8   | graph AND vector ports, plus graphrag store    |
+|                            | URIs and graphrag-toolkit installed            |
+| ``graph_traversal``        | graph port, plus a graphrag graph-store URI    |
+| ``vector_search``          | vector port AND an embed client                |
 | ``nl_to_sql``              | a ``StructuredQueryTier`` is supplied           |
 | ``nl_to_sparql``           | a ``StructuredQueryTier`` is supplied           |
 | ``ontology_lookup``        | ALWAYS (the file source needs no endpoint)      |
@@ -194,9 +195,24 @@ def build_tool_registry(
         (Req 2.7).
     """
     registry = ToolRegistry()
-    has_neptune = bool(config.neptune_endpoint)
-    has_opensearch = bool(config.opensearch_endpoint)
+    # Availability is judged by the RESOLVED PORTS, not by the legacy
+    # ``neptune_endpoint`` / ``opensearch_endpoint`` config fields. Those fields
+    # only describe an AWS deployment; a local deployment injects Oxigraph /
+    # pgvector through COA_PROVIDER_GRAPH / COA_PROVIDER_VECTOR and leaves the
+    # fields empty, so keying the gate on them silently dropped every graph and
+    # strategy tool (``agentic_tool_omitted missing_endpoints=[neptune_endpoint,
+    # opensearch_endpoint]``).
+    has_graph_port = clients.graph is not None
+    has_vector_port = clients.vector is not None
     embed_client = clients.llm
+
+    # strategy:* and graph_traversal are NOT port-backed: they run graphrag-toolkit
+    # property-graph queries (openCypher), so they still need a graphrag graph-store
+    # URI (``neptune-db://`` / ``neptune-graph://``) and the toolkit itself. The RDF/
+    # SPARQL graph port cannot stand in for that store. Derive the URI from the
+    # legacy field when present; when absent, the omission is announced with its own
+    # explicit reason below — never silently.
+    graph_store_uri = _graph_store_uri(config.neptune_endpoint) if config.neptune_endpoint else ""
 
     # ── Retrieval_Strategy_Tools × 7 — neptune + opensearch (Req 2.2) ──
     # build_lexical_retriever returns None unless BOTH store endpoints are set;
@@ -209,27 +225,37 @@ def build_tool_registry(
     # 15.0s" → scored no-progress → wasted escalation step). The controller still
     # enforces the real deadline, so this only stops the adapter from cutting the
     # tool short first.
-    lexical = build_lexical_retriever(config, timeout_s=float(config.deep_reasoning_per_tool_timeout_s))
+    lexical = (
+        build_lexical_retriever(config, timeout_s=float(config.deep_reasoning_per_tool_timeout_s))
+        if has_graph_port and has_vector_port
+        else None
+    )
     if lexical is not None:
         build_strategy_tools(registry, lexical)
     else:
-        missing = _missing_store_endpoints(has_neptune, has_opensearch)
         logger.warning(
             "agentic_tool_omitted",
-            tool="strategy:<value> (7 retrieval strategy tools)",
-            missing_endpoints=missing,
-            reason="required Knowledge_Graph endpoints unconfigured",
+            tool="strategy:<value> (8 retrieval strategy tools)",
+            missing_ports=_missing_ports(has_graph_port, has_vector_port),
+            misses_graphrag_store=not graph_store_uri,
+            misses_graphrag_toolkit=not _graphrag_toolkit_installed(),
+            reason=_strategy_omit_reason(
+                has_graph_port=has_graph_port,
+                has_vector_port=has_vector_port,
+                has_graph_store_uri=bool(graph_store_uri),
+                has_graphrag=_graphrag_toolkit_installed(),
+            ),
         )
 
-    # ── Graph_Traversal_Tool — neptune (Req 2.3) ───────────────────────
-    if has_neptune:
-        build_graph_tool(registry, _graph_store_uri(config.neptune_endpoint))
+    # ── Graph_Traversal_Tool — graph port + a graphrag property-graph store ──
+    if graph_store_uri:
+        build_graph_tool(registry, graph_store_uri)
     else:
         logger.warning(
             "agentic_tool_omitted",
             tool="graph_traversal",
-            missing_endpoints=["neptune_endpoint"],
-            reason="required Knowledge_Graph endpoint unconfigured",
+            missing_ports=_missing_ports(has_graph_port, None),
+            reason=_graph_omit_reason(has_graph_port=has_graph_port),
         )
 
     # ── Chunk_Expansion_Tool — neptune + opt-in flag (idea 6; DISABLED by default) ──
@@ -237,28 +263,30 @@ def build_tool_registry(
     # accuracy (~58% with it vs ~62-64% without), so the tool is kept implemented
     # but NOT registered by default. Set AGENTIC_ENABLE_CHUNK_WINDOW=1 to re-enable
     # it for experiments.
-    if has_neptune and os.getenv("AGENTIC_ENABLE_CHUNK_WINDOW", "") == "1":
-        build_chunk_expansion_tool(registry, _graph_store_uri(config.neptune_endpoint))
-    elif has_neptune:
+    if graph_store_uri and os.getenv("AGENTIC_ENABLE_CHUNK_WINDOW", "") == "1":
+        build_chunk_expansion_tool(registry, graph_store_uri)
+    elif graph_store_uri:
         logger.info(
             "agentic_tool_disabled",
             tool="chunk_window",
             reason="AGENTIC_ENABLE_CHUNK_WINDOW not set (idea 6 disabled by default)",
         )
 
-    # ── Vector_Search_Tool — opensearch + embed client (Req 2.3) ───────
-    if has_opensearch and embed_client is not None:
+    # ── Vector_Search_Tool — vector port + embed client (Req 2.3) ──────
+    # This one IS port-backed: it searches ``clients.vector`` with an embedding
+    # from ``clients.llm``, so the resolved vector port is the whole gate.
+    if has_vector_port and embed_client is not None:
         vr = vector_retriever if vector_retriever is not None else VectorRetriever(clients.vector)
         build_vector_tool(registry, vr, embed_client)
     else:
-        missing = [] if has_opensearch else ["opensearch_endpoint"]
+        missing = [] if has_vector_port else ["vector"]
         if embed_client is None:
             missing.append("embed_client")
         logger.warning(
             "agentic_tool_omitted",
             tool="vector_search",
-            missing_endpoints=missing,
-            reason="required vector endpoint or embed client unconfigured",
+            missing_ports=missing,
+            reason="required vector port or embed client unconfigured",
         )
 
     # ── NL→SQL structured tool — when a StructuredQueryTier is supplied ──
@@ -301,7 +329,7 @@ def build_tool_registry(
             registry,
             sources_registry,
             graph_tool=graph_tool,
-            vector_client=clients.vector if has_opensearch else None,
+            vector_client=clients.vector if has_vector_port else None,
             chunk_index_for=graphrag_chunk_index_name,
         )
     else:
@@ -443,11 +471,60 @@ def build_agentic_retriever(
     )
 
 
-def _missing_store_endpoints(has_neptune: bool, has_opensearch: bool) -> list[str]:
-    """Return the unconfigured store endpoints the strategy tools require (Req 12.6)."""
+def _missing_ports(has_graph_port: bool, has_vector_port: bool | None) -> list[str]:
+    """Return the unconfigured ports a tool requires (Req 12.6).
+
+    ``has_vector_port=None`` means the caller does not depend on the vector port
+    (e.g. ``graph_traversal``), so it is not part of the answer.
+    """
     missing: list[str] = []
-    if not has_neptune:
-        missing.append("neptune_endpoint")
-    if not has_opensearch:
-        missing.append("opensearch_endpoint")
+    if not has_graph_port:
+        missing.append("graph")
+    if has_vector_port is False:
+        missing.append("vector")
     return missing
+
+
+def _graphrag_toolkit_installed() -> bool:
+    """Whether the optional graphrag-toolkit package is importable.
+
+    ``find_spec`` answers without importing the toolkit, preserving the module's
+    lazy-import invariant while letting the omission log name the real cause.
+    """
+    from importlib.util import find_spec
+
+    return find_spec("graphrag_toolkit") is not None
+
+
+def _graph_omit_reason(*, has_graph_port: bool) -> str:
+    """Explain why ``graph_traversal`` was omitted, naming the actual missing piece."""
+    if not has_graph_port:
+        return "graph port (COA_PROVIDER_GRAPH) is not configured"
+    return (
+        "graph port is up, but graph_traversal runs graphrag-toolkit openCypher over a "
+        "property-graph store; no graphrag graph-store URI (neptune-db:// / "
+        "neptune-graph://) can be derived from the configured RDF/SPARQL provider "
+        "(neptune_endpoint unset)"
+    )
+
+
+def _strategy_omit_reason(
+    *,
+    has_graph_port: bool,
+    has_vector_port: bool,
+    has_graph_store_uri: bool,
+    has_graphrag: bool,
+) -> str:
+    """Explain why the ``strategy:*`` tools were omitted, naming the actual missing piece."""
+    missing = _missing_ports(has_graph_port, has_vector_port)
+    if missing:
+        return f"required port(s) unavailable: {', '.join(missing)}"
+    if not has_graph_store_uri:
+        return (
+            "graph/vector ports are up, but the strategy tools run graphrag-toolkit "
+            "property-graph retrieval; that needs neptune_endpoint/opensearch_endpoint "
+            "store URIs, which the local RDF/vector ports do not provide"
+        )
+    if not has_graphrag:
+        return "graphrag-toolkit is not installed (see lexical_retriever_unavailable)"
+    return "lexical retriever could not be built"
