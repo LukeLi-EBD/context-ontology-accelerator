@@ -268,6 +268,7 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
     }
     assert implemented == {
         "ConfigProvider": ["env", "ssm"],
+        "ContextManagerPort": ["local-http"],
         "DataSourceLookup": ["json-snapshot"],
         "Embedding": ["bge-local", "external-http"],
         "GraphAdminPort": ["oxigraph"],

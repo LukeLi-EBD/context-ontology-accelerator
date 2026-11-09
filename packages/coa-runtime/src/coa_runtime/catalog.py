@@ -318,6 +318,19 @@ def _json_data_source_lookup(settings: Settings) -> Any:
     )
 
 
+def _context_manager_local_http(settings: Settings) -> Any:
+    """The local context-manager's AgentCore-shaped HTTP surface (``/invocations`` + ``/ping``)."""
+    from coa_local_providers.context_manager_http import LocalHttpContextManager
+
+    return LocalHttpContextManager(
+        endpoint=settings.require("COA_CONTEXT_MANAGER_ENDPOINT", interface="ContextManagerPort"),
+        token=settings.get("COA_CONTEXT_MANAGER_TOKEN") or "",
+        timeout_s=settings.get_float(
+            "COA_CONTEXT_MANAGER_TIMEOUT_S", default=30.0, interface="ContextManagerPort"
+        ),
+    )
+
+
 def _graph_ontology_lookup(settings: Settings) -> Any:
     """Ontology class existence via a synchronous SPARQL ASK on Oxigraph."""
     from coa_metrics.ontology_lookup_graph import GraphOntologyLookup
@@ -360,7 +373,14 @@ SPECS: tuple[InterfaceSpec, ...] = (
         key="COA_PROVIDER_CONTEXT_MANAGER",
         context="问答与检索",
         protocol=ContextManagerPort,
-        providers=_providers(_todo("local-http"), _todo("agentcore", _AWS)),
+        providers=_providers(
+            _done(
+                "local-http",
+                _context_manager_local_http,
+                notes="本机 context-manager 的 /invocations + /ping（AgentCore 传输契约）",
+            ),
+            _todo("agentcore", _AWS),
+        ),
         notes="替代 AgentCore Runtime 调用",
     ),
     InterfaceSpec(
