@@ -1,0 +1,1668 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "Context Ontology Accelerator - Data Layer (Serve)",
+        "version": "2025-05-01"
+    },
+    "paths": {
+        "/namespaces/{namespaceId}/graph/traverse": {
+            "post": {
+                "description": "Traverse the knowledge graph outward from a starting entity URI, following\nrelationships up to a maximum depth in the requested direction.",
+                "operationId": "GraphTraverse",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GraphTraverseRequestContent"
+                            },
+                            "examples": {
+                                "GraphTraverse_example1": {
+                                    "summary": "Traverse from an entity",
+                                    "description": "",
+                                    "value": {
+                                        "startUri": "urn:coa:customer:acme-corp",
+                                        "maxDepth": 2,
+                                        "direction": "outgoing"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GraphTraverse_example1": {
+                                "summary": "Traverse from an entity",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GraphTraverse 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GraphTraverseResponseContent"
+                                },
+                                "examples": {
+                                    "GraphTraverse_example1": {
+                                        "summary": "Traverse from an entity",
+                                        "description": "",
+                                        "value": {
+                                            "entities": [
+                                                {
+                                                    "uri": "urn:coa:customer:acme-corp",
+                                                    "label": "Acme Corp",
+                                                    "type": "Customer"
+                                                },
+                                                {
+                                                    "uri": "urn:coa:order:o-1001",
+                                                    "label": "Order 1001",
+                                                    "type": "Order"
+                                                }
+                                            ],
+                                            "relationships": [
+                                                {
+                                                    "sourceUri": "urn:coa:customer:acme-corp",
+                                                    "predicateUri": "urn:coa:rel:placed",
+                                                    "targetUri": "urn:coa:order:o-1001",
+                                                    "predicateLabel": "placed"
+                                                }
+                                            ],
+                                            "trace": [
+                                                {
+                                                    "step": "graph-traverse",
+                                                    "status": "ok",
+                                                    "durationMs": 66
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NamespaceNotFoundError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NamespaceNotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "OntologyNotPublishedError 409 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OntologyNotPublishedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/kb/search": {
+            "post": {
+                "description": "Semantic search over the namespace's document knowledge base, returning\nranked supporting chunks with their source provenance.",
+                "operationId": "KBSearch",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KBSearchRequestContent"
+                            },
+                            "examples": {
+                                "KBSearch_example1": {
+                                    "summary": "Search the knowledge base",
+                                    "description": "",
+                                    "value": {
+                                        "query": "refund policy for enterprise contracts",
+                                        "topK": 3,
+                                        "minScore": 0.5
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "KBSearch_example1": {
+                                "summary": "Search the knowledge base",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "KBSearch 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/KBSearchResponseContent"
+                                },
+                                "examples": {
+                                    "KBSearch_example1": {
+                                        "summary": "Search the knowledge base",
+                                        "description": "",
+                                        "value": {
+                                            "chunks": [
+                                                {
+                                                    "chunkId": "doc-42#p7",
+                                                    "text": "Enterprise contracts allow refunds within 30 days of invoice.",
+                                                    "sourceDocumentId": "src-6f8b4f12",
+                                                    "sourceDocumentName": "Enterprise Terms.pdf",
+                                                    "relevanceScore": 0.82
+                                                }
+                                            ],
+                                            "trace": [
+                                                {
+                                                    "step": "kb-search",
+                                                    "status": "ok",
+                                                    "durationMs": 128
+                                                }
+                                            ],
+                                            "queryEmbeddingModel": "amazon.titan-embed-text-v2"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NamespaceNotFoundError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NamespaceNotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/query": {
+            "post": {
+                "description": "Answer a natural-language question against the namespace. Routes through the\ntiered resolver (metric match \u2192 structured query \u2192 knowledge-base retrieval)\nand returns a typed result with confidence and an execution trace.",
+                "operationId": "Query",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QueryRequestContent"
+                            },
+                            "examples": {
+                                "Query_example1": {
+                                    "summary": "Ask a natural-language question",
+                                    "description": "",
+                                    "value": {
+                                        "query": "What was total revenue in Q3 2025?",
+                                        "execute": true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "Query_example1": {
+                                "summary": "Ask a natural-language question",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Query 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QueryResponseContent"
+                                },
+                                "examples": {
+                                    "Query_example1": {
+                                        "summary": "Ask a natural-language question",
+                                        "description": "",
+                                        "value": {
+                                            "result": {
+                                                "tier": 1,
+                                                "confidence": {
+                                                    "score": 0.94,
+                                                    "rationale": "Exact metric match on 'total revenue'"
+                                                },
+                                                "resultRows": [
+                                                    {
+                                                        "period": "Q3 2025",
+                                                        "revenue": "12450000"
+                                                    }
+                                                ],
+                                                "synthesizedAnswer": "Total revenue in Q3 2025 was $12.45M.",
+                                                "trace": [
+                                                    {
+                                                        "step": "metric-match",
+                                                        "status": "ok",
+                                                        "durationMs": 42
+                                                    }
+                                                ]
+                                            },
+                                            "requestId": "req-01HZY8K3M4N5P6Q7R8S9T0V1W2"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "QueryTranslationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QueryTranslationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NoResultError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NoResultErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "OntologyNotPublishedError 409 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OntologyNotPublishedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "DataSourceUnavailableError 502 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DataSourceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/schema": {
+            "get": {
+                "description": "Describe the namespace's queryable schema: classes and their properties\nacross every ontology loaded into the namespace (induced, foundational,\nuploaded). Proxies to the ontology-engine ``/graph/schema`` route via the\nontology-api-proxy Lambda \u2014 the same source the MCP ``describe_schema``\ntool reads, so an agent and a UI see the same schema.",
+                "operationId": "DescribeSchema",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "DescribeSchema_example1": {
+                                "summary": "Describe the queryable schema",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "includeProperties",
+                        "in": "query",
+                        "description": "Whether to include class properties in the response.",
+                        "schema": {
+                            "type": "boolean",
+                            "description": "Whether to include class properties in the response."
+                        },
+                        "examples": {
+                            "DescribeSchema_example1": {
+                                "summary": "Describe the queryable schema",
+                                "description": "",
+                                "value": true
+                            }
+                        }
+                    },
+                    {
+                        "name": "maxResults",
+                        "in": "query",
+                        "description": "Maximum number of classes to return.",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 1000,
+                            "minimum": 1,
+                            "description": "Maximum number of classes to return."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DescribeSchema 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DescribeSchemaResponseContent"
+                                },
+                                "examples": {
+                                    "DescribeSchema_example1": {
+                                        "summary": "Describe the queryable schema",
+                                        "description": "",
+                                        "value": {
+                                            "classes": [
+                                                {
+                                                    "uri": "urn:coa:class:Customer",
+                                                    "label": "Customer",
+                                                    "description": "A purchasing organization or individual",
+                                                    "properties": [
+                                                        {
+                                                            "uri": "urn:coa:prop:segment",
+                                                            "label": "segment",
+                                                            "range": "xsd:string"
+                                                        }
+                                                    ]
+                                                }
+                                            ],
+                                            "ontologyVersion": "2025-09-01"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NamespaceNotFoundError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NamespaceNotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "OntologyNotPublishedError 409 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OntologyNotPublishedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/translate": {
+            "post": {
+                "description": "Translate a natural-language question into SPARQL against the namespace's\nontology without executing it. Useful for previewing or debugging the query\nthe resolver would run.",
+                "operationId": "TranslateSPARQL",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TranslateSPARQLRequestContent"
+                            },
+                            "examples": {
+                                "TranslateSPARQL_example1": {
+                                    "summary": "Preview the SPARQL for a question",
+                                    "description": "",
+                                    "value": {
+                                        "query": "List all customers in the enterprise segment"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "TranslateSPARQL_example1": {
+                                "summary": "Preview the SPARQL for a question",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "TranslateSPARQL 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TranslateSPARQLResponseContent"
+                                },
+                                "examples": {
+                                    "TranslateSPARQL_example1": {
+                                        "summary": "Preview the SPARQL for a question",
+                                        "description": "",
+                                        "value": {
+                                            "sparqlQuery": "SELECT ?customer WHERE { ?customer a :Customer ; :segment \"enterprise\" }",
+                                            "confidence": {
+                                                "score": 0.88,
+                                                "rationale": "Class and property matched from ontology"
+                                            },
+                                            "trace": [
+                                                {
+                                                    "step": "nl-to-sparql",
+                                                    "status": "ok",
+                                                    "durationMs": 310
+                                                }
+                                            ],
+                                            "ontologyVersion": "2025-09-01"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "QueryTranslationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/QueryTranslationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NamespaceNotFoundError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NamespaceNotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "OntologyNotPublishedError 409 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OntologyNotPublishedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AccessDeniedErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 403 when the caller lacks permission to perform the requested operation.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the authorization failure."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "ConfidenceScore": {
+                "type": "object",
+                "description": "A confidence score in [0, 1] for a query result, with an optional rationale\nexplaining how it was derived.",
+                "properties": {
+                    "score": {
+                        "type": "number",
+                        "description": "Confidence score in the range [0, 1].",
+                        "format": "float"
+                    },
+                    "rationale": {
+                        "type": "string",
+                        "description": "Explanation of how the score was derived."
+                    }
+                },
+                "required": [
+                    "score"
+                ]
+            },
+            "ConformanceWarning": {
+                "type": "object",
+                "description": "A warning raised when a result row does not conform to the expected SHACL\nshape, identifying the offending row and shape.",
+                "properties": {
+                    "row": {
+                        "type": "number",
+                        "description": "Index of the result row that failed conformance."
+                    },
+                    "shape": {
+                        "type": "string",
+                        "description": "Identifier of the SHACL shape that was violated."
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the conformance warning."
+                    }
+                },
+                "required": [
+                    "message",
+                    "row",
+                    "shape"
+                ]
+            },
+            "DataSourceUnavailableErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 502 when a backing data source cannot be reached to\nanswer the query; `dataSourceId` identifies the unavailable source.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the error."
+                    },
+                    "dataSourceId": {
+                        "type": "string",
+                        "description": "Identifier of the data source that could not be reached."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "DescribeSchemaResponseContent": {
+                "type": "object",
+                "properties": {
+                    "classes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SchemaClass"
+                        },
+                        "description": "The classes in the namespace's schema."
+                    },
+                    "ontologyVersion": {
+                        "type": "string",
+                        "description": "Version of the ontology described."
+                    }
+                },
+                "required": [
+                    "classes"
+                ]
+            },
+            "DimensionFilter": {
+                "type": "object",
+                "description": "A filter constraining a query to rows matching a dimension value, with an\noptional comparison operator (defaults to equality).\n\nServer-side invariants NOT expressible as Smithy traits, enforced at\nvalidation (a violation is a 400, see the Context Manager's InvokeRequest):\n  - `name` must be non-blank, and is trimmed before use.\n  - `name` is matched case-insensitively, and must be UNIQUE across the list \u2014\n    a mapping cannot express two values for one dimension. (`@uniqueItems`\n    would not capture this: it compares whole structures, so two filters on\n    the same name with different values would still pass.)\n  - every filter must be applicable by the resolved metric; a filter the\n    metric cannot apply fails closed rather than being dropped.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Name of the dimension to filter on."
+                    },
+                    "value": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "description": "Value to match for the dimension. For compatibility, the server also\naccepts a JSON number (finite) or boolean here and binds it as a typed\nliteral; `null`, objects, and arrays are rejected."
+                    },
+                    "operator": {
+                        "$ref": "#/components/schemas/DimensionOperator"
+                    }
+                },
+                "required": [
+                    "name",
+                    "value"
+                ]
+            },
+            "DimensionOperator": {
+                "type": "string",
+                "description": "Comparison operator applied by a DimensionFilter.\n\nEquality is the only supported comparison: Tier-1 binds the value as a bare\nSQL literal into a governed metric's template, which expresses `=` and nothing\nelse. Declared as an enum rather than a free-form String so a client asking\nfor an unsupported comparison is rejected by the contract instead of having it\nsilently applied as equality \u2014 a wrong answer returned with a 200.",
+                "enum": [
+                    "="
+                ]
+            },
+            "Entity": {
+                "type": "object",
+                "description": "An entity (graph node) with its IRI, human-readable label, optional type, and\narbitrary properties.",
+                "properties": {
+                    "uri": {
+                        "type": "string",
+                        "description": "IRI identifying the entity."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label for the entity."
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Type (class IRI) of the entity, if known."
+                    },
+                    "properties": {
+                        "$ref": "#/components/schemas/PropertyMap"
+                    }
+                },
+                "required": [
+                    "label",
+                    "uri"
+                ]
+            },
+            "GraphContext": {
+                "type": "object",
+                "description": "Graph context accompanying an answer: the entities and relationships that\nwere traversed or cited.",
+                "properties": {
+                    "entities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Entity"
+                        },
+                        "description": "Entities traversed or cited for the answer. Bounded to 200 entities per\nresponse; a traversal that reached more is reported through\n`metadata.degradedSources` and the processing trace."
+                    },
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Relationship"
+                        },
+                        "description": "Relationships traversed or cited for the answer. Bounded to 500\nrelationships per response; a traversal that reached more is reported\nthrough `metadata.degradedSources` and the processing trace. A relationship\nthe graph carries without a predicate identifier cannot be represented (see\n`predicateUri`) and is reported the same way, so an empty list is never\nambiguous between \"none found\" and \"all discarded\"."
+                    }
+                }
+            },
+            "GraphTraverseRequestContent": {
+                "type": "object",
+                "properties": {
+                    "startUri": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "pattern": "^(https?://[^\\s<>\"{}|\\\\^`;]+|urn:[a-zA-Z0-9][a-zA-Z0-9._:-]*)$",
+                        "description": "IRI of the entity to start traversal from."
+                    },
+                    "maxDepth": {
+                        "type": "number",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "description": "Maximum traversal depth from the starting entity. Defaults to 2.\nDepths above 2 are accepted but currently traverse 2 hops."
+                    },
+                    "relationshipFilter": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "A single filter value."
+                        },
+                        "maxItems": 50,
+                        "description": "Accepted and validated, but not yet applied: traversal currently\nfollows every relationship. Reserved for restricting traversal to\nthese relationship (predicate) IRIs."
+                    },
+                    "direction": {
+                        "$ref": "#/components/schemas/TraversalDirection"
+                    },
+                    "maxResults": {
+                        "type": "number",
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "description": "Maximum number of entities to return. Defaults to 100."
+                    }
+                },
+                "required": [
+                    "startUri"
+                ]
+            },
+            "GraphTraverseResponseContent": {
+                "type": "object",
+                "properties": {
+                    "entities": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Entity"
+                        },
+                        "description": "Entities reached during traversal."
+                    },
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Relationship"
+                        },
+                        "description": "Relationships traversed."
+                    },
+                    "trace": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TraceStep"
+                        },
+                        "description": "Step-by-step trace of the traversal."
+                    }
+                },
+                "required": [
+                    "entities",
+                    "relationships",
+                    "trace"
+                ]
+            },
+            "InternalServerErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 500 when the service fails unexpectedly. The message is a\nfixed, generic description; the underlying cause is logged, never returned.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Generic description of the failure; carries no internal detail."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "KBSearchRequestContent": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1,
+                        "description": "Natural-language search query."
+                    },
+                    "topK": {
+                        "type": "number",
+                        "maximum": 100,
+                        "minimum": 1,
+                        "description": "Maximum number of chunks to return."
+                    },
+                    "minScore": {
+                        "type": "number",
+                        "minimum": 0,
+                        "description": "Minimum relevance score a chunk must meet to be returned. Relevance\nscores are non-negative; no upper bound is set because the scale\ndepends on the index's similarity metric.",
+                        "format": "float"
+                    },
+                    "sourceFilter": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "A single filter value."
+                        },
+                        "maxItems": 50,
+                        "description": "Not yet supported; a non-empty value is rejected with 400. Reserved\nfor restricting results to these source document identifiers. An\nempty list is accepted and restricts nothing."
+                    },
+                    "entityFilter": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "A single filter value."
+                        },
+                        "maxItems": 50,
+                        "description": "Not yet supported; a non-empty value is rejected with 400. Reserved\nfor restricting results to chunks annotated with these entities. An\nempty list is accepted and restricts nothing."
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            },
+            "KBSearchResponseContent": {
+                "type": "object",
+                "properties": {
+                    "chunks": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupportingContent"
+                        },
+                        "description": "Ranked supporting chunks matching the query."
+                    },
+                    "trace": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TraceStep"
+                        },
+                        "description": "Step-by-step trace of the search."
+                    },
+                    "queryEmbeddingModel": {
+                        "type": "string",
+                        "description": "Identifier of the embedding model used for the query."
+                    }
+                },
+                "required": [
+                    "chunks",
+                    "trace"
+                ]
+            },
+            "NamespaceNotFoundErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 404 when the target namespace does not exist or is not\nvisible to the caller.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the error."
+                    },
+                    "namespaceId": {
+                        "type": "string",
+                        "description": "Identifier of the namespace that was not found."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "NoResultErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 404 when a pinned tier produced no data for the query \u2014\na \"no results\" outcome rather than a server error.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the error."
+                    },
+                    "tier": {
+                        "type": "number",
+                        "description": "Pinned tier that produced no result (1 = metric match, 2 = structured query)."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "OntologyNotPublishedErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 409 when the namespace has no published ontology, so the\nquery cannot be resolved against a schema yet.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the error."
+                    },
+                    "namespaceId": {
+                        "type": "string",
+                        "description": "Identifier of the namespace whose ontology is not published."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "PropertyMap": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string"
+                },
+                "description": "String-valued entity properties. `supportingStatements` is reserved for a\nJSON-encoded string array of graph-only evidence. It is bounded to 100\nstatements per entity, 1,000 characters and 2,000 UTF-8 bytes per statement,\nand 4,000 characters and 6,000 UTF-8 bytes across an assembled graph context."
+            },
+            "QueryMode": {
+                "type": "string",
+                "description": "Tier-3 execution mode for a query. Orthogonal to the tier cascade.",
+                "enum": [
+                    "standard",
+                    "deep-reasoning",
+                    "agentic"
+                ]
+            },
+            "QueryRequestContent": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1,
+                        "description": "Natural-language question to answer."
+                    },
+                    "execute": {
+                        "type": "boolean",
+                        "description": "Whether to execute the generated query (versus translate only)."
+                    },
+                    "tierOverride": {
+                        "type": "number",
+                        "maximum": 3,
+                        "minimum": 1,
+                        "description": "Pin resolution to a specific tier (1, 2 or 3), bypassing automatic routing."
+                    },
+                    "mode": {
+                        "$ref": "#/components/schemas/QueryMode"
+                    },
+                    "strategy": {
+                        "$ref": "#/components/schemas/QueryStrategy"
+                    },
+                    "dimensions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DimensionFilter"
+                        },
+                        "maxItems": 100,
+                        "description": "Dimension filters to constrain the query."
+                    },
+                    "timeoutMs": {
+                        "type": "number",
+                        "maximum": 29000,
+                        "minimum": 1,
+                        "description": "Maximum time to wait for the query, in milliseconds. A caller may\nnarrow the service's own REST budget (29,000 ms) but not widen it."
+                    },
+                    "includeSupporting": {
+                        "type": "boolean",
+                        "description": "Whether to include supporting content in the response. When false,\n`supportingContent` and the `supportingStatements` property of each\n`graphContext` entity are omitted; the entities and relationships are\nstill returned."
+                    },
+                    "includeDebugInfo": {
+                        "type": "boolean",
+                        "description": "When true, include the generated SQL (`queryUsed`) and SPARQL\n(`sparqlGenerated`) in the response for debugging and observability.\nDefaults to false; when unset or false, both fields are omitted.\n\n**Security:** these fields expose internal schema (table and column\nnames, joins), so the flag is honoured only for a caller who already\nadministers that schema: a platform admin, or a namespace owner,\nmaintainer or data steward of the queried namespace. For any other\ncaller the request still succeeds, but both fields are omitted as if\nthe flag were false."
+                    },
+                    "maxResults": {
+                        "type": "number",
+                        "maximum": 10000,
+                        "minimum": 1,
+                        "description": "Maximum number of result rows to return."
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            },
+            "QueryResponseContent": {
+                "type": "object",
+                "properties": {
+                    "result": {
+                        "$ref": "#/components/schemas/QueryResult"
+                    },
+                    "requestId": {
+                        "type": "string",
+                        "description": "Identifier of the request, for tracing and support."
+                    },
+                    "sessionId": {
+                        "type": "string",
+                        "description": "Identifier of the session the request belongs to."
+                    }
+                },
+                "required": [
+                    "result"
+                ]
+            },
+            "QueryResult": {
+                "type": "object",
+                "description": "The top-level result of a query: the answering tier, confidence, tabular\nrows and/or a synthesized answer, the query that ran, supporting content,\ngraph context, and an execution trace.",
+                "properties": {
+                    "tier": {
+                        "type": "number",
+                        "description": "The answering tier that produced this result."
+                    },
+                    "confidence": {
+                        "$ref": "#/components/schemas/ConfidenceScore"
+                    },
+                    "resultRows": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ResultRow"
+                        },
+                        "description": "Tabular result rows returned by the query."
+                    },
+                    "synthesizedAnswer": {
+                        "type": "string",
+                        "description": "Natural-language answer synthesized from the results."
+                    },
+                    "queryUsed": {
+                        "type": "string",
+                        "description": "The query that was executed to produce the result."
+                    },
+                    "sparqlGenerated": {
+                        "type": "string",
+                        "description": "The SPARQL query generated for the result, if any."
+                    },
+                    "supportingContent": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupportingContent"
+                        },
+                        "description": "Knowledge-base chunks supporting the answer."
+                    },
+                    "graphContext": {
+                        "$ref": "#/components/schemas/GraphContext"
+                    },
+                    "trace": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TraceStep"
+                        },
+                        "description": "Step-by-step execution trace of the query."
+                    },
+                    "ontologyVersion": {
+                        "type": "string",
+                        "description": "Version of the ontology the query ran against."
+                    },
+                    "dataSources": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Identifiers of the data sources that contributed to the result."
+                    },
+                    "partial": {
+                        "type": "boolean",
+                        "description": "Whether the result is partial (incomplete)."
+                    },
+                    "executionMode": {
+                        "type": "string",
+                        "description": "The execution mode that produced this result: \"standard\" or\n\"deep-reasoning\". Deep Reasoning is a mode orthogonal to the tier\ncascade, so a client labels an answer by this field rather than\ninferring mode from `tier` (a Deep Reasoning answer resolves at tier 3\nbut is not Standard mode's Tier-3 result). Absent on responses that do\nnot set it."
+                    }
+                },
+                "required": [
+                    "confidence",
+                    "tier",
+                    "trace"
+                ]
+            },
+            "QueryStrategy": {
+                "type": "string",
+                "description": "Which Tier-2 engine answers a structured query. Absent = the serve default\n(``nl_to_sql_first``).\n\nThis is a DIFFERENT axis from ``mode``: ``mode`` chooses whether the whole\nT1\u2192T2\u2192T3 cascade is replaced by the Tier-3 reasoning loop, while ``strategy``\nchooses which engine answers within Tier 2. Both were called \"agentic\" before\nthe rebrand, which is why the distinction is spelled out here.\n\nAn explicit value is caller intent and is never overridden by automatic tier\ngating or per-query Tier-2 pruning.",
+                "enum": [
+                    "best",
+                    "ontop",
+                    "nl_to_sql",
+                    "ontop_first",
+                    "nl_to_sql_first",
+                    "deep-reasoning",
+                    "nl_to_sparql"
+                ]
+            },
+            "QueryTranslationErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 400 when a natural-language question cannot be translated\ninto an executable query against the ontology.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the error."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "RateLimitExceededErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 429 when the caller exceeds the request rate limit;\n`retryAfterSeconds` indicates how long to wait before retrying.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the error."
+                    },
+                    "retryAfterSeconds": {
+                        "type": "number",
+                        "description": "Number of seconds to wait before retrying the request."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "Relationship": {
+                "type": "object",
+                "description": "A directed relationship between two entities, identified by source, predicate,\nand target IRIs.",
+                "properties": {
+                    "sourceUri": {
+                        "type": "string",
+                        "description": "IRI of the source entity."
+                    },
+                    "predicateUri": {
+                        "type": "string",
+                        "description": "IRI of the predicate linking source to target. A property-graph edge that\ncarries only a human-readable predicate string is given a stable,\ntenant-scoped synthetic identifier in the `urn:coa:graph-predicate:` scheme,\nderived from that string. Treat such a value as an opaque identity for\ncorrelating edges within one namespace, not as an ontology predicate IRI."
+                    },
+                    "targetUri": {
+                        "type": "string",
+                        "description": "IRI of the target entity."
+                    },
+                    "predicateLabel": {
+                        "type": "string",
+                        "description": "Human-readable label for the predicate."
+                    }
+                },
+                "required": [
+                    "predicateUri",
+                    "sourceUri",
+                    "targetUri"
+                ]
+            },
+            "ResultRow": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string",
+                    "description": "Customer data returned by or sent to a query: result cell values, knowledge-base\nchunk text, synthesized answers, generated SQL/SPARQL, and dimension filter\nvalues. Marked sensitive so generated clients keep it out of logs."
+                }
+            },
+            "SchemaClass": {
+                "type": "object",
+                "description": "A class in the namespace's queryable schema, with its IRI, label, optional\ndescription, properties, and parent class.",
+                "properties": {
+                    "uri": {
+                        "type": "string",
+                        "description": "IRI identifying the class."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label for the class."
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the class."
+                    },
+                    "properties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SchemaProperty"
+                        },
+                        "description": "Properties defined on the class."
+                    },
+                    "parentClass": {
+                        "type": "string",
+                        "description": "IRI of the parent class, if any."
+                    }
+                },
+                "required": [
+                    "label",
+                    "uri"
+                ]
+            },
+            "SchemaProperty": {
+                "type": "object",
+                "description": "A property of a schema class, with its IRI, label, value range (datatype or\ntarget class), and optional description.",
+                "properties": {
+                    "uri": {
+                        "type": "string",
+                        "description": "IRI identifying the property."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label for the property."
+                    },
+                    "range": {
+                        "type": "string",
+                        "description": "Value range of the property (datatype or target class)."
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the property."
+                    }
+                },
+                "required": [
+                    "label",
+                    "uri"
+                ]
+            },
+            "ServiceUnavailableErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 503 when the service, or a required dependency (including\none it needs to handle the request safely), is temporarily unavailable. For\nexample, a create that\ncarries a `clientToken` fails closed with this error when the retry-safety\nstore cannot be reached, rather than risk running the create twice. Retry\nthe request (with the same `clientToken`) after a backoff.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Description of the unavailable dependency or operation; carries no\ninternal detail."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "SupportingContent": {
+                "type": "object",
+                "description": "A knowledge-base chunk that supports an answer, with its text, source\ndocument provenance, and relevance score.",
+                "properties": {
+                    "chunkId": {
+                        "type": "string",
+                        "description": "Identifier of the knowledge-base chunk."
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Text content of the chunk."
+                    },
+                    "sourceDocumentId": {
+                        "type": "string",
+                        "description": "Opaque, unique identifier of the source document the chunk came from.\nUse this value to correlate chunks; it is not a display name."
+                    },
+                    "sourceDocumentName": {
+                        "type": "string",
+                        "description": "Human-readable original file name of the source document. This value is\nintended for display and is not guaranteed to be unique."
+                    },
+                    "relevanceScore": {
+                        "type": "number",
+                        "description": "Relevance score of the chunk to the query.",
+                        "format": "float"
+                    },
+                    "entityAnnotations": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Entities annotated within the chunk."
+                    }
+                },
+                "required": [
+                    "chunkId",
+                    "text"
+                ]
+            },
+            "TraceStep": {
+                "type": "object",
+                "description": "One step in a query's execution trace, recording what ran, its status,\ntiming, and any tool used or conformance warnings raised.",
+                "properties": {
+                    "step": {
+                        "type": "string",
+                        "description": "Name of the execution step."
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Status of the step (e.g. success or failure)."
+                    },
+                    "durationMs": {
+                        "type": "number",
+                        "description": "Duration of the step in milliseconds."
+                    },
+                    "detail": {
+                        "type": "string",
+                        "description": "Additional detail about the step."
+                    },
+                    "toolUsed": {
+                        "type": "string",
+                        "description": "Name of the tool invoked during the step, if any."
+                    },
+                    "parallelGroup": {
+                        "type": "string",
+                        "description": "Identifier of the parallel group this step ran in, if any."
+                    },
+                    "wallMs": {
+                        "type": "number",
+                        "description": "Wall-clock time for the step in milliseconds."
+                    },
+                    "conformanceWarnings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ConformanceWarning"
+                        },
+                        "description": "Conformance warnings raised during the step."
+                    }
+                },
+                "required": [
+                    "status",
+                    "step"
+                ]
+            },
+            "TranslateSPARQLRequestContent": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "minLength": 1,
+                        "description": "Natural-language question to translate into SPARQL."
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            },
+            "TranslateSPARQLResponseContent": {
+                "type": "object",
+                "properties": {
+                    "sparqlQuery": {
+                        "type": "string",
+                        "description": "The SPARQL query generated from the question."
+                    },
+                    "confidence": {
+                        "$ref": "#/components/schemas/ConfidenceScore"
+                    },
+                    "trace": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TraceStep"
+                        },
+                        "description": "Step-by-step trace of the translation."
+                    },
+                    "ontologyVersion": {
+                        "type": "string",
+                        "description": "Version of the ontology the query was generated against."
+                    }
+                },
+                "required": [
+                    "confidence",
+                    "sparqlQuery",
+                    "trace"
+                ]
+            },
+            "TraversalDirection": {
+                "type": "string",
+                "description": "Direction to follow relationships when traversing the graph.",
+                "enum": [
+                    "outgoing",
+                    "incoming",
+                    "both"
+                ]
+            },
+            "ValidationErrorResponseContent": {
+                "type": "object",
+                "description": "Standard error structure",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the validation failure."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "TokenAuthorizer": {
+                "type": "http",
+                "description": "HTTP Bearer authentication",
+                "scheme": "Bearer",
+                "x-amazon-apigateway-authorizer": {
+                    "type": "request",
+                    "authorizerUri": {
+                        "Fn::Sub": "${AuthorizerLambdaUri}"
+                    },
+                    "authorizerCredentials": {
+                        "Fn::Sub": "${AuthorizerRoleArn}"
+                    },
+                    "identitySource": "method.request.header.authorization",
+                    "authorizerResultTtlInSeconds": 0
+                },
+                "x-amazon-apigateway-authtype": "custom"
+            }
+        }
+    },
+    "security": [
+        {
+            "TokenAuthorizer": []
+        }
+    ]
+}
