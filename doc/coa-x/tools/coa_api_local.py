@@ -584,6 +584,8 @@ ROUTES: list[tuple[str, str]] = [
     # are exposed alongside the five write ones so the UI can render the chain.
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/versions", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/diff", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/export", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/import", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}", KERNEL),
@@ -738,7 +740,8 @@ def _lifecycle_app() -> Any:
 
 
 def _kernel_translate(
-    template: str, path_params: dict[str, str], method: str, body: bytes
+    template: str, path_params: dict[str, str], method: str, body: bytes,
+    query: dict[str, str] | None = None,
 ) -> tuple[str, str, bytes | None]:
     """Map a contract path onto the kernel's ``/ontology/*`` surface.
 
@@ -760,6 +763,15 @@ def _kernel_translate(
         merged = {**payload}
         merged.setdefault("targetNamespace", ontology_id)
         return "POST", "/ontology/import", json.dumps(merged).encode("utf-8")
+
+    if template.endswith("/versions/{versionId}/diff"):
+        q = (query or {}).get("against")
+        suffix = f"?against={unquote(q)}" if q else ""
+        return "GET", f"/ontology/versions/{version_id}/diff{suffix}", None
+
+    if template.endswith("/versions/{versionId}/export"):
+        fmt = (query or {}).get("format") or "turtle"
+        return "GET", f"/ontology/versions/{version_id}/export?format={unquote(fmt)}", None
 
     if template.endswith("/versions/{versionId}"):
         return "GET", f"/ontology/versions/{version_id}", None
@@ -891,7 +903,7 @@ async def _kernel_proxy(
         return Response(content=content, status_code=status, media_type=ctype)
     try:
         method, target, forwarded = _kernel_translate(
-            template, path_params, request.method, body
+            template, path_params, request.method, body, dict(request.query_params)
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -921,6 +933,21 @@ async def _kernel_proxy(
             if "publishedVersion" not in data:
                 data["publishedVersion"] = data.get("id")
             content = json.dumps(data, ensure_ascii=False).encode("utf-8")
+
+    # GetOntologyVersion: the registry returns `id` / `graph` / `tripleCount`;
+    # the contract names them `versionId` / `graphUri` / `statementCount`.
+    if status < 300 and request.method == "GET" and template.endswith(
+        "/versions/{versionId}"
+    ):
+        try:
+            detail = json.loads(content or b"{}")
+        except ValueError:
+            detail = None
+        if isinstance(detail, dict) and "id" in detail:
+            detail.setdefault("versionId", detail["id"])
+            detail.setdefault("graphUri", detail.get("graph"))
+            detail.setdefault("statementCount", detail.get("tripleCount"))
+            content = json.dumps(detail, ensure_ascii=False).encode("utf-8")
     return Response(content=content, status_code=status, media_type=ctype)
 
 

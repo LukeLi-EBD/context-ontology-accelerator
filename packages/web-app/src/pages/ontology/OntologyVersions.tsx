@@ -16,6 +16,7 @@ import Container from "@cloudscape-design/components/container";
 import FormField from "@cloudscape-design/components/form-field";
 import Header from "@cloudscape-design/components/header";
 import Input from "@cloudscape-design/components/input";
+import KeyValuePairs from "@cloudscape-design/components/key-value-pairs";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Table from "@cloudscape-design/components/table";
@@ -26,6 +27,9 @@ import {
 } from "@components/ApiClientProvider";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import {
+  diffOntologyVersions,
+  exportOntologyVersion,
+  getOntologyVersion,
   listOntologyProposals,
   listOntologyVersions,
   proposeOntologyVersion,
@@ -33,8 +37,10 @@ import {
   registerOntologyVersion,
   reviewOntologyProposal,
   rollbackOntology,
+  type OntologyDiff,
   type OntologyProposal,
   type OntologyVersion,
+  type OntologyVersionDetail,
 } from "../../services/ontology-lifecycle";
 
 const SAMPLE_TTL = `@prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -80,6 +86,9 @@ export function OntologyVersionsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [log, setLog] = useState<StepLog[]>([]);
+  const [detail, setDetail] = useState<OntologyVersionDetail | null>(null);
+  const [diff, setDiff] = useState<OntologyDiff | null>(null);
+  const [detailBusy, setDetailBusy] = useState<string | null>(null);
 
   useBreadcrumbTrail(
     namespaceId
@@ -203,6 +212,87 @@ export function OntologyVersionsPage() {
       return `publishedVersion=${res.publishedVersion} replaced=${res.replacedVersionId}`;
     });
 
+  const openDetail = useCallback(
+    async (version: OntologyVersion) => {
+      if (!namespaceId) return;
+      setDetailBusy(`detail-${version.id}`);
+      setError(null);
+      try {
+        const against = version.id === pointer ? undefined : pointer;
+        const [loaded, compared] = await Promise.all([
+          getOntologyVersion(api, namespaceId, appliedOntologyId, version.id),
+          diffOntologyVersions(
+            api,
+            namespaceId,
+            appliedOntologyId,
+            version.id,
+            against,
+          ),
+        ]);
+        setDetail(loaded);
+        setDiff(compared);
+        record(
+          "⑥ 版本详情 / 差异",
+          `versionId=${loaded.versionId} against=${against ?? "(auto)"} ` +
+            `+${compared.summary?.addedTriples ?? "?"}/-${compared.summary?.removedTriples ?? "?"} ` +
+            `breaking=${String(compared.breaking ?? false)}`,
+          true,
+        );
+      } catch (err) {
+        setDetail(null);
+        setDiff(null);
+        setError(`查看详情失败：${errorText(err)}`);
+      } finally {
+        setDetailBusy(null);
+      }
+    },
+    [api, namespaceId, appliedOntologyId, pointer, record],
+  );
+
+  const download = useCallback(async () => {
+    if (!namespaceId || !detail) return;
+    setDetailBusy("export");
+    setError(null);
+    try {
+      const text = await exportOntologyVersion(
+        api,
+        namespaceId,
+        appliedOntologyId,
+        detail.versionId,
+      );
+      const blob = new Blob([text], { type: "text/turtle" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${detail.versionId}.ttl`;
+      link.click();
+      URL.revokeObjectURL(url);
+      record("⑦ 导出", `versionId=${detail.versionId} bytes=${text.length}`, true);
+    } catch (err) {
+      setError(`导出失败：${errorText(err)}`);
+      record("⑦ 导出", errorText(err), false);
+    } finally {
+      setDetailBusy(null);
+    }
+  }, [api, namespaceId, appliedOntologyId, detail, record]);
+
+  const iriList = (title: string, values?: string[]) => (
+    <Box>
+      <Box variant="awsui-key-label">{title}</Box>
+      {values && values.length > 0 ? (
+        <SpaceBetween size="xxs">
+          {values.slice(0, 12).map((iri) => (
+            <Box key={iri} variant="code">
+              {iri}
+            </Box>
+          ))}
+        </SpaceBetween>
+      ) : (
+        <Box color="text-status-inactive">无</Box>
+      )}
+    </Box>
+  );
+
   const logColumns = useMemo(
     () => [
       { id: "time", header: "时间", cell: (item: StepLog) => item.at },
@@ -313,6 +403,18 @@ export function OntologyVersionsPage() {
             cell: (v: OntologyVersion) => v.createdAt ?? "-",
           },
           {
+            id: "detail",
+            header: "⑥ 详情",
+            cell: (v: OntologyVersion) => (
+              <Button
+                loading={detailBusy === `detail-${v.id}`}
+                onClick={() => void openDetail(v)}
+              >
+                详情 / 差异
+              </Button>
+            ),
+          },
+          {
             id: "actions",
             header: "操作",
             cell: (v: OntologyVersion) => (
@@ -395,6 +497,99 @@ export function OntologyVersionsPage() {
         ]}
         empty={<Box textAlign="center" color="inherit">还没有提案。</Box>}
       />
+
+      {detail && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              actions={
+                <Button loading={detailBusy === "export"} onClick={() => void download()}>
+                  ⑦ 导出 TTL
+                </Button>
+              }
+            >
+              版本详情
+            </Header>
+          }
+        >
+          <KeyValuePairs
+            columns={3}
+            items={[
+              { label: "versionId", value: detail.versionId },
+              { label: "semver", value: detail.semver },
+              {
+                label: "状态",
+                value: <StatusIndicator type={statusType(detail.status)}>{detail.status}</StatusIndicator>,
+              },
+              { label: "contentHash", value: detail.contentHash ?? "-" },
+              { label: "三元组", value: String(detail.statementCount ?? detail.tripleCount ?? "-") },
+              { label: "图三元组", value: String(detail.graphTripleCount ?? "-") },
+              { label: "graphUri", value: detail.graphUri ?? detail.graph ?? "-" },
+              { label: "创建时间", value: detail.createdAt ?? "-" },
+              { label: "发布时间", value: detail.publishedAt ?? "-" },
+            ]}
+          />
+        </Container>
+      )}
+
+      {diff && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description={`from ${diff.from ?? "(none)"} → to ${diff.to ?? "?"}`}
+            >
+              版本差异
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            {diff.breaking && (
+              <Alert type="warning" header="包含破坏性变更">
+                发布该版本必须显式确认（`acknowledgeBreaking`），否则会被
+                `E_ONTOLOGY_BREAKING` 拦住。
+                {(diff.breakingItems ?? []).map((item) => (
+                  <Box key={`${item.kind}:${item.iri}`} variant="code">
+                    {item.kind} {item.iri}
+                  </Box>
+                ))}
+              </Alert>
+            )}
+            <KeyValuePairs
+              columns={2}
+              items={[
+                { label: "新增三元组", value: String(diff.summary?.addedTriples ?? "-") },
+                { label: "删除三元组", value: String(diff.summary?.removedTriples ?? "-") },
+              ]}
+            />
+            {iriList("新增类", diff.summary?.addedClasses)}
+            {iriList("删除类", diff.summary?.removedClasses)}
+            {iriList("新增属性", diff.summary?.addedProperties)}
+            {iriList("删除属性", diff.summary?.removedProperties)}
+            {(diff.summary?.domainChanges ?? []).length > 0 && (
+              <Box>
+                <Box variant="awsui-key-label">domain 变更</Box>
+                {(diff.summary?.domainChanges ?? []).map((change) => (
+                  <Box key={change.property} variant="code">
+                    {change.property}: [{change.from.join(", ")}] → [{change.to.join(", ")}]
+                  </Box>
+                ))}
+              </Box>
+            )}
+            {(diff.summary?.rangeChanges ?? []).length > 0 && (
+              <Box>
+                <Box variant="awsui-key-label">range 变更</Box>
+                {(diff.summary?.rangeChanges ?? []).map((change) => (
+                  <Box key={change.property} variant="code">
+                    {change.property}: [{change.from.join(", ")}] → [{change.to.join(", ")}]
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </SpaceBetween>
+        </Container>
+      )}
 
       <Table
         header={<Header variant="h2">操作记录（本页最近 20 条）</Header>}

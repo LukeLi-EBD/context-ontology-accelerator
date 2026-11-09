@@ -61,6 +61,34 @@ export interface RegisterVersionInput {
   changeSummary?: string;
 }
 
+/** GetOntologyVersion: the version row plus its proposals and events. */
+export interface OntologyVersionDetail extends OntologyVersion {
+  versionId: string;
+  graphUri?: string;
+  statementCount?: number;
+  graphTripleCount?: number;
+  proposals?: OntologyProposal[];
+  events?: { action?: string; at?: string; actor?: string }[];
+}
+
+/** DiffOntologyVersions: what changed between `from` and `to`. */
+export interface OntologyDiff {
+  from?: string | null;
+  to?: string;
+  breaking?: boolean;
+  breakingItems?: { iri: string; kind: string }[];
+  summary?: {
+    addedClasses?: string[];
+    removedClasses?: string[];
+    addedProperties?: string[];
+    removedProperties?: string[];
+    addedTriples?: number;
+    removedTriples?: number;
+    domainChanges?: { property: string; from: string[]; to: string[] }[];
+    rangeChanges?: { property: string; from: string[]; to: string[] }[];
+  };
+}
+
 /** What ImportOntology answers: the draft row it just created. */
 export interface RegisteredVersion {
   versionId: string;
@@ -84,6 +112,43 @@ export async function listOntologyVersions(
   ontologyId: string,
 ): Promise<VersionList> {
   return client.get<VersionList>(`${root(namespace, ontologyId)}/versions`);
+}
+
+export async function getOntologyVersion(
+  client: ApiClient,
+  namespace: string,
+  ontologyId: string,
+  versionId: string,
+): Promise<OntologyVersionDetail> {
+  return client.get<OntologyVersionDetail>(
+    `${root(namespace, ontologyId)}/versions/${encodeURIComponent(versionId)}`,
+  );
+}
+
+export async function diffOntologyVersions(
+  client: ApiClient,
+  namespace: string,
+  ontologyId: string,
+  versionId: string,
+  against?: string,
+): Promise<OntologyDiff> {
+  const suffix = against ? `?against=${encodeURIComponent(against)}` : "";
+  return client.get<OntologyDiff>(
+    `${root(namespace, ontologyId)}/versions/${encodeURIComponent(versionId)}/diff${suffix}`,
+  );
+}
+
+/** ExportOntologyVersion: raw Turtle/N-Quads text, not JSON. */
+export async function exportOntologyVersion(
+  client: ApiClient,
+  namespace: string,
+  ontologyId: string,
+  versionId: string,
+  format: "turtle" | "nquads" = "turtle",
+): Promise<string> {
+  const path = `${root(namespace, ontologyId)}/versions/${encodeURIComponent(versionId)}/export?format=${format}`;
+  if (!client.getText) throw new Error("ApiClient.getText is not available");
+  return client.getText(path);
 }
 
 export async function registerOntologyVersion(
