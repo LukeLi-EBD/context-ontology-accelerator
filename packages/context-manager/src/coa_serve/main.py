@@ -31,8 +31,7 @@ from pydantic import ValidationError
 from .clients.athena import AthenaQueryExecutor
 from .clients.bedrock import BedrockLLMClient
 from .clients.composite_executor import CompositeQueryExecutor
-from .clients.neptune import NeptuneGraphClient
-from .clients.opensearch import OpenSearchVectorClient
+from .clients.ports import resolve_graph_client, resolve_vector_client
 from .clients.sparql_clients import SparqlClientCache
 from .config import ServiceConfig, load_config
 from .exceptions import (
@@ -233,9 +232,11 @@ async def _ensure_initialized():
                 region=config.bedrock_region,
             )
 
-        # Build client layer
-        neptune_client = NeptuneGraphClient(endpoint=config.neptune_endpoint)
-        opensearch_client = OpenSearchVectorClient(endpoint=config.opensearch_endpoint)
+        # Build client layer. Graph and vector come from the runtime catalog
+        # (COA_PROVIDER_GRAPH / COA_PROVIDER_VECTOR); a missing key is an explicit
+        # ConfigurationError, never a fallback to the AWS endpoints.
+        graph_client = resolve_graph_client()
+        vector_client = resolve_vector_client()
         bedrock_client = BedrockLLMClient(model_id=config.bedrock_model_id, region=config.bedrock_region)
         # VKG endpoint used as template: "://vkg." is replaced with "://vkg-{ns}." per request
 
@@ -302,7 +303,7 @@ async def _ensure_initialized():
         )
 
         # Build tier resolvers
-        metric_resolver = MetricResolver(neptune_client=neptune_client)
+        metric_resolver = MetricResolver(neptune_client=graph_client)
         # Load metrics from Neptune at startup (fire-and-forget — start()
         # spawns a background refresh task that keeps metrics fresh).
         # _ensure_initialized runs inside the running event loop, so use
@@ -316,7 +317,7 @@ async def _ensure_initialized():
             region=config.bedrock_region,
         )
         nl_to_sparql = NLtoSPARQL(
-            graph_client=neptune_client,
+            graph_client=graph_client,
             llm_client=bedrock_client,
             guardrail_id=config.guardrail_id,
             guardrail_id_provider=guardrail_provider.guardrail_id,
@@ -332,8 +333,8 @@ async def _ensure_initialized():
             query_executor=query_executor,
             sources_registry=sources_registry,
         )
-        vector_retriever = VectorRetriever(vector_client=opensearch_client)
-        graph_traverser = GraphTraverser(graph_client=neptune_client)
+        vector_retriever = VectorRetriever(vector_client=vector_client)
+        graph_traverser = GraphTraverser(graph_client=graph_client)
 
         # Query-time chunk screening: evaluate retrieved content against retrieval
         # guardrail (MEDIUM PROMPT_ATTACK) before synthesis. Graceful degradation:
@@ -381,7 +382,7 @@ async def _ensure_initialized():
         # NL-to-SQL: Direct SQL generation via LLM with ontology retrieval + FK expansion
         sql_generator = SQLGenerator(
             llm_client=bedrock_client,
-            vector_client=opensearch_client,
+            vector_client=vector_client,
             guardrail_id=config.guardrail_id,
             guardrail_id_provider=guardrail_provider.guardrail_id,
         )
@@ -391,7 +392,7 @@ async def _ensure_initialized():
         ontop_strategy = OntopStrategy(
             nl_to_sparql=nl_to_sparql,
             vkg_translator=vkg_translator,
-            vector_client=opensearch_client,
+            vector_client=vector_client,
             oss_ontology_index=oss_ontology_index,
         )
         nl_to_sql_strategy = NLtoSQLStrategy(
@@ -403,7 +404,7 @@ async def _ensure_initialized():
             # by default (SERVE_NL2SQL_GRAPH_EXPAND turns it off deployment-wide,
             # options.flatGraphExpand per request); passing None here leaves the flat
             # path on retrieval alone rather than failing.
-            graph_client=neptune_client,
+            graph_client=graph_client,
             sources_registry=sources_registry,
         )
         # Bounded tool-use agent (iterative schema discovery → generate → execute →
@@ -415,21 +416,21 @@ async def _ensure_initialized():
             sql_generator=sql_generator,
             firewall=firewall,
             query_executor=query_executor,
-            vector_client=opensearch_client,
+            vector_client=vector_client,
             oss_ontology_index=oss_ontology_index,
             # Backs the opt-in explore_graph tool (SERVE_DEEP_REASONING_GRAPH_TRAVERSAL);
             # with the flag off the client is simply never used.
-            graph_client=neptune_client,
+            graph_client=graph_client,
         )
         strategies = [ontop_strategy, nl_to_sql_strategy, agentic_strategy]
         sparql_strategy = _register_sparql_strategy(
             strategies,
-            graph_client=neptune_client,
+            graph_client=graph_client,
             llm_client=bedrock_client,
             guardrail_id=config.guardrail_id,
             guardrail_id_provider=guardrail_provider.guardrail_id,
             sources_registry=sources_registry,
-            vector_client=opensearch_client,
+            vector_client=vector_client,
             oss_ontology_index=oss_ontology_index,
             firewall=firewall,
         )
@@ -455,8 +456,8 @@ async def _ensure_initialized():
             from .tier3.agentic.planner import BedrockStepPlanner
 
             agentic_clients = ClientSet(
-                graph=neptune_client,
-                vector=opensearch_client,
+                graph=graph_client,
+                vector=vector_client,
                 llm=bedrock_client,
                 query_executor=query_executor,
             )
@@ -484,7 +485,7 @@ async def _ensure_initialized():
         tier2_skip_evaluator = None
         if os.environ.get("SERVE_TIER2_SKIP_MODE", "aoss").lower() != "off" and oss_ontology_index:
             tier2_skip_evaluator = AossProvenanceEvaluator(
-                vector_client=opensearch_client,
+                vector_client=vector_client,
                 sources_registry=sources_registry,
                 oss_ontology_index=oss_ontology_index,
             )
@@ -506,7 +507,7 @@ async def _ensure_initialized():
             # Tier-3 URI-hop seeding: same vector client + ontology index the
             # Tier-2 strategies use, so a non-Latin query seeds graph traversal
             # from matched concept URIs instead of the ASCII keyword branch.
-            vector_client=opensearch_client,
+            vector_client=vector_client,
             oss_ontology_index=oss_ontology_index,
             agentic_retriever=agentic_retriever,
             tier3_deep_reasoning_default=(config.tier3_strategy == "deep-reasoning"),
@@ -1225,7 +1226,13 @@ async def invoke(payload: dict, context=None):
         await _ensure_initialized()
     except Exception as e:
         logger.error("invoke_init_failed", error=str(e))
-        yield {"error": "InternalError", "message": "Initialization failed", "statusCode": 500}
+        # Carry the reason: an unconfigured backend must be visible to the caller,
+        # not a generic 500 that hides which COA_PROVIDER_* key is missing.
+        yield {
+            "error": "InternalError",
+            "message": f"Initialization failed: {e}",
+            "statusCode": 500,
+        }
         return
 
     if _orchestrator is None:

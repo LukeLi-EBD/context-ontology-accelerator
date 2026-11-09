@@ -154,8 +154,10 @@ def build_lexical_retriever(
     without a code change; the per-deployment production default (15s) stays the
     code default on the retriever itself.
 
-    Returns None only when the required store endpoints are unset (nothing for
-    graphrag to address).
+    Returns None when the required store endpoints are unset (nothing for
+    graphrag to address), or when the optional ``graphrag-toolkit`` dependency is
+    absent — the latter is logged as ``lexical_retriever_unavailable`` with the
+    reason, so the other Tier-3 paths keep working.
     """
     if not config.neptune_endpoint or not config.opensearch_endpoint:
         return None
@@ -194,9 +196,15 @@ def build_lexical_retriever(
     # The instance-default StrategySpec is only a fallback; the orchestrator
     # passes the resolved per-request strategy into ``retrieve()`` whenever the
     # lexical path is engaged.
-    return BaselineLexicalRetriever(
-        graph_store_uri=graph_uri,
-        vector_store_uri=vector_store_uri,
-        strategy=DEFAULT_SPEC,
-        **({"timeout_s": timeout_s} if timeout_s is not None else {}),
-    )
+    try:
+        return BaselineLexicalRetriever(
+            graph_store_uri=graph_uri,
+            vector_store_uri=vector_store_uri,
+            strategy=DEFAULT_SPEC,
+            **({"timeout_s": timeout_s} if timeout_s is not None else {}),
+        )
+    except ImportError as exc:
+        # graphrag-toolkit is an optional extra. Startup must not fail because one
+        # Tier-3 strategy is unavailable, but the degradation is announced.
+        logger.warning("lexical_retriever_unavailable", reason=str(exc))
+        return None

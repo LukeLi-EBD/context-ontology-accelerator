@@ -21,7 +21,14 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 
-import graphrag_toolkit.lexical_graph.config as _graphrag_cfg
+try:  # optional: the lexical baseline is one Tier-3 strategy, not a startup dependency
+    import graphrag_toolkit.lexical_graph.config as _graphrag_cfg
+except ImportError as _exc:  # pragma: no cover - depends on the installed extras
+    _graphrag_cfg = None
+    _GRAPHRAG_IMPORT_ERROR: ImportError | None = _exc
+else:
+    _GRAPHRAG_IMPORT_ERROR = None
+
 import structlog
 from coa_common import make_llama_index_embedding, resolve_region
 from coa_common.constants import DEFAULT_EMBED_DIMENSIONS, DEFAULT_EMBED_MODEL_ID
@@ -57,8 +64,13 @@ from .strategies import (
 _ACTIVE_MODEL = (
     os.environ.get("GRAPHRAG_LLM_MODEL") or os.environ.get("BEDROCK_MODEL_ID") or "us.anthropic.claude-sonnet-5"
 )
-_graphrag_cfg.DEFAULT_RESPONSE_MODEL = _ACTIVE_MODEL
-_graphrag_cfg.DEFAULT_EXTRACTION_MODEL = _ACTIVE_MODEL
+_GRAPHRAG_REQUIRED = (
+    "the lexical baseline retriever requires graphrag-toolkit, which is not installed; "
+    "install graphrag-lexical-graph==3.20.0 or leave the lexical strategy off"
+)
+if _graphrag_cfg is not None:
+    _graphrag_cfg.DEFAULT_RESPONSE_MODEL = _ACTIVE_MODEL
+    _graphrag_cfg.DEFAULT_EXTRACTION_MODEL = _ACTIVE_MODEL
 
 logger = structlog.get_logger(__name__)
 
@@ -462,6 +474,9 @@ class BaselineLexicalRetriever:
             max_workers=_LEXICAL_MAX_WORKERS,
             thread_name_prefix="lexical-retr",
         )
+
+        if _graphrag_cfg is None:
+            raise ImportError(_GRAPHRAG_REQUIRED) from _GRAPHRAG_IMPORT_ERROR
 
         from graphrag_toolkit.lexical_graph import GraphRAGConfig
 
