@@ -34,6 +34,7 @@ import { ProposalDetailPage } from "./pages/ontology/induce/ProposalDetail";
 import { GraphSearchPage } from "./pages/ontology/GraphSearch";
 import { InducedOntologyDetailPage } from "./pages/ontology/InducedOntologyDetail";
 import { OntologyClassDetailPage } from "./pages/ontology/OntologyClassDetail";
+import { OntologyVersionsPage } from "./pages/ontology/OntologyVersions";
 import { MetricList } from "./pages/MetricList";
 import DocumentsPage from "./pages/DocumentsPage";
 import DocumentDetailPage from "./pages/DocumentDetailPage";
@@ -214,6 +215,11 @@ function AppShell() {
           type: "link" as const,
           text: t("Explorer"),
           href: `${nsPath}/ontology/graph`,
+        },
+        {
+          type: "link" as const,
+          text: "版本与发布",
+          href: `${nsPath}/ontology/versions`,
         },
         {
           type: "link" as const,
@@ -633,6 +639,10 @@ function AppShell() {
               <Route
                 path="/namespaces/:namespaceId/ontology/induced/class"
                 element={<OntologyClassDetailPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/ontology/versions"
+                element={<OntologyVersionsPage />}
               />
               <Route
                 path="/namespaces/:namespaceId/documents"

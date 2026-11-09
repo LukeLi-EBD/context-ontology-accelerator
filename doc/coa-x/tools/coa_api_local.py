@@ -477,6 +477,10 @@ SOURCES = "coa_sources.api.sources_handler"
 METRICS = "coa_metrics.api.metric_api_handler"
 ONTOLOGY = "coa_ontology.api_proxy_handler"
 DATA_LAYER = "coa_data_layer.handler"
+# Sentinel: the T-Box lifecycle lives in the platform kernel (8093), not in a
+# Lambda handler. `dispatch` proxies these paths instead of calling a handler.
+KERNEL = "__kernel__"
+KERNEL_ENDPOINT = os.environ.get("COA_KERNEL_ENDPOINT", "http://127.0.0.1:8093")
 
 ROUTES: list[tuple[str, str]] = [
     ("/namespaces", NAMESPACE),
@@ -574,6 +578,17 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/validate", ONTOLOGY),
     ("/namespaces/{namespaceId}/validate/jobs", ONTOLOGY),
     ("/namespaces/{namespaceId}/validate/jobs/{jobId}", ONTOLOGY),
+    # T-Box lifecycle (09 §5.6). The state machine is platform-core's
+    # `OntologyRegistry`; 8101 only serves the engine proxy above. Read routes
+    # are exposed alongside the five write ones so the UI can render the chain.
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/versions", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/import", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}/review", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/publish", KERNEL),
+    ("/namespaces/{namespaceId}/ontologies/{ontologyId}/rollback", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -613,6 +628,206 @@ def _match(path: str) -> tuple[str, dict[str, str], str] | None:
 # ---------------------------------------------------------------------------
 # HTTP bridge
 # ---------------------------------------------------------------------------
+
+
+async def _kernel_call(method: str, path: str, body: bytes | None = None,
+                       content_type: str = "application/json") -> tuple[int, bytes, str]:
+    """One request to the local platform kernel (8093)."""
+    import httpx
+
+    headers = {"content-type": content_type} if body else {}
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        resp = await client.request(
+            method, KERNEL_ENDPOINT + path, content=body, headers=headers
+        )
+    return resp.status_code, resp.content, resp.headers.get("content-type", "application/json")
+
+
+def _kernel_translate(
+    template: str, path_params: dict[str, str], method: str, body: bytes
+) -> tuple[str, str, bytes | None]:
+    """Map a contract path onto the kernel's ``/ontology/*`` surface.
+
+    Only the five lifecycle writes plus the read routes needed to render the
+    chain are mapped; anything else is a bug in ROUTES.
+    """
+    ontology_id = path_params.get("ontologyId", "")
+    version_id = path_params.get("versionId", "")
+    proposal_id = path_params.get("proposalId", "")
+    try:
+        payload = json.loads(body.decode("utf-8")) if body else {}
+    except ValueError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    if template.endswith("/import"):
+        # ImportOntology: register the uploaded TTL as a draft version.
+        merged = {**payload}
+        merged.setdefault("targetNamespace", ontology_id)
+        return "POST", "/ontology/import", json.dumps(merged).encode("utf-8")
+
+    if template.endswith("/versions/{versionId}"):
+        return "GET", f"/ontology/versions/{version_id}", None
+
+    if template.endswith("/versions"):
+        return "GET", "/ontology/versions", None
+
+    if template.endswith("/proposals/{proposalId}/review"):
+        decision = str(payload.get("decision") or "").upper()
+        action = "approve" if decision == "APPROVE" else "reject"
+        forwarded = {
+            "actor": payload.get("actor") or "operator",
+            "reason": payload.get("comment") or payload.get("reason"),
+        }
+        return (
+            "POST",
+            f"/governance/proposals/{proposal_id}/{action}",
+            json.dumps(forwarded).encode("utf-8"),
+        )
+
+    if template.endswith("/proposals/{proposalId}"):
+        return "GET", f"/governance/proposals/{proposal_id}", None
+
+    if template.endswith("/proposals"):
+        if method == "GET":
+            return "GET", "/governance/proposals", None
+        # ProposeOntologyVersion: the version was registered by `import` in the
+        # preceding step, so it is named explicitly (contract field `versionId`)
+        # or inferred from `baseVersionId` when proposals target the draft.
+        version = payload.get("versionId") or payload.get("baseVersionId")
+        if not version:
+            raise ValueError(
+                "proposals requires versionId (the registered draft) or baseVersionId"
+            )
+        forwarded = {
+            "changeSummary": payload.get("rationale") or payload.get("changeSummary") or "",
+            "againstVersion": payload.get("againstVersion"),
+            "actor": payload.get("actor") or "operator",
+        }
+        return (
+            "POST",
+            f"/ontology/versions/{version}/propose",
+            json.dumps(forwarded).encode("utf-8"),
+        )
+
+    if template.endswith("/publish"):
+        forwarded = {
+            "versionId": payload.get("versionId"),
+            "proposalId": payload.get("proposalId"),
+            "acknowledgeBreaking": bool(payload.get("acknowledgeBreaking", False)),
+            "actor": payload.get("actor") or "operator",
+            "reason": payload.get("reason"),
+            "expectedVersionId": payload.get("expectedVersionId"),
+        }
+        return "POST", "/governance/publish", json.dumps(forwarded).encode("utf-8")
+
+    if template.endswith("/rollback"):
+        target = payload.get("targetVersionId") or payload.get("versionId")
+        if not target:
+            raise ValueError("rollback requires targetVersionId")
+        if payload.get("planOnly"):
+            return "GET", f"/governance/rollback/plan?versionId={target}", None
+        forwarded = {
+            "versionId": target,
+            "actor": payload.get("actor") or "operator",
+            "reason": payload.get("reason"),
+            "expectedVersionId": payload.get("expectedVersionId"),
+        }
+        return "POST", "/governance/rollback-to", json.dumps(forwarded).encode("utf-8")
+
+    raise ValueError(f"no kernel mapping for {method} {template}")
+
+
+async def _kernel_register_version(
+    template: str, path_params: dict[str, str], body: bytes
+) -> tuple[int, bytes, str]:
+    """ImportOntology: register the uploaded T-Box as a *draft* version.
+
+    `/ontology/import` alone only stages (no `ontology_version` row), and
+    `/ontology/imports/{id}/publish` publishes (pointer switch) rather than
+    registering.  The kernel's draft-only path is `import_source`, adapted on
+    8093 as `/local/ontology/register`; see coa_kernel_local.py for why it sits
+    there and not in platform_core.api.
+    """
+    ontology_id = path_params.get("ontologyId", "")
+    try:
+        payload = json.loads(body.decode("utf-8") or "{}")
+    except ValueError:
+        return 400, b'{"error":"import body is not valid JSON"}', "application/json"
+    if not isinstance(payload, dict):
+        payload = {}
+    register = {
+        key: payload[key]
+        for key in ("content", "contentBase64", "format", "semver")
+        if payload.get(key)
+    }
+    register["targetNamespace"] = payload.get("targetNamespace") or ontology_id
+    status, content, ctype = await _kernel_call(
+        "POST", "/local/ontology/register", json.dumps(register).encode("utf-8")
+    )
+    if status >= 300:
+        return status, content, ctype
+    try:
+        data = json.loads(content or b"{}")
+    except ValueError:
+        data = {}
+    merged = {
+        "importId": data.get("versionId"),
+        "versionId": data.get("versionId"),
+        "semver": data.get("semver"),
+        "status": data.get("status") or "draft",
+        "targetNamespace": register["targetNamespace"],
+        "contentHash": data.get("contentHash"),
+        "triples": data.get("tripleCount"),
+        "skipped": data.get("skipped", False),
+        "conflicts": data.get("conflicts", []),
+        "changeSummary": payload.get("changeSummary"),
+    }
+    return 200, json.dumps(merged, ensure_ascii=False).encode("utf-8"), "application/json"
+
+
+async def _kernel_proxy(
+    request: Request, template: str, path_params: dict[str, str]
+) -> Response:
+    """Forward one lifecycle request and normalise the contract's field names."""
+    body = await request.body()
+    if template.endswith("/import") and request.method == "POST":
+        status, content, ctype = await _kernel_register_version(template, path_params, body)
+        return Response(content=content, status_code=status, media_type=ctype)
+    try:
+        method, target, forwarded = _kernel_translate(
+            template, path_params, request.method, body
+        )
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    try:
+        status, content, ctype = await _kernel_call(method, target, forwarded)
+    except Exception as exc:  # kernel down: say so instead of a bare 500
+        return JSONResponse(
+            {
+                "error": "ontology kernel unavailable",
+                "detail": str(exc),
+                "endpoint": KERNEL_ENDPOINT,
+            },
+            status_code=503,
+        )
+
+    # Two contract responses name the result differently from the kernel:
+    # PublishOntology returns `publishedVersion`, RollbackOntology the same.
+    if status < 300 and request.method == "POST" and template.endswith(
+        ("/publish", "/rollback")
+    ):
+        try:
+            data = json.loads(content or b"{}")
+        except ValueError:
+            data = {}
+        if isinstance(data, dict):
+            if "publishedVersion" not in data:
+                data["publishedVersion"] = data.get("id")
+            content = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    return Response(content=content, status_code=status, media_type=ctype)
 
 
 def _make_app() -> Any:
@@ -702,6 +917,14 @@ def _make_app() -> Any:
                 origin,
             )
         template, path_params, module = matched
+        if module == KERNEL:
+            print(f"[api] {request.method} {path} -> kernel ({template})")
+            return _cors(
+                await _kernel_proxy(
+                    request, template, {k: unquote(v) for k, v in path_params.items()}
+                ),
+                origin,
+            )
         handler = _load_handler(module)
         body = await request.body()
         event = {

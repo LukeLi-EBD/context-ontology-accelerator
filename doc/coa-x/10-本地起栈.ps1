@@ -9,6 +9,7 @@
     容器 coa-local-oxigraph  127.0.0.1:7878  oxigraph/oxigraph:0.5.7，数据卷 coa-local-oxigraph-data
     进程 coa-api-local       127.0.0.1:8099  doc/coa-x/tools/coa_api_local.py
     进程 coa-ontology-local  127.0.0.1:8101  doc/coa-x/tools/coa_ontology_local.py
+    进程 coa-kernel-local    127.0.0.1:8093  doc/coa-x/tools/coa_kernel_local.py
     进程 coa-serve-local     127.0.0.1:8091  run_local.py context-manager（Query / KBSearch 的上游）
 
   不管理：8080/8082 验收栈、5173 前端 dev server、8081 BGE 嵌入服务（只读复用）。
@@ -109,6 +110,7 @@ if ($Stop) {
     Write-Host "Stopping COA local stack"
     Stop-PortOwner 8099 "coa_api_local.py"
     Stop-PortOwner 8101 "coa_ontology_local.py"
+    Stop-PortOwner 8093 "coa_kernel_local.py"
     Stop-PortOwner 8091 "run_local.py"
     if (Test-Path $PidFile) { Remove-Item $PidFile -Force }
     if (-not $KeepContainers) {
@@ -144,6 +146,10 @@ Wait-Port 5444 "coa-local-pg" 60
 Wait-Port 7878 "coa-local-oxigraph" 30
 
 # 2) environment for both local processes (no secrets; local DSN only)
+# Prompt/template files are UTF-8; without this the child falls back to the
+# console code page (cp936) and 8101 dies on UnicodeDecodeError at import time.
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
 $env:COA_PROVIDER_ONTOLOGY_GRAPH   = "oxigraph"
 $env:COA_ONTOLOGY_OXIGRAPH_URL     = "http://127.0.0.1:7878"
 $env:COA_PROVIDER_ONTOLOGY_REGISTRY = "postgres"
@@ -204,6 +210,22 @@ if (Test-PortListening 8101) {
 
 Wait-Port 8099 "coa-api-local" 60
 Wait-Port 8101 "coa-ontology-local" 90
+
+# 4b) platform kernel: T-Box lifecycle (versions/proposals/publish/rollback).
+# Shares serve_local + Oxigraph with the local stack; 8080/8082 are untouched.
+if (Test-PortListening 8093) {
+    Write-Host "  [ok] coa-kernel-local already listening on :8093 (not restarted)"
+} else {
+    $out = Join-Path $Tools "kernel-8093.log"
+    $err = Join-Path $Tools "kernel-8093.err.log"
+    $p = Start-Process -FilePath $Python `
+        -ArgumentList "doc\coa-x\tools\coa_kernel_local.py", "--port", "8093" `
+        -WorkingDirectory $Repo -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput $out -RedirectStandardError $err
+    $started["kernel"] = $p.Id
+    Write-Host ("  [start] coa-kernel-local pid={0} log={1}" -f $p.Id, $out)
+}
+Wait-Port 8093 "coa-kernel-local" 60
 
 # 5) serve context-manager: the real upstream of DataLayerService Query / KBSearch
 if (Test-PortListening 8091) {
@@ -300,8 +322,9 @@ if ($started.Count -gt 0) {
 # 5) summary
 Write-Host ""
 Write-Host "Stack is up:"
-Write-Host "  8099  coa-api-local      (bridge -> 8101 for /ontology/*, -> 8091 for /query|/kb/search)"
+Write-Host "  8099  coa-api-local      (bridge -> 8101 for /ontology/*, -> 8093 for lifecycle, -> 8091 for /query|/kb/search)"
 Write-Host "  8101  coa-ontology-local (Oxigraph 7878, PG registry 5444)"
+Write-Host "  8093  coa-kernel-local   (T-Box versions/proposals/publish/rollback, serve_local DB)"
 Write-Host "  8091  coa-serve-local    (context-manager, serve_local DB)"
 Write-Host "  5444  coa-local-pg"
 Write-Host "  7878  coa-local-oxigraph"
