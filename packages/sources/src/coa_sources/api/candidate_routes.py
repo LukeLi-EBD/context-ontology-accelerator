@@ -7,23 +7,33 @@
     POST /namespaces/{namespaceId}/candidates/{candidateId}/approve      ApproveFactCandidate
     POST /namespaces/{namespaceId}/candidates/{candidateId}/reject       RejectFactCandidate
 
-Approval has two effects, deliberately separated in the code:
+Approval writes one assertion to two places, in one request and one order:
 
-* the **ledger** row (``facts`` table) records the assertion with its
-  provenance (candidate, document, chunk, reviewer);
-* the **materialisation** step projects that assertion as one triple into the
-  namespace A-Box graph, so graph queries see it.
+1. the **platform fact ledger** (``platform.fact_assertion`` + its chained
+   ``fact_event``), which is the authoritative record, including provenance
+   (candidate, document, reviewer) and the graph the triple lives in;
+2. the **A-Box triple** in the namespace graph (the ledger projects it; the
+   route re-issues the same ``INSERT DATA`` so a retry heals a projection that
+   failed after the ledger commit);
+3. the namespace's ``facts`` item (a per-namespace projection keyed by the
+   ledger's fact id) and the candidate status.
 
-The projection is idempotent: the fact id is derived from the candidate id, and
-RDF set semantics make a repeated ``INSERT DATA`` a no-op.
+The ledger is written first: if any later step fails the ledger row is retracted
+in the same request, so the assertion is either fully recorded or not recorded
+at all -- never "written here, repaired later".  Re-approving is idempotent:
+the candidate guard returns 409, and the ledger's active-duplicate check returns
+the existing fact instead of inserting a second row.
+
+The ledger writer is injected by the host (the local bridge installs the
+in-process platform runtime).  Without it approval fails with 503
+``fact_ledger_unavailable`` instead of silently writing only one of the two.
 """
 
 from __future__ import annotations
 
 import json
 import os
-import uuid
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import quote
 
 import httpx
@@ -37,7 +47,24 @@ logger = structlog.get_logger(__name__)
 
 _STATUSES = {"PENDING", "APPROVED", "REJECTED"}
 _MAX_CANDIDATES = 200
-_FACT_NAMESPACE = uuid.UUID("6f9619ff-8b86-d011-b42d-00c04fc964ff")
+
+
+_LEDGER_RECORD: Callable[..., dict[str, Any]] | None = None
+_LEDGER_RETRACT: Callable[..., dict[str, Any]] | None = None
+
+
+def install_fact_ledger(
+    record: Callable[..., dict[str, Any]],
+    retract: Callable[..., dict[str, Any]],
+) -> None:
+    """Wire approval to the platform fact ledger (host-specific).
+
+    ``record(**fields)`` must write ``platform.fact_assertion`` + ``fact_event``
+    and project the triple; ``retract(fact_id, reason, actor)`` must undo both.
+    """
+    global _LEDGER_RECORD, _LEDGER_RETRACT
+    _LEDGER_RECORD = record
+    _LEDGER_RETRACT = retract
 
 
 def _now() -> str:
@@ -126,52 +153,129 @@ def handle_approve_candidate(event: dict[str, Any], namespace_id: str, candidate
     if not subject or not predicate or not obj:
         return api_response(400, {"error": "subject, predicate and object must be non-empty"})
 
-    fact_id = str(uuid.uuid5(_FACT_NAMESPACE, f"{namespace_id}:{candidate_id}"))
-    graph_uri = _abox_graph_uri(namespace_id)
-    triple = _triple(subject, predicate, obj)
-    try:
-        _project(graph_uri, triple)
-    except httpx.HTTPError as exc:
-        logger.exception("abox_projection_failed", candidate_id=candidate_id)
-        return api_response(502, {"error": f"A-Box projection failed: {exc}"})
+    if _LEDGER_RECORD is None:
+        logger.error("fact_ledger_unavailable", candidate_id=candidate_id)
+        return api_response(
+            503,
+            {
+                "error": (
+                    "fact ledger is not configured: the host did not install "
+                    "candidate_routes.install_fact_ledger; refusing to approve "
+                    "into one store only"
+                ),
+                "code": "fact_ledger_unavailable",
+            },
+        )
 
+    graph_uri = _abox_graph_uri(namespace_id)
+    subject_term, subject_kind = _term(subject, "subject")
+    predicate_term, predicate_kind = _term(predicate, "predicate")
+    object_term, object_kind = _term(obj, "object")
+    triple = _triple_from_terms(
+        (subject_term, subject_kind),
+        (predicate_term, predicate_kind),
+        (object_term, object_kind),
+    )
     now = _now()
     actor = str(body.get("actor") or get_caller_identity(event) or "local").strip()
-    store.put_fact(
-        {
-            "PK": store.pk(namespace_id),
-            "SK": f"FACT#{fact_id}",
-            "factId": fact_id,
-            "namespaceId": namespace_id,
-            "candidateId": candidate_id,
-            "documentId": candidate.get("documentId"),
-            "chunkId": candidate.get("chunkId"),
-            "subject": subject,
-            "predicate": predicate,
-            "object": obj,
-            "status": "ACTIVE",
-            "graphUri": graph_uri,
-            "triple": triple,
-            "reviewedBy": actor,
-            "createdAt": now,
-        }
-    )
-    store.update_candidate(
-        namespace_id,
-        candidate_id,
-        {
-            "status": "APPROVED",
-            "factId": fact_id,
-            "reviewedBy": actor,
-            "reviewedAt": now,
-            "materializedAt": now,
-        },
-    )
+
+    # 1. Authoritative write. A duplicate (same active assertion for the same
+    #    document + graph) returns the existing row, so retries never double-write.
+    try:
+        fact = _LEDGER_RECORD(
+            subject=subject_term,
+            predicate=predicate_term,
+            object_value=object_term,
+            object_kind=object_kind,
+            graph=graph_uri,
+            source_kind="extraction",
+            source_document_id=candidate.get("documentId"),
+            candidate_id=candidate_id,
+            actor=actor,
+        )
+    except Exception as exc:  # PortError, DB error, graph error: all explicit
+        logger.exception("fact_ledger_record_failed", candidate_id=candidate_id)
+        return api_response(
+            502,
+            {"error": f"fact ledger write failed: {exc}", "code": "fact_ledger_write_failed"},
+        )
+    fact_id = str(fact["factId"])
+    created_here = not bool(fact.get("duplicate"))
+
+    # 2. Two projections of that one row: the A-Box triple (idempotent, also
+    #    heals a ledger row whose projection failed after the ledger commit) and
+    #    the namespace's facts item keyed by the ledger fact id.
+    try:
+        _project(graph_uri, triple)
+        store.put_fact(
+            {
+                "PK": store.pk(namespace_id),
+                "SK": f"FACT#{fact_id}",
+                "factId": fact_id,
+                "namespaceId": namespace_id,
+                "candidateId": candidate_id,
+                "documentId": candidate.get("documentId"),
+                "chunkId": candidate.get("chunkId"),
+                "subject": subject,
+                "predicate": predicate,
+                "object": obj,
+                "status": "ACTIVE",
+                "graphUri": graph_uri,
+                "triple": triple,
+                "reviewedBy": actor,
+                "createdAt": now,
+            }
+        )
+        store.update_candidate(
+            namespace_id,
+            candidate_id,
+            {
+                "status": "APPROVED",
+                "factId": fact_id,
+                "reviewedBy": actor,
+                "reviewedAt": now,
+                "materializedAt": now,
+            },
+        )
+    except Exception as exc:
+        logger.exception(
+            "fact_candidate_approve_failed", candidate_id=candidate_id, fact_id=fact_id
+        )
+        # All-or-nothing: retract the row this request created. A duplicate row
+        # belongs to an earlier approval and must not be retracted here.
+        compensated = False
+        if created_here and _LEDGER_RETRACT is not None:
+            try:
+                _LEDGER_RETRACT(
+                    fact_id,
+                    f"approval rollback: projection/persistence failed ({type(exc).__name__})",
+                    actor,
+                )
+                compensated = True
+            except Exception:
+                logger.exception("fact_ledger_compensation_failed", fact_id=fact_id)
+        status = 500 if (compensated or not created_here) else 503
+        return api_response(
+            status,
+            {
+                "error": f"approval failed after the ledger write: {exc}",
+                "code": "fact_candidate_approve_failed",
+                "factId": fact_id,
+                "compensated": compensated,
+                **(
+                    {}
+                    if compensated or not created_here
+                    else {"warning": "ledger row left active; retract it manually"}
+                ),
+            },
+        )
+
     logger.info(
         "fact_candidate_approved",
         namespace_id=namespace_id,
         candidate_id=candidate_id,
         fact_id=fact_id,
+        duplicate=not created_here,
     )
     return api_response(200, {"factId": fact_id, "status": "APPROVED"})
 
@@ -239,20 +343,33 @@ _PREFIXES = {
 }
 
 
-def _iri(value: str, kind: str) -> str:
+def _term(value: str, kind: str) -> tuple[str, str]:
+    """Normalise one candidate position to ``(term, "iri"|"literal")``.
+
+    The same normalisation feeds the ledger (which validates and projects the
+    term) and the N-Triples serialisation, so both stores hold the same triple.
+    """
     if value in _PREFIXES:
-        return f"<{_PREFIXES[value]}>"
+        return _PREFIXES[value], "iri"
     if _is_iri(value):
-        return f"<{value}>"
+        return value, "iri"
     if kind == "predicate":
-        return f"<urn:coa:predicate:{quote(value, safe='')}>"
+        return f"urn:coa:predicate:{quote(value, safe='')}", "iri"
     if kind == "subject":
-        return f"<urn:coa:entity:{quote(value, safe='')}>"
-    return json.dumps(value, ensure_ascii=False)
+        return f"urn:coa:entity:{quote(value, safe='')}", "iri"
+    return value, "literal"
 
 
-def _triple(subject: str, predicate: str, obj: str) -> str:
-    return f"{_iri(subject, 'subject')} {_iri(predicate, 'predicate')} {_iri(obj, 'object')} ."
+def _serialize(term: str, kind: str) -> str:
+    return f"<{term}>" if kind == "iri" else json.dumps(term, ensure_ascii=False)
+
+
+def _triple_from_terms(
+    subject: tuple[str, str], predicate: tuple[str, str], obj: tuple[str, str]
+) -> str:
+    return (
+        f"{_serialize(*subject)} {_serialize(*predicate)} {_serialize(*obj)} ."
+    )
 
 
 def _project(graph_uri: str, triple: str) -> None:
