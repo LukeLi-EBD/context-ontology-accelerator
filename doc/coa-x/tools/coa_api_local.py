@@ -730,9 +730,18 @@ def _add_register_route(app: Any, runtime: Any) -> None:
         return {**result, "targetNamespace": namespace}
 
 
+_LIFECYCLE_RUNTIME: Any = None
+
+
+def _lifecycle_runtime() -> Any:
+    """The assembled platform runtime (ledger, graph, metadata) for this process."""
+    _lifecycle_app()
+    return _LIFECYCLE_RUNTIME
+
+
 def _lifecycle_app() -> Any:
     """Build the platform_core ASGI app once, inside the bridge process."""
-    global _LIFECYCLE_APP
+    global _LIFECYCLE_APP, _LIFECYCLE_RUNTIME
     if _LIFECYCLE_APP is not None:
         return _LIFECYCLE_APP
     _configure_lifecycle_env()
@@ -749,7 +758,28 @@ def _lifecycle_app() -> Any:
     app = create_app(runtime, [])
     _add_register_route(app, runtime)
     _LIFECYCLE_APP = app
+    _LIFECYCLE_RUNTIME = runtime
     return app
+
+
+def _install_fact_ledger() -> None:
+    """Point candidate approval at the platform fact ledger.
+
+    The bridge already hosts the platform runtime in-process, so approval can
+    write the ledger row, its audit event and the A-Box projection without a
+    second network hop.  Without this hook ``handle_approve_candidate`` answers
+    503 instead of writing the graph alone.
+    """
+    from coa_sources.api import candidate_routes
+
+    def record(**fields: Any) -> dict[str, Any]:
+        return _lifecycle_runtime().facts.record(**fields)
+
+    def retract(fact_id: str, reason: str, actor: str) -> dict[str, Any]:
+        return _lifecycle_runtime().facts.retract(fact_id, reason, actor)
+
+    candidate_routes.install_fact_ledger(record, retract)
+    print("[api] candidate approval -> platform fact ledger (in-process runtime)")
 
 
 def _kernel_translate(
@@ -1237,6 +1267,7 @@ def main() -> None:
     _install_local_catalog()
     _install_local_object_store()
     _install_local_idempotency()
+    _install_fact_ledger()
 
     from coa_common.logging import setup_logging
 
