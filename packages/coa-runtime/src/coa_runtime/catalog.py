@@ -159,9 +159,10 @@ def _metadata_pg(settings: Settings) -> Any:
 
 
 def _env_secrets(_settings: Settings) -> Any:
+    from coa_local_providers.shells import EnvSecretShell
     from platform_core.ports import EnvSecretProvider
 
-    return EnvSecretProvider()
+    return EnvSecretShell(EnvSecretProvider(), provider="env")
 
 
 def _env_config(settings: Settings) -> Any:
