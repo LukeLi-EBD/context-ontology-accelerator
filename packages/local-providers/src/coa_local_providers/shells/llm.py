@@ -26,8 +26,8 @@ from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
 from coa_ports import PortError, PortErrorCode
-from coa_serve.clients.base import ConverseResult
 
+from ..contracts import ConverseResult
 from .async_bridge import SyncToAsyncShell
 from .errors import to_port_error
 

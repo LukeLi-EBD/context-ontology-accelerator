@@ -19,8 +19,9 @@ import asyncio
 import time
 from typing import Any
 
-from coa_serve.clients.base import QueryExecutor, QueryResult  # noqa: F401 - runtime contract
 from platform_core.adapters.metadata_pg import MetadataPg
+
+from .contracts import QueryExecutor, QueryResult  # noqa: F401 - runtime contract
 
 
 class PostgresQueryExecutor:

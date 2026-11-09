@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from coa_serve.clients.base import GraphClient  # noqa: F401 - runtime contract
 from platform_core.adapters.graph_oxigraph import OxigraphHttpStore
 from platform_core.errors import PortError
 

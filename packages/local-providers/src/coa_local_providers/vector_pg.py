@@ -11,13 +11,13 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from coa_serve.clients.base import StructuredBackend, VectorClient, VectorHit  # noqa: F401
 from platform_core.adapters.metadata_pg import MetadataPg
 from platform_core.adapters.search_pg import PgSearchIndex
 from platform_core.adapters.vector_pg import PgVectorStore
 from platform_core.config import EmbeddingConfig, SearchConfig
 from platform_core.errors import PortError
 
+from .contracts import VectorClient, VectorHit  # noqa: F401 - runtime contract
 from .embedding_base import EmbeddingDimensionMismatch, EmbeddingModelMismatch
 
 
@@ -59,7 +59,7 @@ class PgVectorClient:
         entity_type: str | None = None,
         require_mapped: bool = False,
         ontology_ids: list[str] | None = None,
-        query_backend: StructuredBackend | None = None,
+        query_backend: str | None = None,
     ) -> list[VectorHit]:
         try:
             rows = await asyncio.to_thread(

@@ -7,10 +7,10 @@ import json
 import time
 
 import pytest
+from coa_local_providers.contracts import LLMClient
 from coa_local_providers.shells.async_bridge import SyncToAsyncShell
 from coa_local_providers.shells.llm import PlatformLLMShell
 from coa_ports import PortError, PortErrorCode
-from coa_serve.clients.base import LLMClient
 
 
 class _FakeClient:
