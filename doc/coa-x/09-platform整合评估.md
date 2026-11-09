@@ -29,7 +29,7 @@
 | # | 约束 | 本方案的可判定含义 |
 |---|---|---|
 | P1 | 一个 UI | 只有 `packages/web-app`。`platform-core/web` 10 个页面不是调试工具，是**删**；能力按原子功能点逐条落位（§6.3），**只许合并、不许消失**；验收照表逐条点 |
-| P2 | 一个入口 | 所有能力走 COA 的 `ControlPlaneService`（83 op）+ `DataLayerService`（5 op）。`api.py` 137 个端点**不得作为第二组路由并存**，逐条搬进 operation |
+| P2 | 一个入口 | 所有能力走 COA 契约：`ControlPlaneService`（83 op）+ `DataLayerService`（5 op）+ `OntologyService`（新增，先承载 36 个新 op）。对外**只有一个网关、一个 base URL**；网关之后可以是多个 service（§5.0）。`api.py` 137 个端点**不得作为第二组路由并存**，逐条搬进 operation |
 | P3 | 一套契约 | COA 契约没有的能力，用**新增 Smithy operation** 补；不在契约外挂私活（脚本、内部 HTTP、直连库都算私活） |
 | P4 | 一套功能点 | 不许两套说法、两套指标口径、两套健康检查。同一能力只有一个 owner operation、一个 UI 路由、一个数据源 |
 
@@ -377,7 +377,108 @@
 
 ## 5. 新增 operation 规格（86 个，派活材料）
 
-通用：所有 op 挂在 `ControlPlaneService`（`models/src/main/smithy/` 对应领域文件），路径前缀 `/namespaces/{namespaceId}`；通用错误 `ValidationError` / `InternalServerError` / `ServiceUnavailableError`，下表只列**额外**错误。`Content` 一律 `base64` 或 `downloadUrl` 二选一，禁止在 operation 里透出密钥。
+通用：所有 op 按 §5.0 的归属分挂 `ControlPlaneService` / `DataLayerService` / `OntologyService`（`models/src/main/smithy/` 对应领域文件），路径前缀 `/namespaces/{namespaceId}`；通用错误 `ValidationError` / `InternalServerError` / `ServiceUnavailableError`，下表只列**额外**错误。`Content` 一律 `base64` 或 `downloadUrl` 二选一，禁止在 operation 里透出密钥。
+
+### 5.0 新增 operation 的 service 归属（决策记录）
+
+2026-11-09 负责人拍板：**「一个入口」= 对外一个网关、一个 base URL，不等于塞进同一个 Smithy service**。86 个新增 operation 按限界上下文分挂三套契约；拆分只改 Smithy service 归属，**不改变 HTTP 路径**，对外仍是同一个 base URL。
+
+| 目标 service | 新增 op 数 | 边界 |
+|---|---:|---|
+| `ControlPlaneService` | 32 | 命名空间、数据源、权限、审批、指标定义、A-Box 账本治理、数据字典 |
+| `DataLayerService` | 18 | 查询、检索、图遍历、指标计算、回答与溯源读取 |
+| `OntologyService`（新增） | 36 | 本体归纳、提案、评审、发布、回滚、术语、形状、迁移包、推理与校验 |
+
+| # | operation | 目标 service | 理由（一句话） |
+|---:|---|---|---|
+| 1 | `UploadDocument` | `ControlPlaneService` | 文档入库属数据源摄入域的写入口 |
+| 2 | `ListDocuments` | `ControlPlaneService` | 文档清单是摄入域的读模型 |
+| 3 | `GetDocument` | `ControlPlaneService` | 文档元数据由摄入域维护 |
+| 4 | `ListDocumentChunks` | `ControlPlaneService` | 切片元数据与文档同域 |
+| 5 | `DownloadDocument` | `ControlPlaneService` | 原文下载属文档资产管理 |
+| 6 | `ListIngestionRuns` | `ControlPlaneService` | 批量导入作业属摄入调度 |
+| 7 | `StartDocumentIndex` | `ControlPlaneService` | 索引作业属摄入调度 |
+| 8 | `GetMetricReadiness` | `ControlPlaneService` | 指标定义就绪度属定义侧 |
+| 9 | `GetMetricReportManifest` | `ControlPlaneService` | 报告清单是定义侧元数据 |
+| 10 | `ListMetricFamilies` | `ControlPlaneService` | 指标族是定义结构 |
+| 11 | `GetMetricFamily` | `ControlPlaneService` | 指标族详情是定义结构 |
+| 12 | `RecordMetricDecision` | `ControlPlaneService` | 口径决策记录属治理 |
+| 13 | `ListMetricDecisions` | `ControlPlaneService` | 指标决策审计属治理 |
+| 14 | `ListFacts` | `ControlPlaneService` | A-Box 账本治理视图 |
+| 15 | `GetFact` | `ControlPlaneService` | 单条断言及其事件属账本 |
+| 16 | `CreateFacts` | `ControlPlaneService` | 断言写入必须过账本治理 |
+| 17 | `RetractFacts` | `ControlPlaneService` | 撤回是账本治理动作 |
+| 18 | `RestoreFact` | `ControlPlaneService` | 恢复是账本治理动作 |
+| 19 | `ListFactEvents` | `ControlPlaneService` | 断言事件审计属账本 |
+| 20 | `ListFactConflicts` | `ControlPlaneService` | 冲突列表供人工裁决 |
+| 21 | `ResolveFactConflicts` | `ControlPlaneService` | 冲突裁决属人工治理 |
+| 22 | `ListFactCandidates` | `ControlPlaneService` | 候选清单是审批输入 |
+| 23 | `ApproveFactCandidate` | `ControlPlaneService` | 候选通过是审批动作 |
+| 24 | `RejectFactCandidate` | `ControlPlaneService` | 候选拒绝是审批动作 |
+| 25 | `SampleFactRows` | `ControlPlaneService` | 事实源抽样属数据源校验 |
+| 26 | `ResolveSourceRef` | `ControlPlaneService` | 源引用解析属数据源域 |
+| 27 | `ListDictionaries` | `ControlPlaneService` | 数据字典属数据源目录 |
+| 28 | `GetDictionary` | `ControlPlaneService` | 表字典详情属数据源目录 |
+| 29 | `RefreshDictionaries` | `ControlPlaneService` | 字典刷新是目录作业 |
+| 30 | `GetDictionaryView` | `ControlPlaneService` | 字典视图是目录读模型 |
+| 31 | `GetDictionaryCommentCoverage` | `ControlPlaneService` | 注释覆盖率是目录质量指标 |
+| 32 | `BindDictionary` | `ControlPlaneService` | 表列绑定术语属目录治理 |
+| 33 | `CheckAnswerable` | `DataLayerService` | 可答性判定属查询规划 |
+| 34 | `GetAnswerQuality` | `DataLayerService` | 回答质量是查询域聚合 |
+| 35 | `ResolveContext` | `DataLayerService` | 上下文解析属检索 |
+| 36 | `GetMetricObservations` | `DataLayerService` | 观测值查询走数据面 |
+| 37 | `ComputeMetric` | `DataLayerService` | 指标计算是数据面执行 |
+| 38 | `ListMetricComputations` | `DataLayerService` | 计算记录属数据面 |
+| 39 | `ExecuteMetricRules` | `DataLayerService` | 规则执行发生在数据面 |
+| 40 | `ListRuleTriggers` | `DataLayerService` | 规则触发是执行溯源 |
+| 41 | `ListRefusals` | `DataLayerService` | 拒答记录属查询域 |
+| 42 | `GetProvenanceIntegrity` | `DataLayerService` | 溯源完整性属查询域 |
+| 43 | `GetEntityProvenance` | `DataLayerService` | 实体溯源是图读的延伸 |
+| 44 | `GetOntologyTree` | `DataLayerService` | 图树浏览属图遍历 |
+| 45 | `ListStatements` | `DataLayerService` | 三元组浏览属图遍历 |
+| 46 | `FindLinks` | `DataLayerService` | 邻接查询属图遍历 |
+| 47 | `FindGraphPath` | `DataLayerService` | 路径查询属图遍历 |
+| 48 | `GetCanvasManifest` | `DataLayerService` | 画布能力清单是图读视图 |
+| 49 | `GetCanvasSubgraph` | `DataLayerService` | 画布子图是图遍历结果 |
+| 50 | `GetEntity` | `DataLayerService` | 实体详情是 A-Box 读 |
+| 51 | `ExtractDocumentFacts` | `OntologyService` | 文档抽取属本体归纳 |
+| 52 | `ListOntologyVersions` | `OntologyService` | 版本清单属本体生命周期 |
+| 53 | `GetOntologyVersion` | `OntologyService` | 版本详情属本体生命周期 |
+| 54 | `DiffOntologyVersions` | `OntologyService` | 版本差异属本体治理 |
+| 55 | `ExportOntologyVersion` | `OntologyService` | 版本导出属本体治理 |
+| 56 | `ProposeOntologyVersion` | `OntologyService` | 提案创建属本体治理 |
+| 57 | `ListOntologyProposals` | `OntologyService` | 提案列表属本体治理 |
+| 58 | `GetOntologyProposal` | `OntologyService` | 提案详情属本体治理 |
+| 59 | `ReviewOntologyProposal` | `OntologyService` | 提案评审属本体治理 |
+| 60 | `ListOntologyTransitions` | `OntologyService` | 状态迁移审计属本体治理 |
+| 61 | `PublishOntology` | `OntologyService` | 发布是本体生命周期的终态动作 |
+| 62 | `RollbackOntology` | `OntologyService` | 回滚是本体生命周期动作 |
+| 63 | `ListOntologyEvents` | `OntologyService` | 本体事件属本体域 |
+| 64 | `VerifyOntology` | `OntologyService` | 本体一致性校验属本体域 |
+| 65 | `ImportOntology` | `OntologyService` | 本体导入属本体生命周期 |
+| 66 | `GetOntologyImport` | `OntologyService` | 导入状态属本体生命周期 |
+| 67 | `PublishOntologyImport` | `OntologyService` | 导入发布属本体生命周期 |
+| 68 | `PutOntologyShapes` | `OntologyService` | SHACL 形状属本体 schema |
+| 69 | `GetOntologyShapes` | `OntologyService` | 形状读取属本体 schema |
+| 70 | `ExportBundle` | `OntologyService` | 迁移包是本体版本产物 |
+| 71 | `InspectBundle` | `OntologyService` | 迁移包检查属本体治理 |
+| 72 | `ImportBundle` | `OntologyService` | 迁移包导入属本体治理 |
+| 73 | `ListTerms` | `OntologyService` | 术语属本体词表 |
+| 74 | `GetTermCoverage` | `OntologyService` | 术语覆盖率属本体质量 |
+| 75 | `DiffTerms` | `OntologyService` | 术语差异属本体治理 |
+| 76 | `ImportTerms` | `OntologyService` | 术语导入属本体词表 |
+| 77 | `ListTermChecks` | `OntologyService` | 术语检查属本体质量 |
+| 78 | `GetTermGate` | `OntologyService` | 术语门禁属本体质量 |
+| 79 | `GetOntologyDiff` | `OntologyService` | 本体 diff 属本体域健康视图 |
+| 80 | `GetOntologySnapshot` | `OntologyService` | 本体快照属本体域 |
+| 81 | `AnalyzeOntologyImpact` | `OntologyService` | 影响分析依赖本体版本 |
+| 82 | `ListOntologyEvidence` | `OntologyService` | 本体证据属发布审计 |
+| 83 | `DownloadOntologyEvidence` | `OntologyService` | 证据下载属发布审计 |
+| 84 | `MaterializeReasoning` | `OntologyService` | 推理物化属本体语义层 |
+| 85 | `GetReasoningStatus` | `OntologyService` | 推理状态属本体语义层 |
+| 86 | `RunValidation` | `OntologyService` | SHACL 校验属本体门禁 |
+
+**现有 op 的处理**：本次只重排 86 个新增 op；现有 88 个 op 暂留原 service。M2 第一批把 `ontology-induction.smithy`（19）与 `ontology-graph.smithy`（14）迁入 `OntologyService`，路径不变、C2 总量不变（88），迁移完成前不宣称「三套契约已收口」。
 
 ### 5.1 文档摄入（8）
 
@@ -400,7 +501,7 @@
 | `GetAnswerQuality` | `GET /answer/quality` | `sampleSize?`, `since?` | `metrics{coverage,citationRate,refusalRate}`, `samples[]` | — |
 | `ResolveContext` | `POST /context/resolve` | `query`, `sessionId?`, `maxItems?` | `entities[]`, `metrics[]`, `documents[]`, `trace` | `NoResultError` |
 
-### 5.3 指标（8）
+### 5.3 指标（9）
 
 | operation | HTTP | 输入 | 输出 | 额外错误 |
 |---|---|---|---|---|
@@ -508,7 +609,7 @@
 | `GetDictionaryCommentCoverage` | `GET /catalog/dictionaries/comment-coverage` | — | `covered`, `total`, `byTable[]` | — |
 | `BindDictionary` | `POST /catalog/dictionaries/bind` | `table`, `column`, `termIri` | `ok`, `boundTerm` | `NotFoundError` |
 
-### 5.11 影响、证据、推理、校验、实体（6）
+### 5.11 影响、证据、推理、校验、实体（7）
 
 | operation | HTTP | 输入 | 输出 | 额外错误 |
 |---|---|---|---|---|
@@ -846,7 +947,7 @@
 | 层 | COA 原生 | 我们加的 | platform-core 残留 |
 |---|---|---|---|
 | UI | `web-app` 24 路由、Cloudscape | 6 条新路由 + 页面 | **0**（10 页 HTML 删除） |
-| 入口 | `ControlPlaneService` + `DataLayerService` | 86 个新 operation（挂在同一 service） | **0**（137 端点删除） |
+| 入口 | `ControlPlaneService` + `DataLayerService` | 86 个新 operation 按 §5.0 分挂 `ControlPlaneService`（32）/ `DataLayerService`（18）/ `OntologyService`（36）；对外仍一个网关、一个 base URL | **0**（137 端点删除） |
 | 服务 | 8 个原生包 | 各包内新增模块（§3.3 落点） | **0** |
 | 端口 | `coa-ports` 13 端口 + 2 例外 | 不新增端口；`CanvasPort` 等留服务内部 | **0**（`ports.py` 删除） |
 | 组合 | `coa-runtime` | 新增 provider 登记 | **0**（`assembly.py` 删除） |
@@ -862,7 +963,7 @@
 | 步 | 动作 | 进入下一步的闸门（机械可查） |
 |---|---|---|
 | 1 | **能力搬迁**（搬一块验一块） | ① 迁移台账 100% 行有「已搬 / 已删」状态；② 每块能力在目标包有 ≥1 次**真跑通**；③ `grep -rn "platform_core" <目标包>` = 0；④ 双跑：同一请求在旧实现与新实现结果一致 |
-| 2 | **出口切换**（137 端点不再对外） | ① 137 条路由访问日志连续 7 天 = 0（`/healthz` 除外，且它也已由 `HealthCheck` 承担）；② 86 个新 operation 全部有契约测试与一次真跑通；③ `web-app` 网络请求只命中 Smithy 定义路径；④ 仅保留 8080 只读快照用于比对 |
+| 2 | **出口切换**（137 端点不再对外） | ① 137 条路由访问日志连续 7 天 = 0（`/healthz` 除外，且它也已由 `HealthCheck` 承担）；② 86 个新 operation 按 §5.0 分挂三套契约，全部有契约测试与一次真跑通；③ `web-app` 网络请求只命中 Smithy 定义路径；④ C9 通过（对外只有一个 base URL）；⑤ 仅保留 8080 只读快照用于比对 |
 | 3 | **目录删除** | ① `Test-Path packages/platform-core` = `False`；② `grep -rn "platform_core" --include=*.py --include=*.toml --include=*.yml .` = 0；③ compose / pyproject / uv workspace 无引用；④ CI 全绿 |
 | 4 | **实例退役**（8080 / 8082） | §8.3 数据接管判据 7 条全绿 + 双跑 ≥14 天零差异；停服后 5173 全功能可用 |
 
@@ -896,20 +997,22 @@
 
 | # | 检查 | 命令（示例） | 通过标准 |
 |---|---|---|---|
-| C1 | 对外 HTTP 路由注册点唯一 | `grep -rn "FastAPI(\|APIRouter(\|@app\.\(get\|post\|put\|delete\)" packages --include=*.py` | 只命中 `deploy/local/` 的契约适配层；其余 0 |
-| C2 | 路由由契约生成 | 对比 `grep -c "@http(" models/src/main/smithy/*.smithy` 与本地路由表导出行数 | 两者相等（83 + 5 = 88，2026-11-09 实测；契约变更时以两侧实测同时更新） |
+| C1 | 对外网关入口唯一 | `grep -rn "FastAPI(\|APIRouter(\|@app\.\(get\|post\|put\|delete\)" packages --include=*.py` | 只命中 `deploy/local/` 的网关适配层；网关内可挂 3 个 service router，但对外注册点 = 1，其余 0 |
+| C2 | 路由由契约生成 | 对比 `grep -c "@http(" models/src/main/smithy/*.smithy` 与本地路由表导出行数 | 当前两侧相等（83 + 5 = 88，2026-11-09 实测）；86 个新 op 落地后两侧同为 174；任何时点两侧必须相等 |
 | C3 | web-app 路由有背书 | `grep -o 'path="[^"]*"' packages/web-app/src/App.tsx \| sort -u` | 每条都在 §6.3 功能点表中有 operation 背书；无背书新增 = 0 |
 | C4 | 无第二套 UI | `Test-Path packages/platform-core/web`；`grep -rn "webui" packages --include=*.py` | 均为 0 |
 | C5 | 无第二套入口 | `grep -rn "create_app(" packages --include=*.py` | 0（`platform_core.api` 已删） |
 | C6 | 无平台自有端口 | `grep -rn "class .*Port(Protocol)" packages/platform-core`（删除前）；`grep -rn "manifest()" packages/coa-ports` | 删除前只允许 platform 包内部；删除后为 0 |
 | C7 | 目录归零 | `grep -rn "platform_core" --include=*.py --include=*.toml --include=*.yml .` | 0（历史文档除外） |
 | C8 | 8080/8082 无监听 | `Test-NetConnection 127.0.0.1 -Port 8080` / `8082` | 第 4 步前允许监听；第 4 步后必须失败 |
+| C9 | 对外 base URL 唯一 | `grep -rn "VITE_API_BASE\|baseURL\|API_BASE" packages/web-app --include=*.ts --include=*.tsx --include=*.mjs` | 只出现 1 个对外网关地址；`deploy/local/` 之外的构建产物不得内嵌第二个对外 base URL |
 
 补充硬规则：
 
 1. 新增任何对外路由，必须在同一次提交里出现对应的 Smithy operation；否则视为第二入口，直接拒绝。
 2. 新增任何 UI 页面，必须在 `App.tsx` 路由旁标注 operation 名；否则视为第二套说法。
 3. 健康检查只允许 `HealthCheck` / `GetSystemHealth` 两个 op；其他服务内的 `/health` 只能作为内部探针，不得对外暴露。
+4. 「一个入口」= 一个网关、一个 base URL；service 数量不设上限，但新增 service 必须先在 §5.0 的归属表里登记，否则视为私活。
 
 ---
 
@@ -946,14 +1049,14 @@
 
 | # | 计划现状 | 本方案结论 | 建议 |
 |---|---|---|---|
-| 1 | §1「`platform_core` 是实现库」 | 最终状态是**目录不存在**，不是长期实现库 | 把「实现库」表述改为「过渡期实现库，阶段 7 删除」 |
+| 1 | §1「`platform_core` 是实现库」 | 最终状态是**目录不存在**，不是长期实现库 | 已改为「过渡期实现库，阶段 7 删除」（已在 `00` §1 落地） |
 | 2 | §3 原则表无「一个 UI/入口」 | 第一原则高于其余原则 | 增补为第 0 条（已在 `00` §3 落地） |
-| 3 | §5 阶段 5/6 才做新特性 | 平台已有实现的特性应**搬迁**，不是阶段 5/6 重写；搬迁与阶段并行 | 阶段 5/6 判据加「平台已有实现按搬迁计，禁止重写」 |
+| 3 | §5 阶段 5/6 才做新特性 | 平台已有实现的特性应**搬迁**，不是阶段 5/6 重写；搬迁与阶段并行 | 阶段 5/6 判据加「平台已有实现按搬迁计，禁止重写」（已在 `00` §5 落地） |
 | 4 | §5 阶段 7 只写「硬骨头 + 全量回归」 | 阶段 7 必须包含 `platform-core` 删除与 8080/8082 退役闸门 | 增补 §5.2 下线线（已在 `00` 落地） |
 | 5 | §2 DoD 无「单一入口」判据 | 需要机械可查的收敛判据 | 增补 D8（已在 `00` 落地） |
 | 6 | §5 阶段 1 判据未禁止第二套 UI/入口 | 阶段 1 起就不得新建第二套 | §11.5 增补第 7 条（已在 `00` 落地） |
-| 7 | §4 现状「`platform_core` 43,775 行」 | 数量对，但未记 137 端点与 96 个可迁移能力 | 在 §4 增一行「端点与 operation 映射见 09」 |
-| 8 | §2 D1 的 `deploy/local/compose.yml` | 仓库当前不存在 | 标为交付缺口，不在本次修复 |
+| 7 | §4 现状「`platform_core` 43,775 行」 | 数量对，但未记 137 端点与 96 个可迁移能力 | 已在 `00` §4 增索引「137 端点 → operation 见 09 §4」 |
+| 8 | §2 D1 的 `deploy/local/compose.yml` | 仓库当前不存在 | 未修复；登记为 W8（`11` §4），D1 完成前必须落地 |
 
 ---
 
@@ -961,7 +1064,7 @@
 
 1. **共享 `platform.*` schema 还是翻译层。** 建议先共用（回填最快），阶段 7 前不再改；隔离作为后续独立议题。
 2. **`ontology_pg` 是否整体替换 `dynamo_store`。** 先 2–3 人日 spike 验证读写/版本/事务，再决定；失败则退回「PG 只存 T-Box 快照」的窄方案。
-3. **86 个 operation 的命名与分组。** 本方案按领域分组挂在 `ControlPlaneService`；若 Smithy 维护方要求拆 service，需同步改 §4/§7 的入口计数。
+3. **86 个 operation 的命名与分组。** 已拍板（2026-11-09）：不挂同一 service，按 §5.0 分挂 `ControlPlaneService` 32 / `DataLayerService` 18 / `OntologyService` 36；对外仍一个网关、一个 base URL。命名不变，只改归属。
 4. **合成数据是否需要对外 operation。** 若只用于测试，应放在 `scripts/`，不进契约；本方案暂按「有 UI 入口」处理。
 5. **推理的 JVM 依赖。** 第一波只做 RDFS/SHACL，OWL 返回 `UnsupportedError`。
 6. **工作量置信度。** 161–237 人日按模块行数与接口面估算，`ontology_pg`、`bundle`、数据接管三项误差各可达 ±50%。
@@ -981,3 +1084,64 @@
 | 端口定义 | `packages/coa-ports/src/coa_ports/` |
 | 本地 provider | `packages/local-providers/src/coa_local_providers/` |
 | 计划与验收档位 | `doc/coa-x/00-总计划.md` §2、§3、§4.1、§5 |
+
+---
+
+## 14. 需扩展清单（2026-11-09 追加：A-Box「类下实例」）
+
+**结论：契约里没有「查某个类下的实例」的 operation，本次不发明私活路由。** 下面两条是缺口与拟新增规格，派活依据。
+
+### 14.1 缺口一：没有实例维度的 operation，也没有实例维度
+
+实测（`models/src/main/smithy/ontology-graph.smithy`）：
+
+- `GraphVertexKind` 只有 `class` / `object-property` / `datatype-property` / `annotation-property` / `ontology` / `property` / `literal` / `blank-node` / `unknown`，**没有 `individual`**。
+- graph 组 14 个 operation 全是「按 IRI 取一个顶点」或「按子串搜」：`GraphSearch`、`GetGraphClass`、`GetGraphObjectProperty`、`GetGraphDatatypeProperty`、`GetOntologyOverview`。没有「按类列举实例」。
+- 引擎里存在 `/graph/vertex`（任意顶点，不校验 kind）与 `/graph/schema`，但都**不在契约内**，8099 桥也不转发（`doc/coa-x/tools/coa_api_local.py` 的路由表只有 search / ontology-overview / class / object-property / datatype-property）。
+- 平台的旧能力在 `POST /browse/ontology/instances?class=<iri>&limit=&offset=`（`packages/platform-core/src/platform_core/api.py:2434`），返回 `{class, items[{iri,label,graph}], total, limit, offset, pointer}`。这才是需要被 COA 契约接住的那条。
+
+### 14.2 拟新增 operation：`ListGraphClassInstances`
+
+```
+GET /namespaces/{namespaceId}/graph/class/instances
+
+input:
+  namespaceId  Uuid        (httpLabel, required)
+  uri          VertexIri   (httpQuery "uri", required)   与 GetGraphClass 同参，避免 IRI 双编码
+  ontologyId   OntologyId  (httpQuery "ontology_id", optional)  限定单个命名图
+  limit        Integer     (httpQuery, 1..500, 默认 50)
+  offset       Integer     (httpQuery, 0..1000000, 默认 0)
+output: GraphInstancePage
+  items      GraphInstanceSummaryList   // { uri, label, graphUris, types }
+  totalCount Integer                    // 独立于 limit/offset
+  limit      Integer
+  offset     Integer
+errors: NotFoundError(类不在该命名空间) / ValidationError(IRI 非法、limit·offset 越界)
+```
+
+错误语义要点：
+
+- 类存在但无实例 → `200` + `items: []` + `totalCount: 0`；只有「类本身不存在」才 `404`。与 8080 的行为一致（它返回空 items）。
+- `totalCount` 与分页窗口必须由同一条 where 子句派生，服务端一次算清，前端不许自己猜。
+- 排序必须确定（label 小写优先、IRI 兜底），否则 offset 分页会漂。
+- 同时给 `GraphVertexKind` 补 `INDIVIDUAL = "individual"`；`GraphSearch` 命中实例时 `kind` 应报 `individual` 而不是现在的 `unknown`（实例的 `rdf:type` 不是 owl 元类，`_kind_from_type` 落空）。
+
+### 14.3 缺口二（更硬）：现有 `GraphSearch` 在实例量级上跑不通
+
+A-Box 灌入后实测（18,020 实例 / 121,130 三元组，同一台本机 Oxigraph）：
+
+| 调用 | 结果 |
+|---|---|
+| `count_entities` 同一条 where（带 label `CONTAINS`） | 0.7 s |
+| `search_entities`（内层带 label `CONTAINS` + 外层 `GRAPH ?g`） | **101.8 s** |
+| 直接把同一段 SPARQL 发 Oxigraph | **134.3 s** |
+| 经 8099 → 8101（读超时 30 s） | `500` / `The ontology service did not respond in time` |
+| 同一条 SQL 换成 `GRAPH <常量图>` + 去掉 label `CONTAINS` | 0.2 s |
+
+原因是查询形状：`GRAPH ?g { ?s ?_p ?_o }` + `FILTER(STRSTARTS(STR(?g), …))` 无法把图按下标裁剪，外层又对每条解重取 label/type，Oxigraph 规划成近似笛卡尔。**这不是「数据不对」，是「把实例塞进 T-Box 图存储」这条路本身不成立。**
+
+因此：
+
+1. 新 operation 必须**按类索引**取数（`?s a <类IRI>` + `GRAPH <图URI>` 常量绑定），禁止复用现在的 `GRAPH ?g` + STRSTARTS 形状。
+2. 生产语义上实例本就不该常驻 T-Box 图：契约里 `coa:isMapped` 才是结构化 Tier-2（NL→SQL/Ontop）的入口。本地这份 A-Box 的 `agreement#Policy` 等类 `isMapped` 为空，说明「类→表→实例」的映射也没落，需要一起补。
+3. 在 operation 落地前，5173 上**不做实例页**；验证只到存储与 SPARQL 层（见 `12-A-Box与写入链路本地化评估.md`）。
