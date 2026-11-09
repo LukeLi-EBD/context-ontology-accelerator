@@ -1,0 +1,32 @@
+{
+  "data_sources": {
+    "platform-demo": {
+      "catalog_available": true,
+      "rejection_reasons": {},
+      "tables": {
+        "platform.bank_loan_account": [
+          {
+            "name": "institution",
+            "data_type": "text"
+          },
+          {
+            "name": "loan_id",
+            "data_type": "text"
+          },
+          {
+            "name": "amount",
+            "data_type": "numeric"
+          },
+          {
+            "name": "status",
+            "data_type": "text"
+          },
+          {
+            "name": "origination_date",
+            "data_type": "date"
+          }
+        ]
+      }
+    }
+  }
+}
