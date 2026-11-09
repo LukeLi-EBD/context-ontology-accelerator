@@ -129,6 +129,16 @@ def _configure_environment() -> None:
         # answers 503 "ontology service unavailable" instead of crashing on an
         # unset variable.  Point this at a running engine to enable the layer.
         "ONTOLOGY_ENGINE_ENDPOINT": "http://127.0.0.1:8101",
+        # DataLayerService (Query / KBSearch) is served by the real Lambda
+        # handler, whose transport is the local-http ContextManagerPort. The
+        # context-manager is a separate process (run_local.py context-manager,
+        # port 8091); when it is down these two routes answer 502 rather than
+        # pretending to answer.
+        "COA_PROVIDER_CONTEXT_MANAGER": "local-http",
+        "COA_CONTEXT_MANAGER_ENDPOINT": os.environ.get(
+            "COA_CONTEXT_MANAGER_ENDPOINT", "http://127.0.0.1:8091"
+        ),
+        "COA_CONTEXT_MANAGER_TIMEOUT_S": "180",
         "COA_PROVIDER_CONTROL_PLANE_STORE": "postgres",
         # Local deployments have no IAM role to add to the DataZone project.
         "COA_LOCAL_SKIP_PROJECT_MEMBERSHIP": "true",
@@ -459,6 +469,7 @@ GRANTS = "coa_control_plane.grants.grants_handler"
 SOURCES = "coa_sources.api.sources_handler"
 METRICS = "coa_metrics.api.metric_api_handler"
 ONTOLOGY = "coa_ontology.api_proxy_handler"
+DATA_LAYER = "coa_data_layer.handler"
 
 ROUTES: list[tuple[str, str]] = [
     ("/namespaces", NAMESPACE),
@@ -498,6 +509,11 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/candidates", SOURCES),
     ("/namespaces/{namespaceId}/candidates/{candidateId}/approve", SOURCES),
     ("/namespaces/{namespaceId}/candidates/{candidateId}/reject", SOURCES),
+    # DataLayerService: Query / KBSearch are the contract's POST forms of the
+    # legacy platform GETs (/answer, /search, /browse/sparql), which are
+    # deliberately not modelled (see 09 §4.16).
+    ("/namespaces/{namespaceId}/query", DATA_LAYER),
+    ("/namespaces/{namespaceId}/kb/search", DATA_LAYER),
     ("/namespaces/{namespaceId}/metrics", METRICS),
     ("/namespaces/{namespaceId}/metrics/{name}", METRICS),
     ("/namespaces/{namespaceId}/metrics/validate", METRICS),
@@ -711,7 +727,16 @@ def _make_app() -> Any:
         }
         print(f"[api] {request.method} {path} -> {module} ({template})")
         try:
-            result = handler(event, None)
+            if module == DATA_LAYER:
+                # The data-layer Lambda handler drives the ContextManagerPort with
+                # ``asyncio.run`` per request, which cannot run inside our event
+                # loop; a worker thread gives it a clean loop. It also keeps a
+                # multi-second Tier-3 query from blocking every other route.
+                import asyncio
+
+                result = await asyncio.to_thread(handler, event, None)
+            else:
+                result = handler(event, None)
         except Exception as exc:  # surface the real failure in the terminal
             import traceback
 
