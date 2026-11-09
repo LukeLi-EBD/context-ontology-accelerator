@@ -178,7 +178,7 @@ class SourceDBQueryExecutor:
         if self._secrets is None:
             from coa_runtime.registry import resolve
 
-            self._secrets = resolve("SecretProvider")
+            self._secrets = resolve("SecretProvider").instance
         return self._secrets
 
     async def close(self) -> None:

@@ -1074,14 +1074,12 @@ class TestS3PersistStepFailure:
         """The primitive itself must propagate (#467): a mocked S3 failure raises
         rather than being logged-and-swallowed."""
         with (
-            patch("boto3.client") as mock_client,
+            patch("coa_ontology.proposals._s3") as mock_s3,
             patch("coa_ontology.stores.neptune_db_graph._gsp_get_turtle", return_value=":X a owl:Class ."),
             patch("coa_ontology.proposals.dynamo_store") as mock_ds,
         ):
             mock_ds.list_proposals.return_value = []
-            mock_s3 = MagicMock()
-            mock_s3.put_object.side_effect = RuntimeError("S3 boom")
-            mock_client.return_value = mock_s3
+            mock_s3.return_value.put.side_effect = RuntimeError("S3 boom")
             with pytest.raises(Exception, match="S3 boom"):
                 proposals._persist_induced_to_s3("http://x.org/o#", "ns", "https://graph/uri")
 

@@ -87,7 +87,7 @@ class FewShotExampleLoader:
             environment = dict(os.environ)
             if self._region:
                 environment["AWS_REGION"] = self._region
-            self._store = resolve("ObjectStorePort", Settings(environment))
+            self._store = resolve("ObjectStorePort", Settings(environment)).instance
         return self._store
 
     def invalidate(self, namespace: str | None = None) -> None:

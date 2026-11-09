@@ -1522,7 +1522,7 @@ def _run_ingest_from_s3(
 
     dynamo_store.update_ingest_job(job_id, IngestJobState.RUNNING, namespace=namespace)
     try:
-        store = resolve("ObjectStorePort")
+        store = resolve("ObjectStorePort").instance
         # ``head`` keeps the size check before the body is read into memory.
         content_length = store.head(_ONTOLOGY_BUCKET, s3_key).size
         _max_ingest_bytes = 100 * 1024 * 1024  # 100 MB

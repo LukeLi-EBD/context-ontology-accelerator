@@ -148,9 +148,9 @@ class TestImportFromS3:
 
     @patch("coa_metrics.api.import_osi._get_opensearch")
     @patch("coa_metrics.api.import_osi._get_neptune")
-    @patch("coa_metrics.api.import_osi._get_s3_client")
+    @patch("coa_metrics.api.import_osi._get_object_store")
     def test_reads_content_from_s3(
-        self, mock_s3: MagicMock, mock_neptune: MagicMock, mock_opensearch: MagicMock
+        self, mock_store: MagicMock, mock_neptune: MagicMock, mock_opensearch: MagicMock
     ) -> None:
         from coa_metrics.api.import_osi import handler
 
@@ -170,9 +170,7 @@ class TestImportFromS3:
             "          source_table: orders\n"
         )
 
-        mock_body = MagicMock()
-        mock_body.read.return_value = yaml_content.encode("utf-8")
-        mock_s3.return_value.get_object.return_value = {"Body": mock_body}
+        mock_store.return_value.get.return_value = (yaml_content.encode("utf-8"), None)
         mock_neptune.return_value.get_metric.return_value = None
         mock_neptune.return_value.create_metric.return_value = None
 
@@ -186,9 +184,9 @@ class TestImportFromS3:
         assert resp["statusCode"] == 200
         body = json.loads(resp["body"])
         assert body["metricsCreated"] == 1
-        mock_s3.return_value.get_object.assert_called_once_with(
-            Bucket="test-bucket",
-            Key="test-ns/imports/abc/file.yaml",
+        mock_store.return_value.get.assert_called_once_with(
+            "test-bucket",
+            "test-ns/imports/abc/file.yaml",
         )
 
     @patch("coa_metrics.api.import_osi._read_from_s3")
@@ -240,11 +238,11 @@ class TestImportFromS3:
         assert resp["statusCode"] == 400
         assert "required" in json.loads(resp["body"])["message"].lower()
 
-    @patch("coa_metrics.api.import_osi._get_s3_client")
-    def test_s3_missing_key_returns_404(self, mock_s3: MagicMock) -> None:
+    @patch("coa_metrics.api.import_osi._get_object_store")
+    def test_s3_missing_key_returns_404(self, mock_store: MagicMock) -> None:
         from coa_metrics.api.import_osi import handler
 
-        mock_s3.return_value.get_object.side_effect = ClientError(
+        mock_store.return_value.get.side_effect = ClientError(
             {"Error": {"Code": "NoSuchKey", "Message": "missing"}}, "GetObject"
         )
 
@@ -253,11 +251,11 @@ class TestImportFromS3:
 
         assert resp["statusCode"] == 404
 
-    @patch("coa_metrics.api.import_osi._get_s3_client")
-    def test_s3_service_error_returns_503(self, mock_s3: MagicMock) -> None:
+    @patch("coa_metrics.api.import_osi._get_object_store")
+    def test_s3_service_error_returns_503(self, mock_store: MagicMock) -> None:
         from coa_metrics.api.import_osi import handler
 
-        mock_s3.return_value.get_object.side_effect = ClientError(
+        mock_store.return_value.get.side_effect = ClientError(
             {"Error": {"Code": "ServiceUnavailable", "Message": "slow down"}}, "GetObject"
         )
 

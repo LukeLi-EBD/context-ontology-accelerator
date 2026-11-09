@@ -424,7 +424,7 @@ def _config_provider():
     """Resolve the config port lazily, at the first SSM lookup."""
     from coa_runtime.registry import resolve
 
-    return resolve("ConfigProvider")
+    return resolve("ConfigProvider").instance
 
 
 def _get_ssm_parameter(name: str, *, required: bool = False) -> str:

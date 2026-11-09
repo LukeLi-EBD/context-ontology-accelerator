@@ -858,7 +858,7 @@ def _s3():
     if _object_store is None:
         from coa_runtime.registry import resolve
 
-        _object_store = resolve("ObjectStorePort")
+        _object_store = resolve("ObjectStorePort").instance
     return _object_store
 
 
