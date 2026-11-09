@@ -285,6 +285,30 @@ def _s3_object_store(settings: Settings) -> Any:
     )
 
 
+def _fs_object_store(settings: Settings) -> Any:
+    from coa_local_providers.object_fs import FsObjectStore
+
+    return FsObjectStore(
+        settings.require("COA_OBJECT_STORE_FS_ROOT", interface="ObjectStorePort")
+    )
+
+
+def _graph_store_oxigraph(settings: Settings) -> Any:
+    from coa_local_providers.shells import GraphStoreShell
+    from platform_core.adapters.graph_oxigraph import OxigraphHttpStore
+
+    store = OxigraphHttpStore(
+        settings.require("COA_GRAPH_OXIGRAPH_URL", interface="GraphStorePort"),
+        timeout_ms=settings.get_int(
+            "COA_GRAPH_OXIGRAPH_TIMEOUT_MS", default=30000, interface="GraphStorePort"
+        ),
+        max_rows=settings.get_int(
+            "COA_GRAPH_OXIGRAPH_MAX_ROWS", default=10000, interface="GraphStorePort"
+        ),
+    )
+    return GraphStoreShell(store, provider="oxigraph")
+
+
 # ── the catalog ─────────────────────────────────────────────────────────────
 
 _SHELL = "薄壳未落地（阶段 1 第 3 步）"
@@ -506,7 +530,11 @@ SPECS: tuple[InterfaceSpec, ...] = (
         context="本体 / 知识图",
         required_methods=("query", "update", "clear_graph"),
         expects_async=False,
-        providers=_providers(_todo("oxigraph"), _todo("fuseki"), _todo("neptune", _AWS)),
+        providers=_providers(
+            _done("oxigraph", _graph_store_oxigraph),
+            _todo("fuseki", "Fuseki 只有异步只读 GraphClient，无同步写入实现"),
+            _todo("neptune", _AWS),
+        ),
         notes="平台同步 GraphStore 形状，供本体写 schema 图",
     ),
     InterfaceSpec(
@@ -514,7 +542,11 @@ SPECS: tuple[InterfaceSpec, ...] = (
         key="COA_PROVIDER_OBJECT_STORE",
         context="文档摄入 / 数据源接入",
         protocol=ObjectStorePort,
-        providers=_providers(_todo("fs"), _todo("pg"), _done("s3", _s3_object_store, "AWS S3")),
+        providers=_providers(
+            _done("fs", _fs_object_store, "本地文件；无预签名、无分片上传"),
+            _todo("pg"),
+            _done("s3", _s3_object_store, "AWS S3"),
+        ),
     ),
     InterfaceSpec(
         name="MetadataStorePort",
