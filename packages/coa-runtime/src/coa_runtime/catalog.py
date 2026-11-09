@@ -20,14 +20,17 @@ from coa_ports import (
     ConfigProvider,
     ContextManagerPort,
     EventBusPort,
+    GraphAdminPort,
     IdentityPort,
     MetadataStorePort,
+    MetricIndexPort,
     ObjectStorePort,
     SchedulerPort,
     SchemaProvider,
     SecretProvider,
     ServiceRegistryPort,
     TaskQueuePort,
+    WarehouseAdminPort,
     WorkflowPort,
 )
 
@@ -121,12 +124,58 @@ def _pgvector(settings: Settings) -> Any:
     )
 
 
+def _graph_admin(settings: Settings) -> Any:
+    from coa_local_providers.graph_admin import OxigraphGraphAdmin
+
+    return OxigraphGraphAdmin(
+        settings.require("COA_GRAPH_OXIGRAPH_URL", interface="GraphAdminPort"),
+        timeout_ms=settings.get_int("COA_GRAPH_OXIGRAPH_TIMEOUT_MS", default=30000, interface="GraphAdminPort"),
+    )
+
+
+def _warehouse_admin(settings: Settings) -> Any:
+    from coa_local_providers.warehouse_admin import PgWarehouseAdmin
+
+    dsn = settings.get("COA_WAREHOUSE_ADMIN_PG_DSN") or settings.require(
+        "COA_METADATA_PG_DSN", interface="WarehouseAdminPort"
+    )
+    return PgWarehouseAdmin(dsn)
+
+
+def _metric_index_pg(settings: Settings) -> Any:
+    from coa_local_providers.metric_index_pg import PgMetricIndex
+
+    dsn = settings.get("COA_METRIC_INDEX_PG_DSN") or settings.require(
+        "COA_METADATA_PG_DSN", interface="MetricIndexPort"
+    )
+    return PgMetricIndex(dsn)
+
+
 def _postgres_executor(settings: Settings) -> Any:
     from coa_local_providers.query_pg import PostgresQueryExecutor
 
     return PostgresQueryExecutor(
         settings.require("COA_EXECUTOR_POSTGRES_DSN", interface="QueryExecutor"),
         max_rows=settings.get_int("COA_EXECUTOR_MAX_ROWS", default=1000, interface="QueryExecutor"),
+    )
+
+
+def _llm_shell(settings: Settings) -> Any:
+    from coa_local_providers.shells.llm import PlatformLLMShell
+    from platform_core.adapters.llm_openai import LlmClient
+    from platform_core.config import LlmConfig
+    from platform_core.ports import EnvSecretProvider
+
+    config = LlmConfig(
+        provider=settings.get("COA_LLM_PROVIDER") or "openai-compatible",
+        base_url=settings.get("COA_LLM_BASE_URL") or "",
+        model=settings.get("COA_LLM_MODEL") or "",
+        timeout_ms=settings.get_int("COA_LLM_TIMEOUT_MS", default=30000, interface="LLMClient"),
+        api_key_env=settings.get("COA_LLM_API_KEY_ENV") or "LLM_API_KEY",
+    )
+    return PlatformLLMShell(
+        LlmClient(config, EnvSecretProvider()),
+        timeout_s=settings.get_float("COA_LLM_TIMEOUT_S", default=60.0, interface="LLMClient"),
     )
 
 
@@ -349,6 +398,15 @@ SPECS: tuple[InterfaceSpec, ...] = (
         notes="COA 异步 GraphClient；平台同步适配器是另一接口 GraphStorePort",
     ),
     InterfaceSpec(
+        name="GraphAdminPort",
+        key="COA_PROVIDER_GRAPH_ADMIN",
+        context="数据源接入 / 知识图",
+        protocol=GraphAdminPort,
+        expects_async=False,
+        providers=_providers(_done("oxigraph", _graph_admin), _todo("neptune", _AWS)),
+        notes="控制面：引擎探活、集群清单、标签；GraphClient 不承担这些，AWS 侧登记未接线",
+    ),
+    InterfaceSpec(
         name="VectorClient",
         key="COA_PROVIDER_VECTOR",
         context="问答与检索",
@@ -357,16 +415,29 @@ SPECS: tuple[InterfaceSpec, ...] = (
         providers=_providers(_done("platform-pgvector", _pgvector), _todo("aoss", _AWS)),
     ),
     InterfaceSpec(
+        name="MetricIndexPort",
+        key="COA_PROVIDER_METRIC_INDEX",
+        context="问答与检索 / 控制面",
+        protocol=MetricIndexPort,
+        expects_async=True,
+        providers=_providers(
+            _done("platform-pg", _metric_index_pg, "直接检索 platform.metric_definition（单租户，检索只接此实现）"),
+            _todo("aoss", _AWS),
+        ),
+        notes="替换 metric-service 的 OpenSearch 指标索引；不复用 VectorClient（后者返回文档分块 VectorHit）",
+    ),
+    InterfaceSpec(
         name="LLMClient",
         key="COA_PROVIDER_LLM",
         context="问答与检索",
         required_methods=("complete",),
         expects_async=True,
         providers=_providers(
-            _todo("openai-compatible", "平台 LlmClient 是同步 complete_json，需薄壳（阶段 1 第 3 步）"),
+            _done("openai-compatible", _llm_shell, "同步 complete_json 的异步薄壳；流式与 embed 显式 unsupported"),
             _todo("llama-cpp", "实现位于 coa-gateway 验证跑道，未迁入"),
             _todo("bedrock", _AWS),
         ),
+        notes="converse/health_check 可包；converse_stream/embed 抛 PortError(unsupported)；embed 归 EmbeddingPort",
     ),
     InterfaceSpec(
         name="QueryExecutor",
@@ -375,6 +446,15 @@ SPECS: tuple[InterfaceSpec, ...] = (
         required_methods=("execute",),
         expects_async=True,
         providers=_providers(_done("postgres", _postgres_executor), _todo("athena", _AWS)),
+    ),
+    InterfaceSpec(
+        name="WarehouseAdminPort",
+        key="COA_PROVIDER_WAREHOUSE_ADMIN",
+        context="数据源接入 / 控制面",
+        protocol=WarehouseAdminPort,
+        expects_async=False,
+        providers=_providers(_done("postgres", _warehouse_admin), _todo("athena", _AWS)),
+        notes="workgroup/catalog 本地为 no-op，run_query 只读；AWS 侧登记未接线",
     ),
     InterfaceSpec(
         name="GraphStorePort",

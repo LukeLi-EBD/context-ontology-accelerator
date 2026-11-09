@@ -21,15 +21,18 @@ ALL_PORTS = [
     ports.ConfigProvider,
     ports.ContextManagerPort,
     ports.EventBusPort,
+    ports.GraphAdminPort,
     ports.GraphStorePort,
     ports.IdentityPort,
     ports.MetadataStorePort,
+    ports.MetricIndexPort,
     ports.ObjectStorePort,
     ports.SchedulerPort,
     ports.SchemaProvider,
     ports.SecretProvider,
     ports.ServiceRegistryPort,
     ports.TaskQueuePort,
+    ports.WarehouseAdminPort,
     ports.WorkflowPort,
 ]
 

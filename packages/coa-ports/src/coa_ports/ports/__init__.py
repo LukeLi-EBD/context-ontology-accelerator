@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .answering import ContextManagerPort
+from .admin import GraphAdminPort, WarehouseAdminPort
+from .answering import ContextManagerPort, MetricIndexPort
 from .change import ChangeFeedPort
 from .config import ConfigProvider
 from .identity import IdentityPort
@@ -23,14 +24,17 @@ __all__ = [
     "ConfigProvider",
     "ContextManagerPort",
     "EventBusPort",
+    "GraphAdminPort",
     "GraphStorePort",
     "IdentityPort",
     "MetadataStorePort",
+    "MetricIndexPort",
     "ObjectStorePort",
     "SchedulerPort",
     "SchemaProvider",
     "SecretProvider",
     "ServiceRegistryPort",
     "TaskQueuePort",
+    "WarehouseAdminPort",
     "WorkflowPort",
 ]

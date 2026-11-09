@@ -15,6 +15,7 @@ for _path in (
     str(_PACKAGES / "coa-ports" / "src"),
     str(_PACKAGES / "platform-core" / "src"),
     str(_PACKAGES / "metric-service" / "src"),
+    str(_PACKAGES / "context-manager" / "src"),
     str(_REPO / "libs" / "common" / "src"),
 ):
     if _path not in sys.path:

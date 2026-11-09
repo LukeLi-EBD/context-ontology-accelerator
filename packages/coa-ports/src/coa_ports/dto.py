@@ -64,6 +64,45 @@ class ContextAction(StrEnum):
 
 
 @dataclass(frozen=True)
+class GraphCluster:
+    """One graph cluster as the admin plane reports it.
+
+    ``identifier`` is the cluster's stable name (a Neptune cluster id locally, a
+    local endpoint URL for the single-node provider). ``endpoints`` holds the
+    writer, reader and custom endpoints that must be treated as the same cluster.
+    """
+
+    identifier: str
+    engine: str
+    endpoints: tuple[str, ...]
+    iam_auth_enabled: bool = True
+
+
+@dataclass(frozen=True)
+class MetricRecord:
+    """One metric to make findable by description.
+
+    ``text`` is the provider's searchable projection of the metric (name,
+    definition, formula); it is built by the caller, not by the port, so a
+    provider never has to know the metric model.
+    """
+
+    namespace: NamespaceId
+    name: MetricName
+    text: str
+
+
+@dataclass(frozen=True)
+class MetricHit:
+    """One metric search result. ``score`` is provider-relative, not a probability."""
+
+    namespace: NamespaceId
+    name: MetricName
+    text: str
+    score: float
+
+
+@dataclass(frozen=True)
 class ContextRequest:
     """One request to the Answering & Retrieval context.
 
