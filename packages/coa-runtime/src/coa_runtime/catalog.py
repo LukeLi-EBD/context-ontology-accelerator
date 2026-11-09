@@ -452,7 +452,15 @@ SPECS: tuple[InterfaceSpec, ...] = (
         required_methods=("get", "put", "query", "update", "delete"),
         expects_async=False,
         port_location="coa_control_plane.ports",
-        providers=_providers(_todo("postgres"), _todo("dynamodb", _AWS)),
+        providers=_providers(
+            _todo(
+                "postgres",
+                "经 coa_common.dao 的 dynamo_store 接缝实现，不是 ControlPlaneStore 端口的实现："
+                "该端口不带表名，一个实例覆盖不了 namespaces/roles/grants 等多张表。"
+                "只有出现第二个需要端口形态的消费方时才抽端口实现。",
+            ),
+            _todo("dynamodb", _AWS),
+        ),
         notes="同步 DynamoDB item 语义，镜像 coa_common.dao.DatastoreDAO；阶段 7 实现",
     ),
     InterfaceSpec(
