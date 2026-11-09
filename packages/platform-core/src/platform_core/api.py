@@ -2890,6 +2890,29 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.post("/facts/retract")
     def retract_facts(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        """Retract many assertions.
+
+        Two selectors share this endpoint:
+        - explicit `factIds` (or subject/predicate/graph filters) → `batch_retract`,
+          which previews by default (`dryRun` defaults to true);
+        - `sourceDocumentId`/`sourceRunId` only → the legacy S8 source retraction,
+          which executes immediately (smoke_s8 depends on it).
+        The UI always sends `factIds`, so the wide-impact path always previews.
+        """
+        batch = any(
+            body.get(key) for key in ("factIds", "subject", "predicate", "graph")
+        )
+        if batch:
+            return runtime.facts.batch_retract(
+                fact_ids=body.get("factIds"),
+                subject=body.get("subject"),
+                predicate=body.get("predicate"),
+                graph=body.get("graph"),
+                source_document_id=body.get("sourceDocumentId"),
+                actor=body.get("actor") or "",
+                reason=body.get("reason"),
+                dry_run=bool(body.get("dryRun", True)),
+            )
         return runtime.facts.retract_by_source(
             document_id=body.get("sourceDocumentId"),
             run_id=body.get("sourceRunId"),
@@ -2920,8 +2943,51 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return runtime.facts.restore(fact_id, (body or {}).get("actor", "api"))
 
     @app.get("/facts/{fact_id}/events")
-    def fact_events(fact_id: str) -> dict[str, Any]:
-        return {"factId": fact_id, "events": runtime.facts.events(fact_id)}
+    def fact_events(
+        fact_id: str,
+        limit: int = Query(default=200, ge=1, le=1000),
+        before: int | None = Query(default=None),
+        format: str = Query(default="full"),
+    ) -> dict[str, Any]:
+        """Read the append-only chain on its own, without the assertion row.
+
+        The chain is the audit source of truth: a retracted/merged fact can be
+        inspected even when the console only holds an eventId. `before` is an
+        eventId cursor (exclusive) so the page walks backwards in pages.
+        """
+        if format not in ("full", "summary"):
+            raise PortError(
+                code="InvalidArgument",
+                message=f"format must be full|summary, got {format!r}",
+                provider="platform",
+                provider_code="E_FACT_EVENT_FORMAT",
+                details={"field": "format", "allowed": ["full", "summary"]},
+            )
+        chain = runtime.facts.events(fact_id)
+        older = [event for event in chain if before is None or event["eventId"] < before]
+        page = older[-limit:]
+        items = page
+        if format == "summary":
+            items = [
+                {
+                    "eventId": event["eventId"],
+                    "type": event["action"],
+                    "at": event["createdAt"],
+                    "actor": event["actor"],
+                    "reason": event["reason"],
+                    "batchId": event["batchId"],
+                }
+                for event in page
+            ]
+        return {
+            "factId": fact_id,
+            "count": len(page),
+            "total": len(chain),
+            "items": items,
+            # Backward-compatible alias: earlier callers read `events`.
+            "events": items,
+            "nextBefore": page[0]["eventId"] if len(older) > len(page) else None,
+        }
 
     @app.get("/facts/events/export")
     def export_fact_events(

@@ -236,3 +236,80 @@ export async function undoFactConflict(
 ): Promise<Record<string, unknown>> {
   return client.post<Record<string, unknown>>(`${root(namespace)}/conflicts/undo`, input);
 }
+
+export interface BatchRetractInput {
+  /** Explicit ids win; when omitted the kernel accepts subject/predicate/graph filters. */
+  factIds?: string[];
+  subject?: string;
+  predicate?: string;
+  graph?: string;
+  sourceDocumentId?: string;
+  actor: string;
+  reason?: string;
+  /** Defaults to true on the kernel, so an omitted flag can only preview. */
+  dryRun?: boolean;
+}
+
+export interface BatchRetractItem {
+  factId: string;
+  subject: string;
+  predicate: string;
+  object: string;
+  objectKind: string;
+  graph: string;
+  candidateId?: string | null;
+}
+
+export interface BatchRetractSkipped {
+  factId: string;
+  reason: string;
+}
+
+export interface BatchRetractResult {
+  dryRun: boolean;
+  batchId: string | null;
+  count: number;
+  items: BatchRetractItem[];
+  skipped: BatchRetractSkipped[];
+  actor: string;
+  reason?: string | null;
+  retracted?: string[];
+}
+
+/**
+ * Batch retract (RetractFacts). `dryRun` is the default shape: the response is a
+ * preview listing exactly which facts would change and which would be skipped.
+ */
+export async function batchRetractFacts(
+  client: ApiClient,
+  namespace: string,
+  input: BatchRetractInput,
+): Promise<BatchRetractResult> {
+  return client.post<BatchRetractResult>(`${root(namespace)}/retract`, input);
+}
+
+export interface FactEventPage {
+  factId: string;
+  count: number;
+  total: number;
+  items: FactEvent[];
+  /** Pass back as `before` to page further back in the chain. */
+  nextBefore: number | null;
+}
+
+export async function listFactEvents(
+  client: ApiClient,
+  namespace: string,
+  factId: string,
+  query: { limit?: number; before?: number; format?: "full" | "summary" } = {},
+): Promise<FactEventPage> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) continue;
+    params.set(key, String(value));
+  }
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+  return client.get<FactEventPage>(
+    `${root(namespace)}/${encodeURIComponent(factId)}/events${suffix}`,
+  );
+}

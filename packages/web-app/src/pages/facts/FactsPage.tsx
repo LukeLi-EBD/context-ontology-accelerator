@@ -9,6 +9,7 @@ import Container from "@cloudscape-design/components/container";
 import FormField from "@cloudscape-design/components/form-field";
 import Header from "@cloudscape-design/components/header";
 import Input from "@cloudscape-design/components/input";
+import Modal from "@cloudscape-design/components/modal";
 import Select from "@cloudscape-design/components/select";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Table from "@cloudscape-design/components/table";
@@ -16,15 +17,19 @@ import Table from "@cloudscape-design/components/table";
 import { ApiError, useApiClient } from "../../components/ApiClientProvider";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import {
+  batchRetractFacts,
   getFact,
   listFactConflicts,
+  listFactEvents,
   listFacts,
   resolveFactConflict,
   restoreFact,
   retractFact,
   undoFactConflict,
+  type BatchRetractResult,
   type FactAdjudication,
   type FactConflict,
+  type FactEventPage,
   type FactRecord,
 } from "../../services/fact-ledger";
 
@@ -86,6 +91,11 @@ export function FactsPage() {
   const [keepChoice, setKeepChoice] = useState<Record<string, string>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FactRecord | null>(null);
+  const [chain, setChain] = useState<FactEventPage | null>(null);
+  const [chainBusy, setChainBusy] = useState(false);
+  const [selectedFacts, setSelectedFacts] = useState<FactRecord[]>([]);
+  const [preview, setPreview] = useState<BatchRetractResult | null>(null);
+  const [batchBusy, setBatchBusy] = useState(false);
   const [actor, setActor] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -127,14 +137,43 @@ export function FactsPage() {
       setSelectedId(factId);
       setError(null);
       try {
-        setDetail(await getFact(api, namespaceId, factId));
+        const [row, page] = await Promise.all([
+          getFact(api, namespaceId, factId),
+          listFactEvents(api, namespaceId, factId, { limit: 100 }),
+        ]);
+        setDetail(row);
+        setChain(page);
       } catch (err) {
         setDetail(null);
+        setChain(null);
         setError(`读取事实详情失败：${errorText(err)}`);
       }
     },
     [api, namespaceId],
   );
+
+  const loadEarlier = async () => {
+    if (!namespaceId || !chain || chain.nextBefore === null) return;
+    setChainBusy(true);
+    setError(null);
+    try {
+      const page = await listFactEvents(api, namespaceId, chain.factId, {
+        limit: 100,
+        before: chain.nextBefore,
+      });
+      // Pages walk backwards; merge so the chain stays in eventId order.
+      setChain({
+        ...page,
+        count: page.count + chain.count,
+        total: page.total,
+        items: [...page.items, ...chain.items],
+      });
+    } catch (err) {
+      setError(`读取更早事件失败：${errorText(err)}`);
+    } finally {
+      setChainBusy(false);
+    }
+  };
 
   const requireActor = (): string => {
     const value = actor.trim();
@@ -157,6 +196,9 @@ export function FactsPage() {
           ? await retractFact(api, namespaceId, fact.factId, { actor: who, reason: reason || undefined })
           : await restoreFact(api, namespaceId, fact.factId, { actor: who, reason: reason || undefined });
       setDetail(await getFact(api, namespaceId, fact.factId));
+      setChain(
+        await listFactEvents(api, namespaceId, fact.factId, { limit: 100 }),
+      );
       setNotice(
         `${kind === "retract" ? "已撤回" : "已恢复"} ${fact.factId}（actor=${who}，当前状态 ${
           updated.state ?? "-"
@@ -169,6 +211,60 @@ export function FactsPage() {
       );
     } finally {
       setBusy(null);
+    }
+  };
+
+  const previewBatch = async () => {
+    if (!namespaceId) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const who = requireActor();
+      const factIds = selectedFacts.map((item) => item.factId);
+      const result = await batchRetractFacts(api, namespaceId, {
+        factIds,
+        actor: who,
+        reason: reason || undefined,
+        dryRun: true,
+      });
+      setPreview(result);
+    } catch (err) {
+      setError(`批量撤回预览失败：${errorText(err)}`);
+    }
+  };
+
+  const confirmBatch = async () => {
+    if (!namespaceId || !preview) return;
+    setBatchBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await batchRetractFacts(api, namespaceId, {
+        factIds: preview.items.map((item) => item.factId),
+        actor: preview.actor,
+        reason: preview.reason ?? undefined,
+        dryRun: false,
+      });
+      const skipped = result.skipped ?? [];
+      setNotice(
+        `批量撤回完成：${result.count} 条，批次 ${result.batchId ?? "-"}，actor=${result.actor}` +
+          (result.reason ? `，理由=${result.reason}` : "，未填理由") +
+          (skipped.length
+            ? `；跳过 ${skipped.length} 条（${skipped
+                .map((item) => `${item.factId}:${item.reason}`)
+                .join("，")}）`
+            : ""),
+      );
+      setPreview(null);
+      setSelectedFacts([]);
+      if (detail && result.retracted?.includes(detail.factId)) {
+        await loadDetail(detail.factId);
+      }
+      await loadFacts();
+    } catch (err) {
+      setError(`批量撤回失败：${errorText(err)}`);
+    } finally {
+      setBatchBusy(false);
     }
   };
 
@@ -314,7 +410,18 @@ export function FactsPage() {
 
       <Container
         header={
-          <Header variant="h2" description={`共 ${facts.length} 条`}>
+          <Header
+            variant="h2"
+            description={`共 ${facts.length} 条；已选 ${selectedFacts.length} 条`}
+            actions={
+              <Button
+                disabled={selectedFacts.length === 0}
+                onClick={() => void previewBatch()}
+              >
+                批量撤回（预览）
+              </Button>
+            }
+          >
             事实列表
           </Header>
         }
@@ -323,6 +430,12 @@ export function FactsPage() {
           items={facts}
           loading={listBusy}
           loadingText="读取事实账本"
+          selectionType="multi"
+          selectedItems={selectedFacts}
+          onSelectionChange={({ detail: change }) =>
+            setSelectedFacts(change.selectedItems)
+          }
+          trackBy="factId"
           columnDefinitions={[
             { id: "factId", header: "factId", cell: (item) => item.factId, width: 220 },
             { id: "subject", header: "主语", cell: (item) => item.subject },
@@ -441,13 +554,29 @@ export function FactsPage() {
               </Button>
             </SpaceBetween>
             <Table
-              items={detail.events ?? []}
-              header={<Header variant="h3">事件链（{(detail.events ?? []).length} 条）</Header>}
+              items={chain?.items ?? []}
+              loading={chainBusy}
+              header={
+                <Header
+                  variant="h3"
+                  description="独立读：GET /facts/{factId}/events，不依赖事实行；撤销入口只持有 eventId 时也走这条链"
+                  actions={
+                    chain?.nextBefore != null ? (
+                      <Button loading={chainBusy} onClick={() => void loadEarlier()}>
+                        加载更早
+                      </Button>
+                    ) : undefined
+                  }
+                >
+                  事件链（已载 {chain?.count ?? 0} / 共 {chain?.total ?? 0} 条）
+                </Header>
+              }
               columnDefinitions={[
                 { id: "createdAt", header: "时间", cell: (item) => item.createdAt ?? "-" },
                 { id: "action", header: "动作", cell: (item) => item.action },
                 { id: "actor", header: "actor", cell: (item) => item.actor ?? "-" },
                 { id: "reason", header: "原因", cell: (item) => item.reason ?? "-" },
+                { id: "batchId", header: "批次", cell: (item) => item.batchId ?? "-" },
                 {
                   id: "payload",
                   header: "载荷",
@@ -617,6 +746,59 @@ export function FactsPage() {
           empty={<Box textAlign="center">还没有裁决记录</Box>}
         />
       </Container>
+
+      <Modal
+        visible={preview !== null}
+        onDismiss={() => setPreview(null)}
+        size="large"
+        header="批量撤回预览"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button onClick={() => setPreview(null)} disabled={batchBusy}>
+                取消
+              </Button>
+              <Button
+                variant="primary"
+                loading={batchBusy}
+                disabled={(preview?.count ?? 0) === 0}
+                onClick={() => void confirmBatch()}
+              >
+                确认撤回 {preview?.count ?? 0} 条
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        {preview && (
+          <SpaceBetween size="m">
+            <Alert type="warning">
+              将把 <b>{preview.count}</b> 条生效事实改为 retracted；actor=
+              <b>{preview.actor}</b>，理由=
+              <b>{preview.reason ? preview.reason : "（未填）"}</b>
+              ，每条都会写 `batch_retracted` 事件并带上同一批次号。确认前不会写入任何东西。
+            </Alert>
+            {preview.skipped.length > 0 && (
+              <Alert type="info">
+                跳过 {preview.skipped.length} 条：
+                {preview.skipped.map((item) => `${item.factId}（${item.reason}）`).join("，")}
+              </Alert>
+            )}
+            <Table
+              items={preview.items}
+              trackBy="factId"
+              columnDefinitions={[
+                { id: "factId", header: "factId", cell: (item) => item.factId, width: 220 },
+                { id: "subject", header: "主语", cell: (item) => item.subject },
+                { id: "predicate", header: "谓词", cell: (item) => item.predicate },
+                { id: "object", header: "宾语", cell: (item) => item.object },
+                { id: "graph", header: "图", cell: (item) => item.graph },
+              ]}
+              empty={<Box textAlign="center">没有可撤回的事实</Box>}
+            />
+          </SpaceBetween>
+        )}
+      </Modal>
     </SpaceBetween>
   );
 }

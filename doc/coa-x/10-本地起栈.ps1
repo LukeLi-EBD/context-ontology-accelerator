@@ -27,17 +27,23 @@
 .PARAMETER KeepContainers
   与 -Stop 一起用：只停进程，保留容器运行。
 
+.PARAMETER StrictReconcile
+  验收模式：第 4.5 步只读对账一旦发现差异（退出码非零）或根本没跑成，起栈直接失败。
+  常规开发与 -Stop 路径不加该开关，差异只告警。等价于环境变量 COA_RECONCILE_STRICT=1。
+
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\10-本地起栈.ps1
   powershell -ExecutionPolicy Bypass -File .\10-本地起栈.ps1 -Seed
   powershell -ExecutionPolicy Bypass -File .\10-本地起栈.ps1 -Stop
+  powershell -ExecutionPolicy Bypass -File .\10-本地起栈.ps1 -StrictReconcile   # 8 步验收 / 功能点核对 / M3 闸门
 #>
 [CmdletBinding()]
 param(
     [switch]$Stop,
     [switch]$Seed,
     [string]$Namespace = "ed70a15c-2d42-4dc9-8c61-33b2584f05fd",
-    [switch]$KeepContainers
+    [switch]$KeepContainers,
+    [switch]$StrictReconcile
 )
 
 $ErrorActionPreference = "Stop"
@@ -304,14 +310,26 @@ if ($started.Count -gt 0) {
     [System.IO.File]::WriteAllText($PidFile, $json, (New-Object System.Text.UTF8Encoding($false)))
 }
 
-# 4.5) fact ledger reconciliation (read-only). A difference is a warning, not a
-# stack failure: repairing it is always an explicit `reconcile_fact_ledger.py --fix`.
+# 4.5) fact ledger reconciliation (read-only).
+# Dev / start-stack path: a difference is a warning. Acceptance mode
+# (-StrictReconcile or COA_RECONCILE_STRICT=1): a difference must fail the stack,
+# because a green run against known inconsistencies proves nothing.
+$StrictReconcile = $StrictReconcile -or ($env:COA_RECONCILE_STRICT -match '^(1|true|yes)$')
 try {
     & $Python (Join-Path $Tools "reconcile_fact_ledger.py") 2>&1 | ForEach-Object { Write-Host ("  {0}" -f $_) }
     if ($LASTEXITCODE -ne 0) {
+        if ($StrictReconcile) {
+            Write-Host "  [fail] fact ledger books disagree; strict reconcile refuses to hand over a dirty stack"
+            Write-Host "         inspect, then run tools\reconcile_fact_ledger.py --fix (writes audited 'reconciled' events)"
+            exit 1
+        }
         Write-Host "  [warn] fact ledger books disagree: review, then run tools\reconcile_fact_ledger.py --fix"
     }
 } catch {
+    if ($StrictReconcile) {
+        Write-Host ("  [fail] fact ledger reconcile did not run, so cleanliness is unproven: {0}" -f $_.Exception.Message)
+        exit 1
+    }
     Write-Host ("  [warn] fact ledger reconcile did not run: {0}" -f $_.Exception.Message)
 }
 

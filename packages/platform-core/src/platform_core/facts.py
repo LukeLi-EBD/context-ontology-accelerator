@@ -173,6 +173,7 @@ class FactLedger:
             provider_version="s10.1",
             capabilities=[
                 "fact.record", "fact.retract", "fact.retract_by_source",
+                "fact.batch_retract", "fact.events",
                 "fact.restore", "fact.list", "fact.conflicts",
                 "fact.conflict_adjudications",
                 "fact.conflict_resolve", "fact.conflict_undo",
@@ -363,6 +364,117 @@ class FactLedger:
             "factIds": fact_ids,
             "source": {"documentId": document_id, "runId": run_id},
         }
+
+    def batch_retract(
+        self,
+        fact_ids: list[str] | None = None,
+        subject: str | None = None,
+        predicate: str | None = None,
+        graph: str | None = None,
+        source_document_id: str | None = None,
+        actor: str = "operator",
+        reason: str | None = None,
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
+        """Withdraw many assertions in one batch.
+
+        Batch retract is the only operation that can move a large part of the
+        ledger at once, so the default caller path is a *preview*: `dry_run=True`
+        returns exactly what would change (and what would be skipped and why)
+        without writing.  Executing stamps one `batch_id` on every event, so the
+        batch is reconstructable from the chain and every row carries `actor`
+        and `reason`.
+        """
+        explicit = [str(fact_id) for fact_id in (fact_ids or []) if fact_id]
+        filters = {
+            "subject": subject, "predicate": predicate, "graph": graph,
+            "source_document_id": source_document_id,
+        }
+        selected = {key: value for key, value in filters.items() if value}
+        if not explicit and not selected:
+            raise _err(
+                "InvalidArgument",
+                "batch retract needs factIds or at least one filter (subject/predicate/graph/sourceDocumentId)",
+                "E_FACT_BATCH_SELECTOR",
+            )
+        if not actor:
+            raise _err(
+                "InvalidArgument", "actor is required for batch retract",
+                "E_FACT_EVENT", field="actor",
+            )
+
+        rows: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        if explicit:
+            for fact_id in explicit:
+                row = self._fetch(fact_id)
+                if row is None:
+                    skipped.append({"factId": fact_id, "reason": "not_found"})
+                elif row["state"] != "active":
+                    skipped.append(
+                        {"factId": fact_id, "reason": f"not_active:{row['state']}"}
+                    )
+                else:
+                    rows.append(row)
+        else:
+            clauses = ["state = 'active'"]
+            params: list[Any] = []
+            if subject:
+                clauses.append("subject_iri = %s")
+                params.append(subject)
+            if predicate:
+                clauses.append("predicate_iri = %s")
+                params.append(predicate)
+            if graph:
+                clauses.append("graph_iri = %s")
+                params.append(graph)
+            if source_document_id:
+                clauses.append("source_document_id = %s")
+                params.append(source_document_id)
+            rows = self._meta.query(
+                "SELECT fact_id FROM platform.fact_assertion WHERE "
+                + " AND ".join(clauses) + " ORDER BY fact_id",
+                tuple(params),
+            )
+            rows = [self._fetch(row["fact_id"]) for row in rows]
+            rows = [row for row in rows if row is not None]
+
+        items = [
+            {
+                "factId": row["fact_id"],
+                "subject": row["subject_iri"],
+                "predicate": row["predicate_iri"],
+                "object": row["object_value"],
+                "objectKind": row["object_kind"],
+                "graph": row["graph_iri"],
+                "candidateId": row["candidate_id"],
+            }
+            for row in rows
+        ]
+        result: dict[str, Any] = {
+            "dryRun": bool(dry_run),
+            "batchId": None,
+            "count": len(items),
+            "items": items,
+            "skipped": skipped,
+            "actor": actor,
+            "reason": reason,
+        }
+        if dry_run:
+            return result
+
+        batch_id = f"batch-{uuid.uuid4().hex[:10]}"
+        retracted: list[str] = []
+        for row in rows:
+            if self._retract_one(row["fact_id"], reason, actor, batch_id) is not None:
+                retracted.append(row["fact_id"])
+            else:
+                skipped.append({"factId": row["fact_id"], "reason": "raced_not_active"})
+        result.update(
+            {"batchId": batch_id, "count": len(retracted),
+             "retracted": retracted, "skipped": skipped}
+        )
+        return result
 
     def restore(self, fact_id: str, actor: str = "api") -> dict[str, Any]:
         row = self._fetch(fact_id)

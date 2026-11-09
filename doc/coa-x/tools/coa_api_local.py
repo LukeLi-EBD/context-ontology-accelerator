@@ -607,9 +607,15 @@ ROUTES: list[tuple[str, str]] = [
     # literal-heavy templates first.
     ("/namespaces/{namespaceId}/facts/conflicts/resolve", KERNEL),
     ("/namespaces/{namespaceId}/facts/conflicts/undo", KERNEL),
+    # Batch retract also carries a literal tail, so it must not fall through to
+    # `/facts/{factId}/retract` (that one keeps the single-fact shape).
+    ("/namespaces/{namespaceId}/facts/retract", KERNEL),
     ("/namespaces/{namespaceId}/facts/{factId}", KERNEL),
     ("/namespaces/{namespaceId}/facts/{factId}/retract", KERNEL),
     ("/namespaces/{namespaceId}/facts/{factId}/restore", KERNEL),
+    # The chain is readable without the assertion row: undo entries only hold an
+    # eventId, so this path is the console's independent audit read.
+    ("/namespaces/{namespaceId}/facts/{factId}/events", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -923,7 +929,7 @@ def _kernel_translate(
         }
         return "POST", "/governance/rollback-to", json.dumps(forwarded).encode("utf-8")
 
-    if template.endswith("/events"):
+    if template.endswith("/events") and "/facts" not in template:
         q = query or {}
         params = {
             key: q[key] for key in ("versionId", "action", "limit") if q.get(key)
@@ -937,6 +943,12 @@ def _kernel_translate(
     if "/facts" in template:
         fact_id = path_params.get("factId", "")
         q = query or {}
+        if template.endswith("/events"):
+            params = {
+                key: q[key] for key in ("limit", "before", "format") if q.get(key)
+            }
+            suffix = f"?{urlencode(params)}" if params else ""
+            return "GET", f"/facts/{quote(fact_id)}/events{suffix}", None
         if template.endswith("/facts/conflicts/resolve"):
             # Same fields as the kernel's resolve endpoint; drop empty ones so the
             # kernel's defaults (actor=operator, mergedObjectKind=iri) still apply.
@@ -973,6 +985,23 @@ def _kernel_translate(
                 else ""
             )
             return "GET", f"/facts/conflicts{suffix}", None
+        if template.endswith("/facts/retract"):
+            # Batch retract: keep the payload shape (factIds/filters/dryRun); the
+            # kernel previews unless dryRun is explicitly false. Registered ahead
+            # of the single-fact `/retract` tail on purpose.
+            forwarded = {
+                key: payload[key]
+                for key in (
+                    "factIds", "subject", "predicate", "graph", "sourceDocumentId",
+                    "actor", "reason", "dryRun",
+                )
+                if payload.get(key) not in (None, "", [])
+            }
+            return (
+                "POST",
+                "/facts/retract",
+                json.dumps(forwarded, ensure_ascii=False).encode("utf-8"),
+            )
         if template.endswith("/retract"):
             forwarded = {
                 "actor": payload.get("actor") or "operator",
