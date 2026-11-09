@@ -50,6 +50,23 @@ class AuthorizationDecision:
     reason: str = ""
 
 
+@dataclass(frozen=True)
+class PrincipalGrant:
+    """One grant as stored in the ResourceRoleMappings table.
+
+    ``resource_id`` is ``GLOBAL`` for a platform-wide role, otherwise the
+    namespace/namespace-id the role applies to. The three restriction fields keep
+    the table's meaning: ``None`` means "this grant declares none" (no
+    constraint), distinct from an empty tuple (an explicit "nothing permitted").
+    """
+
+    role: str = ""
+    resource_id: str = ""
+    table_allowlist: tuple[str, ...] | None = None
+    column_denylist: Mapping[str, tuple[str, ...]] | None = None
+    allowed_metrics: tuple[str, ...] | None = None
+
+
 # ── Answering & Retrieval ────────────────────────────────────────────────────
 
 
@@ -319,6 +336,7 @@ __all__ = [
     "MetricObservation",
     "ObjectInfo",
     "Principal",
+    "PrincipalGrant",
     "QueueMessage",
     "ScheduleHandle",
     "SchemaClass",

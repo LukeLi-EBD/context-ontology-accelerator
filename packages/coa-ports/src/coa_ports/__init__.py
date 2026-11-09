@@ -24,6 +24,7 @@ from .dto import (
     MetricRecord,
     ObjectInfo,
     Principal,
+    PrincipalGrant,
     QueueMessage,
     ScheduleHandle,
     SchemaClass,
@@ -53,6 +54,7 @@ from .language import (
     WorkflowRunId,
 )
 from .ports import (
+    AuthorizationPort,
     ChangeFeedPort,
     ComputePort,
     ConfigProvider,
@@ -75,6 +77,7 @@ from .ports import (
 
 __all__ = [
     "AuthorizationDecision",
+    "AuthorizationPort",
     "ChangeBatch",
     "ChangeFeedPort",
     "ChunkId",
@@ -114,6 +117,7 @@ __all__ = [
     "PortError",
     "PortErrorCode",
     "Principal",
+    "PrincipalGrant",
     "PrincipalId",
     "QueueMessage",
     "ReceiptHandle",

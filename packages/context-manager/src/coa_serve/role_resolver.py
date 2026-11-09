@@ -113,7 +113,13 @@ def resolve_profile(
     (intersection — a column is denied only if ALL matching grants deny it).
 
     If no namespace is provided, only roles are resolved (no table/column merge).
-    If RRM_TABLE_NAME is not configured, returns a minimal profile with just userId/groups.
+    If ``RRM_TABLE_NAME`` is not configured, returns a minimal profile with just userId/groups.
+
+    When ``COA_PROVIDER_AUTHORIZATION`` is configured, the grants come from that
+    port instead (``AuthorizationPort.grants_for_principal``), and the
+    ``RRM_TABLE_NAME`` table is not read at all. A configured-but-unresolvable
+    port raises — a misconfiguration must not look like a principal with no
+    grants, because the deny reason differs and an operator needs to see it.
 
     Raises:
         Exception: Propagates a grant-lookup failure. Resolution must not fall
@@ -122,6 +128,16 @@ def resolve_profile(
             error would widen data access.
     """
     result = ResolvedProfile(user_id=user_id, groups=groups, email=email)
+
+    from .clients.ports import resolve_authorization_port
+
+    port = resolve_authorization_port()
+    if port is not None:
+        grants = port.grants_for_principal(
+            user_id=user_id, email=email, groups=groups, namespace=namespace
+        )
+        _apply_grants(result, _grant_items(grants), namespace)
+        return result
 
     if not _RRM_TABLE:
         return result
@@ -164,7 +180,37 @@ def resolve_profile(
             raise
 
     # Resolve roles from all items
-    for item in all_items:
+    _apply_grants(result, all_items, namespace)
+
+    return result
+
+
+def _grant_items(grants: Any) -> list[dict[str, Any]]:
+    """Adapt ``AuthorizationPort`` grants to the RRM item shape merged below.
+
+    The mapping keeps the resolution rules in exactly one place
+    (:func:`_apply_grants` / :func:`_merge_data_restrictions`): a port grant and
+    a DynamoDB item differ only in how their fields are spelled.
+    """
+    return [
+        {
+            "role": grant.role,
+            "resourceId": grant.resource_id,
+            "tableAllowlist": None if grant.table_allowlist is None else list(grant.table_allowlist),
+            "columnDenylist": (
+                None
+                if grant.column_denylist is None
+                else {table: list(columns) for table, columns in grant.column_denylist.items()}
+            ),
+            "allowedMetrics": None if grant.allowed_metrics is None else list(grant.allowed_metrics),
+        }
+        for grant in grants
+    ]
+
+
+def _apply_grants(result: ResolvedProfile, items: list[dict[str, Any]], namespace: str) -> None:
+    """Fill roles, then (only when ``namespace`` is set) the data restrictions."""
+    for item in items:
         role = item.get("role", "")
         resource_id = item.get("resourceId", "")
         if resource_id == "GLOBAL" and role:
@@ -172,11 +218,8 @@ def resolve_profile(
         elif resource_id and role:
             result.resource_roles.append({"role": role, "resourceUID": resource_id})
 
-    # Resolve table/column restrictions for the target namespace
     if namespace:
-        _merge_data_restrictions(result, all_items, namespace)
-
-    return result
+        _merge_data_restrictions(result, items, namespace)
 
 
 @dataclass

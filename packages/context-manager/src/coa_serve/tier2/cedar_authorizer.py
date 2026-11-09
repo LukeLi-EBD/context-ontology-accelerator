@@ -29,14 +29,17 @@ environment.
 
 - ``CedarAuthorizer`` — the protocol the firewall depends on.
 - ``CedarDecision`` — allow/deny + reason.
-Policy source (FAIL-CLOSED): role policies come from the Roles table via the
-shared ``coa_authorization.policy_loader.load_policies_for_roles`` (the loader the
-MCP grant resolver uses). When the table cannot be read, or reads back empty, the
-last successfully loaded policy of each role is reused for a bounded window and
-then the query is denied with ``authorization_policies_unavailable``. The shipped
-seed policies are used only when no Roles table is configured AND the dev/test
-opt-in ``ALLOW_WITHOUT_ROLES=true`` is set (same name as the control-plane
-authorizer's opt-in). They are never a runtime fallback for a failing table.
+Policy source (FAIL-CLOSED): when ``COA_PROVIDER_AUTHORIZATION`` is set, role
+policies come from that port (``local-file`` locally; ``dynamodb`` is the AWS
+provider, not wired). Otherwise they come from the Roles table via the shared
+``coa_authorization.policy_loader.load_policies_for_roles`` (the loader the
+MCP grant resolver uses). When the source cannot be read, or reads back empty,
+the last successfully loaded policy of each role is reused for a bounded window
+and then the query is denied with ``authorization_policies_unavailable``. The
+shipped seed policies are used only when no policy source is configured AND the
+dev/test opt-in ``ALLOW_WITHOUT_ROLES=true`` is set (same name as the
+control-plane authorizer's opt-in). They are never a runtime fallback for a
+failing source, and a configured-but-broken port never falls back to the table.
 
 - ``RealCedarAuthorizer`` — the default: real ``cedarpy`` evaluation vs Roles-table policies.
 - ``NullCedarAuthorizer`` — explicit opt-out (allow-all at the Cedar layer only).
@@ -195,6 +198,34 @@ class _CachedRolePolicy:
 
     loaded_at: float
     text: str
+
+
+class _CatalogPolicySource:
+    """Role policies read through ``COA_PROVIDER_AUTHORIZATION``.
+
+    Resolves the port on every call rather than capturing one instance, so a
+    local file edited under a running service is picked up the same way the
+    Roles-table cache picks up a table write after its TTL. Resolution failures
+    are logged and become ``None`` (deny) — never an empty policy set, and never
+    a fallback to the AWS table.
+    """
+
+    def policies_for_roles(self, role_ids: set[str]) -> str | None:
+        from ..clients.ports import resolve_authorization_port
+
+        try:
+            port = resolve_authorization_port()
+            if port is None:
+                return None
+            return port.policies_for_roles(role_ids)
+        except Exception as exc:
+            logger.error(
+                "cedar_authorization_port_unavailable",
+                error=type(exc).__name__,
+                error_msg=str(exc),
+                effect="deny-all-queries",
+            )
+            return None
 
 
 class _RolePolicyCache:
@@ -414,23 +445,47 @@ class RealCedarAuthorizer:
         # a configured table that cannot be used denies (fail-closed), never seeds.
         self._use_seed_policies = False
         if policy_loader is None:
-            table = os.environ.get("ROLES_TABLE_NAME", "")
-            if table:
-                try:
-                    # AWS_REGION is always set in the AgentCore runtime.
-                    policy_loader = _RolePolicyCache(table, os.environ.get("AWS_REGION", ""))
-                except Exception as exc:
-                    logger.error(
-                        "cedar_policy_loader_unavailable",
-                        error=type(exc).__name__,
-                        error_msg=str(exc),
-                        effect="deny-all-queries",
-                    )
-            elif allow_without_roles:
-                logger.warning("cedar_seed_policies_in_use", reason="no-roles-table", opt_in="ALLOW_WITHOUT_ROLES")
-                self._use_seed_policies = True
+            # Port first: a configured ``COA_PROVIDER_AUTHORIZATION`` is the
+            # deliberate source, local or AWS. A configured-but-broken port denies
+            # and must NOT fall through to the Roles table (that would hide the
+            # misconfiguration behind an AWS read).
+            from ..clients.ports import resolve_authorization_port
+
+            port: Any = None
+            port_error: Exception | None = None
+            try:
+                port = resolve_authorization_port()
+            except Exception as exc:  # a configured source that cannot be built
+                port_error = exc
+            if port_error is not None:
+                logger.error(
+                    "cedar_authorization_port_unavailable",
+                    error=type(port_error).__name__,
+                    error_msg=str(port_error),
+                    effect="deny-all-queries",
+                )
+            elif port is not None:
+                policy_loader = _CatalogPolicySource()
             else:
-                logger.error("cedar_roles_table_not_configured", effect="deny-all-queries")
+                table = os.environ.get("ROLES_TABLE_NAME", "")
+                if table:
+                    try:
+                        # AWS_REGION is always set in the AgentCore runtime.
+                        policy_loader = _RolePolicyCache(table, os.environ.get("AWS_REGION", ""))
+                    except Exception as exc:
+                        logger.error(
+                            "cedar_policy_loader_unavailable",
+                            error=type(exc).__name__,
+                            error_msg=str(exc),
+                            effect="deny-all-queries",
+                        )
+                elif allow_without_roles:
+                    logger.warning(
+                        "cedar_seed_policies_in_use", reason="no-roles-table", opt_in="ALLOW_WITHOUT_ROLES"
+                    )
+                    self._use_seed_policies = True
+                else:
+                    logger.error("cedar_roles_table_not_configured", effect="deny-all-queries")
         self._policy_loader = policy_loader
 
     def authorize(self, *, namespace: str, profile: dict[str, Any], tables: list[str]) -> CedarDecision:

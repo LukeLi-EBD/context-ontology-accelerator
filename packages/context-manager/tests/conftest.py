@@ -41,6 +41,10 @@ def mock_aws_env():
         # seed policies for the session, as a local dev run does. Prod never sets
         # this (it always has ROLES_TABLE_NAME, where the opt-in has no effect).
         "ALLOW_WITHOUT_ROLES": "true",
+        # Empty = absent (Settings treats a blank value as unconfigured), so a
+        # developer shell that points at a local authorization file does not
+        # change what the unit suite exercises.
+        "COA_PROVIDER_AUTHORIZATION": "",
     }
     with patch.dict(os.environ, env_vars):
         yield

@@ -267,6 +267,7 @@ def test_implemented_providers_are_the_ones_with_local_code() -> None:
         if any(provider.implemented for provider in spec.providers.values())
     }
     assert implemented == {
+        "AuthorizationPolicies": ["local-file"],
         "ConfigProvider": ["env", "ssm"],
         "ContextManagerPort": ["local-http"],
         "DataSourceLookup": ["json-snapshot"],

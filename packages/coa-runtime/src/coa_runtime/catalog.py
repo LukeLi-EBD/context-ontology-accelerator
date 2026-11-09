@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from coa_ports import (
+    AuthorizationPort,
     ChangeFeedPort,
     ComputePort,
     ConfigProvider,
@@ -331,6 +332,15 @@ def _context_manager_local_http(settings: Settings) -> Any:
     )
 
 
+def _authorization_file(settings: Settings) -> Any:
+    """Cedar policies and principal grants from one JSON file (Roles + RRM shapes)."""
+    from coa_local_providers.authz_file import FileAuthorization
+
+    return FileAuthorization.from_path(
+        settings.require("COA_AUTHORIZATION_FILE", interface="AuthorizationPolicies")
+    )
+
+
 def _graph_ontology_lookup(settings: Settings) -> Any:
     """Ontology class existence via a synchronous SPARQL ASK on Oxigraph."""
     from coa_metrics.ontology_lookup_graph import GraphOntologyLookup
@@ -478,6 +488,22 @@ SPECS: tuple[InterfaceSpec, ...] = (
         expects_async=True,
         port_location="coa_serve.ports",
         providers=_providers(_todo("local"), _todo("textract", _AWS)),
+    ),
+    InterfaceSpec(
+        name="AuthorizationPolicies",
+        key="COA_PROVIDER_AUTHORIZATION",
+        context="控制面 / 问答与检索",
+        protocol=AuthorizationPort,
+        expects_async=False,
+        providers=_providers(
+            _done(
+                "local-file",
+                _authorization_file,
+                "本机 JSON：Roles 表的 cedarPolicy + RRM 表的主配角，形状对齐两张表",
+            ),
+            _todo("dynamodb", _AWS),
+        ),
+        notes="替代 Roles / ResourceRoleMappings 两张表；未配置时 Cedar 保持原有 fail-closed",
     ),
     # ── 10 reused interfaces (plan §7.1) ──
     InterfaceSpec(

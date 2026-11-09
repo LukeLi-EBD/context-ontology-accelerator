@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .admin import GraphAdminPort, WarehouseAdminPort
 from .answering import ContextManagerPort, MetricIndexPort
+from .authorization import AuthorizationPort
 from .change import ChangeFeedPort
 from .config import ConfigProvider
 from .identity import IdentityPort
@@ -19,6 +20,7 @@ from .orchestration import (
 from .storage import GraphStorePort, MetadataStorePort, ObjectStorePort, SecretProvider
 
 __all__ = [
+    "AuthorizationPort",
     "ChangeFeedPort",
     "ComputePort",
     "ConfigProvider",

@@ -64,4 +64,25 @@ def resolve_vector_client() -> Any:
     return _resolve("VectorClient")
 
 
-__all__ = ["GraphClientAdapter", "resolve_graph_client", "resolve_vector_client"]
+def resolve_authorization_port() -> Any | None:
+    """``COA_PROVIDER_AUTHORIZATION`` -> the policy/grant source, or ``None``.
+
+    ``None`` means the key is absent: the caller keeps its legacy behaviour (the
+    Roles table when ``ROLES_TABLE_NAME`` is set, otherwise a fail-closed deny).
+    A key that IS set but cannot be resolved raises, so a typo or a missing
+    ``COA_AUTHORIZATION_FILE`` is loud instead of silently disabling policy
+    loading.
+    """
+    from coa_runtime.settings import Settings
+
+    if Settings.from_environ().get("COA_PROVIDER_AUTHORIZATION") is None:
+        return None
+    return _resolve("AuthorizationPolicies")
+
+
+__all__ = [
+    "GraphClientAdapter",
+    "resolve_authorization_port",
+    "resolve_graph_client",
+    "resolve_vector_client",
+]

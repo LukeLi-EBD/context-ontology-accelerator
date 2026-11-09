@@ -576,3 +576,79 @@ class TestPolicySourceConfiguration:
         result = fw.authorize_namespace(_NS, self._ADMIN)
         assert result.denied
         assert result.reason == POLICIES_UNAVAILABLE_REASON
+
+
+@pytest.mark.unit
+class TestAuthorizationPortPolicySource:
+    """``COA_PROVIDER_AUTHORIZATION`` supplies the policy text when configured."""
+
+    _ALLOW_DEMO = (
+        'permit(principal, action == SCL::Action::"query", resource) '
+        'when { resource.namespace == "demo" };'
+    )
+
+    @staticmethod
+    def _configure(monkeypatch, tmp_path, policies: dict[str, str]):
+        pytest.importorskip("coa_local_providers.authz_file")
+        import json
+
+        path = tmp_path / "authz.json"
+        path.write_text(json.dumps({"policies": policies, "principals": {}}), encoding="utf-8")
+        monkeypatch.setenv("COA_PROVIDER_AUTHORIZATION", "local-file")
+        monkeypatch.setenv("COA_AUTHORIZATION_FILE", str(path))
+
+    @staticmethod
+    def _analyst(namespace: str) -> dict:
+        return {"userId": "alice", "resourceRoles": [{"role": "analyst", "resourceUID": namespace}]}
+
+    def test_allowed_on_the_namespace_the_policy_grants(self, monkeypatch, tmp_path):
+        self._configure(monkeypatch, tmp_path, {"default": "// none", "analyst": self._ALLOW_DEMO})
+
+        d = RealCedarAuthorizer(fail_open_no_roles=False).authorize(
+            namespace="demo", tables=[], profile=self._analyst("demo")
+        )
+
+        assert d.allowed
+
+    def test_denied_on_another_namespace(self, monkeypatch, tmp_path):
+        self._configure(monkeypatch, tmp_path, {"default": "// none", "analyst": self._ALLOW_DEMO})
+
+        d = RealCedarAuthorizer(fail_open_no_roles=False).authorize(
+            namespace="other", tables=[], profile=self._analyst("other")
+        )
+
+        assert not d.allowed
+        assert d.reason == "not permitted to query this namespace"
+
+    def test_a_missing_role_policy_denies_as_unavailable(self, monkeypatch, tmp_path):
+        self._configure(monkeypatch, tmp_path, {"default": "// none"})
+
+        d = RealCedarAuthorizer(fail_open_no_roles=False).authorize(
+            namespace="demo", tables=[], profile=self._analyst("demo")
+        )
+
+        assert not d.allowed
+        assert d.reason == POLICIES_UNAVAILABLE_REASON
+
+    def test_a_configured_but_broken_port_denies_and_does_not_use_seeds(self, monkeypatch, tmp_path):
+        """A typo in the provider name must not silently fall back to the seed policies."""
+        monkeypatch.setenv("COA_PROVIDER_AUTHORIZATION", "no-such-provider")
+        with structlog.testing.capture_logs() as logs:
+            auth = RealCedarAuthorizer(fail_open_no_roles=False, allow_without_roles=True)
+        d = auth.authorize(namespace="demo", tables=[], profile=self._analyst("demo"))
+        assert not d.allowed
+        assert d.reason == POLICIES_UNAVAILABLE_REASON
+        assert any(log["event"] == "cedar_authorization_port_unavailable" for log in logs)
+
+    def test_an_unconfigured_port_keeps_the_deny_all_posture(self, monkeypatch):
+        monkeypatch.delenv("COA_PROVIDER_AUTHORIZATION", raising=False)
+        monkeypatch.delenv("ROLES_TABLE_NAME", raising=False)
+        monkeypatch.delenv("ALLOW_WITHOUT_ROLES", raising=False)
+        with structlog.testing.capture_logs() as logs:
+            auth = RealCedarAuthorizer(fail_open_no_roles=False)
+
+        d = auth.authorize(namespace="demo", tables=[], profile=self._analyst("demo"))
+
+        assert not d.allowed
+        assert d.reason == POLICIES_UNAVAILABLE_REASON
+        assert any(log["event"] == "cedar_roles_table_not_configured" for log in logs)

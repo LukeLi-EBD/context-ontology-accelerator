@@ -10,6 +10,7 @@ allowedMetrics union), plus ResolvedProfile.inject_into.
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -497,3 +498,55 @@ class TestRestrictionsAccumulate:
             resolved = role_resolver.resolve_profile("bob@x.com", [], namespace="ns-OTHER")
 
         assert resolved.column_denylist is None
+
+
+@pytest.mark.unit
+class TestAuthorizationPort:
+    """``COA_PROVIDER_AUTHORIZATION`` replaces the RRM table as the grant source."""
+
+    @staticmethod
+    def _configure(monkeypatch, tmp_path):
+        pytest.importorskip("coa_local_providers.authz_file")
+        path = tmp_path / "authz.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "policies": {"default": "// none"},
+                    "principals": {
+                        "User::alice": [
+                            {"resourceId": _NS, "role": "data-analyst", "tableAllowlist": ["orders"]},
+                            {"resourceId": "GLOBAL", "role": "platform-viewer"},
+                        ]
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("COA_PROVIDER_AUTHORIZATION", "local-file")
+        monkeypatch.setenv("COA_AUTHORIZATION_FILE", str(path))
+
+    def test_roles_and_restrictions_come_from_the_file(self, monkeypatch, tmp_path):
+        self._configure(monkeypatch, tmp_path)
+
+        resolved = resolve_profile("alice", [], namespace=_NS)
+
+        assert resolved.global_roles == ["platform-viewer"]
+        assert resolved.resource_roles == [{"role": "data-analyst", "resourceUID": _NS}]
+        assert resolved.table_allowlist == ["orders"]
+
+    def test_unknown_principal_has_no_roles(self, monkeypatch, tmp_path):
+        self._configure(monkeypatch, tmp_path)
+
+        resolved = resolve_profile("nobody", [], namespace=_NS)
+
+        assert resolved.global_roles == []
+        assert resolved.resource_roles == []
+
+    def test_a_configured_but_missing_file_raises_instead_of_returning_no_grants(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("COA_PROVIDER_AUTHORIZATION", "local-file")
+        monkeypatch.setenv("COA_AUTHORIZATION_FILE", str(tmp_path / "absent.json"))
+        pytest.importorskip("coa_local_providers.authz_file")
+
+        with pytest.raises(Exception) as excinfo:
+            resolve_profile("alice", [], namespace=_NS)
+        assert "absent.json" in str(excinfo.value)
