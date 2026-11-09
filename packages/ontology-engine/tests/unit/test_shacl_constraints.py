@@ -256,33 +256,61 @@ _NL_GEN = "coa_ontology.validation.shapes.nl_generator"
 
 
 class TestResolveGuardrailId:
-    """SSM-based Bedrock guardrail resolution for constraint inference."""
+    """Guardrail resolution through the ConfigProvider port."""
 
     @patch(f"{_NL_GEN}._GUARDRAIL_SSM_PARAM", "")
-    def test_returns_none_when_param_not_set(self):
+    @patch("coa_runtime.registry.resolve")
+    def test_returns_none_when_param_not_set(self, mock_resolve):
+        assert _resolve_guardrail_id() is None
+        mock_resolve.assert_not_called()
+
+    @patch(f"{_NL_GEN}._GUARDRAIL_SSM_PARAM", "/coa/bedrock/guardrail-id")
+    @patch("coa_runtime.registry.resolve")
+    def test_returns_the_configured_value(self, mock_resolve):
+        provider = MagicMock()
+        provider.get.return_value = "gr-abc123"
+        mock_resolve.return_value = MagicMock(instance=provider)
+
+        assert _resolve_guardrail_id() == "gr-abc123"
+        provider.get.assert_called_once_with("/coa/bedrock/guardrail-id")
+        assert mock_resolve.call_args.args[0] == "ConfigProvider"
+
+    @patch(f"{_NL_GEN}._GUARDRAIL_SSM_PARAM", "/coa/bedrock/guardrail-id")
+    @patch("coa_runtime.registry.resolve")
+    def test_absent_parameter_returns_none(self, mock_resolve):
+        """A configured provider that reports 'absent' is 'no guardrail', not a failure."""
+        provider = MagicMock()
+        provider.get.return_value = None
+        mock_resolve.return_value = MagicMock(instance=provider)
+
         assert _resolve_guardrail_id() is None
 
     @patch(f"{_NL_GEN}._GUARDRAIL_SSM_PARAM", "/coa/bedrock/guardrail-id")
-    @patch(f"{_NL_GEN}.boto3")
-    def test_returns_value_from_ssm(self, mock_boto3):
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.return_value = {"Parameter": {"Value": "gr-abc123"}}
-        mock_boto3.client.return_value = mock_ssm
+    @patch("coa_runtime.registry.resolve")
+    def test_read_failure_propagates(self, mock_resolve):
+        from coa_ports import PortError, PortErrorCode
 
-        assert _resolve_guardrail_id() == "gr-abc123"
-        mock_ssm.get_parameter.assert_called_once_with(Name="/coa/bedrock/guardrail-id")
-        # AWS_REGION is wired into the SSM client.
-        _args, kwargs = mock_boto3.client.call_args
-        assert kwargs.get("region_name")
+        provider = MagicMock()
+        provider.get.side_effect = PortError(
+            PortErrorCode.UNAVAILABLE, "ssm down", provider="ssm"
+        )
+        mock_resolve.return_value = MagicMock(instance=provider)
+
+        with pytest.raises(PortError):
+            _resolve_guardrail_id()
 
     @patch(f"{_NL_GEN}._GUARDRAIL_SSM_PARAM", "/coa/bedrock/guardrail-id")
-    @patch(f"{_NL_GEN}.boto3")
-    def test_returns_none_on_ssm_failure(self, mock_boto3):
-        mock_ssm = MagicMock()
-        mock_ssm.get_parameter.side_effect = RuntimeError("ssm unavailable")
-        mock_boto3.client.return_value = mock_ssm
+    @patch("coa_runtime.registry.resolve")
+    def test_unconfigured_provider_degrades_to_no_guardrail(self, mock_resolve):
+        """No ConfigProvider in a deployment means 'guardrail not configured'."""
+        from coa_runtime.errors import MissingConfigurationError
 
-        # Resolution failure degrades to no guardrail (fail-open, best-effort).
+        mock_resolve.side_effect = MissingConfigurationError(
+            "ConfigProvider has no provider configured",
+            interface="ConfigProvider",
+            key="COA_PROVIDER_CONFIG",
+        )
+
         assert _resolve_guardrail_id() is None
 
 

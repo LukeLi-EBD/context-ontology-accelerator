@@ -30,12 +30,17 @@ def get_smus_domain_id(ssm_prefix: str, region_name: str | None = None) -> str:
 
     Raises:
         ValueError: if the parameter is missing or empty.
+        coa_runtime.errors.ConfigurationError: if no ``ConfigProvider`` is
+            configured.
+        coa_ports.PortError: if reading the parameter fails (as opposed to
+            the parameter being absent).
     """
     param_name = f"{ssm_prefix}/smus/domain-id"
     environment = dict(os.environ)
     if region_name:
         environment["AWS_REGION"] = region_name
-    value = resolve("ConfigProvider", Settings(environment)).get(param_name)
+    provider = resolve("ConfigProvider", Settings(environment)).instance
+    value = provider.get(param_name)
     if not value:
         raise ValueError(f"SMUS domain ID not found at SSM parameter: {param_name}")
     return value

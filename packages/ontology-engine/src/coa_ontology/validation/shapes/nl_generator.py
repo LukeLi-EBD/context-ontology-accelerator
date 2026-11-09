@@ -41,23 +41,35 @@ def _default_bedrock_region() -> str:
 
 
 def _resolve_guardrail_id() -> str | None:
-    """Resolve the Bedrock guardrail ID from SSM at runtime; None if unavailable.
+    """Resolve the Bedrock guardrail ID from configuration; None if unset.
 
     Mirrors the enrichment path's resolver so the ontology inference call gets
     the same content-interception layer.
+
+    A deployment with no ``ConfigProvider`` is "guardrail not configured", so
+    it logs and proceeds without one. A configured provider that fails to read
+    is a real error and propagates: silently dropping the guardrail would send
+    untrusted text through the model unprotected.
     """
     if not _GUARDRAIL_SSM_PARAM:
         return None
-    try:
-        from coa_runtime.registry import resolve
-        from coa_runtime.settings import Settings
 
-        environment = dict(os.environ)
-        environment["AWS_REGION"] = _AWS_REGION
-        return resolve("ConfigProvider", Settings(environment)).get(_GUARDRAIL_SSM_PARAM)
-    except Exception:
-        log.warning("Failed to resolve guardrail from SSM %s — proceeding without", _GUARDRAIL_SSM_PARAM, exc_info=True)
+    from coa_runtime.errors import ConfigurationError
+    from coa_runtime.registry import resolve
+    from coa_runtime.settings import Settings
+
+    environment = dict(os.environ)
+    environment["AWS_REGION"] = _AWS_REGION
+    try:
+        provider = resolve("ConfigProvider", Settings(environment)).instance
+    except ConfigurationError:
+        log.warning(
+            "ConfigProvider not configured; guardrail %s is not applied",
+            _GUARDRAIL_SSM_PARAM,
+            exc_info=True,
+        )
         return None
+    return provider.get(_GUARDRAIL_SSM_PARAM)
 
 
 # Matches opening OR closing <document> / <document_content> tags,
