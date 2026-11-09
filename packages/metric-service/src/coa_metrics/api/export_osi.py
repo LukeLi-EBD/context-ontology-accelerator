@@ -30,6 +30,7 @@ from coa_metrics.api.contract import EXPORT_NAMES_MAX_ITEMS, check_metric_name_l
 from coa_metrics.neptune_client import (
     MetricDefinition,
     MetricNeptuneClient,
+    new_metric_graph_client,
 )
 from coa_metrics.osi_parser import (
     OsiAiContext,
@@ -54,7 +55,7 @@ _neptune: MetricNeptuneClient | None = None
 def _get_neptune() -> MetricNeptuneClient:
     global _neptune  # noqa: PLW0603
     if _neptune is None:
-        _neptune = MetricNeptuneClient()
+        _neptune = new_metric_graph_client()
     return _neptune
 
 

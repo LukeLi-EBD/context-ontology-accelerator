@@ -27,7 +27,7 @@ from coa_metrics.api.contract import (
     check_string,
 )
 from coa_metrics.api.create_metric import _metric_to_dict
-from coa_metrics.neptune_client import MetricNeptuneClient
+from coa_metrics.neptune_client import MetricNeptuneClient, new_metric_graph_client
 
 setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
 logger = structlog.get_logger(__name__)
@@ -45,7 +45,7 @@ _neptune: MetricNeptuneClient | None = None
 def _get_neptune() -> MetricNeptuneClient:
     global _neptune  # noqa: PLW0603
     if _neptune is None:
-        _neptune = MetricNeptuneClient()
+        _neptune = new_metric_graph_client()
     return _neptune
 
 

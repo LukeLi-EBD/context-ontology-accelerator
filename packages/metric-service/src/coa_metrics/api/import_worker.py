@@ -54,7 +54,12 @@ from coa_metrics.api.import_queue_message import (
     parse_import_queue_record,
 )
 from coa_metrics.dataset_resolver import resolve_datasets
-from coa_metrics.neptune_client import InvalidMetricDefinitionError, MetricDefinition, MetricNeptuneClient
+from coa_metrics.neptune_client import (
+    InvalidMetricDefinitionError,
+    MetricDefinition,
+    MetricNeptuneClient,
+    new_metric_graph_client,
+)
 from coa_metrics.osi_parser import OsiDocument, OsiMetric, parse_osi_yaml
 from coa_metrics.source_status import (
     SourceValidationUnavailableError,
@@ -87,7 +92,7 @@ class InvalidImportSourceError(ValueError):
 def _get_neptune() -> MetricNeptuneClient:
     global _neptune  # noqa: PLW0603
     if _neptune is None:
-        _neptune = MetricNeptuneClient()
+        _neptune = new_metric_graph_client()
     return _neptune
 
 

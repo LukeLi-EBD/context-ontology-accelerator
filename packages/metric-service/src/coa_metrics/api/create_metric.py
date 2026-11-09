@@ -41,6 +41,7 @@ from coa_metrics.neptune_client import (
     MetricDefinition,
     MetricDialect,
     MetricNeptuneClient,
+    new_metric_graph_client,
 )
 from coa_metrics.opensearch_client import MetricOpenSearchClient
 from coa_metrics.source_status import (
@@ -69,7 +70,7 @@ _eventbridge: Any | None = None
 def _get_neptune() -> MetricNeptuneClient:
     global _neptune  # noqa: PLW0603
     if _neptune is None:
-        _neptune = MetricNeptuneClient()
+        _neptune = new_metric_graph_client()
     return _neptune
 
 

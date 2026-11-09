@@ -28,7 +28,7 @@ from coa_metrics.api.contract import (
     check_metric_name_list,
     check_string,
 )
-from coa_metrics.neptune_client import MetricNeptuneClient
+from coa_metrics.neptune_client import MetricNeptuneClient, new_metric_graph_client
 from coa_metrics.opensearch_client import MetricOpenSearchClient
 
 setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
@@ -41,7 +41,7 @@ _opensearch: MetricOpenSearchClient | None = None
 def _get_neptune() -> MetricNeptuneClient:
     global _neptune  # noqa: PLW0603
     if _neptune is None:
-        _neptune = MetricNeptuneClient()
+        _neptune = new_metric_graph_client()
     return _neptune
 
 

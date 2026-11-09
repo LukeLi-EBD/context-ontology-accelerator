@@ -17,7 +17,7 @@ CONTEXT_INTERFACES: Mapping[str, tuple[str, ...]] = {
     # 问答与检索
     "answering": ("GraphClient", "VectorClient", "LLMClient", "QueryExecutor", "Embedding", "ConfigProvider"),
     # 指标
-    "metrics": ("QueryExecutor", "GraphClient", "ConfigProvider", "SecretProvider"),
+    "metrics": ("QueryExecutor", "GraphClient", "MetricGraph", "ConfigProvider", "SecretProvider"),
     # 本体
     "ontology": ("GraphStorePort", "MetadataStorePort", "SchemaProvider", "ConfigProvider"),
     # 知识图

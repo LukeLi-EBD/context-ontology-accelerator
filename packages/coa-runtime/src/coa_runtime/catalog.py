@@ -151,6 +151,28 @@ def _metric_index_pg(settings: Settings) -> Any:
     return PgMetricIndex(dsn)
 
 
+def _metric_graph_neptune(_settings: Settings) -> Any:
+    from coa_local_providers.metric_graph import NeptuneSparqlTransport
+
+    return NeptuneSparqlTransport()
+
+
+def _metric_graph_oxigraph(settings: Settings) -> Any:
+    from coa_local_providers.metric_graph import oxigraph_transport
+
+    base = (
+        settings.get("COA_METRIC_GRAPH_URI_BASE")
+        or settings.get("NDB_GRAPH_URI_BASE")
+        or "https://ontology-workbench.local"
+    )
+    return oxigraph_transport(
+        settings.require("COA_GRAPH_OXIGRAPH_URL", interface="MetricGraph"),
+        graph_base=base,
+        timeout_ms=settings.get_int("COA_GRAPH_OXIGRAPH_TIMEOUT_MS", default=30000, interface="MetricGraph"),
+        max_rows=settings.get_int("COA_GRAPH_OXIGRAPH_MAX_ROWS", default=10000, interface="MetricGraph"),
+    )
+
+
 def _postgres_executor(settings: Settings) -> Any:
     from coa_local_providers.query_pg import PostgresQueryExecutor
 
@@ -425,6 +447,25 @@ SPECS: tuple[InterfaceSpec, ...] = (
             _todo("aoss", _AWS),
         ),
         notes="替换 metric-service 的 OpenSearch 指标索引；不复用 VectorClient（后者返回文档分块 VectorHit）",
+    ),
+    InterfaceSpec(
+        name="MetricGraph",
+        key="COA_PROVIDER_METRIC_GRAPH",
+        context="指标 / 知识图",
+        required_methods=("query", "update"),
+        expects_async=False,
+        providers=_providers(
+            _done(
+                "neptune",
+                _metric_graph_neptune,
+                "沿用 metric-service 现有 SigV4 传输；AWS 路径未在本机验证",
+            ),
+            _done("oxigraph", _metric_graph_oxigraph),
+        ),
+        notes=(
+            "指标图同步 SPARQL 传输，返回 Neptune 结果形状；"
+            "不复用 GraphStorePort（后者把 binding 拍平成字符串，丢失 term 类型）"
+        ),
     ),
     InterfaceSpec(
         name="LLMClient",

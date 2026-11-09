@@ -34,6 +34,8 @@ import structlog
 from coa_common import GOVERNED_METRICS_ONTOLOGY_ID
 from coa_common.constants import URN_PREFIX
 
+from .graph_transport import SparqlTransport
+
 logger = structlog.get_logger(__name__)
 
 # ── Configuration ───────────────────────────────────────────────────────
@@ -241,9 +243,27 @@ class MetricNeptuneClient:
     ``GOVERNED_METRICS_ONTOLOGY_ID``.
     """
 
-    def __init__(self) -> None:
-        """Initialize the client with an empty per-namespace seeding cache."""
+    def __init__(self, transport: SparqlTransport | None = None) -> None:
+        """Initialize the client with an empty per-namespace seeding cache.
+
+        ``transport`` is the configured SPARQL endpoint (see
+        ``COA_PROVIDER_METRIC_GRAPH``). ``None`` keeps the historical Neptune
+        SigV4 module functions, so callers that build the client directly (unit
+        tests, scripts) behave exactly as before.
+        """
         self._seeded_namespaces: set[str] = set()
+        self._transport = transport
+
+    def _query(self, sparql: str) -> dict[str, Any]:
+        if self._transport is None:
+            return _sparql_query(sparql)
+        return self._transport.query(sparql)
+
+    def _update(self, sparql: str) -> None:
+        if self._transport is None:
+            _sparql_update(sparql)
+            return
+        self._transport.update(sparql)
 
     def _ensure_base_vocabulary(self, namespace: str) -> None:
         """Ensure the :GovernedMetric base OWL class exists in the namespace graph."""
@@ -260,7 +280,7 @@ class MetricNeptuneClient:
           }}
         }}
         """
-        result = _sparql_query(ask_query)
+        result = self._query(ask_query)
         if result.get("boolean", False):
             self._seeded_namespaces.add(namespace)
             return
@@ -280,7 +300,7 @@ class MetricNeptuneClient:
             f"{_iri(COA_VOCAB + 'governedMetricFor')} {_iri(RDFS + 'range')} {_iri(OWL + 'Class')} .",
         ]
         sparql = f"INSERT DATA {{ GRAPH {_iri(graph)} {{\n  {chr(10).join(seed_triples)}\n}} }}"
-        _sparql_update(sparql)
+        self._update(sparql)
         self._seeded_namespaces.add(namespace)
         logger.info("Seeded GovernedMetric base class", namespace=namespace)
 
@@ -334,7 +354,7 @@ class MetricNeptuneClient:
         }}
         ORDER BY ?label STR(?cls)
         """
-        result = _sparql_query(query)
+        result = self._query(query)
         bindings = result["results"]["bindings"]
         if not isinstance(bindings, list):
             raise ValueError("ontology concept query bindings must be a list")
@@ -365,7 +385,7 @@ class MetricNeptuneClient:
         triples = self._build_triples(namespace, metric)
         self._ensure_base_vocabulary(namespace)
         sparql = f"INSERT DATA {{ GRAPH {_iri(graph)} {{\n  {chr(10).join(triples)}\n}} }}"
-        _sparql_update(sparql)
+        self._update(sparql)
         logger.info("Metric created", namespace=namespace, name=metric.name)
 
     def get_metric(self, namespace: str, name: str) -> MetricDefinition | None:
@@ -379,7 +399,7 @@ class MetricNeptuneClient:
           }}
         }}
         """
-        result = _sparql_query(query)
+        result = self._query(query)
         bindings = result.get("results", {}).get("bindings", [])
         if not bindings:
             return None
@@ -414,7 +434,7 @@ class MetricNeptuneClient:
         LIMIT {limit}
         OFFSET {offset}
         """
-        result = _sparql_query(query)
+        result = self._query(query)
         bindings = result.get("results", {}).get("bindings", [])
 
         metrics: list[MetricDefinition] = []
@@ -461,7 +481,7 @@ class MetricNeptuneClient:
         }}
         ORDER BY ?s
         """
-        result = _sparql_query(query)
+        result = self._query(query)
         bindings = result.get("results", {}).get("bindings", [])
 
         grouped: dict[str, list[dict[str, Any]]] = {}
@@ -489,7 +509,7 @@ class MetricNeptuneClient:
         }}
         WHERE {{ {_iri(uri)} ?p ?o }}
         """
-        _sparql_update(sparql)
+        self._update(sparql)
         logger.info("Metric updated", namespace=namespace, name=name)
 
     def delete_metric(self, namespace: str, name: str) -> bool:
@@ -506,7 +526,7 @@ class MetricNeptuneClient:
         DELETE {{ {_iri(uri)} ?p ?o }}
         WHERE {{ {_iri(uri)} ?p ?o }}
         """
-        _sparql_update(sparql)
+        self._update(sparql)
         logger.info("Metric deleted", namespace=namespace, name=name)
         return True
 
@@ -531,7 +551,7 @@ class MetricNeptuneClient:
           }}
         }}
         """
-        result = _sparql_query(count_query)
+        result = self._query(count_query)
         bindings = result.get("results", {}).get("bindings", [])
         count = int(bindings[0]["count"]["value"]) if bindings else 0
 
@@ -549,7 +569,7 @@ class MetricNeptuneClient:
           ?s ?p ?o .
         }}
         """
-        _sparql_update(delete_sparql)
+        self._update(delete_sparql)
         logger.info("All metrics deleted", namespace=namespace, count=count)
         return count
 
@@ -668,3 +688,15 @@ class MetricNeptuneClient:
             effective_from=props.get("effective_from"),
             label=props.get("label"),
         )
+
+
+def new_metric_graph_client() -> MetricNeptuneClient:
+    """Build the metric graph client with the configured transport.
+
+    ``COA_PROVIDER_METRIC_GRAPH`` selects ``neptune`` (the historical SigV4
+    path) or ``oxigraph`` (local). Resolution is lazy, at first request, so a
+    missing key fails here with the catalog's error rather than at import.
+    """
+    from coa_runtime.registry import resolve
+
+    return MetricNeptuneClient(transport=resolve("MetricGraph").instance)
