@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     按依赖顺序拉起：临时 pgvector(5443) → 真实迁移 → 灌 chunk+向量 → 临时 Oxigraph(7878)
-    → 灌 FS-LDM 本体 → 本机 OpenAI 兼容 LLM(8077) → context-manager(8091)
-    → data-layer(8092) → 发一条真实 Query → 断言 200 且 Tier-3 有证据。
+    → 灌 FS-LDM 本体 → LLM（默认远端 Ark；llama-local 时起本机 8077）→ context-manager(8091)
+    → data-layer(8092) → 发一条真实 Query → 断言 200 且 Tier-2/3 有真实结果。
 
     前置条件见同目录 05-本地链路复验.md。缺任何一项都会在启动前失败并说明原因，
     不会静默降级、不会回落到 AWS。
@@ -14,8 +14,8 @@
     查询使用的 namespace（必须是 UUID v4，且与 Cedar 策略一致）。
 
 .PARAMETER LlmProvider
-    local（默认）：起本机 llama.cpp 0.5B（8077）。
-    ark：用火山方舟 coding plan 端点，密钥从 packages/platform-core/.env 或环境变量读。
+    ark（默认）：用火山方舟 coding plan 端点，密钥从 packages/platform-core/.env 或环境变量读。
+    llama-local：起本机 llama.cpp 0.5B（8077），只用于不联网的冒烟，不承诺 Tier-2 质量。
     本脚本从不把密钥写入任何文件或日志。
 
 .PARAMETER Keep
@@ -24,13 +24,13 @@
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1
     powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1 -Keep
-    powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1 -LlmProvider ark -Keep
+    powershell -ExecutionPolicy Bypass -File .\05-本地链路复验.ps1 -LlmProvider llama-local
 #>
 [CmdletBinding()]
 param(
     [string]$Namespace = "550e8400-e29b-41d4-a716-446655440000",
-    [ValidateSet("local", "ark")]
-    [string]$LlmProvider = "local",
+    [ValidateSet("llama-local", "ark")]
+    [string]$LlmProvider = "ark",
     [switch]$Keep
 )
 
@@ -162,7 +162,7 @@ function Cleanup {
 # ---- preflight ------------------------------------------------------------
 Write-Step "0/7 preflight"
 Assert-True (Test-Path $Python) "project venv python: $Python"
-if ($LlmProvider -eq "local") {
+if ($LlmProvider -eq "llama-local") {
     Assert-True (Test-Path $Model) "GGUF model: $Model"
 } else {
     $arkKey = $env:COA_LLM_HTTP_API_KEY
@@ -225,7 +225,7 @@ Wait-Http "$OxiUrl/" 60 "oxigraph"
 if ($LASTEXITCODE -ne 0) { throw "FAILED: ontology load" }
 
 # ---- 4. LLM endpoint -------------------------------------------------------
-if ($LlmProvider -eq "local") {
+if ($LlmProvider -eq "llama-local") {
     Write-Step "4/7 local OpenAI-compatible LLM ($LlmPort)"
     if (-not (Test-Port $LlmPort)) {
         $threads = [Math]::Min(12, [Environment]::ProcessorCount)
@@ -280,7 +280,7 @@ $env:COA_PROVIDER_LLM                     = "openai-http"
 # 本地显式开启「先到先得 + 短尾」：一条腿给出可接受结果后就不再等另一条。
 # 仅本地复验这样设；AWS 部署保持默认（gather），因为那会改变线上选优语义与 p50/p99。
 $env:SERVE_TIER2_PARALLEL_MODE            = "first_win"
-if ($LlmProvider -eq "local") {
+if ($LlmProvider -eq "llama-local") {
     $env:COA_LLM_HTTP_BASE_URL            = $LlmUrl
     $env:COA_LLM_HTTP_MODEL               = "qwen2.5-0.5b"
     $env:COA_LLM_HTTP_TIMEOUT_S           = "300"
