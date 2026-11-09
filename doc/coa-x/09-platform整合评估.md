@@ -373,6 +373,22 @@
 | `GET /governance/proposals/{id}/transitions` | 可合并 | `ListOntologyTransitions` | |
 | `GET /governance/versions/{id}/transitions` | 可合并 | `ListOntologyTransitions` | `subjectType=VERSION` |
 
+### 4.16 不做等价物（明确不迁的旧语义）
+
+以下三条 platform 端点**不进入 COA 契约**，不新增对应的 GET operation。它们是 platform 的旧语义（用 HTTP 方法承载查询），为兼容它们给契约加 GET 属于让旧系统污染新契约，故明确不做。
+
+| 平台端点 | 原映射（作废） | 不做的理由 | 迁移方式（web-app 侧） |
+|---|---|---|---|
+| `GET /search` | `KBSearch` | 检索带查询体、过滤器、分页 token，GET 只能拼串 | 改调 `KBSearch`（`POST /namespaces/{ns}/kb/search`） |
+| `GET /answer` | `Query` | 问答输入多字段，GET 无法承载；且与 `POST /answer` 重复 | 改调 `Query`（`POST /namespaces/{ns}/query`） |
+| `GET /browse/sparql` | `Query` | SPARQL 直查是执行语义，不是读取资源；把查询串放 URL 会漏进日志与代理 | 改调 `Query`（`POST`，`strategy=nl_to_sparql`）或 `TranslateSPARQL`（`POST`，预览）；**不保留任意 SPARQL 串直查入口** |
+
+落地要求：
+
+1. 迁移方式是 **web-app 改用 POST 语义**：`platform-core/web` 的 search / answer / browse-sparql 三个页面搬迁时，只能接上表的 POST operation，不得为旧 GET 新增调用点或兼容层。
+2. **旧 GET 随 M3b 出口切换、`platform-core` 目录退役一起消失**，不设过渡期、不做别名。
+3. 2026-11-10 核查：`packages/web-app/src` 下对 `/search`、`/answer`、`/browse/sparql` 三个路径的引用为 **0**，无待改调用点。
+
 ---
 
 ## 5. 新增 operation 规格（86 个，派活材料）
@@ -388,6 +404,14 @@
 | `ControlPlaneService` | 32 | 命名空间、数据源、权限、审批、指标定义、A-Box 账本治理、数据字典 |
 | `DataLayerService` | 18 | 查询、检索、图遍历、指标计算、回答与溯源读取 |
 | `OntologyService`（新增） | 36 | 本体归纳、提案、评审、发布、回滚、术语、形状、迁移包、推理与校验 |
+
+#### 5.0.1 临时归属：向量检索两 op（记账，不是定论）
+
+已落地的 `GetEntityEmbeddings`、`SearchEmbeddings` **当前挂在 `ControlPlaneService`**，属于**临时归属**，原因只有一个：仓库尚无 `OntologyService`，为它们单开一套 service 会把「先能跑」变成「先分裂」。
+
+- **迁移触发条件（硬性）**：本体那 36 个 op 开工建 `OntologyService` 时，**同一次改动内**把这两 op 一并迁入 `OntologyService`，不留第二次迁移。
+- **迁移范围**：`models/src/main/smithy/embeddings.smithy` 的 `use` 与 `control-plane.smithy` 的 `operations` 列表两处归属；HTTP 路径不变（`/namespaces/{namespaceId}/embeddings/...`），对外 base URL 不变。
+- **禁止**：不得因「已经能跑」而把临时归属当最终决策；下一次 service 归属评审必须显式确认这两 op 是否已迁。
 
 | # | operation | 目标 service | 理由（一句话） |
 |---:|---|---|---|
@@ -1145,3 +1169,26 @@ A-Box 灌入后实测（18,020 实例 / 121,130 三元组，同一台本机 Oxig
 1. 新 operation 必须**按类索引**取数（`?s a <类IRI>` + `GRAPH <图URI>` 常量绑定），禁止复用现在的 `GRAPH ?g` + STRSTARTS 形状。
 2. 生产语义上实例本就不该常驻 T-Box 图：契约里 `coa:isMapped` 才是结构化 Tier-2（NL→SQL/Ontop）的入口。本地这份 A-Box 的 `agreement#Policy` 等类 `isMapped` 为空，说明「类→表→实例」的映射也没落，需要一起补。
 3. 在 operation 落地前，5173 上**不做实例页**；验证只到存储与 SPARQL 层（见 `12-A-Box与写入链路本地化评估.md`）。
+
+### 14.4 决策：`GraphSearch` 命名空间级检索改为常量图绑定（2026-11-10）
+
+§14.3 的 101.8 s 与 M2 第一批的 90 s 是同一个病根：不传 `ontology_id` 时 `?g` 不绑定，`GRAPH ?g { … }` + `FILTER(STRSTARTS(STR(?g), …))` 让引擎先扫全库再过滤，外层又对每条解重取 label/type。
+
+**测量（本机 Oxigraph，5 个命名图 / 123,828 三元组；同一查询形状、同一空结果集）：**
+
+| 形状 | 耗时 |
+|---|---|
+| `GRAPH ?g` + `STRSTARTS`（原） | 86.281 s |
+| `GRAPH ?g` + `VALUES ?g { 3 个命名空间图 }` | 0.058 s |
+| `GRAPH <常量图>` | 0.0028 s |
+| 仅枚举 `SELECT DISTINCT ?g WHERE { GRAPH ?g { } }` | 0.0036 s |
+
+**结论：选方案 ②（枚举命名空间图 + 常量图绑定），不强制 `ontology_id`。** 理由：
+
+1. 契约与 UI 都需要「整个命名空间」的浏览：`GraphSearch.ontology_id` 本就是可选，Explorer 的 `ALL_ONTOLOGIES` 是默认视图。强制必填等于用契约去补实现缺口，会把可用的浏览能力变成不可用。
+2. 语义零变化：`VALUES` 列出的图与 `STRSTARTS` 接受的是同一集合（都按 `{base}/{namespace}/` 前缀），结果集与 `total_count` 不变（实测 namespace 路径 100 hits / total 156，与 `ontology_id` 路径一致）。
+3. 不新建「按类索引」：图列表取自存储自身的命名图字典（3.6 ms），无一致性维护成本。按类索引留给 §14.3 的实例级 operation（那条仍必须 `?s a <类IRI>` + 常量图）。
+
+**生产路径影响：AWS 默认不改。** 范围模式按 provider 决定：`COA_PROVIDER_ONTOLOGY_GRAPH=oxigraph`（本地）→ `values`；其余（Neptune、未设置）→ `prefix`，即原查询形状完全不变。原因是 Neptune 的执行计划依赖图统计，`VALUES` + `GRAPH` 没有生产实测，不在无证据时改线上形状。`COA_ONTOLOGY_GRAPH_SCOPE=values|prefix` 可单环境覆盖；切换只影响性能，不影响结果。
+
+验证：`/namespaces/{ns}/graph/search?q=*&kind=class&limit=100` → 1.19 s（原同形状空结果集 86.3 s）；带 `ontology_id` → 0.52 s；相关单测 270 passed。
