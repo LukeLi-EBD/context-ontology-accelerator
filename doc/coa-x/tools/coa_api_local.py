@@ -598,6 +598,13 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/export", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/inspect", KERNEL),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/import", KERNEL),
+    # A-Box fact ledger (09 §4.7): the kernel keeps one ledger, so the namespace
+    # segment is contract shape rather than a partition key.
+    ("/namespaces/{namespaceId}/facts", KERNEL),
+    ("/namespaces/{namespaceId}/facts/conflicts", KERNEL),
+    ("/namespaces/{namespaceId}/facts/{factId}", KERNEL),
+    ("/namespaces/{namespaceId}/facts/{factId}/retract", KERNEL),
+    ("/namespaces/{namespaceId}/facts/{factId}/restore", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -891,6 +898,43 @@ def _kernel_translate(
 
     if template.endswith("/verify"):
         return "GET", "/ontology/verify", None
+
+    if "/facts" in template:
+        fact_id = path_params.get("factId", "")
+        q = query or {}
+        if template.endswith("/facts/conflicts"):
+            suffix = (
+                "?includeAccepted=true"
+                if str(q.get("includeAccepted", "")).lower() in ("1", "true", "yes")
+                else ""
+            )
+            return "GET", f"/facts/conflicts{suffix}", None
+        if template.endswith("/retract"):
+            forwarded = {
+                "actor": payload.get("actor") or "operator",
+                "reason": payload.get("reason"),
+            }
+            return (
+                "POST",
+                f"/facts/{quote(fact_id)}/retract",
+                json.dumps(forwarded).encode("utf-8"),
+            )
+        if template.endswith("/restore"):
+            forwarded = {"actor": payload.get("actor") or "operator"}
+            return (
+                "POST",
+                f"/facts/{quote(fact_id)}/restore",
+                json.dumps(forwarded).encode("utf-8"),
+            )
+        if template.endswith("/{factId}"):
+            return "GET", f"/facts/{quote(fact_id)}", None
+        params = {
+            key: q[key]
+            for key in ("state", "subject", "predicate", "sourceDocumentId", "conflict", "limit")
+            if q.get(key)
+        }
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/facts{suffix}", None
 
     raise ValueError(f"no kernel mapping for {method} {template}")
 

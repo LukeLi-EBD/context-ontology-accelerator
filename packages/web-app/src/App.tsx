@@ -36,6 +36,7 @@ import { InducedOntologyDetailPage } from "./pages/ontology/InducedOntologyDetai
 import { OntologyClassDetailPage } from "./pages/ontology/OntologyClassDetail";
 import { OntologyVersionsPage } from "./pages/ontology/OntologyVersions";
 import { GovernancePage } from "./pages/governance/GovernancePage";
+import { FactsPage } from "./pages/facts/FactsPage";
 import { MetricList } from "./pages/MetricList";
 import DocumentsPage from "./pages/DocumentsPage";
 import DocumentDetailPage from "./pages/DocumentDetailPage";
@@ -226,6 +227,11 @@ function AppShell() {
           type: "link" as const,
           text: "治理",
           href: `${nsPath}/governance`,
+        },
+        {
+          type: "link" as const,
+          text: "事实账本",
+          href: `${nsPath}/facts`,
         },
         {
           type: "link" as const,
@@ -654,6 +660,7 @@ function AppShell() {
                 path="/namespaces/:namespaceId/governance"
                 element={<GovernancePage />}
               />
+              <Route path="/namespaces/:namespaceId/facts" element={<FactsPage />} />
               <Route
                 path="/namespaces/:namespaceId/documents"
                 element={<DocumentsPage />}

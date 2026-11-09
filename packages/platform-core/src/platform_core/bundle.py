@@ -230,6 +230,20 @@ def _term_entry_count(graph: Graph) -> int:
     )
 
 
+def _metric_def_aggregation(row: dict[str, Any]) -> Any:
+    """Required: the column is hashed, so a silent default would fabricate data."""
+
+    if "aggregation_semantics" not in row:
+        raise _err(
+            "E_BUNDLE_METRIC_DEF_INCOMPLETE",
+            f"metric definition {row.get('metric_id')!r} has no aggregation_semantics; "
+            "bundles exported before this column was carried cannot be restored "
+            "faithfully — re-export from the source database",
+            path=METRIC_DEFINITIONS_FILE,
+        )
+    return row["aggregation_semantics"]
+
+
 def _metric_def_params(row: dict[str, Any]) -> tuple[Any, ...]:
     return (
         row["metric_id"], row["name_zh"], row["domain"], row["evidence_basis"],
@@ -240,7 +254,7 @@ def _metric_def_params(row: dict[str, Any]) -> tuple[Any, ...]:
         row.get("denominator_agg"), row.get("window_kind"),
         int(row["min_window_days"]) if row.get("min_window_days") is not None else None,
         row.get("grain"), row.get("unit"), row.get("fact_function"),
-        row.get("aggregation_semantics") or "sum",
+        _metric_def_aggregation(row),
         _as_datetime(row.get("updated_at")),
     )
 
@@ -597,13 +611,12 @@ def export_bundle(
         )
 
         # ---- metric registry, observations and entity facts -------------
+        # Column list comes from _METRIC_DEF_COLUMNS so export, upsert and the
+        # content hash cannot drift apart; a hand-written list silently dropped
+        # aggregation_semantics and made every restore fail verification.
         metric_defs = runtime.metadata.query(
-            """
-            SELECT metric_id, name_zh, domain, evidence_basis, publishable,
-                   inference, formula_disabled, missing, evidence_status, note,
-                   definition_version, metric_kind, formula_expr, numerator_agg,
-                   denominator_agg, window_kind, min_window_days, grain, unit,
-                   fact_function, updated_at
+            f"""
+            SELECT {", ".join(_METRIC_DEF_COLUMNS)}
               FROM platform.metric_definition
              ORDER BY metric_id
             """

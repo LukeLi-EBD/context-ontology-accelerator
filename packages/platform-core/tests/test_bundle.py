@@ -169,5 +169,71 @@ class RestoreCleanupTests(unittest.TestCase):
         self.assertEqual(result["deleted"], iris[1:])
 
 
+class MetricDefinitionRegistryTest(unittest.TestCase):
+    """指标注册表随 bundle 迁移：hash 覆盖的字段必须被导出携带，且不许静默补默认值。"""
+
+    def _row(self, **overrides: object) -> dict:
+        row = {name: None for name in bundle._METRIC_DEF_COLUMNS}
+        row.update(
+            {
+                "metric_id": "CUST-001",
+                "name_zh": "RFM-R",
+                "domain": "customer",
+                "evidence_basis": "industry",
+                "publishable": False,
+                "inference": True,
+                "formula_disabled": False,
+                "evidence_status": "INDUSTRY_ONLY",
+                "definition_version": "v3.0",
+                "metric_kind": "duration",
+                "formula_expr": "numerator",
+                "numerator_agg": "max",
+                "window_kind": "instant",
+                "min_window_days": 0,
+                "grain": "customer",
+                "unit": "天",
+                "aggregation_semantics": "sum",
+                "updated_at": "2026-11-09T17:10:47.742102+00:00",
+            }
+        )
+        row.update(overrides)
+        return row
+
+    def test_hash_ignores_updated_at(self) -> None:
+        base = self._row()
+        moved = self._row(updated_at="2026-11-10T00:00:00+00:00")
+        self.assertEqual(
+            bundle._metric_def_hash([base]), bundle._metric_def_hash([moved])
+        )
+
+    def test_hash_covers_aggregation_semantics(self) -> None:
+        # 回归：导出曾漏掉这一列，85/85 条全对但 hash 判不等。
+        self.assertNotEqual(
+            bundle._metric_def_hash([self._row()]),
+            bundle._metric_def_hash([self._row(aggregation_semantics="distinct_count")]),
+        )
+
+    def test_hash_is_order_independent(self) -> None:
+        first, second = self._row(), self._row(metric_id="CUST-002")
+        self.assertEqual(
+            bundle._metric_def_hash([first, second]),
+            bundle._metric_def_hash([second, first]),
+        )
+
+    def test_params_reject_row_without_aggregation_semantics(self) -> None:
+        row = self._row()
+        row.pop("aggregation_semantics")
+        with self.assertRaises(PortError) as ctx:
+            bundle._metric_def_params(row)
+        self.assertEqual(ctx.exception.provider_code, "E_BUNDLE_METRIC_DEF_INCOMPLETE")
+
+    def test_params_carry_aggregation_semantics(self) -> None:
+        params = bundle._metric_def_params(
+            self._row(aggregation_semantics="distinct_count")
+        )
+        index = bundle._METRIC_DEF_COLUMNS.index("aggregation_semantics")
+        self.assertEqual(params[index], "distinct_count")
+
+
 if __name__ == "__main__":
     unittest.main()
