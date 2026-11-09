@@ -44,6 +44,7 @@ def _emb_response(e: dict) -> EmbeddingResponse:
         dimensions=e.get("dimensions", len(e.get("vector") or e.get("embedding") or [])),
         text=e.get("text"),
         created_at=e.get("created_at", ""),
+        metadata=e.get("metadata"),
     )
 
 
@@ -125,6 +126,7 @@ def get_embeddings_for_entity(
             dimensions=r.get("dimensions", len(r.get("vector") or r.get("embedding") or [])),
             created_at=r.get("created_at", ""),
             vector=r.get("vector") or r.get("embedding") or [],
+            metadata=r.get("metadata"),
         )
         for r in rows
         if _matches_model(r, model_id)
@@ -201,6 +203,7 @@ def search_nearest(body: EmbeddingQuery, namespace: str = "default"):
                 dimensions=dims,
                 created_at="",
                 vector=vec[:dims],
+                metadata=d.get("metadata"),
             )
         )
     return out

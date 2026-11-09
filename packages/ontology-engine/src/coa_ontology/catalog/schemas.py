@@ -3,6 +3,8 @@
 
 """Pydantic request/response schemas for the ontology-catalog and embedding APIs."""
 
+from typing import Any
+
 from pydantic import BaseModel, Field, field_validator
 
 # --- Ontology schemas ---
@@ -198,6 +200,10 @@ class EmbeddingCreate(BaseModel):
     model_id: str
     vector: list[float]
     dimensions: int
+    # Optional provenance for non-entity embeddings (e.g. document chunks).
+    # Entity embeddings leave this unset; chunk embeddings carry document/chunk
+    # ids and offsets so a vector can be traced back to its chunk row.
+    metadata: dict[str, Any] | None = None
 
 
 class EmbeddingBatchCreate(BaseModel):
@@ -218,6 +224,7 @@ class EmbeddingResponse(BaseModel):
     dimensions: int
     text: str | None = None
     created_at: str | None = None
+    metadata: dict[str, Any] | None = None
 
     model_config = {"from_attributes": True}
 
