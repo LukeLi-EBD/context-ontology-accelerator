@@ -441,13 +441,18 @@ def _seed_demo_catalog(namespace_id: str) -> dict[str, Any]:
         "sourceType": "DATABASE",
         "sourceSubType": "GLUE_DATABASE",
         "status": "APPROVED",
-        "configuration": {
-            "glueConfiguration": {
-                "catalogId": "local",
+        # Stored blob is the Glue configuration itself; the wire member name
+        # (glueConfiguration) only selects which member GetSource surfaces it
+        # under (_DETAIL_CONFIG_KEYS), so it is not nested here.
+        "configuration": json.dumps(
+            {
+                # GlueConfiguration.catalogId is contract-constrained to a
+                # 12-digit account id; there is no AWS account locally.
+                "catalogId": "123456789012",
                 "databaseName": "platform",
                 "region": os.environ["AWS_REGION"],
             }
-        },
+        ),
         "tenantId": f"ns-{namespace_id}",
         "createdBy": LOCAL_EMAIL,
         "createdAt": created,
