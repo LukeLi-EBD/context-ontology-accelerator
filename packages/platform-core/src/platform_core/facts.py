@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import uuid
 from datetime import datetime
@@ -25,6 +26,27 @@ from .ports import Manifest
 IRI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:[^<>\"{}|^`\\\s]+$")
 STATES = ("active", "retracted", "superseded")
 SOURCE_KINDS = ("extraction", "manual", "import")
+PLATFORM_GRAPH_PREFIX = "urn:platform:"
+# Document facts are materialised into the COA A-Box graph
+# ``{NDB_GRAPH_URI_BASE}/{namespace}/{ontology}``.  The ledger has to record the
+# graph that actually holds the triple, otherwise retract/restore would delete
+# from a graph the triple was never written to.  The base is read from the
+# environment (the same key the metric service uses); when it is unset no A-Box
+# graph is accepted and the caller gets an explicit E_FACT_BAD_GRAPH.
+ABOX_GRAPH_BASE_ENV = "NDB_GRAPH_URI_BASE"
+
+
+def _abox_graph_prefixes() -> tuple[str, ...]:
+    base = (os.environ.get(ABOX_GRAPH_BASE_ENV) or "").strip().rstrip("/")
+    return (f"{base}/",) if base else ()
+
+
+def _graph_ok(graph: str) -> bool:
+    if not IRI_RE.match(graph or ""):
+        return False
+    if graph.startswith(PLATFORM_GRAPH_PREFIX):
+        return True
+    return any(graph.startswith(prefix) for prefix in _abox_graph_prefixes())
 
 
 def _err(code: str, detail: str, provider_code: str, **details: Any) -> PortError:
@@ -190,9 +212,12 @@ class FactLedger:
                 "InvalidArgument", f"unsupported source kind: {source_kind!r}",
                 "E_FACT_BAD_SOURCE", allowed=list(SOURCE_KINDS),
             )
-        if not IRI_RE.match(graph or "") or not graph.startswith("urn:platform:"):
+        if not _graph_ok(graph):
             raise _err(
-                "InvalidArgument", f"graph must be a urn:platform: IRI, got {graph!r}",
+                "InvalidArgument",
+                f"graph must be a urn:platform: IRI or an A-Box graph under "
+                f"{os.environ.get(ABOX_GRAPH_BASE_ENV) or ABOX_GRAPH_BASE_ENV + ' (unset)'}, "
+                f"got {graph!r}",
                 "E_FACT_BAD_GRAPH", graph=graph,
             )
         self.ensure_chain()
@@ -490,9 +515,12 @@ class FactLedger:
                 "E_FACT_RESOLUTION", field="mergedObject",
             )
         target_graph = graph or rows[0]["graph_iri"]
-        if not target_graph.startswith("urn:platform:"):
+        if not _graph_ok(target_graph):
             raise _err(
-                "InvalidArgument", f"graph must be a urn:platform: IRI: {target_graph!r}",
+                "InvalidArgument",
+                f"graph must be a urn:platform: IRI or an A-Box graph under "
+                f"{os.environ.get(ABOX_GRAPH_BASE_ENV) or ABOX_GRAPH_BASE_ENV + ' (unset)'}: "
+                f"{target_graph!r}",
                 "E_FACT_BAD_GRAPH", graph=target_graph,
             )
         new_id = f"fact-{uuid.uuid4().hex[:12]}"
