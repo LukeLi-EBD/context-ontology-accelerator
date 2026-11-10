@@ -17,10 +17,16 @@ import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Table from "@cloudscape-design/components/table";
 import Tabs from "@cloudscape-design/components/tabs";
+import TreeView from "@cloudscape-design/components/tree-view";
 import { PendingReviewBanner } from "@components/ontology/PendingReviewBanner";
 import { InductedSourcesView } from "./explorer/InductedSourcesView";
 import { OntologyInventoryView } from "./explorer/OntologyInventoryView";
 import { StatementBrowserView } from "./explorer/StatementBrowserView";
+import {
+  buildClassTree,
+  defaultExpandedIds,
+  type ClassTreeEntry,
+} from "./class-tree";
 
 import {
   searchEntities,
@@ -772,14 +778,22 @@ export function GraphSearchPage() {
   const [visibleUris, setVisibleUris] = useState<Set<string>>(new Set());
   // Total number of root classes available (visible roots may be capped).
   const [totalRoots, setTotalRoots] = useState(0);
-  // Which pane is shown: a flat paginated class list (default), or the
-  // interactive graph.
-  const [view, setView] = useState<"graph" | "list">("list");
+  // Which pane is shown: a flat paginated class list (default), the
+  // interactive graph, or the collapsible class tree.
+  const [view, setView] = useState<"graph" | "list" | "tree">("list");
   // class URI → description, from the per-ontology overview calls. Feeds the
   // List view's Description column without loading each class's full vertex.
   const [descriptionByUri, setDescriptionByUri] = useState<Map<string, string>>(
     new Map(),
   );
+  // Class hierarchy for the Tree view, from the same overview calls: the tree
+  // must not cost a second round-trip per ontology.
+  const [classTreeEntries, setClassTreeEntries] = useState<ClassTreeEntry[]>(
+    [],
+  );
+  const [expandedClassNodes, setExpandedClassNodes] = useState<string[]>([]);
+  // Expand the tree to three levels once, when its data first arrives.
+  const treeExpansionInitialised = useRef(false);
   // ontology_id → registry record, for resolving ontology name + induced flag
   // in the List view (fetched once on mount alongside the classes).
   const [ontologyById, setOntologyById] = useState<Map<string, ListedOntology>>(
@@ -900,12 +914,19 @@ export function GraphSearchPage() {
       .then((overviews) => {
         if (cancelled) return;
         const descByUri = new Map<string, string>();
+        const entries: ClassTreeEntry[] = [];
         for (const ov of overviews) {
           for (const c of ov?.classes ?? []) {
             if (c.comment) descByUri.set(c.uri, c.comment);
+            entries.push({
+              uri: c.uri,
+              label: c.label || c.uri,
+              parents: c.subClassOf ?? undefined,
+            });
           }
         }
         setDescriptionByUri(descByUri);
+        setClassTreeEntries(entries);
       })
       .catch(() => {
         // Best-effort: descriptions enrich the List view but aren't required.
@@ -914,6 +935,17 @@ export function GraphSearchPage() {
       cancelled = true;
     };
   }, [namespaceId, apiClient, ontologyById]);
+
+  const classTree = useMemo(
+    () => buildClassTree(classTreeEntries),
+    [classTreeEntries],
+  );
+
+  useEffect(() => {
+    if (treeExpansionInitialised.current || classTree.length === 0) return;
+    treeExpansionInitialised.current = true;
+    setExpandedClassNodes(defaultExpandedIds(classTree));
+  }, [classTree]);
 
   // Build the graph seed the first time the Graph view is opened without an
   // active search. Fetches the FULL (un-sampled) class list per ontology —
@@ -1686,30 +1718,33 @@ export function GraphSearchPage() {
               <SegmentedControl
                 selectedId={view}
                 onChange={({ detail }) =>
-                  setView(detail.selectedId as "graph" | "list")
+                  setView(detail.selectedId as "graph" | "list" | "tree")
                 }
                 label={t("View")}
                 options={[
                   { id: "list", text: t("List"), iconName: "list-view" },
                   { id: "graph", text: t("Graph"), iconName: "share" },
+                  { id: "tree", text: t("Tree") },
                 ]}
               />
-              <div style={{ flexGrow: 1, minWidth: 300 }}>
-                <Input
-                  value={query}
-                  onChange={({ detail }) => setQuery(detail.value)}
-                  onKeyDown={({ detail }) => {
-                    if (isSubmitEnter(detail) && view === "graph")
-                      handleSearch();
-                  }}
-                  placeholder={
-                    view === "list"
-                      ? t("Filter classes...")
-                      : t("Search classes, properties...")
-                  }
-                  type="search"
-                />
-              </div>
+              {view !== "tree" && (
+                <div style={{ flexGrow: 1, minWidth: 300 }}>
+                  <Input
+                    value={query}
+                    onChange={({ detail }) => setQuery(detail.value)}
+                    onKeyDown={({ detail }) => {
+                      if (isSubmitEnter(detail) && view === "graph")
+                        handleSearch();
+                    }}
+                    placeholder={
+                      view === "list"
+                        ? t("Filter classes...")
+                        : t("Search classes, properties...")
+                    }
+                    type="search"
+                  />
+                </div>
+              )}
               {view === "list" && (
                 <Select
                   selectedOption={selectedOntologyOption}
@@ -1859,6 +1894,57 @@ export function GraphSearchPage() {
             </SpaceBetween>
           )}
 
+          {/* Tree view — the same classes as a collapsible taxonomy, built from
+              the overviews the List view already loads. Clicking a class name
+              opens the same right-hand detail panel as the other two views. */}
+          {view === "tree" && (
+            <div
+              style={{ marginTop: 12, flex: 1, minHeight: 0, overflow: "auto" }}
+            >
+              {classTree.length === 0 ? (
+                <Box
+                  textAlign="center"
+                  color="text-body-secondary"
+                  padding={{ top: "xxxl" }}
+                >
+                  {t("No classes found in this namespace yet.")}
+                </Box>
+              ) : (
+                <TreeView
+                  items={classTree}
+                  getItemId={(node) => node.uri}
+                  getItemChildren={(node) =>
+                    node.children.length > 0 ? node.children : undefined
+                  }
+                  renderItem={(node) => ({
+                    content:
+                      selectedVertex?.uri === node.uri ? (
+                        <strong>{node.label}</strong>
+                      ) : (
+                        <Link
+                          variant="primary"
+                          onFollow={() => handleClassRowClick(node.uri)}
+                        >
+                          {node.label}
+                        </Link>
+                      ),
+                    announcementLabel: node.label,
+                  })}
+                  expandedItems={expandedClassNodes}
+                  onItemToggle={({ detail }) =>
+                    setExpandedClassNodes((current) =>
+                      detail.expanded
+                        ? [...current, detail.id]
+                        : current.filter((id) => id !== detail.id),
+                    )
+                  }
+                  ariaLabel={t("Class tree")}
+                  connectorLines="vertical"
+                />
+              )}
+            </div>
+          )}
+
           {/* List view — a paginated table of every class in the namespace,
               grouped by ontology (induced first). Clicking a row opens the same
               right-hand detail panel the graph uses. */}
@@ -1882,6 +1968,9 @@ export function GraphSearchPage() {
                   const row = detail.selectedItems[0];
                   if (row) handleClassRowClick(row.uri);
                 }}
+                // The selection radio was the only way in; clicking anywhere on
+                // the row now opens the same detail panel as the graph.
+                onRowClick={({ detail }) => handleClassRowClick(detail.item.uri)}
                 columnDefinitions={[
                   {
                     id: "label",

@@ -122,6 +122,8 @@ export const MESSAGES_JA = {
     "この名前空間にはサンプル質問が公開されていません。",
   "Could not load sample prompts.":
     "サンプル質問を読み込めませんでした。",
+  Tree: "ツリー",
+  "Class tree": "クラスのツリー",
   "No namespace selected. Choose one from the top navigation.":
     "名前空間が選択されていません。上部ナビゲーションから選択してください。",
   "Previous session history may not have loaded":
