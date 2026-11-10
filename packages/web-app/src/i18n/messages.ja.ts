@@ -2570,6 +2570,15 @@ export const MESSAGES_JA = {
     "合成された回答はありません（ティア {tier}）。",
   "Tier {tier} · {chunks} supporting chunks":
     "ティア {tier} · サポートチャンク {chunks} 件",
+  "Retrieval degraded": "検索が縮退しました",
+  "{step}: {status}": "{step}: {status}",
+  "{step}: {status} — {detail}": "{step}: {status} — {detail}",
+  "Results truncated": "結果が切り詰められました",
+  "Showing the first {count} chunks (top-K cap). More matching chunks may exist and are not shown.":
+    "先頭 {count} 件のチャンクのみ表示しています（top-K 上限）。一致するチャンクが他にも存在する可能性がありますが、表示されていません。",
+  "Partial answer": "部分的な回答",
+  "The service marked this answer as partial; some evidence could not be retrieved.":
+    "サービスはこの回答を部分的とマークしました。一部の根拠を取得できていません。",
   'Must be an absolute http(s) IRI without spaces or any of < > " { } | \\ ^ `.':
     '空白および < > " { } | \\ ^ ` のいずれも含まない、絶対 http(s) IRI を指定してください。',
 } as const;

@@ -10,7 +10,11 @@ import {
   useListDocumentChunks,
   useListDocuments,
 } from "@api-hooks";
-import { useAskNamespace, useKbSearch } from "@api-hooks/use-retrieval";
+import {
+  KB_SEARCH_TOP_K,
+  useAskNamespace,
+  useKbSearch,
+} from "@api-hooks/use-retrieval";
 import Alert from "@cloudscape-design/components/alert";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
@@ -118,6 +122,18 @@ export default function RetrievalPage() {
 
   const hits: EmbeddingRecord[] = search.data?.hits ?? [];
 
+  // F84: make truncation and degradation explicit instead of silent.
+  // `KBSearchOutput` carries no truncation flag, so the honest signal is that
+  // the service returned exactly as many chunks as this UI asked for.
+  // Degradation is only claimed for statuses that actually say so — a `miss`
+  // or an `allow` decision is a normal outcome, not a degraded retrieval.
+  const kbChunks = kbSearch.data?.chunks ?? [];
+  const kbTruncated = kbChunks.length >= KB_SEARCH_TOP_K;
+  const degradedStatusPattern = /degrad|fallback|partial|timeout|error|fail/i;
+  const kbDegradedSteps = (kbSearch.data?.trace ?? []).filter(
+    (step) => step.status && degradedStatusPattern.test(step.status),
+  );
+
   return (
     <SpaceBetween size="l">
       <Flashbar items={flashItems} />
@@ -156,10 +172,38 @@ export default function RetrievalPage() {
           {kbSearch.error ? (
             <Alert type="error">{kbSearch.error.message}</Alert>
           ) : null}
+          {kbSearch.data && kbDegradedSteps.length > 0 ? (
+            <Alert type="warning" header={t("Retrieval degraded")}>
+              <SpaceBetween size="xxs">
+                {kbDegradedSteps.map((step) => (
+                  <Box key={step.step}>
+                    {step.detail
+                      ? t("{step}: {status} — {detail}", {
+                          step: step.step ?? "",
+                          status: step.status ?? "",
+                          detail: step.detail,
+                        })
+                      : t("{step}: {status}", {
+                          step: step.step ?? "",
+                          status: step.status ?? "",
+                        })}
+                  </Box>
+                ))}
+              </SpaceBetween>
+            </Alert>
+          ) : null}
+          {kbSearch.data && kbTruncated ? (
+            <Alert type="warning" header={t("Results truncated")}>
+              {t(
+                "Showing the first {count} chunks (top-K cap). More matching chunks may exist and are not shown.",
+                { count: KB_SEARCH_TOP_K },
+              )}
+            </Alert>
+          ) : null}
           {kbSearch.data ? (
             <Table
               variant="embedded"
-              items={kbSearch.data.chunks ?? []}
+              items={kbChunks}
               columnDefinitions={[
                 {
                   id: "text",
@@ -241,6 +285,13 @@ export default function RetrievalPage() {
                   chunks: ask.data.result.supportingContent?.length ?? 0,
                 })}
               </Box>
+              {ask.data.result.partial ? (
+                <Alert type="warning" header={t("Partial answer")}>
+                  {t(
+                    "The service marked this answer as partial; some evidence could not be retrieved.",
+                  )}
+                </Alert>
+              ) : null}
             </SpaceBetween>
           ) : null}
         </SpaceBetween>
