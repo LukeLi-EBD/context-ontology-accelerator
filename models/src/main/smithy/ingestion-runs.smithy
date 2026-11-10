@@ -104,6 +104,112 @@ structure IngestionRun {
 
     /// When the batch finished; absent while running.
     finishedAt: Timestamp
+
+    /// Most recent invocation of `platform import` for this batch
+    /// (platform.import_run). Absent for batches imported before the ledger.
+    lastRun: IngestionRunAttempt
+}
+
+/// Final state of one import invocation.
+enum IngestionAttemptStatus {
+    /// The process was still working when the snapshot was taken.
+    RUNNING
+
+    /// The invocation returned normally (items may still have failed).
+    COMPLETED
+
+    /// Stopped by the operator; the next invocation resumes.
+    INTERRUPTED
+
+    /// The invocation raised before it could finish.
+    FAILED
+}
+
+/// Scan buckets that never became import items.
+structure IngestionRunSkipped {
+    @required
+    hidden: Long
+
+    @required
+    unsupported: Long
+
+    @required
+    empty: Long
+
+    @required
+    tooLarge: Long
+
+    @required
+    unreadable: Long
+}
+
+/// Counters exactly as reported by one invocation.
+structure IngestionRunCounters {
+    @required
+    total: Long
+
+    @required
+    alreadyDone: Long
+
+    @required
+    processed: Long
+
+    @required
+    parsed: Long
+
+    @required
+    resumedChunked: Long
+
+    @required
+    indexed: Long
+
+    @required
+    documentsAdded: Long
+
+    @required
+    failedThisRun: Long
+
+    @required
+    failedTotal: Long
+
+    @required
+    remainingFiles: Long
+
+    @required
+    interrupted: Boolean
+
+    @required
+    skipped: IngestionRunSkipped
+
+    @required
+    elapsedSeconds: Double
+}
+
+/// One invocation of `platform import` (platform.import_run).
+structure IngestionRunAttempt {
+    /// Invocation identifier (platform.import_run.run_id), not the batch id.
+    @required
+    runId: Uuid
+
+    @required
+    status: IngestionAttemptStatus
+
+    @required
+    startedAt: Timestamp
+
+    finishedAt: Timestamp
+
+    /// Process exit code reported by the CLI.
+    exitCode: Integer
+
+    /// Machine-readable failure code when status is FAILED.
+    errorCode: String
+
+    /// Human-readable failure message when status is FAILED.
+    errorMessage: String
+
+    /// Counters are absent when the invocation failed before counting.
+    counters: IngestionRunCounters
 }
 
 /// A page of ingestion runs.

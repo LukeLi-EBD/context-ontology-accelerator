@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-SUPPORTED_SCHEMA_VERSION = 50
+SUPPORTED_SCHEMA_VERSION = 51
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -99,6 +99,7 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     # C2 quota landed after V49: 35 is retired forever (see below), so the
     # daily ledger takes the next free number instead of its original V35.
     (50, "V50__quota_usage.sql", "C2-1 quota ledger: daily token/request counters per scope"),
+    (51, "V51__import_run.sql", "P1 import run ledger: per-invocation status, counters and failure"),
 ]
 
 # Retired migration numbers, kept permanently empty.

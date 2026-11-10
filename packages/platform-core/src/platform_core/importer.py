@@ -287,6 +287,76 @@ def _find_batch(runtime: Runtime, root: Path) -> uuid.UUID | None:
     return rows[0]["batch_id"] if rows else None
 
 
+def _start_run(
+    runtime: Runtime,
+    batch_id: uuid.UUID,
+    namespace_id: uuid.UUID,
+    options: dict[str, Any],
+) -> uuid.UUID:
+    """Open one ledger row for this invocation.
+
+    The batch advisory lock is already held, so any `running` row for the same
+    batch belongs to a process that died without finishing: close it as
+    interrupted instead of leaving a phantom run forever.
+    """
+    from psycopg.types.json import Jsonb
+
+    runtime.metadata.execute(
+        """
+        UPDATE platform.import_run
+           SET status = 'interrupted',
+               finished_at = now(),
+               error_code = COALESCE(error_code, 'E_RUN_ABANDONED'),
+               error_message = COALESCE(error_message, 'process exited without finishing')
+         WHERE batch_id = %s AND status = 'running'
+        """,
+        (batch_id,),
+    )
+    rows = runtime.metadata.query(
+        """
+        INSERT INTO platform.import_run (batch_id, namespace_id, status, options)
+        VALUES (%s, %s, 'running', %s)
+        RETURNING run_id
+        """,
+        (batch_id, namespace_id, Jsonb(options)),
+    )
+    return rows[0]["run_id"]
+
+
+def _finish_run(
+    runtime: Runtime,
+    run_id: uuid.UUID,
+    *,
+    status: str,
+    counters: dict[str, Any],
+    exit_code: int | None,
+    error: BaseException | None = None,
+) -> None:
+    from psycopg.types.json import Jsonb
+
+    code = message = None
+    if error is not None:
+        code = (
+            getattr(error, "provider_code", None)
+            or getattr(error, "code", None)
+            or type(error).__name__
+        )
+        message = getattr(error, "message", None) or str(error)
+    runtime.metadata.execute(
+        """
+        UPDATE platform.import_run
+           SET status = %s,
+               finished_at = now(),
+               exit_code = %s,
+               counters = %s,
+               error_code = %s,
+               error_message = %s
+         WHERE run_id = %s
+        """,
+        (status, exit_code, Jsonb(counters), code, message, run_id),
+    )
+
+
 def _upsert_items(
     runtime: Runtime, batch_id: uuid.UUID, scan: ScanResult, indexed_shas: set[str]
 ) -> None:
@@ -631,7 +701,61 @@ class Importer:
                         provider="platform",
                         provider_code="E_IMPORT_BUSY",
                     )
-                return self._run_locked(root, batch_id, retry_failed, started, namespace)
+                run_id = _start_run(self._runtime, batch_id, namespace, options)
+                try:
+                    result = self._run_locked(root, batch_id, retry_failed, started)
+                except Exception as exc:  # noqa: BLE001 - ledger must not hide the failure
+                    _finish_run(
+                        self._runtime, run_id, status="failed", counters={},
+                        exit_code=None, error=exc,
+                    )
+                    raise
+                result["runId"] = str(run_id)
+                run_status = "interrupted" if result["interrupted"] else "completed"
+                _finish_run(
+                    self._runtime,
+                    run_id,
+                    status=run_status,
+                    counters={
+                        "total": result["total"],
+                        "alreadyDone": result["alreadyDone"],
+                        "processed": result["processed"],
+                        "parsed": result["parsed"],
+                        "resumedChunked": result["resumedChunked"],
+                        "indexed": result["indexed"],
+                        "failedThisRun": result["failedThisRun"],
+                        "failedTotal": result["failed"],
+                        "documentsAdded": result["documentsAdded"],
+                        "remainingFiles": result["remainingFiles"],
+                        "interrupted": result["interrupted"],
+                        "skipped": result["skipped"],
+                        "elapsedSeconds": result["elapsedSeconds"],
+                    },
+                    exit_code=result["exitCode"],
+                )
+                # One structured line per invocation: the JSON goes to stdout,
+                # this is what survives in the log pipeline.
+                log.info(
+                    "import run finished",
+                    extra={
+                        "event": {
+                            "event": "import_run_finished",
+                            "runId": result["runId"],
+                            "batchId": result["batchId"],
+                            "namespaceId": str(namespace),
+                            "status": run_status,
+                            **{
+                                key: result[key]
+                                for key in (
+                                    "total", "alreadyDone", "processed", "indexed",
+                                    "failedThisRun", "failed", "remainingFiles",
+                                    "interrupted", "skipped", "elapsedSeconds", "exitCode",
+                                )
+                            },
+                        }
+                    },
+                )
+                return result
 
     def _run_locked(
         self,
@@ -639,7 +763,6 @@ class Importer:
         batch_id: uuid.UUID,
         retry_failed: bool,
         started: float,
-        namespace_id: uuid.UUID,
     ) -> dict[str, Any]:
         cache = _batch_items(self._runtime, batch_id)
         scan = scan_directory(self._runtime, root, cache)
@@ -899,29 +1022,6 @@ class Importer:
             "failures": failures,
             "exitCode": exit_code,
         }
-        # One structured line per invocation: the JSON goes to stdout, this is
-        # what survives in the log pipeline and can be reconciled later.
-        log.info(
-            "import run finished",
-            extra={
-                "event": {
-                    "event": "import_run_finished",
-                    "batchId": result["batchId"],
-                    "namespaceId": str(namespace_id),
-                    "total": result["total"],
-                    "alreadyDone": result["alreadyDone"],
-                    "processed": result["processed"],
-                    "indexed": result["indexed"],
-                    "failedThisRun": result["failedThisRun"],
-                    "failedTotal": result["failed"],
-                    "remainingFiles": result["remainingFiles"],
-                    "interrupted": result["interrupted"],
-                    "skipped": result["skipped"],
-                    "elapsedSeconds": result["elapsedSeconds"],
-                    "exitCode": result["exitCode"],
-                }
-            },
-        )
         return result
 
 
@@ -1117,6 +1217,39 @@ def _encode_offset(offset: int) -> str:
     return base64.urlsafe_b64encode(str(offset).encode("ascii")).decode("ascii")
 
 
+def _last_runs(runtime: Runtime, batch_ids: list[Any]) -> dict[Any, dict[str, Any]]:
+    """Latest ledger row per batch (one query, no N+1)."""
+    if not batch_ids:
+        return {}
+    rows = runtime.metadata.query(
+        """
+        SELECT DISTINCT ON (batch_id)
+               batch_id, run_id, status, started_at, finished_at, exit_code,
+               counters, error_code, error_message
+          FROM platform.import_run
+         WHERE batch_id = ANY(%s)
+         ORDER BY batch_id, started_at DESC
+        """,
+        (list(batch_ids),),
+    )
+    return {row["batch_id"]: row for row in rows}
+
+
+def _run_view(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return {
+        "runId": str(row["run_id"]),
+        "status": row["status"].upper(),
+        "startedAt": row["started_at"].isoformat() if row["started_at"] else None,
+        "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+        "exitCode": row["exit_code"],
+        "counters": row["counters"] or None,
+        "errorCode": row["error_code"],
+        "errorMessage": row["error_message"],
+    }
+
+
 def ingestion_runs(
     runtime: Runtime,
     namespace_id: str,
@@ -1210,6 +1343,7 @@ def ingestion_runs(
     )
     has_more = len(rows) > max_results
     rows = rows[:max_results]
+    last_runs = _last_runs(runtime, [row["batch_id"] for row in rows])
 
     items = [
         {
@@ -1226,6 +1360,7 @@ def ingestion_runs(
             "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
             "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
             "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+            "lastRun": _run_view(last_runs.get(row["batch_id"])),
         }
         for row in rows
     ]
