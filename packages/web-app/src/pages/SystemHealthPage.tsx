@@ -570,7 +570,7 @@ export function SystemHealthPage() {
 
       <Container
         header={
-          <Header variant="h3" description="跑不动或没配的检查显示“跳过/不可读”，不折算成 0">
+          <Header variant="h3" description="产品有、本地没接的能力标「待本地化」，不折算成 0，也不记成「不适用」">
             F127 质量与推理
           </Header>
         }
@@ -599,18 +599,18 @@ export function SystemHealthPage() {
                       name: "SHACL",
                       value:
                         quality.shacl.status === "skipped"
-                          ? "跳过（无 shapes）"
+                          ? "待本地化（本地无 shapes）"
                           : quality.shacl.status,
                       detail: quality.shacl.detail ?? "",
                     },
                     {
                       name: "推理失败",
                       value: quality.inferenceFailures.count,
-                      detail:
-                        quality.inferenceFailures.detail ??
-                        (reasoning?.available
+                      detail: !reasoning
+                        ? (quality.inferenceFailures.detail ?? "推理状态不可读")
+                        : reasoning.available
                           ? `推理引擎 ${reasoning.engine ?? "unknown"}`
-                          : "未配置推理引擎"),
+                          : "待本地化（本地未接 reasoner）",
                     },
                   ]
                 : []
