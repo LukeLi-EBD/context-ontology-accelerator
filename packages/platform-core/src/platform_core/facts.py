@@ -476,7 +476,8 @@ class FactLedger:
         )
         return result
 
-    def restore(self, fact_id: str, actor: str = "api") -> dict[str, Any]:
+    def restore(self, fact_id: str, actor: str = "api",
+                reason: str | None = None) -> dict[str, Any]:
         row = self._fetch(fact_id)
         if row is None:
             raise _err("NotFound", f"fact not found: {fact_id}", "E_FACT_NOT_FOUND", factId=fact_id)
@@ -498,7 +499,7 @@ class FactLedger:
                 """,
                 (fact_id,),
             )
-            self._event(tx, fact_id, "restored", actor, None, None, {
+            self._event(tx, fact_id, "restored", actor, reason, None, {
                 "subject": row["subject_iri"], "predicate": row["predicate_iri"],
                 "object": row["object_value"], "graph": row["graph_iri"],
             })

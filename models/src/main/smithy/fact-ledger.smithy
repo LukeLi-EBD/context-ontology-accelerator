@@ -990,6 +990,10 @@ operation RestoreFact {
         /// Identity recorded on the restore event; defaults to `api`.
         @length(min: 1, max: 256)
         actor: String
+
+        /// Why the row is restored.
+        @length(min: 0, max: 1024)
+        reason: String
     }
 
     output: FactRecord
