@@ -11,8 +11,13 @@ teardown):
 * A new top-level package would add a distribution for a single table schema.
 
 So placement is: registry (``registry.py``) + runner (``runner.py``) + SQL files
-(``migrations/``) here; the ``MetadataPg`` adapter stays in ``platform-core``
-until R2/R3 and delegates here, keeping one registry and one version gate.
+(``migrations/``) + connection management (``connection.py``) here. The
+``MetadataPg`` adapter in ``platform-core`` is now a thin forwarder over
+``connection.PgPool``: one pool implementation, one registry, one version gate.
+
+``connection`` is imported by name, not re-exported here: it is the only module
+in the package that requires psycopg, and the version gate must stay importable
+without the driver.
 
 The SQL files are byte-for-byte the committed platform-core files; migration
 numbers never change (retired 35/36 stay empty, current head is 49).

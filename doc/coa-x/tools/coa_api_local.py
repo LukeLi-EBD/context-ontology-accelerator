@@ -826,9 +826,9 @@ def _assert_schema_version(metadata: Any, *, where: str) -> None:
 def _assert_lifecycle_schema() -> None:
     """Start-up gate for the embedded app's database (``serve_local``)."""
     _configure_lifecycle_env()
-    from platform_core.adapters.metadata_pg import MetadataPg
+    from coa_control_plane.platform_db.connection import PgPool
 
-    meta = MetadataPg(os.environ["PLATFORM__DATABASE__URL"], pool_max=1)
+    meta = PgPool(os.environ["PLATFORM__DATABASE__URL"], pool_max=1)
     try:
         meta.open(retry_seconds=15)
         _assert_schema_version(meta, where="8099 startup")

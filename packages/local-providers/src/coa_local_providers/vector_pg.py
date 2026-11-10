@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from platform_core.adapters.metadata_pg import MetadataPg
+from coa_control_plane.platform_db.connection import PgPool
 from platform_core.adapters.search_pg import PgSearchIndex
 from platform_core.adapters.vector_pg import PgVectorStore
 from platform_core.config import EmbeddingConfig, SearchConfig
@@ -37,7 +37,7 @@ class PgVectorClient:
     ) -> None:
         self.model = model
         self.dimensions = dimensions
-        self._meta = MetadataPg(dsn, pool_max=pool_max)
+        self._meta = PgPool(dsn, pool_max=pool_max)
         self._meta.open(retry_seconds=open_timeout_seconds)
         self._store = PgVectorStore(
             self._meta,

@@ -81,7 +81,9 @@ class _FakePool:
 
 def _meta(current: int, versions: list[int]) -> MetadataPg:
     meta = MetadataPg("postgresql://fake/db")
-    meta._pool = _FakePool(_FakeConn(current, versions))
+    # R2: the adapter forwards to platform_db.PgPool; the fake stands in for the
+    # psycopg pool inside it, so the version-gate branches stay the same.
+    meta._pool._pool = _FakePool(_FakeConn(current, versions))
     return meta
 
 

@@ -1,4 +1,12 @@
-"""MetadataStore adapter: PostgreSQL (psycopg 3 + pool)."""
+"""MetadataStore adapter: PostgreSQL (psycopg 3 + pool).
+
+Since R2 the connection management (pool, ``query``/``execute``, ``tx``,
+``advisory_lock``, ``migrate`` plumbing) lives in
+``coa_control_plane.platform_db.connection`` and exists only once. This module
+is the platform-core face of that implementation: it keeps the historical
+import path, adds the ``MetadataStore`` manifest, and maps the platform_db
+errors onto ``platform_core.errors`` so existing callers are unaffected.
+"""
 
 from __future__ import annotations
 
@@ -13,15 +21,23 @@ from coa_control_plane.platform_db import (
     SUPPORTED_SCHEMA_VERSION,
     MigrationGateError,
 )
-from coa_control_plane.platform_db import apply_migrations as _apply_migrations
 from coa_control_plane.platform_db import migration_gap_versions as _migration_gap_versions
-from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
+from coa_control_plane.platform_db.connection import PgPool, PgUnavailableError, Tx
 
 from ..errors import EXIT_CONFIG, PlatformError, PortError
 from ..ports import Manifest
 
 log = logging.getLogger(__name__)
+
+__all__ = [
+    "MIGRATION_GAP_HINT",
+    "MIGRATIONS",
+    "RETIRED_MIGRATION_VERSIONS",
+    "SUPPORTED_SCHEMA_VERSION",
+    "MetadataPg",
+    "Tx",
+    "migration_gap_versions",
+]
 
 
 def migration_gap_versions(
@@ -39,26 +55,24 @@ def migration_gap_versions(
     )
 
 
-class Tx:
-    def __init__(self, conn: Any) -> None:
-        self._conn = conn
+def _port_error(exc: PgUnavailableError) -> PortError:
+    """Translate the platform_db connection error into the platform error."""
+    return PortError(
+        code=exc.code,
+        message=str(exc),
+        provider="postgres",
+        provider_code=exc.provider_code,
+        retryable=exc.retryable,
+    )
 
-    def query(self, sql: str, params: tuple | list = ()) -> list[dict[str, Any]]:
-        return self._conn.execute(sql, params).fetchall()
 
-    def execute(self, sql: str, params: tuple | list = ()) -> int:
-        return self._conn.execute(sql, params).rowcount
-
-    def execute_returning(self, sql: str, params: tuple | list = ()) -> list[dict[str, Any]]:
-        return self._conn.execute(sql, params).fetchall()
-
-    def executemany(self, sql: str, params: list[tuple | list]) -> int:
-        """Bulk insert/update inside the caller's transaction."""
-        if not params:
-            return 0
-        with self._conn.cursor() as cursor:
-            cursor.executemany(sql, params)
-            return cursor.rowcount
+@contextmanager
+def _translated() -> Iterator[None]:
+    """Map ``PgUnavailableError`` raised inside the block (incl. ``__enter__``)."""
+    try:
+        yield
+    except PgUnavailableError as exc:
+        raise _port_error(exc) from exc
 
 
 class MetadataPg:
@@ -71,13 +85,12 @@ class MetadataPg:
         statement_timeout_ms: int | None = None,
         trgm_word_similarity_threshold: float | None = None,
     ) -> None:
-        self._url = url
-        self._pool_max = pool_max
-        self._statement_timeout_ms = statement_timeout_ms
-        # S16: `q.raw <% c.text` (pg_trgm word similarity) is GIN-indexable only
-        # at a lowered threshold. The session value must equal search.min_similarity.
-        self._trgm_threshold = trgm_word_similarity_threshold
-        self._pool: ConnectionPool | None = None
+        self._pool = PgPool(
+            url,
+            pool_max=pool_max,
+            statement_timeout_ms=statement_timeout_ms,
+            trgm_word_similarity_threshold=trgm_word_similarity_threshold,
+        )
 
     def manifest(self) -> Manifest:
         return Manifest(
@@ -89,110 +102,60 @@ class MetadataPg:
         )
 
     def open(self, retry_seconds: float = 60.0) -> None:
-        if self._pool is not None:
-            return
-        kwargs: dict[str, Any] = {"row_factory": dict_row}
-        options: list[str] = []
-        if self._statement_timeout_ms:
-            options.append(f"statement_timeout={self._statement_timeout_ms}")
-        if self._trgm_threshold is not None:
-            options.append(f"pg_trgm.word_similarity_threshold={self._trgm_threshold}")
-        if options:
-            kwargs["options"] = "-c " + " -c ".join(options)
-        self._pool = ConnectionPool(
-            conninfo=self._url,
-            min_size=1,
-            max_size=self._pool_max,
-            open=False,
-            timeout=10,
-            kwargs=kwargs,
-        )
-        try:
-            self._pool.open(wait=True, timeout=retry_seconds)
-        except Exception as exc:  # psycopg_pool.PoolTimeout / OperationalError
-            self._pool = None
-            raise PortError(
-                code="Unavailable",
-                message=f"cannot connect to PostgreSQL: {exc}",
-                provider="postgres",
-                provider_code="E_DB_UNAVAILABLE",
-                retryable=True,
-            ) from exc
+        with _translated():
+            self._pool.open(retry_seconds=retry_seconds)
 
     def close(self) -> None:
-        if self._pool is not None:
-            self._pool.close()
-            self._pool = None
-
-    def _require_pool(self) -> ConnectionPool:
-        if self._pool is None:
-            raise PortError(
-                code="Unavailable",
-                message="metadata pool is not open",
-                provider="postgres",
-                provider_code="E_DB_UNAVAILABLE",
-                retryable=True,
-            )
-        return self._pool
+        self._pool.close()
 
     def query(self, sql: str, params: tuple | list = ()) -> list[dict[str, Any]]:
-        with self._require_pool().connection() as conn:
-            return conn.execute(sql, params).fetchall()
+        with _translated():
+            return self._pool.query(sql, params)
 
     def execute(self, sql: str, params: tuple | list = ()) -> int:
-        with self._require_pool().connection() as conn:
-            return conn.execute(sql, params).rowcount
+        with _translated():
+            return self._pool.execute(sql, params)
 
     @contextmanager
     def tx(self) -> Iterator[Tx]:
-        with self._require_pool().connection() as conn:
-            with conn.transaction():
-                yield Tx(conn)
+        with _translated():
+            with self._pool.tx() as tx:
+                yield tx
 
     @contextmanager
     def advisory_lock(self, key: str, blocking: bool = False) -> Iterator[bool]:
         """Session-scoped advisory lock. Yields True when acquired."""
-        with self._require_pool().connection() as conn:
-            fn = "pg_advisory_lock" if blocking else "pg_try_advisory_lock"
-            row = conn.execute(f"SELECT {fn}(hashtext(%s)) AS ok", (key,)).fetchone()
-            acquired = bool(row["ok"]) if row else False
-            try:
+        with _translated():
+            with self._pool.advisory_lock(key, blocking=blocking) as acquired:
                 yield acquired
-            finally:
-                if acquired:
-                    conn.execute("SELECT pg_advisory_unlock(hashtext(%s))", (key,))
 
     def migrate(self) -> dict[str, Any]:
         """Apply forward migrations idempotently; refuses a newer schema.
 
-        The chain itself lives in ``coa_control_plane.platform_db``; this method
-        only supplies the pool connection, the legacy registry binding (so
-        callers patching ``MIGRATIONS`` keep working) and the post-migration
-        binding replay, which is still platform-core code.
+        The chain and the pool live in ``coa_control_plane.platform_db``; this
+        method only supplies the legacy registry binding (so callers patching
+        ``MIGRATIONS`` keep working), the post-migration binding replay, which
+        is still platform-core code, and the platform error mapping.
         """
-        applied: list[str] = []
-        with self._require_pool().connection() as conn:
-            try:
-                applied = _apply_migrations(
-                    conn,
+        try:
+            with _translated():
+                return self._pool.migrate(
                     registry=MIGRATIONS,
                     supported_version=SUPPORTED_SCHEMA_VERSION,
                     retired_versions=RETIRED_MIGRATION_VERSIONS,
                     gap_hint=MIGRATION_GAP_HINT,
                     after_apply=self._replay_published_bindings,
                 )
-            except MigrationGateError as exc:
-                raise PlatformError(
-                    code=exc.code,
-                    detail=exc.detail,
-                    stage="db",
-                    key="schema_version",
-                    provider="postgres",
-                    hint=exc.hint,
-                    exit_code=EXIT_CONFIG,
-                ) from exc
-        log.info("migration applied", extra={"event": {"event": "migrate", "to": applied}})
-        return {"to": str(SUPPORTED_SCHEMA_VERSION), "applied": applied}
+        except MigrationGateError as exc:
+            raise PlatformError(
+                code=exc.code,
+                detail=exc.detail,
+                stage="db",
+                key="schema_version",
+                provider="postgres",
+                hint=exc.hint,
+                exit_code=EXIT_CONFIG,
+            ) from exc
 
     @staticmethod
     def _replay_published_bindings(conn: Any) -> None:

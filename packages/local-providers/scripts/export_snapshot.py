@@ -63,8 +63,13 @@ def main() -> int:
 
     out = Path(args.out)
     repo = Path(args.repo)
-    sql_dir = repo / "platform" / "src" / "platform_core" / "sql"
-    overrides_path = repo / "platform" / "src" / "platform_core" / "metric_binding_overrides.py"
+    sql_dir = (
+        repo / "packages" / "control-plane" / "src"
+        / "coa_control_plane" / "platform_db" / "migrations"
+    )
+    overrides_path = (
+        repo / "packages" / "platform-core" / "src" / "platform_core" / "metric_binding_overrides.py"
+    )
 
     manifest = fetch_manifest(args.api)
     write_json(out / "raw" / "manifest.json", {"items": manifest})
