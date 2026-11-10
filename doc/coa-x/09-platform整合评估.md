@@ -14,7 +14,7 @@
 三句话：
 
 1. **最终形态只有一套**：COA 原生包在跑（`control-plane` / `data-layer` / `metric-service` / `ontology-engine` / `sources` / `context-manager` / `vkg` / `web-app`），`platform-core` 的每一块能力都搬进上述包的具体模块，搬完原文件删除。
-2. **`api.py` 的 HTTP 端点不保留任何一条**（2026-11-09 快照 137 条；2026-11-10 实扫 **135** 条 `@app.*` 路由，差 2 条未逐条归因）。8 条直接落到 COA 已有 operation；73 条落到新增 operation（计划口径 86 个，见 §4.1 对账）；56 条是同一件事的重复入口，合并进 operation。`platform-core/web` 的 10 个 HTML 页面全部消失，能力在 `web-app` 找到落点（§5）。
+2. **`api.py` 的 HTTP 端点不保留任何一条**（2026-11-09 快照 137 行；2026-11-10 实扫 **135** 条 `@app.*` 路由，净差 2 条已逐条归因，见 §4.1 对账）。7 条直接落到 COA 已有 operation；73 条落到新增 operation（计划口径 86 个，见 §4.1 对账）；57 条是同一件事的重复入口，合并进 operation。`platform-core/web` 的 10 个 HTML 页面全部消失，能力在 `web-app` 找到落点（§5）。
 3. **工作量按「搬迁 + 契约扩展 + 功能点落点 + 出口切换/删除核对 + 数据接管」重算：161–237 人日（±40%）**。删除本身只占 10–14 人日，真正的成本是证明搬干净了（§8 闸门）与证明 COA 能接管 8080 的数据（§8.3）。
 4. **`platform-core/web` 的原子功能点共 143 条：已具备 37 条、需新增 102 条、纯前端无后端 4 条**（§6.3）。只许合并，不许消失。
 
@@ -163,16 +163,18 @@
 
 | 分类 | 行数 | 含义 |
 |---|---|---|
-| 已有 | 8 | COA 契约已有对应 operation（`/search` 需补 `mode` 字段） |
+| 已有 | 7 | COA 契约已有对应 operation（其中 1 行是「已有但需补字段」：`/search` 补 `mode`） |
 | 需扩展 | 73 | 能力保留但契约没有 → 新增 operation（计划口径 86 个，含 13 个「可合并」行的合并目标） |
-| 可合并 | 56 | 同一件事的多个入口（含 5 组 `/api/*` 别名） → 收敛为一个 operation |
-| **合计** | **137** | 2026-11-09 快照；2026-11-10 实扫 135，差 2 条未逐条归因 |
+| 可合并 | 57 | 同一件事的多个入口（含 5 组 `/api/*` 别名） → 收敛为一个 operation |
+| **合计** | **137** | 2026-11-09 快照（行内标签实测：6 + 1 + 73 + 57 = 137） |
 
 > **2026-11-10 对账（别把 137 / 86 当现值）**
-> - `api.py`：**135** 条路由（旧记 137）。
+> - `api.py`：**135** 条 `@app.*` 路由（旧记 137）。差 2 条的归因已逐条核完：**表里有、`api.py` 里没有 5 条**——都是 `/api/ontology/*` 别名入口（`GET /api/ontology/imports/{id}`、`GET /api/ontology/shapes`、`POST /api/ontology/import`、`POST /api/ontology/imports/{id}/publish`、`PUT /api/ontology/shapes`）；**`api.py` 里有、表里没有 3 条**——`GET /entities/{iri:path}`、`GET /entities/{iri:path}/provenance`（P10/实体页）、`POST /namespaces/{namespaceId}/answerable`（P7）。137 − 5 + 3 = 135，差额闭合。
+> - 生成客户端 command：**106** 个（control-plane 101 + data-layer 5），11 个新 op 一个都还没有。
 > - Smithy 契约：**117** 个 op（ControlPlane 110 + DataLayer 7；`@http` 计数同为 117）。
 > - 8099 桥：**138** 条路由（其中 KERNEL 43）。
-> - 按 §5 的 86 个计划名逐条对现有契约：**26 个已有同名 op、60 个仍无同名 op**；其中一部分是**改名**（`GetOntologyProposal` → `GetOntologyVersionProposal`（P13 定名，未合主线）、`VerifyOntology` → `RunValidation`、`ImportOntology` → `UploadOntology` / `ImportOsi`、`ExportBundle` → `DownloadOntology`、`GetOntologyTree` → 无对应，由 `ListStatements` 承担）。**注意 `GetProposal` 不能顶替 `GetOntologyProposal`**：前者属归纳链路，后者是平台版本链路的提案，两个资源。
+> - 按 §5 的 86 个计划名逐条对现有契约：**26 个已有同名 op、60 个仍无同名 op**。名不对的只有两种：① **定名改名**——`GetOntologyProposal` → `GetOntologyVersionProposal`（P13，**新建**，不是复用）；② **确实没有等价 op**——`VerifyOntology`（`RunValidation` 是 namespace 级图质量检查、不按 `versionId` 校验，顶替不了）、`ImportOntology`（`UploadOntology` 是同步文件上传，没有 `importId`/`status` 作业语义）、`ExportBundle`（`DownloadOntology` 只出 Turtle，不含 `includeInstances` 与 `manifest`）、`GetOntologyTree`（无对应，由 `ListStatements` 承担）。**注意 `GetProposal` 不能顶替 `GetOntologyProposal`**：前者属归纳链路，后者是平台版本链路的提案，两个资源。
+> - 因此「60 个仍无」里**没有靠改名白捡的**；`07` §4.8 记的缺口 op **32 个**按名字计，就是这个口径。
 > - 结论：**「86 个新 operation」只能读作「计划要建的 op 名」，不能读作「还差 86 个」**；「137」同理，只能当 2026-11-09 快照引用。
 
 ### 4.2 健康与状态（9）
