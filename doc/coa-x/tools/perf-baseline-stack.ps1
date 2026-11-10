@@ -23,6 +23,19 @@ param(
     [switch]$Start,
     [switch]$Seed,
     [switch]$Stop,
+    # With -Stop: leave PG/Oxigraph running, so restarting the Python processes
+    # to pick up code changes does not drop the seeded dataset.
+    [switch]$KeepContainers,
+    # Run the runaway-query watchdog in the foreground. Oxigraph's --timeout-s
+    # cancels most shapes but not a cross product over >=3 unbound GRAPH
+    # variables (measured: still 99% CPU after 180 s). The watchdog restarts the
+    # container once CPU stays pinned. It must call `docker restart` itself:
+    # `docker kill` counts as a manual stop, and `unless-stopped` therefore does
+    # NOT bring the container back (measured: exited 137, never restarted).
+    # Do not run it during load.
+    [switch]$Watchdog,
+    [int]$WatchdogCpuPercent = 80,
+    [int]$WatchdogSeconds = 90,
     [string]$Namespace = "3f2a9c1e-7b4d-4e2a-9c6f-1a2b3c4d5e6f"
 )
 
@@ -140,12 +153,42 @@ function Set-StackEnv() {
 
 Set-StackEnv
 
+if ($Watchdog) {
+    # CPU-pinning watchdog. A cheap probe is not enough: during a runaway the
+    # store still answers `SELECT ... LIMIT` in ~230 ms, so only CPU tells us a
+    # query escaped --timeout-s.
+    Write-Host ("Watching {0}: restart when CPU >= {1}% for {2}s" -f $OxiName, $WatchdogCpuPercent, $WatchdogSeconds)
+    $interval = 5
+    $pinned = 0
+    while ($true) {
+        $raw = docker stats --no-stream --format "{{.CPUPerc}} {{.MemUsage}}" $OxiName 2>$null
+        $cpu = 0.0
+        if ($raw -match "([0-9.]+)%") { $cpu = [double]$Matches[1] }
+        if ($cpu -ge $WatchdogCpuPercent) { $pinned += $interval } else { $pinned = 0 }
+        Write-Host ("  [{0}] cpu={1:N1}% {2} pinned={3}s" -f (Get-Date -Format "HH:mm:ss"), $cpu, ($raw -replace "^[0-9.]+% ", ""), $pinned)
+        if ($pinned -ge $WatchdogSeconds) {
+            $before = docker inspect -f "{{.State.StartedAt}}" $OxiName 2>$null
+            Write-Host ("  [{0}] pinned >= {1}s -> docker restart {2} (started {3}); no manual action" -f (Get-Date -Format "HH:mm:ss"), $WatchdogSeconds, $OxiName, $before)
+            docker restart $OxiName | Out-Null
+            Start-Sleep -Seconds 6
+            $after = docker inspect -f "{{.State.Status}} started {{.State.StartedAt}}" $OxiName 2>$null
+            Write-Host ("  [{0}] back up: {1}" -f (Get-Date -Format "HH:mm:ss"), $after)
+            $pinned = 0
+        }
+        Start-Sleep -Seconds $interval
+    }
+}
+
 if ($Stop) {
     Write-Host "Stopping perf-baseline stack"
     Stop-PortOwner 8899 "coa_api_local.py"
     Stop-PortOwner 8812 "coa_ontology_local.py"
     Stop-PortOwner 8898 "run_local.py"
     foreach ($name in @($PgName, $OxiName)) {
+        if ($KeepContainers) {
+            Write-Host ("  [keep] container {0}" -f $name)
+            continue
+        }
         if (Get-ContainerRunning $name) { Write-Host ("  [stop] container {0}" -f $name); docker stop $name | Out-Null }
     }
     Write-Host "Done."
@@ -165,8 +208,15 @@ if ($Start) {
     if (-not (Get-ContainerRunning $OxiName)) {
         if (Test-ContainerExists $OxiName) { docker start $OxiName | Out-Null }
         else {
+            # --timeout-s is the only thing that actually stops a query: closing
+            # the HTTP connection leaves Oxigraph evaluating it (measured ~1 core
+            # held afterwards). --cpus/--memory bound the blast radius, and
+            # `--restart unless-stopped` brings the store back if it is OOM-killed.
+            # 20 s sits above the slowest accepted route (statements ~10 s at 100k)
+            # and below the 28 s gateway budget.
             docker run -d --name $OxiName --publish 127.0.0.1:8088:7878 `
-                -v perf-baseline-oxigraph-data:/data oxigraph/oxigraph:0.5.7 serve --location /data --bind 0.0.0.0:7878 | Out-Null
+                --cpus 2 --memory 2g --restart unless-stopped `
+                -v perf-baseline-oxigraph-data:/data oxigraph/oxigraph:0.5.7 serve --location /data --bind 0.0.0.0:7878 --timeout-s 20 | Out-Null
         }
     }
     Wait-Port 6144 "perf-pg" 90

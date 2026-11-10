@@ -19,12 +19,20 @@ Configuration (no default provider — startup fails closed):
     COA_ONTOLOGY_OXIGRAPH_URL     base URL for ``oxigraph`` (required for it)
     COA_ONTOLOGY_OXIGRAPH_TIMEOUT request timeout in seconds (default 30)
 
+The client timeout only stops *waiting*; Oxigraph keeps evaluating the query
+after the socket closes (measured: ~1 core held for as long as the query runs).
+The container must therefore also be started with ``serve --timeout-s N``: that
+is the server-side deadline, and it is the only mechanism that actually stops a
+runaway query. It reports cancellation as a truncated 200 (not an HTTP error),
+which :func:`sparql_query` turns into ``GraphQueryCancelled``.
+
 ``neptune`` leaves the engine untouched: it keeps its SigV4-signed AWS path
 and still requires ``NDB_ENDPOINT`` from the deployment.
 """
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 from urllib.parse import quote
@@ -32,6 +40,11 @@ from urllib.parse import quote
 import httpx
 
 _PROVIDERS = ("oxigraph", "neptune")
+
+# Oxigraph appends this notice to the response body when ``--timeout-s`` fires.
+# The response is still HTTP 200 and the JSON is truncated mid-stream, so it has
+# to be recognised before the body is parsed.
+_CANCELLED_NOTICE = "The SPARQL operation has been cancelled"
 
 
 def _provider() -> str:
@@ -78,7 +91,16 @@ def sparql_query(query: str) -> dict[str, Any]:
     )
     if r.status_code >= 400:
         _fail("query", r)
-    return r.json()
+    try:
+        return r.json()
+    except json.JSONDecodeError:
+        if _CANCELLED_NOTICE in r.text:
+            from coa_ontology.stores.base import GraphQueryCancelled
+
+            raise GraphQueryCancelled(
+                f"oxigraph cancelled the query at its {_timeout()}s server limit; it is no longer running"
+            ) from None
+        raise
 
 
 def sparql_update(update: str) -> None:

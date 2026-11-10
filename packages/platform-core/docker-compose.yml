@@ -58,12 +58,28 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME:-agent-platform}-oxigraph
     # Image is distroless (no shell/curl), so no in-container healthcheck.
     # Real graph readiness is proven by platform self-check and /readyz.
-    command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7878"]
+    # --timeout-s is a *server-side* deadline: it is the only mechanism that
+    # actually stops a runaway SPARQL query. Closing the client connection does
+    # not (measured: the query keeps a core busy after the caller has gone).
+    # It is shape-dependent: 1-2 unbound GRAPH variables, same-graph joins and
+    # property paths are cancelled at the deadline, but a cross product over
+    # >=3 unbound GRAPH variables is not (measured: 99% CPU after 180 s).
+    # 20 s sits above the slowest accepted route (statements ~10 s at 100k) and
+    # below the 28 s gateway budget; the 10 s console deadline still answers 504
+    # and the query stops on its own a few seconds later.
+    command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7878", "--timeout-s", "20"]
     # S14H-16: NO host port mapping on purpose. Oxigraph has no auth, so any
     # host-side mapping (even 127.0.0.1) lets local processes bypass the
     # platform's GSP governance (measured: POST /store -> 204). The platform
     # reaches it in-network as http://oxigraph:7878. Debugging must go through
     # `docker compose exec platform python ...`, not a published port.
+    #
+    # Blast radius: one pathological query used to take every core and several
+    # GB on the host. Two cores and 2 GB keep the rest of the stack responsive
+    # while the deadline counts down; an OOM kill is recovered by the restart
+    # policy instead of a manual `docker restart`.
+    cpus: "2.0"
+    mem_limit: 2g
     volumes:
       - oxigraph-data:/data
     restart: unless-stopped

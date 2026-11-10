@@ -64,7 +64,13 @@ from coa_ontology.catalog.graph_schemas import (
 from coa_ontology.catalog.namespace_language import label_preference_for
 from coa_ontology.query_params import require_enum_value
 from coa_ontology.stores import build_stores
-from coa_ontology.stores.base import GraphStore, SearchScopeTooLarge
+from coa_ontology.stores.base import (
+    FilteredSearchTooLarge,
+    GraphQueryCancelled,
+    GraphScanTooLarge,
+    GraphStore,
+    SearchScopeTooLarge,
+)
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -270,6 +276,21 @@ def search_entities(
             f"above the {e.limit}-quad limit. Pass kind=class|object-property|datatype-property "
             "or ontology_id to bound the scan.",
         ) from e
+    except FilteredSearchTooLarge as e:
+        # ``kind`` bounds the type but not the label scan that follows it; past
+        # this many entities of one kind the query outruns the backend timeout.
+        raise HTTPException(
+            422,
+            f"Search over {e.entities} {e.kind} entities is above the {e.limit}-entity limit. "
+            "Pass ontology_id to scope the search to a single ontology, or use "
+            "/graph/statements for a bulk listing.",
+        ) from e
+    except GraphQueryCancelled as e:
+        raise HTTPException(
+            504,
+            "The graph store cancelled this search at its time limit. Narrow the query "
+            "(ontology_id, or a longer q) and retry.",
+        ) from e
     except (NotImplementedError, AttributeError) as e:
         log.warning("entity search unsupported by backend: %s", e)
         raise HTTPException(501, "Entity search is not supported on this backend.") from e
@@ -331,6 +352,19 @@ def get_canvas_subgraph(
     except (NotImplementedError, AttributeError) as e:
         log.warning("canvas subgraph unsupported by backend: %s", e)
         raise HTTPException(501, "Canvas subgraph is not supported on this backend.") from e
+    except GraphScanTooLarge as e:
+        # A page of 50 nodes still scans the namespace; past the budget the
+        # request would outlive the backend timeout and leave the store busy.
+        raise HTTPException(
+            422,
+            f"The namespace holds {e.quads} quads, above the {e.limit}-quad canvas limit. "
+            "Filter the page by graph, or use /graph/statements with subject/predicate filters.",
+        ) from e
+    except GraphQueryCancelled as e:
+        raise HTTPException(
+            504,
+            "The graph store cancelled this canvas page at its time limit. Filter by graph and retry.",
+        ) from e
     except ValueError as e:
         log.warning("invalid canvas filter: %s", e)
         raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER) from e
@@ -374,6 +408,17 @@ def find_graph_path(
     except (NotImplementedError, AttributeError) as e:
         log.warning("graph path unsupported by backend: %s", e)
         raise HTTPException(501, "Graph path search is not supported on this backend.") from e
+    except GraphScanTooLarge as e:
+        raise HTTPException(
+            422,
+            f"The namespace holds {e.quads} quads, above the {e.limit}-quad path-search limit. "
+            "Search paths in a smaller namespace.",
+        ) from e
+    except GraphQueryCancelled as e:
+        raise HTTPException(
+            504,
+            "The graph store cancelled this path search at its time limit. Lower max_hops and retry.",
+        ) from e
     except ValueError as e:
         log.warning("invalid graph path IRI: %s", e)
         raise HTTPException(400, "Invalid graph path IRI.") from e
@@ -518,6 +563,20 @@ def list_statements(
     except (NotImplementedError, AttributeError) as e:
         log.warning("statement listing unsupported by backend: %s", e)
         raise HTTPException(501, "Statement listing is not supported on this backend.") from e
+    except GraphScanTooLarge as e:
+        # Paging is total-order stable, and the store pays for that with a sort
+        # over every matched quad; past the budget it would outlive the request.
+        raise HTTPException(
+            422,
+            f"This page would sort {e.quads} quads, above the {e.limit}-quad limit. "
+            "Add a subject, predicate, object or graph filter to narrow it.",
+        ) from e
+    except GraphQueryCancelled as e:
+        raise HTTPException(
+            504,
+            "The graph store cancelled this statement page at its time limit. Add a subject, "
+            "predicate or graph filter and retry.",
+        ) from e
     except ValueError as e:
         # ``_iri`` rejects malformed / injecting URIs; its text echoes them.
         log.warning("invalid statement filter: %s", e)

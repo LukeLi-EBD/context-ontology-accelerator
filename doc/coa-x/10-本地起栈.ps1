@@ -168,8 +168,17 @@ Ensure-Container $OxiName @(
     # 只绑回环：Oxigraph 无认证，/update 可改图删图。发布到 0.0.0.0 等于把写口
     # 开放给同网段。8101/8099 都通过 http://127.0.0.1:7878 访问，回环绑定不影响。
     "--publish", "127.0.0.1:7878:7878",
+    # --timeout-s 是服务端截止时间，也是唯一能真正停住失控查询的开关：客户端
+    # 断开连接不会让 Oxigraph 停止求值（实测断开后仍占满一个核）。它对查询形状
+    # 敏感：1-2 个未绑定 GRAPH 变量/同图 join/属性路径会按时取消，但 >=3 个
+    # 未绑定 GRAPH 变量的交叉积不检查取消（实测 180s 仍 99% CPU）。--cpus /
+    # --memory 限制波及范围（runaway 只烧 1 核，轻查询仍 ~230ms），OOM 后由
+    # restart 策略自动拉起，无需手工重启。
+    "--cpus", "2",
+    "--memory", "2g",
+    "--restart", "unless-stopped",
     "-v", "coa-local-oxigraph-data:/data",
-    "oxigraph/oxigraph:0.5.7", "serve", "--location", "/data", "--bind", "0.0.0.0:7878"
+    "oxigraph/oxigraph:0.5.7", "serve", "--location", "/data", "--bind", "0.0.0.0:7878", "--timeout-s", "20"
 )
 Ensure-Container $ReasonerName @(
     "--publish", "127.0.0.1:7879:7879",

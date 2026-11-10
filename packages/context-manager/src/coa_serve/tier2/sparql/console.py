@@ -61,6 +61,10 @@ MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 MAX_GRAPHS = 200
 GRAPHS_TTL_S = 60.0
 
+# Oxigraph's ``serve --timeout-s`` deadline reports cancellation by appending
+# this text to an otherwise HTTP 200, chunked SPARQL-JSON response.
+_CANCELLED_NOTICE = "The SPARQL operation has been cancelled"
+
 # Only the namespace's own data graphs are in scope. The T-Box graph
 # (``urn:coa:ontology:<id>``) and inferred/import graphs deliberately do not match,
 # so class definitions are not exposed through the console in this version.
@@ -210,6 +214,12 @@ class OxigraphBackend:
         try:
             parsed = json.loads(body)
         except ValueError as exc:
+            # Oxigraph's own ``--timeout-s`` deadline ends the response as a
+            # truncated 200 whose tail says the operation was cancelled. The
+            # query is already stopped there, so this is a timeout (504), not an
+            # unavailable provider (502).
+            if _CANCELLED_NOTICE.encode() in body:
+                raise _ProviderTimedOut("the graph provider cancelled the query at its server limit") from exc
             raise _ProviderUnavailable("provider returned a body that is not SPARQL JSON") from exc
         if not isinstance(parsed, dict):
             raise _ProviderUnavailable("provider returned a JSON value that is not an object")

@@ -16,12 +16,13 @@ Under concurrent integ load the shared Neptune cluster answered
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
+from urllib.parse import unquote_plus
 
 import httpx
 import pytest
 from coa_ontology.main import app
 from coa_ontology.stores import neptune_db_graph as ndb
-from coa_ontology.stores.base import SearchScopeTooLarge
+from coa_ontology.stores.base import FilteredSearchTooLarge, GraphQueryCancelled, GraphScanTooLarge, SearchScopeTooLarge
 from coa_ontology.stores.neptune_db_graph import NeptuneDBGraphStore, NeptuneMemoryLimitError
 from fastapi.testclient import TestClient
 
@@ -155,11 +156,16 @@ class TestKindScopedScan:
                 store.count_entities(query="*", namespace=NS, kind="class"),
             )
         )
-        assert len(queries) == 2
+        # Each call issues its pre-flight entity count, then the query itself.
+        assert len(queries) == 4
         for q in queries:
             assert "?_p ?_o" not in q
-            assert "?s a ?requiredType" in q
             assert "STRSTARTS(STR(?g)" in q  # namespace scoping is unchanged
+        for preflight in (queries[0], queries[2]):
+            assert "VALUES ?type" in preflight
+            assert "COUNT(DISTINCT ?s) AS ?n" in preflight
+        for scan in (queries[1], queries[3]):
+            assert "?s a ?requiredType" in scan
 
     def test_no_kind_keeps_full_subject_pattern(self):
         store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
@@ -195,10 +201,15 @@ class TestUnfilteredSearchBudget:
     def test_kind_scoped_search_does_not_measure_the_namespace(self, neptune, monkeypatch):
         monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
         responses, calls = neptune
-        responses.append(httpx.Response(200, json=_EMPTY_RESULTS))
+        responses += [httpx.Response(200, json=_EMPTY_RESULTS)] * 2
         store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
         assert store.search_entities(query="Claim", namespace=NS, kind="class") == []
-        assert len(calls) == 1  # the search itself; no budget pre-check
+        assert len(calls) == 2  # type-subject pre-flight, then the search
+        preflight = unquote_plus(calls[0].content.decode())
+        assert "VALUES ?type" in preflight
+        assert "COUNT(DISTINCT ?s) AS ?n" in preflight
+        # The namespace-wide quad count is not what bounds a kind search.
+        assert "COUNT(*) AS ?n" not in preflight
 
     def test_api_maps_scope_too_large_to_422(self):
         graph = MagicMock()
@@ -209,3 +220,92 @@ class TestUnfilteredSearchBudget:
         detail = resp.json()["detail"]
         assert "121130" in detail
         assert "kind=class|object-property|datatype-property" in detail
+
+
+def _graph_list_response(*graphs: str) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "head": {"vars": ["g"]},
+            "results": {
+                "bindings": [{"g": {"type": "uri", "value": g}} for g in graphs],
+            },
+        },
+    )
+
+
+@pytest.mark.unit
+class TestGraphReadBudgets:
+    """Canvas, path and kind search are bounded before they scan, not after.
+
+    All three used to run until the transport gave up: the caller saw a 504 at
+    28 s while the store kept burning CPU. Each now answers 422 from a cheap
+    aggregate pre-check over the same 100k-quad set that produced the 504.
+    """
+
+    def test_kind_search_refuses_over_the_entity_budget(self, neptune, monkeypatch):
+        monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
+        responses, calls = neptune
+        over = ndb._MAX_FILTERED_SEARCH_ENTITIES + 1
+        responses.append(_quad_count_response(over))
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        with pytest.raises(FilteredSearchTooLarge) as excinfo:
+            store.search_entities(query="*", namespace=NS, kind="class", limit=50)
+        assert excinfo.value.entities == over
+        assert len(calls) == 1  # pre-flight count only: the label scan never ran
+
+    def test_canvas_refuses_over_the_quad_budget(self, neptune, monkeypatch):
+        monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
+        responses, calls = neptune
+        responses += [_graph_list_response("urn:coa:g:1"), _quad_count_response(ndb._MAX_CANVAS_QUADS + 1)]
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        with pytest.raises(GraphScanTooLarge) as excinfo:
+            store.get_canvas_subgraph(namespace=NS, limit=50)
+        assert excinfo.value.limit == ndb._MAX_CANVAS_QUADS
+        assert len(calls) == 2  # graph enumeration + quad count
+
+    def test_path_refuses_over_the_quad_budget(self, neptune, monkeypatch):
+        monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
+        responses, calls = neptune
+        responses += [_graph_list_response("urn:coa:g:1"), _quad_count_response(ndb._MAX_PATH_QUADS + 1)]
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        with pytest.raises(GraphScanTooLarge) as excinfo:
+            store.find_graph_path(namespace=NS, start="urn:coa:a", end="urn:coa:b", max_hops=2)
+        assert excinfo.value.limit == ndb._MAX_PATH_QUADS
+        assert len(calls) == 2
+
+    def test_statement_page_is_totally_ordered(self):
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        captured: list[str] = []
+
+        def respond(q: str) -> dict:
+            captured.append(q)
+            if "SELECT DISTINCT ?g" in q:
+                return {"results": {"bindings": [{"g": {"value": "urn:coa:g:1"}}]}}
+            return {"results": {"bindings": []}}
+
+        with patch.object(ndb, "_sparql_query", side_effect=respond):
+            store.list_statements(namespace=NS, limit=10)
+        # Paging without a total order can repeat one quad and skip another.
+        assert any("ORDER BY ?s ?p ?o ?g" in q for q in captured)
+
+    def test_statement_page_refuses_over_the_sort_budget(self, neptune, monkeypatch):
+        monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
+        responses, calls = neptune
+        responses += [
+            _graph_list_response("urn:coa:g:1"),
+            _quad_count_response(ndb._MAX_STATEMENT_PAGE_QUADS + 1),
+        ]
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        with pytest.raises(GraphScanTooLarge) as excinfo:
+            store.list_statements(namespace=NS, limit=10)
+        assert excinfo.value.limit == ndb._MAX_STATEMENT_PAGE_QUADS
+        assert len(calls) == 2  # graph enumeration + match count, no sort
+
+    def test_cancelled_search_maps_to_504(self):
+        graph = MagicMock()
+        graph.search_entities.side_effect = GraphQueryCancelled("store cancelled the query")
+        with patch("coa_ontology.catalog.routers.graph.build_stores", return_value=(graph, MagicMock())):
+            resp = TestClient(app).get("/graph/search", params={"q": "Claim", "namespace": NS})
+        assert resp.status_code == 504
+        assert "cancelled" in resp.json()["detail"]

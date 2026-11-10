@@ -208,6 +208,25 @@ class TestTimeoutSemantics:
         )
         assert error.code != "E_SPARQL_PROVIDER_ERROR"
 
+    def test_oxigraph_server_side_cancellation_maps_to_504(self, monkeypatch):
+        # ``serve --timeout-s`` ends a runaway query as a truncated 200 whose
+        # tail says it was cancelled. The query is already stopped, so this is a
+        # timeout, not a provider error.
+        body = b'{"head":{"vars":["s"]},"results":{"bindings":[The SPARQL operation has been cancelled'
+        real = httpx.AsyncClient
+        monkeypatch.setattr(
+            console.httpx,
+            "AsyncClient",
+            lambda **kw: real(transport=httpx.MockTransport(lambda request: httpx.Response(200, content=body)), **kw),
+        )
+        error = _rejected(
+            console.OxigraphBackend("http://127.0.0.1:7878"),
+            "SELECT ?s WHERE { ?s ?p ?o }",
+            "E_SPARQL_TIMEOUT",
+            504,
+        )
+        assert error.code != "E_SPARQL_PROVIDER_ERROR"
+
 
 class TestProviderErrors:
     def test_a_provider_4xx_keeps_its_status_code_and_body(self):
