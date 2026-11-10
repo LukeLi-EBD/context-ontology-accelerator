@@ -11,6 +11,7 @@ $version: "2"
 namespace com.amazon.semanticcontext.entity
 
 use com.amazon.semanticcontext.common#NotFoundError
+use com.amazon.semanticcontext.common#StringList
 
 /// Percent-encoded IRI of an A-Box entity.
 @length(min: 1, max: 2048)
@@ -199,11 +200,6 @@ structure EntityRequired {
 
 list EntityRequiredList {
     member: EntityRequired
-}
-
-/// Strings in an entity read response.
-list StringList {
-    member: String
 }
 
 /// One evidence source for the entity.
@@ -658,7 +654,12 @@ structure EntityProvenanceReport {
                     labeled: true
                     inferredOnly: false
                     instanceCount: 12
-                    chain: [{ iri: "urn:coa:class:Thing", label: "Thing" }]
+                    chain: [
+                        {
+                            iri: "urn:coa:class:Thing"
+                            label: "Thing"
+                        }
+                    ]
                 }
             ]
             requiredProperties: []
@@ -667,18 +668,37 @@ structure EntityProvenanceReport {
                 {
                     property: "urn:coa:predicate:belongs-to"
                     label: "belongs to"
-                    values: [{ kind: "iri", value: "urn:coa:entity:archive", iri: "urn:coa:entity:archive" }]
+                    values: [
+                        {
+                            kind: "iri"
+                            value: "urn:coa:entity:archive"
+                            iri: "urn:coa:entity:archive"
+                        }
+                    ]
                 }
             ]
-            neighbors: { nodes: [], edges: [], truncated: false }
+            neighbors: {
+                nodes: []
+                edges: []
+                truncated: false
+            }
             instanceCount: 12
-            relatedMetrics: { status: "empty", reason: "no metric binding", items: [], matchBasis: [] }
+            relatedMetrics: {
+                status: "empty"
+                reason: "no metric binding"
+                items: []
+                matchBasis: []
+            }
             sources: []
             evidenceBadge: { state: "inferred", label: "仅推理", basis: "仅推理图出现，无断言 sourceRef / PROV" }
             tbox: { versionId: "8c7d6e5f-4a3b-4c2d-8e1f-0a9b8c7d6e5f", semver: "1.4.0", graph: "urn:coa:graph:tbox" }
             sampledAt: "2026-10-02T09:00:00Z"
             namedGraphs: ["urn:coa:graph:asserted"]
-            provenance: { count: 1, items: [], unavailable: false }
+            provenance: {
+                count: 1
+                items: []
+                unavailable: false
+            }
         }
     }
 ])
@@ -719,22 +739,45 @@ operation GetEntity {
                 {
                     property: "urn:coa:predicate:belongs-to"
                     label: "belongs to"
-                    values: [{ kind: "iri", value: "urn:coa:entity:archive", iri: "urn:coa:entity:archive" }]
+                    values: [
+                        {
+                            kind: "iri"
+                            value: "urn:coa:entity:archive"
+                            iri: "urn:coa:entity:archive"
+                        }
+                    ]
                     asserted: true
                     inferredOnly: false
                     badge: { state: "evidenced", label: "有溯源", basis: "事实账本 fact-1a2b3c4d5e6f" }
                     hasSourceRef: true
                     hasProv: true
-                    links: [{ kind: "fact", ref: "fact-1a2b3c4d5e6f", url: "/facts/fact-1a2b3c4d5e6f/events" }]
+                    links: [
+                        {
+                            kind: "fact"
+                            ref: "fact-1a2b3c4d5e6f"
+                            url: "/facts/fact-1a2b3c4d5e6f/events"
+                        }
+                    ]
                 }
             ]
             statements: []
             activities: []
-            citations: [{ kind: "doc", ref: "doc-1", text: "Contract Ledger belongs to Archive", url: "/source/resolve?ref=doc-1" }]
+            citations: [
+                {
+                    kind: "doc"
+                    ref: "doc-1"
+                    text: "Contract Ledger belongs to Archive"
+                    url: "/source/resolve?ref=doc-1"
+                }
+            ]
             summary: { total: 1, evidenced: 1, inferred: 0, none: 0, withSourceRef: 1, withProv: 1, coverageRate: 1.0 }
             evidenceBadge: { state: "evidenced", label: "有溯源", basis: "字段值命中 PROV/sourceRef 证据文本" }
             namedGraphs: ["urn:coa:graph:asserted"]
-            provenance: { count: 1, items: [], unavailable: false }
+            provenance: {
+                count: 1
+                items: []
+                unavailable: false
+            }
             empty: false
             note: "每个字段都有徽标；无溯源显式显示「无」"
         }

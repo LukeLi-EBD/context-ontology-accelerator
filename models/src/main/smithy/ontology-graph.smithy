@@ -16,6 +16,7 @@ use com.amazon.semanticcontext.common#OntologyId
 use com.amazon.semanticcontext.common#PaginatedOutput
 use com.amazon.semanticcontext.common#PaginationToken
 use com.amazon.semanticcontext.common#PresignedUrl
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 
@@ -143,10 +144,6 @@ structure OntologyRecord {
 
 list OntologyRecordList {
     member: OntologyRecord
-}
-
-list StringList {
-    member: String
 }
 
 /// IRI of a `urn:platform:` named graph (the only graphs a namespace may ask

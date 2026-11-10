@@ -357,10 +357,7 @@ operation ListDocumentChunks {
     {
         title: "Download the bytes of a stored document"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", documentId: "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d" }
-        output: {
-            content: "SGVsbG8sIHdvcmxkIQ=="
-            contentSha256: "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8b2e1e5c1c0e5b8"
-        }
+        output: { content: "SGVsbG8sIHdvcmxkIQ==", contentSha256: "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8b2e1e5c1c0e5b8" }
     }
 ])
 operation DownloadDocument {

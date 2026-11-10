@@ -18,6 +18,7 @@ $version: "2"
 
 namespace com.amazon.semanticcontext.browse
 
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.ontologylifecycle#OntologyPointer
 
 /// IRI of an ontology class, as passed on the `class` query parameter.
@@ -154,11 +155,6 @@ structure OntologyInstanceList {
     pointer: OntologyPointer
 }
 
-/// Strings in a browse response.
-list StringList {
-    member: String
-}
-
 /// Flat class list in a browse response.
 list OntologyClassRefList {
     member: OntologyClassRef
@@ -186,13 +182,7 @@ list OntologyInstanceRefList {
     {
         title: "Read the published class tree"
         output: {
-            pointer: {
-                name: "tbox/current"
-                versionId: "ont-1a2b3c4d5e6f"
-                semver: "1.0.0"
-                graph: "urn:platform:graph:tbox:1a2b3c4d"
-                updatedAt: "2026-10-02T09:30:00Z"
-            }
+            pointer: { name: "tbox/current", versionId: "ont-1a2b3c4d5e6f", semver: "1.0.0", graph: "urn:platform:graph:tbox:1a2b3c4d", updatedAt: "2026-10-02T09:30:00Z" }
             tree: [
                 {
                     iri: "urn:coa:class:BusinessEntity"
@@ -202,18 +192,30 @@ list OntologyInstanceRefList {
                         {
                             iri: "urn:coa:class:Contract"
                             label: "Contract"
-                            parents: [ "urn:coa:class:BusinessEntity" ]
+                            parents: ["urn:coa:class:BusinessEntity"]
                             children: []
                         }
                     ]
                 }
             ]
             classes: [
-                { iri: "urn:coa:class:BusinessEntity", label: "Business Entity", parents: [] }
-                { iri: "urn:coa:class:Contract", label: "Contract", parents: [ "urn:coa:class:BusinessEntity" ] }
+                {
+                    iri: "urn:coa:class:BusinessEntity"
+                    label: "Business Entity"
+                    parents: []
+                }
+                {
+                    iri: "urn:coa:class:Contract"
+                    label: "Contract"
+                    parents: ["urn:coa:class:BusinessEntity"]
+                }
             ]
             properties: [
-                { iri: "urn:coa:property:belongs-to", label: "belongs to", kind: "ObjectProperty" }
+                {
+                    iri: "urn:coa:property:belongs-to"
+                    label: "belongs to"
+                    kind: "ObjectProperty"
+                }
             ]
             counts: { classes: 2, properties: 1 }
         }

@@ -15,6 +15,7 @@ $version: "2"
 namespace com.amazon.semanticcontext.platformmetric
 
 use com.amazon.semanticcontext.common#NotFoundError
+use com.amazon.semanticcontext.common#StringList
 
 /// Stable metric identifier.
 @length(min: 1, max: 128)
@@ -151,10 +152,6 @@ structure MetricCard {
     variantMetricIds: StringList
 }
 
-list StringList {
-    member: String
-}
-
 /// Read the platform metric card.
 ///
 /// `bindingStatus` is first-class: an unbound metric reports `unbound` and an
@@ -182,7 +179,14 @@ list StringList {
             definitionVersion: "v3"
             bindingStatus: "bound"
             fieldBindings: [
-                { role: "numerator", factTable: "fact_contract", entityColumn: "contract_id", valueExpr: "amount", agg: "sum", windowMode: "calendar" }
+                {
+                    role: "numerator"
+                    factTable: "fact_contract"
+                    entityColumn: "contract_id"
+                    valueExpr: "amount"
+                    agg: "sum"
+                    windowMode: "calendar"
+                }
             ]
             externalEligible: true
             externalStatus: "external_candidate"

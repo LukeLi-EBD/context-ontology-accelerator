@@ -724,8 +724,16 @@ operation GetFact {
                     accepted: false
                     pending: true
                     facts: [
-                        { factId: "fact-1a2b3c4d5e6f", object: "urn:coa:entity:archive", objectKind: "iri" }
-                        { factId: "fact-0f1e2d3c4b5a", object: "urn:coa:entity:legal", objectKind: "iri" }
+                        {
+                            factId: "fact-1a2b3c4d5e6f"
+                            object: "urn:coa:entity:archive"
+                            objectKind: "iri"
+                        }
+                        {
+                            factId: "fact-0f1e2d3c4b5a"
+                            object: "urn:coa:entity:legal"
+                            objectKind: "iri"
+                        }
                     ]
                 }
             ]
@@ -737,7 +745,12 @@ operation GetFact {
                     status: "in_effect"
                     values: ["urn:coa:entity:archive", "urn:coa:entity:legal"]
                     history: []
-                    effective: { activeCount: 2, values: ["urn:coa:entity:archive", "urn:coa:entity:legal"], conflict: true, acceptedConflict: false }
+                    effective: {
+                        activeCount: 2
+                        values: ["urn:coa:entity:archive", "urn:coa:entity:legal"]
+                        conflict: true
+                        acceptedConflict: false
+                    }
                 }
             ]
         }
@@ -1002,7 +1015,13 @@ operation RestoreFact {
             count: 1
             total: 1
             items: [
-                { eventId: 41, factId: "fact-1a2b3c4d5e6f", action: "assert", actor: "operator", createdAt: "2026-10-01T08:00:00Z" }
+                {
+                    eventId: 41
+                    factId: "fact-1a2b3c4d5e6f"
+                    action: "assert"
+                    actor: "operator"
+                    createdAt: "2026-10-01T08:00:00Z"
+                }
             ]
         }
     }
@@ -1050,15 +1069,7 @@ operation ListFactEvents {
 @examples([
     {
         title: "Record one fact"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            subject: "urn:coa:entity:contract-ledger"
-            predicate: "urn:coa:predicate:belongs-to"
-            object: "urn:coa:entity:archive"
-            objectKind: "iri"
-            graph: "urn:coa:graph:asserted"
-            actor: "operator"
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", subject: "urn:coa:entity:contract-ledger", predicate: "urn:coa:predicate:belongs-to", object: "urn:coa:entity:archive", objectKind: "iri", graph: "urn:coa:graph:asserted", actor: "operator" }
         output: {
             factId: "fact-1a2b3c4d5e6f"
             subject: "urn:coa:entity:contract-ledger"
@@ -1132,14 +1143,7 @@ operation AssertFact {
 @examples([
     {
         title: "Preview a batch keep"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            keep: "urn:coa:entity:archive"
-            predicate: "urn:coa:predicate:belongs-to"
-            actor: "operator"
-            reason: "archive is the canonical owner"
-            dryRun: true
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", keep: "urn:coa:entity:archive", predicate: "urn:coa:predicate:belongs-to", actor: "operator", reason: "archive is the canonical owner", dryRun: true }
         output: {
             batchId: "resolve-1a2b3c4d5e"
             dryRun: true
