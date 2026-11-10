@@ -1775,6 +1775,28 @@ export const MESSAGES_JA = {
   Subclasses: "サブクラス",
   "Datatype properties": "データ型プロパティ",
   "Object properties": "オブジェクトプロパティ",
+  "Named graphs": "名前付きグラフ",
+  "Entity page": "エンティティページ",
+  "Ontology tree": "オントロジーツリー",
+  "Provenance": "出所",
+  "Evidenced {count}": "根拠あり {count}",
+  "Inferred {count}": "推論 {count}",
+  "None {count}": "根拠なし {count}",
+  "of {total} fields/statements": "全 {total} 件の項目/文",
+  "Failed to load provenance": "出所情報を読み込めませんでした",
+  "Graph IRI": "グラフ IRI",
+  "Named graph IRIs the ontologies in this namespace are stored in.":
+    "この名前空間のオントロジーが格納されている名前付きグラフ IRI。",
+  "No named graph was reported for these ontologies.":
+    "これらのオントロジーについて名前付きグラフは報告されていません。",
+  "Object properties (class-to-class relationships) declared by the ontologies in this namespace.":
+    "この名前空間のオントロジーが宣言するオブジェクトプロパティ（クラス間リレーション）。",
+  "Datatype properties (class-to-literal attributes) declared by the ontologies in this namespace.":
+    "この名前空間のオントロジーが宣言するデータ型プロパティ（クラスからリテラルへの属性）。",
+  "No object properties were reported for these ontologies.":
+    "これらのオントロジーについてオブジェクトプロパティは報告されていません。",
+  "No datatype properties were reported for these ontologies.":
+    "これらのオントロジーについてデータ型プロパティは報告されていません。",
   "Inherited from {name}": "{name} から継承",
   "Remove this foundational ontology?": "この基盤オントロジーを削除しますか？",
   "Removing ": "",
@@ -2570,6 +2592,15 @@ export const MESSAGES_JA = {
     "合成された回答はありません（ティア {tier}）。",
   "Tier {tier} · {chunks} supporting chunks":
     "ティア {tier} · サポートチャンク {chunks} 件",
+  "Retrieval degraded": "検索が縮退しました",
+  "{step}: {status}": "{step}: {status}",
+  "{step}: {status} — {detail}": "{step}: {status} — {detail}",
+  "Results truncated": "結果が切り詰められました",
+  "Showing the first {count} chunks (top-K cap). More matching chunks may exist and are not shown.":
+    "先頭 {count} 件のチャンクのみ表示しています（top-K 上限）。一致するチャンクが他にも存在する可能性がありますが、表示されていません。",
+  "Partial answer": "部分的な回答",
+  "The service marked this answer as partial; some evidence could not be retrieved.":
+    "サービスはこの回答を部分的とマークしました。一部の根拠を取得できていません。",
   'Must be an absolute http(s) IRI without spaces or any of < > " { } | \\ ^ `.':
     '空白および < > " { } | \\ ^ ` のいずれも含まない、絶対 http(s) IRI を指定してください。',
   "Run materialization": "物化を実行",

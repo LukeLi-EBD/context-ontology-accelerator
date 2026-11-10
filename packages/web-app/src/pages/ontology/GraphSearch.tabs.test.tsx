@@ -18,7 +18,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GraphSearchPage } from "./GraphSearch";
+import { GraphSearchPage, buildNamedGraphRows, buildPropertyRows } from "./GraphSearch";
 import { BreadcrumbProvider } from "@components/BreadcrumbProvider";
 import type {
   GraphSearchHit,
@@ -50,19 +50,37 @@ const ONTOLOGY_RECORDS: OntologyRecord[] = [
 ];
 const OVERVIEW: OntologyOverviewResult = {
   ontology_id: "o",
+  graphUri: "http://ex.org/graph/o",
   classes: [
     { uri: CLAIM, label: "Claim", comment: "A claim.", subClassOf: [] },
+  ],
+  objectProperties: [
+    {
+      uri: "http://ex.org/o#hasParty",
+      label: "has party",
+      domain: CLAIM,
+      range: "http://ex.org/o#Party",
+    },
+  ],
+  datatypeProperties: [
+    {
+      uri: "http://ex.org/o#claimNumber",
+      label: "claim number",
+      domain: CLAIM,
+      range: "http://www.w3.org/2001/XMLSchema#string",
+    },
   ],
 };
 
 const searchEntitiesPaged = vi.fn();
 const getOntologyOverview = vi.fn();
 const listOntologies = vi.fn();
+const getClass = vi.fn();
 
 vi.mock("../../services/ontology-engine", () => ({
   searchEntities: vi.fn(),
   searchEntitiesPaged: (...args: unknown[]) => searchEntitiesPaged(...args),
-  getClass: vi.fn(),
+  getClass: (...args: unknown[]) => getClass(...args),
   getObjectProperty: vi.fn(),
   getDatatypeProperty: vi.fn(),
   getOntologyOverview: (...args: unknown[]) => getOntologyOverview(...args),
@@ -138,6 +156,12 @@ describe("GraphSearchPage — Explorer tabs", () => {
     searchEntitiesPaged.mockResolvedValue(CLASS_PAGE);
     getOntologyOverview.mockResolvedValue(OVERVIEW);
     listOntologies.mockResolvedValue(ONTOLOGY_RECORDS);
+    getClass.mockResolvedValue({
+      uri: CLAIM,
+      labels: ["Claim"],
+      kind: "class",
+      graph_uris: ["http://ex.org/graph/o"],
+    });
   });
 
   it("defaults to the Classes tab when no ?tab= is given", async () => {
@@ -236,16 +260,82 @@ describe("GraphSearchPage — Explorer tabs", () => {
     expect(view.queryByTestId("inducted-sources")).toBeNull();
   });
 
-  it("always renders all four tabs, whichever one is active", async () => {
+  it("always renders all five tabs, whichever one is active", async () => {
     const view = renderPage("?tab=sources");
     await waitFor(() => expect(activeTabLabel(view)).toBe("Inducted sources"));
     expect(view.getAllByRole("tab").map((t) => t.textContent?.trim())).toEqual([
       "Classes",
+      "Properties",
       "Ontologies",
       "Inducted sources",
       "Statements",
     ]);
     // The page header is tab-independent.
     expect(screen.getByText("Explorer")).toBeInTheDocument();
+  });
+
+  it("shows declared properties and named graph IRIs on the Properties tab", async () => {
+    // F133 + F134: the tab is fed by the same overview the List view loads.
+    const view = renderPage("?tab=properties");
+
+    await waitFor(() => expect(activeTabLabel(view)).toBe("Properties"));
+    await waitFor(() =>
+      expect(view.getByText("http://ex.org/graph/o")).toBeInTheDocument(),
+    );
+    expect(view.getByText("has party")).toBeInTheDocument();
+    expect(view.getByText("claim number")).toBeInTheDocument();
+    expect(view.getByText("http://ex.org/o#hasParty")).toBeInTheDocument();
+    expect(view.getByText("http://ex.org/o#claimNumber")).toBeInTheDocument();
+  });
+
+  it("offers an entity-page jump for a selected search result (F143)", async () => {
+    const view = renderPage();
+
+    // Row click opens the same detail panel the graph uses.
+    await waitFor(() => expect(view.getByText("Claim")).toBeInTheDocument());
+    await userEvent.click(view.getByText("Claim"));
+
+    await waitFor(() =>
+      expect(view.getByText("Entity page")).toBeInTheDocument(),
+    );
+  });
+});
+
+describe("Explorer property / named-graph builders", () => {
+  const byId = new Map(ONTOLOGY_RECORDS.map((r) => [r.ontologyId, r]));
+
+  it("flattens object and datatype properties with the ontology title", () => {
+    const rows = buildPropertyRows([{ ontologyId: "o", overview: OVERVIEW }], byId);
+    expect(rows.map((r) => [r.kind, r.label, r.ontologyName])).toEqual([
+      ["object", "has party", "Insurance"],
+      ["datatype", "claim number", "Insurance"],
+    ]);
+    expect(rows[0].domain).toBe(CLAIM);
+    expect(rows[1].range).toBe("http://www.w3.org/2001/XMLSchema#string");
+  });
+
+  it("skips overviews without a graph URI instead of inventing one", () => {
+    const rows = buildNamedGraphRows(
+      [
+        {
+          ontologyId: "o",
+          overview: { ...OVERVIEW, graphUri: null },
+        },
+      ],
+      byId,
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it("reports the named graph with its class count", () => {
+    const rows = buildNamedGraphRows([{ ontologyId: "o", overview: OVERVIEW }], byId);
+    expect(rows).toEqual([
+      {
+        ontologyId: "o",
+        ontologyName: "Insurance",
+        graphUri: "http://ex.org/graph/o",
+        classCount: 1,
+      },
+    ]);
   });
 });
