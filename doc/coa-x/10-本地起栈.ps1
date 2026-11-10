@@ -3,10 +3,11 @@
   COA 原版本地栈一键启停。
 
 .DESCRIPTION
-  本脚本只管理下面六个东西（其余一律不碰）：
+  本脚本只管理下面这些东西（其余一律不碰）：
 
     容器 coa-local-pg        127.0.0.1:5444  pgvector/pgvector:pg18-trixie，库 platform + serve_local
     容器 coa-local-oxigraph  127.0.0.1:7878  oxigraph/oxigraph:0.5.7，数据卷 coa-local-oxigraph-data
+    容器 coa-local-reasoner  127.0.0.1:7879  agent-reasoner:0.1-s5（ROBOT 1.9.6 + ELK + Jena riot）
     进程 coa-api-local       127.0.0.1:8099  doc/coa-x/tools/coa_api_local.py
     进程 coa-ontology-local  127.0.0.1:8101  doc/coa-x/tools/coa_ontology_local.py
     进程 coa-serve-local     127.0.0.1:8091  run_local.py context-manager（Query / KBSearch 的上游）
@@ -63,6 +64,8 @@ $RunDir  = Join-Path $env:TEMP "coa-local-stack"
 $PidFile = Join-Path $RunDir "pids.json"
 $PgName  = "coa-local-pg"
 $OxiName = "coa-local-oxigraph"
+$ReasonerName = "coa-local-reasoner"
+$ReasonerImage = "agent-reasoner:0.1-s5"
 
 if (-not (Test-Path $Python)) {
     throw "venv python not found: $Python"
@@ -130,7 +133,7 @@ if ($Stop) {
     Stop-PortOwner 5173 "vite"
     if (Test-Path $PidFile) { Remove-Item $PidFile -Force }
     if (-not $KeepContainers) {
-        foreach ($name in @($PgName, $OxiName)) {
+        foreach ($name in @($PgName, $OxiName, $ReasonerName)) {
             if (Get-ContainerRunning $name) {
                 Write-Host ("  [stop] container {0}" -f $name)
                 docker stop $name | Out-Null
@@ -166,8 +169,13 @@ Ensure-Container $OxiName @(
     "-v", "coa-local-oxigraph-data:/data",
     "oxigraph/oxigraph:0.5.7", "serve", "--location", "/data", "--bind", "0.0.0.0:7878"
 )
+Ensure-Container $ReasonerName @(
+    "--publish", "127.0.0.1:7879:7879",
+    $ReasonerImage
+)
 Wait-Port 5444 "coa-local-pg" 60
 Wait-Port 7878 "coa-local-oxigraph" 30
+Wait-Port 7879 "coa-local-reasoner" 60
 
 # 1.5) Schema for BOTH databases, before any process starts.
 # 8099's in-process app reads serve_local (PLATFORM__DATABASE__URL); 8101's
@@ -205,6 +213,12 @@ $env:COA_PROVIDER_ONTOLOGY_EMBEDDING = "http"
 $env:COA_CONTROL_PLANE_PG_DSN      = "postgresql://platform:platform_dev@127.0.0.1:5444/platform"
 $env:DYNAMODB_TABLE                = "coa-local-ontologies"
 $env:NDB_GRAPH_URI_BASE            = "https://coa.local/graph"
+# P3 reasoning: the demo A-Box graph, named <base>/<namespace>/<encoded IRI>.
+# The kernel's materialize body rejects non-urn IRIs by design, so the local
+# composition root injects the graph on the assembled config instead.
+$env:COA_LOCAL_REASONING_ABOX_GRAPH = "$($env:NDB_GRAPH_URI_BASE)/$Namespace/urn%3Acoa%3Aabox%3Aplatform-synthetic"
+# T-Box+A-Box 16MB + RDFS closure 70MB on the demo data, above the 50MiB default.
+$env:PLATFORM__REASONING__MAX_ASSEMBLY_BYTES = "157286400"
 $env:COA_ONTOLOGY_PORT             = "8101"
 $env:COA_LOCAL_API_PORT            = "8099"
 # Artifact bytes (S3 role) live beside the stack's logs/pid, served by 8099.
@@ -399,5 +413,6 @@ Write-Host "  8091  coa-serve-local    (context-manager, serve_local DB)"
 Write-Host "  5173  coa-web-5173       (vite --config vite.dev-local.config.mjs)"
 Write-Host "  5444  coa-local-pg      (platform = control plane, serve_local = query chain)"
 Write-Host "  7878  coa-local-oxigraph"
+Write-Host "  7879  coa-local-reasoner (ROBOT/ELK; platform.reasoning_job via 8099)"
 Write-Host ""
 Write-Host "Stop:     powershell -ExecutionPolicy Bypass -File .\10-本地起栈.ps1 -Stop"

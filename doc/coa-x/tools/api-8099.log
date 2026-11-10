@@ -1,2 +1,2 @@
 [api] metadata catalog -> json-snapshot (LocalCatalogClient)
-[api] object store -> fs bucket=coa-local-documents
+[api] object store -> upstream s3 (provider=unset)

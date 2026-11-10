@@ -581,7 +581,11 @@ ROUTES: list[tuple[str, str]] = [
     # `validate` is a read-only measurement despite the POST verb.
     ("/namespaces/{namespaceId}/graph/snapshot", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/validate", ONTOLOGY),
-    ("/namespaces/{namespaceId}/graph/reasoning", ONTOLOGY),
+    # GetReasoningStatus / MaterializeReasoning: inference lives in
+    # platform_core (job table + reasoner client), so these two go to KERNEL
+    # even though the other /graph/* reads are answered by 8101.
+    ("/namespaces/{namespaceId}/graph/reasoning/materialize", KERNEL),
+    ("/namespaces/{namespaceId}/graph/reasoning", KERNEL),
     ("/namespaces/{namespaceId}/graph/diff", ONTOLOGY),
     ("/namespaces/{namespaceId}/ontologies", ONTOLOGY),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}", ONTOLOGY),
@@ -689,14 +693,15 @@ def _match(path: str) -> tuple[str, dict[str, str], str] | None:
 
 
 async def _kernel_call(method: str, path: str, body: bytes | None = None,
-                       content_type: str = "application/json") -> tuple[int, bytes, str]:
+                       content_type: str = "application/json",
+                       timeout: float = 120.0) -> tuple[int, bytes, str]:
     """One request to the lifecycle app, in process (httpx ASGITransport)."""
     import httpx
 
     headers = {"content-type": content_type} if body else {}
     transport = httpx.ASGITransport(app=_lifecycle_app())
     async with httpx.AsyncClient(
-        transport=transport, base_url="http://lifecycle", timeout=120.0
+        transport=transport, base_url="http://lifecycle", timeout=timeout
     ) as client:
         resp = await client.request(method, path, content=body, headers=headers)
     return resp.status_code, resp.content, resp.headers.get("content-type", "application/json")
@@ -833,7 +838,14 @@ def _lifecycle_app() -> Any:
     from platform_core.config import load_config
     from platform_core.ontology_init import start as start_ontology
 
-    runtime = assemble(load_config(_LIFECYCLE_CONFIG))
+    bundle = load_config(_LIFECYCLE_CONFIG)
+    # Local A-Box graphs use the namespace-scoped https naming, which the
+    # /reasoning/materialize body guard (urn:platform: only) rejects. The stack
+    # passes the concrete graph in, so set it on the assembled config instead.
+    local_abox = os.environ.get("COA_LOCAL_REASONING_ABOX_GRAPH")
+    if local_abox:
+        bundle.config.reasoning.abox_graphs = [local_abox]
+    runtime = assemble(bundle)
     # The CLI's self-check normally opens the pool; without it every DB route
     # answers 503 E_DB_UNAVAILABLE.  No HTTP server means no lifespan either.
     runtime.metadata.open(retry_seconds=30.0)
@@ -1041,6 +1053,23 @@ def _kernel_translate(
         # Encode the whole IRI so its slashes cannot be read as path separators.
         return "GET", f"/entities/{quote(iri, safe='')}{suffix}", None
 
+    if template == "/namespaces/{namespaceId}/graph/reasoning/materialize":
+        if method != "POST":
+            raise ValueError(f"no kernel mapping for {method} {template}")
+        forwarded = {
+            key: payload[key]
+            for key in ("profile", "force")
+            if payload.get(key) not in (None, "")
+        }
+        return (
+            "POST",
+            "/reasoning/materialize",
+            json.dumps(forwarded, ensure_ascii=False).encode("utf-8"),
+        )
+
+    if template == "/namespaces/{namespaceId}/graph/reasoning":
+        return "GET", "/reasoning/status", None
+
     if "/facts" in template:
         fact_id = path_params.get("factId", "")
         q = query or {}
@@ -1217,7 +1246,14 @@ async def _kernel_proxy(
         return JSONResponse({"error": str(exc)}, status_code=400)
 
     try:
-        status, content, ctype = await _kernel_call(method, target, forwarded)
+        status, content, ctype = await _kernel_call(
+            method,
+            target,
+            forwarded,
+            # RDFS closure + ELK on the demo A-Box takes ~13s at the engine;
+            # the rdflib diff around it needs a longer socket budget.
+            timeout=600.0 if template.endswith("/graph/reasoning/materialize") else 120.0,
+        )
     except Exception as exc:  # kernel down: say so instead of a bare 500
         return JSONResponse(
             {
@@ -1227,6 +1263,42 @@ async def _kernel_proxy(
             },
             status_code=503,
         )
+
+    # GetReasoningStatus: the kernel reports its own job table; the contract
+    # speaks in `available`/`engine`/`failures`. Translate instead of leaking
+    # the kernel payload, and keep `detail` readable for the health board.
+    if status < 300 and request.method == "GET" and template.endswith(
+        "/graph/reasoning"
+    ):
+        try:
+            kernel_status = json.loads(content or b"{}")
+        except ValueError:
+            kernel_status = {}
+        if isinstance(kernel_status, dict):
+            last = kernel_status.get("lastJob") or {}
+            available = bool(kernel_status.get("available"))
+            translated = {
+                "available": available,
+                "engine": (
+                    kernel_status.get("provider") or kernel_status.get("engine")
+                ) if available else None,
+                "failures": {
+                    "count": int(kernel_status.get("failedJobs") or 0),
+                    "detail": "platform.reasoning_job kind=materialize state=failed",
+                },
+                "detail": (
+                    f"mode={kernel_status.get('mode')} "
+                    f"profile={kernel_status.get('profile')} "
+                    f"lastJob={last.get('state') or 'none'} "
+                    f"inferred={last.get('inferred')}"
+                ),
+                "source": (
+                    "platform-core /reasoning/status (in-process kernel; "
+                    "platform.reasoning_job)"
+                ),
+                "sampledAt": datetime.now(timezone.utc).isoformat(),
+            }
+            content = json.dumps(translated, ensure_ascii=False).encode("utf-8")
 
     # Two contract responses name the result differently from the kernel:
     # PublishOntology returns `publishedVersion`, RollbackOntology the same.
