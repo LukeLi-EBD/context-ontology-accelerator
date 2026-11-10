@@ -16,6 +16,8 @@ import type {
   InductionJobStatus,
   InductionSourceType,
   InductionStrategy,
+  IngestionRunKind,
+  IngestionRunStatus,
   IngestJobState,
   MatchType,
   NamespaceStatus,
@@ -159,6 +161,827 @@ export interface HealthCheckOutput {
    * @public
    */
   status: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetDictionaryInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Source whose dictionary is read or refreshed.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Restrict the table rollups to one table.
+   * @public
+   */
+  table?: string | undefined;
+}
+
+/**
+ * Lifecycle of one dictionary introspection pass.
+ * @public
+ */
+export interface DictionaryRefreshRun {
+  /**
+   * Server-minted identifier of this introspection pass.
+   * @public
+   */
+  runId: string | undefined;
+
+  /**
+   * Source whose dictionary was introspected.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * `running`, `succeeded` or `failed`.
+   * @public
+   */
+  status: string | undefined;
+
+  /**
+   * Caller-supplied key that makes the refresh replayable.
+   * @public
+   */
+  idempotencyKey?: string | undefined;
+
+  /**
+   * Principal that requested the refresh, when recorded.
+   * @public
+   */
+  requestedBy?: string | undefined;
+
+  /**
+   * ISO-8601 start time.
+   * @public
+   */
+  startedAt?: string | undefined;
+
+  /**
+   * ISO-8601 finish time; absent while still running.
+   * @public
+   */
+  finishedAt?: string | undefined;
+
+  /**
+   * Column rows read from the source.
+   * @public
+   */
+  processed?: number | undefined;
+
+  /**
+   * Column rows newly inserted into the snapshot.
+   * @public
+   */
+  inserted?: number | undefined;
+
+  /**
+   * Column rows updated in the snapshot.
+   * @public
+   */
+  updated?: number | undefined;
+
+  /**
+   * Column rows that were already identical.
+   * @public
+   */
+  unchanged?: number | undefined;
+
+  /**
+   * Column rows dropped because the source no longer exposes them.
+   * @public
+   */
+  removed?: number | undefined;
+
+  /**
+   * Failure message when `status` is `failed`; absent otherwise.
+   * @public
+   */
+  error?: string | undefined;
+}
+
+/**
+ * Per-table rollup on the source dictionary page.
+ * @public
+ */
+export interface DictionaryTableSummary {
+  /**
+   * Table name.
+   * @public
+   */
+  table: string | undefined;
+
+  /**
+   * Column count in the table.
+   * @public
+   */
+  columns: number | undefined;
+
+  /**
+   * Columns carrying a source comment.
+   * @public
+   */
+  commented: number | undefined;
+
+  /**
+   * Columns bound to an ontology property.
+   * @public
+   */
+  bound: number | undefined;
+
+  /**
+   * Columns with no source comment.
+   * @public
+   */
+  missingComment: number | undefined;
+
+  /**
+   * Columns not bound to any ontology property.
+   * @public
+   */
+  unbound: number | undefined;
+}
+
+/**
+ * Comment coverage rollup (F66). `ratio` is absent when there are no rows.
+ * @public
+ */
+export interface CommentCoverage {
+  /**
+   * Rows considered.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Rows carrying a comment.
+   * @public
+   */
+  commented: number | undefined;
+
+  /**
+   * Rows with no comment.
+   * @public
+   */
+  missing: number | undefined;
+
+  /**
+   * Commented rows divided by total, 0..1.
+   * @public
+   */
+  ratio?: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetDictionaryOutput {
+  /**
+   * Source the dictionary belongs to.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Source engine kind, e.g. `postgresql` or `snowflake`.
+   * @public
+   */
+  sourceKind?: string | undefined;
+
+  /**
+   * Catalog the source exposes tables under.
+   * @public
+   */
+  catalog?: string | undefined;
+
+  /**
+   * Schema the source exposes tables under.
+   * @public
+   */
+  schema?: string | undefined;
+
+  /**
+   * Per-table rollups.
+   * @public
+   */
+  tables: DictionaryTableSummary[] | undefined;
+
+  /**
+   * Comment coverage for the whole source.
+   * @public
+   */
+  totals: CommentCoverage | undefined;
+
+  /**
+   * Bindings already resolved (`binding_method` != `none`).
+   * @public
+   */
+  boundColumns: number | undefined;
+
+  /**
+   * Lifecycle of one dictionary introspection pass.
+   * @public
+   */
+  latestRun?: DictionaryRefreshRun | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetDictionaryCommentCoverageInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Source whose dictionary is read or refreshed.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Restrict the coverage rollup to one table.
+   * @public
+   */
+  table?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetDictionaryCommentCoverageOutput {
+  /**
+   * Source the coverage applies to.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Comment coverage for the whole source.
+   * @public
+   */
+  coverage: CommentCoverage | undefined;
+
+  /**
+   * Per-table coverage rollups.
+   * @public
+   */
+  tables: DictionaryTableSummary[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetDictionaryViewInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Source whose dictionary is read or refreshed.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * `all`, `missing_comment`, `unbound` or `mappable_unbound`.
+   * @public
+   */
+  view?: string | undefined;
+
+  /**
+   * Restrict to one table name.
+   * @public
+   */
+  table?: string | undefined;
+
+  /**
+   * Restrict to one column name.
+   * @public
+   */
+  column?: string | undefined;
+
+  /**
+   * `explicit`, `name_match`, `manual` or `none`.
+   * @public
+   */
+  bindingMethod?: string | undefined;
+
+  /**
+   * `postgresql`, `mysql`, `redshift`, `sqlserver`, `snowflake`,
+   * `glue` or `duckdb`.
+   * @public
+   */
+  sourceKind?: string | undefined;
+
+  /**
+   * Case-insensitive substring match on table, column or comment.
+   * @public
+   */
+  query?: string | undefined;
+
+  /**
+   * Page size (default 50, max 200).
+   * @public
+   */
+  limit?: number | undefined;
+
+  /**
+   * Rows to skip (default 0).
+   * @public
+   */
+  offset?: number | undefined;
+}
+
+/**
+ * One column row in the dictionary (ten-column view, F63).
+ * @public
+ */
+export interface DictionaryColumn {
+  /**
+   * Source this column snapshot belongs to.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Catalog the source exposes the table under.
+   * @public
+   */
+  catalog: string | undefined;
+
+  /**
+   * Schema the source exposes the table under.
+   * @public
+   */
+  schema: string | undefined;
+
+  /**
+   * Table name.
+   * @public
+   */
+  table: string | undefined;
+
+  /**
+   * Column name.
+   * @public
+   */
+  column: string | undefined;
+
+  /**
+   * Column data type as reported by the source.
+   * @public
+   */
+  dataType: string | undefined;
+
+  /**
+   * Whether the column admits NULL.
+   * @public
+   */
+  isNullable: boolean | undefined;
+
+  /**
+   * Source engine kind, e.g. `postgresql` or `snowflake`.
+   * @public
+   */
+  sourceKind: string | undefined;
+
+  /**
+   * How the binding was resolved: `explicit`, `name_match`, `manual` or `none`.
+   * @public
+   */
+  bindingMethod: string | undefined;
+
+  /**
+   * Column comment captured from the source, when present.
+   * @public
+   */
+  comment?: string | undefined;
+
+  /**
+   * Ontology property this column is bound to, when bound.
+   * @public
+   */
+  propertyIri?: string | undefined;
+
+  /**
+   * Confidence of a `name_match` binding, 0..1.
+   * @public
+   */
+  confidence?: number | undefined;
+
+  /**
+   * Human note attached to a `manual` binding.
+   * @public
+   */
+  bindingNote?: string | undefined;
+
+  /**
+   * ISO-8601 time the snapshot observed this column.
+   * @public
+   */
+  observedAt?: string | undefined;
+
+  /**
+   * Refresh run that last wrote this row.
+   * @public
+   */
+  lastRefreshRunId?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetDictionaryViewOutput {
+  /**
+   * Column rows for this page.
+   * @public
+   */
+  items: DictionaryColumn[] | undefined;
+
+  /**
+   * Number of rows after filtering.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Number of rows skipped.
+   * @public
+   */
+  offset: number | undefined;
+
+  /**
+   * Page size actually applied.
+   * @public
+   */
+  limit: number | undefined;
+
+  /**
+   * The filter view that was applied.
+   * @public
+   */
+  view: string | undefined;
+
+  /**
+   * Comment coverage rollup (F66). `ratio` is absent when there are no rows.
+   * @public
+   */
+  coverage: CommentCoverage | undefined;
+
+  /**
+   * Non-fatal notes, e.g. an empty mappable set. Never silent.
+   * @public
+   */
+  warnings?: string[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListDictionariesInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Page size (default 50, max 200).
+   * @public
+   */
+  limit?: number | undefined;
+
+  /**
+   * Rows to skip (default 0).
+   * @public
+   */
+  offset?: number | undefined;
+}
+
+/**
+ * Per-source rollup shown in the source list.
+ * @public
+ */
+export interface DictionarySummary {
+  /**
+   * Source the snapshot belongs to.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Source engine kind, e.g. `postgresql` or `snowflake`.
+   * @public
+   */
+  sourceKind: string | undefined;
+
+  /**
+   * Distinct tables in the snapshot.
+   * @public
+   */
+  tables: number | undefined;
+
+  /**
+   * Column count in the snapshot.
+   * @public
+   */
+  columns: number | undefined;
+
+  /**
+   * Columns carrying a source comment.
+   * @public
+   */
+  commented: number | undefined;
+
+  /**
+   * Columns bound to an ontology property.
+   * @public
+   */
+  bound: number | undefined;
+
+  /**
+   * ISO-8601 time the snapshot was last observed.
+   * @public
+   */
+  observedAt?: string | undefined;
+
+  /**
+   * Most recent refresh run for this source.
+   * @public
+   */
+  lastRun?: DictionaryRefreshRun | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListDictionariesOutput {
+  /**
+   * Per-source dictionary rollups for this page.
+   * @public
+   */
+  items: DictionarySummary[] | undefined;
+
+  /**
+   * Number of sources that have a snapshot.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Number of rows skipped.
+   * @public
+   */
+  offset: number | undefined;
+
+  /**
+   * Page size actually applied.
+   * @public
+   */
+  limit: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListTermsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Case-insensitive substring match on label, class label or class IRI.
+   * @public
+   */
+  query?: string | undefined;
+
+  /**
+   * Filter by entry status: `evidenced` or `inferred`.
+   * @public
+   */
+  status?: string | undefined;
+
+  /**
+   * Page size (default 100, max 500).
+   * @public
+   */
+  limit?: number | undefined;
+
+  /**
+   * Rows to skip (default 0).
+   * @public
+   */
+  offset?: number | undefined;
+}
+
+/**
+ * Anchor-class and alias counts for the namespace's published T-Box.
+ * @public
+ */
+export interface TermCounts {
+  /**
+   * Distinct owl:Class nodes that an alias entry points at (F58).
+   * @public
+   */
+  anchorClasses: number | undefined;
+
+  /**
+   * Number of skos:Concept / term:TermEntry alias entries (F59).
+   * @public
+   */
+  termEntries: number | undefined;
+
+  /**
+   * Entries whose status is `evidenced`.
+   * @public
+   */
+  evidenced: number | undefined;
+
+  /**
+   * Entries whose status is `inferred`.
+   * @public
+   */
+  inferred: number | undefined;
+}
+
+/**
+ * One alias row. The seven data columns are class, label, status,
+ * confidence, guard regex, canonical-for targets and suppressed surfaces.
+ * @public
+ */
+export interface TermEntry {
+  /**
+   * IRI of the skos:Concept / term:TermEntry node.
+   * @public
+   */
+  entry: string | undefined;
+
+  /**
+   * IRI of the anchored class.
+   * @public
+   */
+  classIri?: string | undefined;
+
+  /**
+   * rdfs:label of the anchored class, when the graph carries one.
+   * @public
+   */
+  classLabel?: string | undefined;
+
+  /**
+   * The alias surface form (skos:prefLabel or term:label).
+   * @public
+   */
+  label: string | undefined;
+
+  /**
+   * `evidenced` or `inferred`.
+   * @public
+   */
+  status: string | undefined;
+
+  /**
+   * Term confidence, 0..1, when recorded.
+   * @public
+   */
+  confidence?: number | undefined;
+
+  /**
+   * Guard regular expression that must pass before the alias is used.
+   * @public
+   */
+  guardRegex?: string | undefined;
+
+  /**
+   * Concepts this surface is the canonical label for.
+   * @public
+   */
+  canonicalFor?: string[] | undefined;
+
+  /**
+   * Surface forms suppressed in favour of this entry.
+   * @public
+   */
+  suppressedSurface?: string[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListTermsOutput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * IRI of the graph the entries were read from; absent when the
+   * namespace has no lexicon graph.
+   * @public
+   */
+  graph?: string | undefined;
+
+  /**
+   * Anchor-class and alias counts for the namespace's published T-Box.
+   * @public
+   */
+  counts: TermCounts | undefined;
+
+  /**
+   * The alias rows for this page.
+   * @public
+   */
+  entries: TermEntry[] | undefined;
+
+  /**
+   * Number of entries after filtering.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Number of rows skipped.
+   * @public
+   */
+  offset: number | undefined;
+
+  /**
+   * Page size actually applied.
+   * @public
+   */
+  limit: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface RefreshDictionariesInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Source whose dictionary is read or refreshed.
+   * @public
+   */
+  sourceId: string | undefined;
+
+  /**
+   * Caller-supplied key; generated per request when absent.
+   * @public
+   */
+  idempotencyKey?: string | undefined;
+
+  /**
+   * Principal requesting the refresh, when the caller supplies one.
+   * @public
+   */
+  requestedBy?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface RefreshDictionariesOutput {
+  /**
+   * Lifecycle of one dictionary introspection pass.
+   * @public
+   */
+  run: DictionaryRefreshRun | undefined;
+
+  /**
+   * How bindings were resolved: `published-ontology`,
+   * `published-ontology-empty`, or `replay` when an already-succeeded
+   * idempotency key returned its prior run.
+   * @public
+   */
+  bindingBasis: string | undefined;
+
+  /**
+   * Non-fatal notes (e.g. a source with zero columns). Never silent.
+   * @public
+   */
+  warnings?: string[] | undefined;
 }
 
 /**
@@ -1482,6 +2305,197 @@ export interface ListPrincipalGrantsOutput {
 }
 
 /**
+ * @public
+ */
+export interface ListIngestionRunsInput {
+  /**
+   * Namespace whose runs are listed.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Run family; defaults to BATCH and only BATCH is implemented.
+   * @public
+   */
+  kind?: IngestionRunKind | undefined;
+
+  /**
+   * Optional lifecycle-status filter.
+   * @public
+   */
+  status?: IngestionRunStatus | undefined;
+
+  /**
+   * Pagination token from a previous response.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Maximum runs per page (default and maximum 50).
+   * @public
+   */
+  maxResults?: number | undefined;
+}
+
+/**
+ * One failed item surfaced in the inline failure feed.
+ * @public
+ */
+export interface IngestionFailure {
+  /**
+   * Batch the failed item belongs to.
+   * @public
+   */
+  runId: string | undefined;
+
+  /**
+   * Item path relative to the batch root.
+   * @public
+   */
+  relPath: string | undefined;
+
+  /**
+   * Number of processing attempts so far.
+   * @public
+   */
+  attempts: number | undefined;
+
+  /**
+   * Machine-readable failure code, when the importer recorded one.
+   * @public
+   */
+  code?: string | undefined;
+
+  /**
+   * Human-readable failure message, when the importer recorded one.
+   * @public
+   */
+  message?: string | undefined;
+
+  /**
+   * When the item last changed.
+   * @public
+   */
+  updatedAt: Date | undefined;
+}
+
+/**
+ * One import batch and its per-item counters.
+ * @public
+ */
+export interface IngestionRun {
+  /**
+   * Stable batch identifier (platform.import_batch.batch_id).
+   * @public
+   */
+  runId: string | undefined;
+
+  /**
+   * Filesystem root that was imported.
+   * @public
+   */
+  root: string | undefined;
+
+  /**
+   * Current lifecycle state.
+   * @public
+   */
+  status: IngestionRunStatus | undefined;
+
+  /**
+   * True when status is STALE.
+   * @public
+   */
+  stale: boolean | undefined;
+
+  /**
+   * Machine-readable stale reason; present only when stale is true.
+   * @public
+   */
+  staleReason?: string | undefined;
+
+  /**
+   * Discovered items in this batch.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Items that reached a terminal state (indexed or failed).
+   * @public
+   */
+  completed: number | undefined;
+
+  /**
+   * Items indexed successfully.
+   * @public
+   */
+  indexed: number | undefined;
+
+  /**
+   * Items that ended in failure.
+   * @public
+   */
+  failed: number | undefined;
+
+  /**
+   * Items indexed with degraded quality (for example missing embeddings).
+   * @public
+   */
+  degraded: number | undefined;
+
+  /**
+   * When the batch row was created.
+   * @public
+   */
+  createdAt: Date | undefined;
+
+  /**
+   * When the batch row last changed.
+   * @public
+   */
+  updatedAt: Date | undefined;
+
+  /**
+   * When the batch finished; absent while running.
+   * @public
+   */
+  finishedAt?: Date | undefined;
+}
+
+/**
+ * Standard pagination output
+ * @public
+ */
+export interface ListIngestionRunsOutput {
+  /**
+   * Opaque token for fetching the next page; absent when there are no more results.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Page of ingestion runs.
+   * @public
+   */
+  items: IngestionRun[] | undefined;
+
+  /**
+   * Number of runs matching the filter across all pages.
+   * @public
+   */
+  totalCount: number | undefined;
+
+  /**
+   * Most recent failed items across the returned page (at most 20).
+   * @public
+   */
+  failures: IngestionFailure[] | undefined;
+}
+
+/**
  * Filter criteria selecting which metrics a bulk delete should remove.
  * @public
  */
@@ -2380,6 +3394,789 @@ export interface ValidateMetricOutput {
    * @public
    */
   warnings: ValidationWarning[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetMetricFamilyInput {
+  /**
+   * Namespace that owns the metric family.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Family identifier: the metric id of the family index.
+   * @public
+   */
+  familyId: string | undefined;
+}
+
+/**
+ * One field that differs (or does not differ) across variants.
+ * @public
+ */
+export interface MetricFamilyDiff {
+  /**
+   * Field name used for the comparison.
+   * @public
+   */
+  field: string | undefined;
+
+  /**
+   * Display label of the field.
+   * @public
+   */
+  label: string | undefined;
+
+  /**
+   * metricId -> rendered value.
+   * @public
+   */
+  values: Record<string, string> | undefined;
+
+  /**
+   * True when the values are not all equal.
+   * @public
+   */
+  different: boolean | undefined;
+}
+
+/**
+ * Instruction shown when a family index is opened instead of a variant.
+ * @public
+ */
+export interface MetricFamilyGuidance {
+  /**
+   * Stable machine code (for example E_METRIC_VARIANT_REQUIRED).
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * Human-readable explanation.
+   * @public
+   */
+  message: string | undefined;
+
+  /**
+   * Ordered steps that resolve the selection.
+   * @public
+   */
+  howTo: string[] | undefined;
+}
+
+/**
+ * Observation window declared by a variant.
+ * @public
+ */
+export interface MetricFamilyVariantWindow {
+  /**
+   * Window kind (instant, period, rolling).
+   * @public
+   */
+  kind?: string | undefined;
+
+  /**
+   * Minimum window length in days.
+   * @public
+   */
+  minWindowDays?: number | undefined;
+
+  /**
+   * Rendered window description.
+   * @public
+   */
+  text?: string | undefined;
+}
+
+/**
+ * One variant of a metric family.
+ * @public
+ */
+export interface MetricFamilyVariant {
+  /**
+   * Variant metric id; use this for output calls.
+   * @public
+   */
+  metricId: string | undefined;
+
+  /**
+   * Display name of the variant.
+   * @public
+   */
+  nameZh?: string | undefined;
+
+  /**
+   * Display label override, when the definition carries one.
+   * @public
+   */
+  displayName?: string | undefined;
+
+  /**
+   * Whether the variant may be published at all.
+   * @public
+   */
+  publishable?: boolean | undefined;
+
+  /**
+   * Evidence basis (regulatory, industry, none).
+   * @public
+   */
+  evidenceBasis?: string | undefined;
+
+  /**
+   * Whether the variant passes the external-eligibility rule.
+   * @public
+   */
+  externalEligible?: boolean | undefined;
+
+  /**
+   * Notice shown when the variant is an internal baseline.
+   * @public
+   */
+  internalNotice?: string | undefined;
+
+  /**
+   * Formula text as declared by the definition.
+   * @public
+   */
+  formula?: string | undefined;
+
+  /**
+   * True when the formula is present but execution is disabled.
+   * @public
+   */
+  formulaDisabled?: boolean | undefined;
+
+  /**
+   * Computability tier code.
+   * @public
+   */
+  computability?: string | undefined;
+
+  /**
+   * Computability tier label.
+   * @public
+   */
+  computabilityLabel?: string | undefined;
+
+  /**
+   * Observation window declared by the variant.
+   * @public
+   */
+  window?: MetricFamilyVariantWindow | undefined;
+
+  /**
+   * Denominator expression text, when the definition declares one.
+   * @public
+   */
+  denominator?: string | undefined;
+
+  /**
+   * Human-readable denominator description.
+   * @public
+   */
+  denominatorText?: string | undefined;
+
+  /**
+   * Grain label (for example policy or agreement).
+   * @public
+   */
+  grain?: string | undefined;
+
+  /**
+   * Grain code as stored in the definition.
+   * @public
+   */
+  grainCode?: string | undefined;
+
+  /**
+   * Metric kind (ratio, duration, sum, ...).
+   * @public
+   */
+  metricKind?: string | undefined;
+
+  /**
+   * Unit of the produced value.
+   * @public
+   */
+  unit?: string | undefined;
+}
+
+/**
+ * One metric family (a family index plus its variants).
+ * @public
+ */
+export interface MetricFamily {
+  /**
+   * Family identifier, equal to the index metric id.
+   * @public
+   */
+  familyId: string | undefined;
+
+  /**
+   * The metric a caller lands on before choosing a variant.
+   * @public
+   */
+  indexMetricId: string | undefined;
+
+  /**
+   * Display name of the family index.
+   * @public
+   */
+  nameZh?: string | undefined;
+
+  /**
+   * Always true for a family index: output needs a variant metricId.
+   * @public
+   */
+  selectionRequired: boolean | undefined;
+
+  /**
+   * How the caller must choose a variant before producing a value.
+   * @public
+   */
+  guidance: MetricFamilyGuidance | undefined;
+
+  /**
+   * Number of variants in this family.
+   * @public
+   */
+  variantCount: number | undefined;
+
+  /**
+   * Variants of this family, in metric id order.
+   * @public
+   */
+  variants: MetricFamilyVariant[] | undefined;
+
+  /**
+   * Field-by-field differences across variants.
+   * @public
+   */
+  diffs: MetricFamilyDiff[] | undefined;
+
+  /**
+   * Store the family was read from.
+   * @public
+   */
+  source: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetMetricFamilyOutput {
+  /**
+   * The family index plus every variant and their differences.
+   * @public
+   */
+  family: MetricFamily | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetMetricReportManifestInput {
+  /**
+   * Namespace that owns the governed metrics.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * "all" (everything) or "external" (external-eligible candidates only).
+   * @public
+   */
+  scope?: string | undefined;
+
+  /**
+   * Optional domain filter.
+   * @public
+   */
+  domain?: string | undefined;
+
+  /**
+   * Optional evidence-basis filter.
+   * @public
+   */
+  evidenceBasis?: string | undefined;
+
+  /**
+   * Optional publishable filter.
+   * @public
+   */
+  publishable?: boolean | undefined;
+}
+
+/**
+ * Filters applied to a manifest response.
+ * @public
+ */
+export interface MetricReportFilters {
+  /**
+   * Applied scope.
+   * @public
+   */
+  scope?: string | undefined;
+
+  /**
+   * Applied domain filter.
+   * @public
+   */
+  domain?: string | undefined;
+
+  /**
+   * Applied evidence-basis filter.
+   * @public
+   */
+  evidenceBasis?: string | undefined;
+
+  /**
+   * Applied publishable filter.
+   * @public
+   */
+  publishable?: boolean | undefined;
+}
+
+/**
+ * One governed metric row as it appears in the report manifest. Fields left
+ * absent were not applicable for that metric; they are never coerced to false.
+ * @public
+ */
+export interface MetricReportItem {
+  /**
+   * Governed metric id (also the identifier used by /metrics/\{metric_id\}).
+   * @public
+   */
+  metricId: string | undefined;
+
+  /**
+   * Display name in Chinese.
+   * @public
+   */
+  nameZh?: string | undefined;
+
+  /**
+   * Display label override, when the definition carries one.
+   * @public
+   */
+  displayName?: string | undefined;
+
+  /**
+   * Business domain.
+   * @public
+   */
+  domain?: string | undefined;
+
+  /**
+   * Whether the metric may be published.
+   * @public
+   */
+  publishable?: boolean | undefined;
+
+  /**
+   * Evidence basis (regulatory, industry, none).
+   * @public
+   */
+  evidenceBasis?: string | undefined;
+
+  /**
+   * Rendered evidence-basis label.
+   * @public
+   */
+  evidenceBasisLabel?: string | undefined;
+
+  /**
+   * Provenance label of the evidence.
+   * @public
+   */
+  evidenceSource?: string | undefined;
+
+  /**
+   * True when regulatory text is attached.
+   * @public
+   */
+  hasRegulatoryText?: boolean | undefined;
+
+  /**
+   * True when the metric is an industry formula (internal baseline only).
+   * @public
+   */
+  industryBaseline?: boolean | undefined;
+
+  /**
+   * Internal-baseline notice, when applicable.
+   * @public
+   */
+  internalNotice?: string | undefined;
+
+  /**
+   * True when the metric is flagged as an E1 baseline.
+   * @public
+   */
+  e1Baseline?: boolean | undefined;
+
+  /**
+   * Formula text as declared by the definition.
+   * @public
+   */
+  formula?: string | undefined;
+
+  /**
+   * Formula expression used for execution, when declared.
+   * @public
+   */
+  formulaExpr?: string | undefined;
+
+  /**
+   * Computability tier code.
+   * @public
+   */
+  computability?: string | undefined;
+
+  /**
+   * Computability tier label.
+   * @public
+   */
+  computabilityLabel?: string | undefined;
+
+  /**
+   * Computability tone used by the UI (ok, warn, blocked).
+   * @public
+   */
+  computabilityTone?: string | undefined;
+
+  /**
+   * Short computability gap description.
+   * @public
+   */
+  gap?: string | undefined;
+
+  /**
+   * Stable gap code.
+   * @public
+   */
+  gapCode?: string | undefined;
+
+  /**
+   * Missing component description, when the metric cannot be computed.
+   * @public
+   */
+  missing?: string | undefined;
+
+  /**
+   * Whether the metric passes the external-eligibility rule.
+   * @public
+   */
+  externalEligible?: boolean | undefined;
+
+  /**
+   * Stable external status code.
+   * @public
+   */
+  externalStatus?: string | undefined;
+
+  /**
+   * Rendered external status label.
+   * @public
+   */
+  externalLabel?: string | undefined;
+
+  /**
+   * Why the metric has this external status.
+   * @public
+   */
+  externalReason?: string | undefined;
+
+  /**
+   * Execution path code (unavailable, rule_set_only, executable).
+   * @public
+   */
+  executionPath?: string | undefined;
+
+  /**
+   * True when the metric can be executed right now.
+   * @public
+   */
+  executable?: boolean | undefined;
+
+  /**
+   * Human-readable execution blocker.
+   * @public
+   */
+  executionReason?: string | undefined;
+
+  /**
+   * Stable execution blocker code.
+   * @public
+   */
+  executionReasonCode?: string | undefined;
+
+  /**
+   * Number of observation rows available.
+   * @public
+   */
+  observationCount?: number | undefined;
+
+  /**
+   * Observation window currently available, in days.
+   * @public
+   */
+  availableWindowDays?: number | undefined;
+
+  /**
+   * Observation window required by the definition, in days.
+   * @public
+   */
+  minWindowDays?: number | undefined;
+
+  /**
+   * True when the available window covers the required window.
+   * @public
+   */
+  windowSufficient?: boolean | undefined;
+
+  /**
+   * Window warning shown to the reporter, when applicable.
+   * @public
+   */
+  windowWarning?: string | undefined;
+
+  /**
+   * Family index id for a variant metric.
+   * @public
+   */
+  variantOf?: string | undefined;
+
+  /**
+   * Output mode (index, rule_set, value).
+   * @public
+   */
+  outputMode?: string | undefined;
+
+  /**
+   * True when the formula exists but execution is disabled.
+   * @public
+   */
+  formulaDisabled?: boolean | undefined;
+
+  /**
+   * True when the definition is inferred rather than provided.
+   * @public
+   */
+  inference?: boolean | undefined;
+
+  /**
+   * Evidence verification status.
+   * @public
+   */
+  evidenceStatus?: string | undefined;
+
+  /**
+   * Definition version the row was read from.
+   * @public
+   */
+  definitionVersion?: string | undefined;
+}
+
+/**
+ * Counter breakdown of the manifest.
+ * @public
+ */
+export interface MetricReportCounts {
+  /**
+   * Rows with publishable=true.
+   * @public
+   */
+  publishableTrue?: number | undefined;
+
+  /**
+   * Rows whose evidence basis is industry.
+   * @public
+   */
+  industry?: number | undefined;
+
+  /**
+   * Rows whose evidence basis is regulatory.
+   * @public
+   */
+  regulatory?: number | undefined;
+
+  /**
+   * Rows that pass the external-eligibility rule.
+   * @public
+   */
+  externalEligible?: number | undefined;
+
+  /**
+   * Rows with external status external_candidate.
+   * @public
+   */
+  externalCandidates?: number | undefined;
+
+  /**
+   * Rows executable right now.
+   * @public
+   */
+  executableNow?: number | undefined;
+
+  /**
+   * Industry rows excluded from external output.
+   * @public
+   */
+  industryExcludedFromExternal?: number | undefined;
+
+  /**
+   * Row count per computability tier.
+   * @public
+   */
+  computability?: Record<string, number> | undefined;
+}
+
+/**
+ * Execution-path breakdown of the manifest.
+ * @public
+ */
+export interface MetricReportExecution {
+  /**
+   * Rows with external status external_candidate.
+   * @public
+   */
+  externalCandidates?: number | undefined;
+
+  /**
+   * Rows executable right now.
+   * @public
+   */
+  executableNow?: number | undefined;
+
+  /**
+   * Rows executable from a rule set only.
+   * @public
+   */
+  ruleSetOnly?: number | undefined;
+
+  /**
+   * Rows that cannot be executed yet.
+   * @public
+   */
+  unavailable?: number | undefined;
+
+  /**
+   * Unavailable rows counted by reason code.
+   * @public
+   */
+  byReason?: Record<string, number> | undefined;
+
+  /**
+   * Basis used by the execution judgement.
+   * @public
+   */
+  basis?: string | undefined;
+
+  /**
+   * Explanatory note for the execution judgement.
+   * @public
+   */
+  note?: string | undefined;
+}
+
+/**
+ * Counters and provenance for the whole manifest.
+ * @public
+ */
+export interface MetricReportMeta {
+  /**
+   * Generation timestamp (ISO-8601).
+   * @public
+   */
+  generatedAt: string | undefined;
+
+  /**
+   * Store the manifest was read from.
+   * @public
+   */
+  source?: string | undefined;
+
+  /**
+   * Scope this manifest was generated for.
+   * @public
+   */
+  scope?: string | undefined;
+
+  /**
+   * Number of rows in this response.
+   * @public
+   */
+  total?: number | undefined;
+
+  /**
+   * Number of rows in the namespace before filtering.
+   * @public
+   */
+  allTotal?: number | undefined;
+
+  /**
+   * Counter breakdown.
+   * @public
+   */
+  counts?: MetricReportCounts | undefined;
+
+  /**
+   * Execution-path breakdown.
+   * @public
+   */
+  execution?: MetricReportExecution | undefined;
+
+  /**
+   * Industry-baseline notice shared by all industry rows.
+   * @public
+   */
+  industryNotice?: string | undefined;
+
+  /**
+   * Rule that decides external eligibility.
+   * @public
+   */
+  externalScopeRule?: string | undefined;
+
+  /**
+   * Statement that computability does not imply business values exist.
+   * @public
+   */
+  disclaimer?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetMetricReportManifestOutput {
+  /**
+   * Manifest rows after filtering.
+   * @public
+   */
+  items: MetricReportItem[] | undefined;
+
+  /**
+   * Number of rows in items.
+   * @public
+   */
+  count: number | undefined;
+
+  /**
+   * Counters and provenance for the whole manifest.
+   * @public
+   */
+  meta: MetricReportMeta | undefined;
+
+  /**
+   * Filters that were applied to this response.
+   * @public
+   */
+  filters: MetricReportFilters | undefined;
 }
 
 /**
@@ -9098,629 +10895,4 @@ export interface ListSourceTablesOutput {
    * @public
    */
   skippedAssets?: number | undefined;
-}
-
-/**
- * @public
- */
-export interface PutSourceEventRescanInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source to configure.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Whether event-driven rescans should be active.
-   * @public
-   */
-  enabled: boolean | undefined;
-}
-
-/**
- * @public
- */
-export interface PutSourceEventRescanOutput {
-  /**
-   * Identifier of the source.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * The resulting event-driven rescan configuration.
-   * @public
-   */
-  eventRescan: EventRescanConfig | undefined;
-}
-
-/**
- * @public
- */
-export interface PutSourceRescanScheduleInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source to schedule rescans for.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Whether the recurring rescan should be active.
-   * @public
-   */
-  enabled: boolean | undefined;
-
-  /**
-   * EventBridge schedule expression (e.g. "rate(1 day)" or
-   * "cron(0 3 * * ? *)"). Required when enabled=true.
-   *
-   * The cadence is floored, because every tick is a full discovery plus
-   * enrichment pass. A `rate()` below the floor is rejected with 400, a
-   * `cron()` must name a single minute so it cannot fire sub-hourly, and
-   * one-time `at()` expressions are not accepted.
-   * @public
-   */
-  scheduleExpression?: string | undefined;
-
-  /**
-   * IANA timezone for cron evaluation. Defaults to UTC.
-   * @public
-   */
-  timezone?: string | undefined;
-}
-
-/**
- * @public
- */
-export interface PutSourceRescanScheduleOutput {
-  /**
-   * Identifier of the source.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * The resulting schedule configuration.
-   * @public
-   */
-  rescanSchedule: RescanSchedule | undefined;
-}
-
-/**
- * @public
- */
-export interface RejectSourceInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source to reject.
-   * @public
-   */
-  sourceId: string | undefined;
-}
-
-/**
- * @public
- */
-export interface RejectSourceOutput {
-  /**
-   * Identifier of the source being rejected.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Unified lifecycle status for all source types.
-   * @public
-   */
-  status: SourceStatus | undefined;
-}
-
-/**
- * @public
- */
-export interface RescanSourceInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source to rescan.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Acknowledge that starting this re-scan discards an open re-scan
-   * review. Required only when the source is in RESCAN_REVIEW: a fresh
-   * re-scan re-diffs against the last APPROVED state, so any review
-   * decisions or edits made inside the open review window are lost.
-   * Omitting it in that state returns 409 rather than silently
-   * discarding the review. Ignored from every other status, where a
-   * re-scan discards nothing.
-   * @public
-   */
-  confirmDiscardOpenReview?: boolean | undefined;
-
-  /**
-   * Optional idempotency token. A retry with the same token and the same
-   * parameters within 24 hours returns the original result instead of
-   * starting another scan; reusing the token with different parameters
-   * is rejected with ConflictError (409).
-   * @public
-   */
-  clientToken?: string | undefined;
-}
-
-/**
- * @public
- */
-export interface RescanSourceOutput {
-  /**
-   * Identifier of the rescanned source.
-   * @public
-   */
-  sourceId?: string | undefined;
-
-  /**
-   * Unified lifecycle status for all source types.
-   * @public
-   */
-  status?: SourceStatus | undefined;
-}
-
-/**
- * @public
- */
-export interface ReviewSourceColumnInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source containing the column.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Table identifier (database.table format).
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Column name identifier.
-   * @public
-   */
-  columnName: string | undefined;
-
-  /**
-   * Decision a steward can make on enriched metadata.
-   * @public
-   */
-  decision: ReviewDecision | undefined;
-}
-
-/**
- * @public
- */
-export interface ReviewSourceColumnOutput {
-  /**
-   * Identifier of the table containing the column.
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Name of the reviewed column.
-   * @public
-   */
-  columnName: string | undefined;
-
-  /**
-   * Review status for enriched metadata.
-   * @public
-   */
-  reviewStatus: ReviewStatus | undefined;
-}
-
-/**
- * @public
- */
-export interface ReviewSourceTableInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source containing the table.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Table identifier (database.table format).
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Decision a steward can make on enriched metadata.
-   * @public
-   */
-  decision: ReviewDecision | undefined;
-}
-
-/**
- * @public
- */
-export interface ReviewSourceTableOutput {
-  /**
-   * Identifier of the reviewed table.
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Review status for enriched metadata.
-   * @public
-   */
-  reviewStatus: ReviewStatus | undefined;
-}
-
-/**
- * Steward-supplied overrides applied to discovered metadata: description,
- * synonyms, glossary terms, and tags.
- * @public
- */
-export interface MetadataOverrides {
-  /**
-   * Override description for the table or column.
-   * @public
-   */
-  description?: string | undefined;
-
-  /**
-   * Override synonyms or aliases.
-   * @public
-   */
-  synonyms?: string[] | undefined;
-
-  /**
-   * Override business glossary terms.
-   * @public
-   */
-  glossaryTerms?: string[] | undefined;
-
-  /**
-   * Override classification tags.
-   * @public
-   */
-  tags?: string[] | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceColumnMetadataInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source containing the column.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Table identifier (database.table format).
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Column name identifier.
-   * @public
-   */
-  columnName: string | undefined;
-
-  /**
-   * Steward-supplied overrides applied to discovered metadata: description,
-   * synonyms, glossary terms, and tags.
-   * @public
-   */
-  overrides: MetadataOverrides | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceColumnMetadataOutput {
-  /**
-   * Identifier of the table containing the column.
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Name of the updated column.
-   * @public
-   */
-  columnName: string | undefined;
-
-  /**
-   * Review status for enriched metadata.
-   * @public
-   */
-  reviewStatus: ReviewStatus | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceMetadataInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source to update.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Human-readable display name. Allows spaces and punctuation. 1–128 chars.
-   * @public
-   */
-  name?: string | undefined;
-
-  /**
-   * Glue Data Catalog database connection configuration.
-   * @public
-   */
-  glueConfiguration?: GlueConfiguration | undefined;
-
-  /**
-   * JDBC database connection configuration.
-   * @public
-   */
-  jdbcConfiguration?: JdbcConfiguration | undefined;
-
-  /**
-   * Custom Athena Query Federation connector configuration — the
-   * CUSTOM_CONNECTOR sub-type. The connector is a Lambda the customer authors
-   * and deploys in their own account, which this service registers as a
-   * Lambda-backed Athena data catalog in its own account; both discovery and
-   * serve-time queries run through Athena against that catalog.
-   *
-   * Unlike GlueConfiguration there is no Glue database behind the source, so
-   * there is no catalogId and no cross-account IAM role to assume: the customer
-   * grants access on the connector Lambda's own resource policy instead. There
-   * is also no region member — the connector must live in this deployment's
-   * region (see connectorFunctionArn).
-   * @public
-   */
-  customConnectorConfiguration?: CustomConnectorConfiguration | undefined;
-
-  /**
-   * Whether AI-powered metadata enrichment runs for this source.
-   * @public
-   */
-  metadataEnrichmentEnabled?: boolean | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceMetadataOutput {
-  /**
-   * Identifier of the updated source.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Unified lifecycle status for all source types.
-   * @public
-   */
-  status: SourceStatus | undefined;
-
-  /**
-   * Timestamp when the source was last updated.
-   * @public
-   */
-  updatedAt: Date | undefined;
-}
-
-/**
- * Steward-supplied foreign key relationship. Stored with
- * source = STEWARD_SPECIFIED.
- * @public
- */
-export interface ForeignKeyInput {
-  /**
-   * Column name identifier.
-   * @public
-   */
-  column: string | undefined;
-
-  /**
-   * Referenced table.
-   * @public
-   */
-  targetTable: string | undefined;
-
-  /**
-   * Referenced column in the target table.
-   * @public
-   */
-  targetColumn?: string | undefined;
-
-  /**
-   * Origin of the key. Preserved on a steward review so an approved inferred
-   * relationship keeps its AI_INFERRED provenance (#1088).
-   * @public
-   */
-  source?: string | undefined;
-
-  /**
-   * Steward review decision for an inferred relationship (#1088): APPROVED or
-   * REJECTED. Omitted for a plain steward-authored edit (treated as approved).
-   * @public
-   */
-  reviewStatus?: string | undefined;
-
-  /**
-   * Datasource id of the target table for a cross-source relationship (#1088).
-   * @public
-   */
-  targetDatasourceId?: string | undefined;
-
-  /**
-   * Provenance note, preserved across a review round-trip (#1088).
-   * @public
-   */
-  provenance?: string | undefined;
-}
-
-/**
- * Steward-supplied primary key. Replaces the table's primary key; an empty
- * columns list clears it. Stored with source = STEWARD_SPECIFIED.
- * @public
- */
-export interface PrimaryKeyInput {
-  /**
-   * Column names composing the primary key; empty list clears it.
-   * @public
-   */
-  columns: string[] | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceTableKeysInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source containing the table.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Table identifier (database.table format).
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Steward-supplied primary key. Replaces the table's primary key; an empty
-   * columns list clears it. Stored with source = STEWARD_SPECIFIED.
-   * @public
-   */
-  primaryKey?: PrimaryKeyInput | undefined;
-
-  /**
-   * Foreign-key relationships to set for the table.
-   * @public
-   */
-  foreignKeys?: ForeignKeyInput[] | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceTableKeysOutput {
-  /**
-   * Identifier of the updated table.
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Review status for enriched metadata.
-   * @public
-   */
-  reviewStatus: ReviewStatus | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceTableMetadataInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Identifier of the source containing the table.
-   * @public
-   */
-  sourceId: string | undefined;
-
-  /**
-   * Table identifier (database.table format).
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Steward-supplied overrides applied to discovered metadata: description,
-   * synonyms, glossary terms, and tags.
-   * @public
-   */
-  overrides: MetadataOverrides | undefined;
-}
-
-/**
- * @public
- */
-export interface UpdateSourceTableMetadataOutput {
-  /**
-   * Identifier of the updated table.
-   * @public
-   */
-  tableId: string | undefined;
-
-  /**
-   * Review status for enriched metadata.
-   * @public
-   */
-  reviewStatus: ReviewStatus | undefined;
 }

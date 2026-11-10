@@ -106,6 +106,15 @@ import type {
   GetCanvasSubgraphCommandInput,
   GetCanvasSubgraphCommandOutput,
 } from "./commands/GetCanvasSubgraphCommand";
+import type { GetDictionaryCommandInput, GetDictionaryCommandOutput } from "./commands/GetDictionaryCommand";
+import type {
+  GetDictionaryCommentCoverageCommandInput,
+  GetDictionaryCommentCoverageCommandOutput,
+} from "./commands/GetDictionaryCommentCoverageCommand";
+import type {
+  GetDictionaryViewCommandInput,
+  GetDictionaryViewCommandOutput,
+} from "./commands/GetDictionaryViewCommand";
 import type {
   GetEntityEmbeddingsCommandInput,
   GetEntityEmbeddingsCommandOutput,
@@ -127,6 +136,11 @@ import type {
 } from "./commands/GetInferConstraintsJobCommand";
 import type { GetIngestStatusCommandInput, GetIngestStatusCommandOutput } from "./commands/GetIngestStatusCommand";
 import type { GetMetricCommandInput, GetMetricCommandOutput } from "./commands/GetMetricCommand";
+import type { GetMetricFamilyCommandInput, GetMetricFamilyCommandOutput } from "./commands/GetMetricFamilyCommand";
+import type {
+  GetMetricReportManifestCommandInput,
+  GetMetricReportManifestCommandOutput,
+} from "./commands/GetMetricReportManifestCommand";
 import type { GetNamespaceCommandInput, GetNamespaceCommandOutput } from "./commands/GetNamespaceCommand";
 import type { GetNamespaceRoleCommandInput, GetNamespaceRoleCommandOutput } from "./commands/GetNamespaceRoleCommand";
 import type { GetOntologyCommandInput, GetOntologyCommandOutput } from "./commands/GetOntologyCommand";
@@ -177,6 +191,7 @@ import type {
   KeepRescanRemovalCommandInput,
   KeepRescanRemovalCommandOutput,
 } from "./commands/KeepRescanRemovalCommand";
+import type { ListDictionariesCommandInput, ListDictionariesCommandOutput } from "./commands/ListDictionariesCommand";
 import type {
   ListDocumentChunksCommandInput,
   ListDocumentChunksCommandOutput,
@@ -198,6 +213,10 @@ import type {
   ListInductionJobsCommandInput,
   ListInductionJobsCommandOutput,
 } from "./commands/ListInductionJobsCommand";
+import type {
+  ListIngestionRunsCommandInput,
+  ListIngestionRunsCommandOutput,
+} from "./commands/ListIngestionRunsCommand";
 import type { ListMetricsCommandInput, ListMetricsCommandOutput } from "./commands/ListMetricsCommand";
 import type {
   ListNamespaceGrantsCommandInput,
@@ -229,6 +248,7 @@ import type {
 import type { ListSourcesCommandInput, ListSourcesCommandOutput } from "./commands/ListSourcesCommand";
 import type { ListSourceTablesCommandInput, ListSourceTablesCommandOutput } from "./commands/ListSourceTablesCommand";
 import type { ListStatementsCommandInput, ListStatementsCommandOutput } from "./commands/ListStatementsCommand";
+import type { ListTermsCommandInput, ListTermsCommandOutput } from "./commands/ListTermsCommand";
 import type {
   LoadFoundationalOntologyCommandInput,
   LoadFoundationalOntologyCommandOutput,
@@ -245,6 +265,10 @@ import type {
   PutSourceRescanScheduleCommandInput,
   PutSourceRescanScheduleCommandOutput,
 } from "./commands/PutSourceRescanScheduleCommand";
+import type {
+  RefreshDictionariesCommandInput,
+  RefreshDictionariesCommandOutput,
+} from "./commands/RefreshDictionariesCommand";
 import type {
   RejectFactCandidateCommandInput,
   RejectFactCandidateCommandOutput,
@@ -336,6 +360,9 @@ export type ServiceInputTypes =
   | FindGraphPathCommandInput
   | GetCanvasManifestCommandInput
   | GetCanvasSubgraphCommandInput
+  | GetDictionaryCommandInput
+  | GetDictionaryCommentCoverageCommandInput
+  | GetDictionaryViewCommandInput
   | GetEntityEmbeddingsCommandInput
   | GetGraphClassCommandInput
   | GetGraphDatatypePropertyCommandInput
@@ -345,6 +372,8 @@ export type ServiceInputTypes =
   | GetInferConstraintsJobCommandInput
   | GetIngestStatusCommandInput
   | GetMetricCommandInput
+  | GetMetricFamilyCommandInput
+  | GetMetricReportManifestCommandInput
   | GetNamespaceCommandInput
   | GetNamespaceRoleCommandInput
   | GetOntologyCommandInput
@@ -368,12 +397,14 @@ export type ServiceInputTypes =
   | InferConstraintsCommandInput
   | IngestOntologyFromS3CommandInput
   | KeepRescanRemovalCommandInput
+  | ListDictionariesCommandInput
   | ListDocumentChunksCommandInput
   | ListDocumentsCommandInput
   | ListFactCandidatesCommandInput
   | ListFoundationalOntologiesCommandInput
   | ListInducedDatasourcesCommandInput
   | ListInductionJobsCommandInput
+  | ListIngestionRunsCommandInput
   | ListMetricsCommandInput
   | ListNamespaceGrantsCommandInput
   | ListNamespaceRolesCommandInput
@@ -387,10 +418,12 @@ export type ServiceInputTypes =
   | ListSourceTablesCommandInput
   | ListSourcesCommandInput
   | ListStatementsCommandInput
+  | ListTermsCommandInput
   | LoadFoundationalOntologyCommandInput
   | MaterializeReasoningCommandInput
   | PutSourceEventRescanCommandInput
   | PutSourceRescanScheduleCommandInput
+  | RefreshDictionariesCommandInput
   | RejectFactCandidateCommandInput
   | RejectProposalsCommandInput
   | RejectSourceCommandInput
@@ -442,6 +475,9 @@ export type ServiceOutputTypes =
   | FindGraphPathCommandOutput
   | GetCanvasManifestCommandOutput
   | GetCanvasSubgraphCommandOutput
+  | GetDictionaryCommandOutput
+  | GetDictionaryCommentCoverageCommandOutput
+  | GetDictionaryViewCommandOutput
   | GetEntityEmbeddingsCommandOutput
   | GetGraphClassCommandOutput
   | GetGraphDatatypePropertyCommandOutput
@@ -451,6 +487,8 @@ export type ServiceOutputTypes =
   | GetInferConstraintsJobCommandOutput
   | GetIngestStatusCommandOutput
   | GetMetricCommandOutput
+  | GetMetricFamilyCommandOutput
+  | GetMetricReportManifestCommandOutput
   | GetNamespaceCommandOutput
   | GetNamespaceRoleCommandOutput
   | GetOntologyCommandOutput
@@ -474,12 +512,14 @@ export type ServiceOutputTypes =
   | InferConstraintsCommandOutput
   | IngestOntologyFromS3CommandOutput
   | KeepRescanRemovalCommandOutput
+  | ListDictionariesCommandOutput
   | ListDocumentChunksCommandOutput
   | ListDocumentsCommandOutput
   | ListFactCandidatesCommandOutput
   | ListFoundationalOntologiesCommandOutput
   | ListInducedDatasourcesCommandOutput
   | ListInductionJobsCommandOutput
+  | ListIngestionRunsCommandOutput
   | ListMetricsCommandOutput
   | ListNamespaceGrantsCommandOutput
   | ListNamespaceRolesCommandOutput
@@ -493,10 +533,12 @@ export type ServiceOutputTypes =
   | ListSourceTablesCommandOutput
   | ListSourcesCommandOutput
   | ListStatementsCommandOutput
+  | ListTermsCommandOutput
   | LoadFoundationalOntologyCommandOutput
   | MaterializeReasoningCommandOutput
   | PutSourceEventRescanCommandOutput
   | PutSourceRescanScheduleCommandOutput
+  | RefreshDictionariesCommandOutput
   | RejectFactCandidateCommandOutput
   | RejectProposalsCommandOutput
   | RejectSourceCommandOutput

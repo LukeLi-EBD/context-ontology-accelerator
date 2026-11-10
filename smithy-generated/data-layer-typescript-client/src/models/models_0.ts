@@ -2,6 +2,485 @@
 import type { DimensionOperator, QueryMode, QueryStrategy, TraversalDirection } from "./enums";
 
 /**
+ * A ranked candidate for the question as a whole.
+ * @public
+ */
+export interface AnswerCandidate {
+  /**
+   * Layer the candidate belongs to.
+   * @public
+   */
+  layer: string | undefined;
+
+  /**
+   * Candidate identifier.
+   * @public
+   */
+  id: string | undefined;
+
+  /**
+   * Human-readable label.
+   * @public
+   */
+  label: string | undefined;
+
+  /**
+   * Why the candidate matched.
+   * @public
+   */
+  reason: string | undefined;
+
+  /**
+   * Match score in 0..1.
+   * @public
+   */
+  score: number | undefined;
+}
+
+/**
+ * Per-layer evaluation timings.
+ * @public
+ */
+export interface AnswerTimings {
+  /**
+   * Ontology/term layer duration in milliseconds.
+   * @public
+   */
+  termsMs: number | undefined;
+
+  /**
+   * Metric matching duration in milliseconds.
+   * @public
+   */
+  metricMs: number | undefined;
+
+  /**
+   * Fact layer duration in milliseconds.
+   * @public
+   */
+  factsMs: number | undefined;
+}
+
+/**
+ * Input for CheckAnswerable.
+ * @public
+ */
+export interface CheckAnswerableInput {
+  /**
+   * Namespace the question is asked in.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * The natural-language question to pre-check.
+   * @public
+   */
+  query: string | undefined;
+
+  /**
+   * Ontology version to check against; defaults to the published current one.
+   * @public
+   */
+  ontologyVersion?: string | undefined;
+
+  /**
+   * Minimum term coverage (0..1) required for `answerable: true`.
+   * @public
+   */
+  minCoverage?: number | undefined;
+}
+
+/**
+ * Character accounting behind the ontology/term coverage ratio.
+ * @public
+ */
+export interface CoverageChars {
+  /**
+   * Number of content characters covered by a matched term.
+   * @public
+   */
+  covered: number | undefined;
+
+  /**
+   * Number of content characters in the question (stopwords/punctuation removed).
+   * @public
+   */
+  total: number | undefined;
+}
+
+/**
+ * Layer-specific evidence for one match.
+ * @public
+ */
+export interface LayerMatch {
+  /**
+   * Matched identifier (term IRI or metric id).
+   * @public
+   */
+  id?: string | undefined;
+
+  /**
+   * Human-readable label.
+   * @public
+   */
+  label?: string | undefined;
+
+  /**
+   * Predicate that produced the match (ontology layer).
+   * @public
+   */
+  predicate?: string | undefined;
+
+  /**
+   * Source of the label: `rdfs:label` or `skos`.
+   * @public
+   */
+  source?: string | undefined;
+
+  /**
+   * Match score (metrics layer).
+   * @public
+   */
+  score?: number | undefined;
+
+  /**
+   * Metric this evidence belongs to (facts layer).
+   * @public
+   */
+  metricId?: string | undefined;
+
+  /**
+   * Fact coverage status for that metric.
+   * @public
+   */
+  status?: string | undefined;
+
+  /**
+   * Stable machine-readable status code.
+   * @public
+   */
+  code?: string | undefined;
+
+  /**
+   * Number of fact rows backing the metric.
+   * @public
+   */
+  observationRows?: number | undefined;
+
+  /**
+   * Fact function declared by the metric.
+   * @public
+   */
+  factFunction?: string | undefined;
+}
+
+/**
+ * One of the four answerability layers.
+ * @public
+ */
+export interface CoverageLayer {
+  /**
+   * Layer name: `ontology` | `terms` | `metrics` | `facts`.
+   * @public
+   */
+  layer: string | undefined;
+
+  /**
+   * `covered` | `partial` | `missing` | `degraded` | `unavailable` | `not_applicable`.
+   * @public
+   */
+  status: string | undefined;
+
+  /**
+   * Layer coverage in 0..1. Absent when the layer cannot be computed;
+   * clients must render that as "unavailable", never as 0.
+   * @public
+   */
+  coverage?: number | undefined;
+
+  /**
+   * Evidence that matched in this layer. Fields are layer-specific: ontology
+   * and term matches carry id/label/predicate/source, metrics carry
+   * id/label/score, facts carry metricId/status/code/observationRows.
+   * @public
+   */
+  matched: LayerMatch[] | undefined;
+
+  /**
+   * Short human-readable descriptions of what this layer lacks.
+   * @public
+   */
+  missing: string[] | undefined;
+}
+
+/**
+ * A term that matched part of the question.
+ * @public
+ */
+export interface MatchedTerm {
+  /**
+   * Term IRI.
+   * @public
+   */
+  term: string | undefined;
+
+  /**
+   * Human-readable label.
+   * @public
+   */
+  label: string | undefined;
+
+  /**
+   * Inclusive-exclusive [start, end) character span in the normalized question.
+   * @public
+   */
+  span: number[] | undefined;
+}
+
+/**
+ * A ranked candidate that may close a gap.
+ * @public
+ */
+export interface GapCandidate {
+  /**
+   * Candidate identifier (metric id).
+   * @public
+   */
+  id: string | undefined;
+
+  /**
+   * Human-readable label.
+   * @public
+   */
+  label: string | undefined;
+
+  /**
+   * Match score in 0..1.
+   * @public
+   */
+  score: number | undefined;
+}
+
+/**
+ * A lexically similar term offered for an uncovered fragment.
+ * @public
+ */
+export interface NearbyTerm {
+  /**
+   * Term IRI.
+   * @public
+   */
+  term: string | undefined;
+
+  /**
+   * Human-readable label.
+   * @public
+   */
+  label: string | undefined;
+
+  /**
+   * Lexical similarity in 0..1.
+   * @public
+   */
+  similarity: number | undefined;
+}
+
+/**
+ * A gap: what is missing, in which layer, and how to fix it (F79).
+ * @public
+ */
+export interface MissingGap {
+  /**
+   * Layer the gap belongs to: `ontology` | `terms` | `metrics` | `facts`.
+   * @public
+   */
+  layer: string | undefined;
+
+  /**
+   * Stable machine-readable code, e.g. `E_LAYER_ONTOLOGY_GAP`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * The question fragment that could not be covered (ontology layer).
+   * @public
+   */
+  text?: string | undefined;
+
+  /**
+   * Inclusive-exclusive [start, end) span of that fragment, when known.
+   * @public
+   */
+  span?: number[] | undefined;
+
+  /**
+   * What exactly is missing, phrased as an operator action target.
+   * @public
+   */
+  what?: string | undefined;
+
+  /**
+   * How to close the gap.
+   * @public
+   */
+  howToFix?: string | undefined;
+
+  /**
+   * Metric this gap belongs to (facts layer).
+   * @public
+   */
+  metricId?: string | undefined;
+
+  /**
+   * Lexically nearby terms that may be the intended concept.
+   * @public
+   */
+  nearbyTerms?: NearbyTerm[] | undefined;
+
+  /**
+   * Ranked candidates that may close this gap.
+   * @public
+   */
+  candidates?: GapCandidate[] | undefined;
+}
+
+/**
+ * Result of an answerability pre-check.
+ * @public
+ */
+export interface CheckAnswerableOutput {
+  /**
+   * Echo of the checked question.
+   * @public
+   */
+  query: string | undefined;
+
+  /**
+   * True when the question can be answered: term coverage meets the
+   * threshold, or an exact metric match supports a definition answer even
+   * when no fact rows are available.
+   * @public
+   */
+  answerable: boolean | undefined;
+
+  /**
+   * True when a concrete numeric value can be produced (facts layer covered).
+   * @public
+   */
+  valueAnswerable: boolean | undefined;
+
+  /**
+   * How the question can be answered: `value`, `definition` or `none`.
+   * @public
+   */
+  answerMode: string | undefined;
+
+  /**
+   * Detected question intent: `value` or `definition`.
+   * @public
+   */
+  intent: string | undefined;
+
+  /**
+   * True when any layer is degraded or unavailable.
+   * @public
+   */
+  degraded: boolean | undefined;
+
+  /**
+   * Character coverage of the ontology/term layer (0..1).
+   * @public
+   */
+  coverage: number | undefined;
+
+  /**
+   * Threshold used to decide `answerable`.
+   * @public
+   */
+  threshold: number | undefined;
+
+  /**
+   * Covered / total content characters behind `coverage`.
+   * @public
+   */
+  coverageChars: CoverageChars | undefined;
+
+  /**
+   * Ontology version the check ran against.
+   * @public
+   */
+  ontologyVersion: string | undefined;
+
+  /**
+   * Named graph URI of that version.
+   * @public
+   */
+  ontologyGraph: string | undefined;
+
+  /**
+   * Human-readable description of the term source used.
+   * @public
+   */
+  termSource: string | undefined;
+
+  /**
+   * Number of distinct terms considered.
+   * @public
+   */
+  termCount: number | undefined;
+
+  /**
+   * Terms that matched the question.
+   * @public
+   */
+  matchedTerms: MatchedTerm[] | undefined;
+
+  /**
+   * Exactly four layers, in order: ontology, terms, metrics, facts.
+   * @public
+   */
+  layers: CoverageLayer[] | undefined;
+
+  /**
+   * One entry per gap, each carrying what is missing and how to fix it (F79).
+   * @public
+   */
+  missing: MissingGap[] | undefined;
+
+  /**
+   * Ranked candidates that could close the gaps.
+   * @public
+   */
+  candidates: AnswerCandidate[] | undefined;
+
+  /**
+   * Machine-readable reasons collected while evaluating.
+   * @public
+   */
+  reasons: string[] | undefined;
+
+  /**
+   * Machine-readable reason when `answerable` is false.
+   * @public
+   */
+  reasonCode?: string | undefined;
+
+  /**
+   * Operator-facing next step when `answerable` is false.
+   * @public
+   */
+  hint?: string | undefined;
+
+  /**
+   * Per-layer evaluation timings in milliseconds.
+   * @public
+   */
+  timings: AnswerTimings | undefined;
+}
+
+/**
  * A confidence score in [0, 1] for a query result, with an optional rationale
  * explaining how it was derived.
  * @public
@@ -730,6 +1209,84 @@ export interface QueryOutput {
    * @public
    */
   sessionId?: string | undefined;
+}
+
+/**
+ * The namespace and the statement to run.
+ * @public
+ */
+export interface RunSparqlInput {
+  /**
+   * The namespace whose graphs the query may read.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * SPARQL text: one SELECT or ASK statement.
+   * @public
+   */
+  sparql: string | undefined;
+}
+
+/**
+ * One executed statement: its form, the ASK answer, or the SELECT columns and rows.
+ * @public
+ */
+export interface RunSparqlOutput {
+  /**
+   * The executed form: `SELECT` or `ASK`.
+   * @public
+   */
+  form: string | undefined;
+
+  /**
+   * The ASK answer; present only when `form` is `ASK`.
+   * @public
+   */
+  answer?: boolean | undefined;
+
+  /**
+   * Column names, in the provider's order (SELECT only).
+   * @public
+   */
+  variables?: string[] | undefined;
+
+  /**
+   * Rows, each aligned to `variables` (SELECT only).
+   * @public
+   */
+  rows?: string[][] | undefined;
+
+  /**
+   * Rows the provider produced before the 5,000-row display cap (SELECT only).
+   * @public
+   */
+  rowCount: number | undefined;
+
+  /**
+   * Rows actually returned in `rows` (SELECT only; at most 5,000).
+   * @public
+   */
+  returnedRows: number | undefined;
+
+  /**
+   * True when the provider produced more than 5,000 rows and `rows` was cut.
+   * @public
+   */
+  truncated: boolean | undefined;
+
+  /**
+   * Number of namespace graphs the query was confined to.
+   * @public
+   */
+  graphCount: number | undefined;
+
+  /**
+   * Server-side execution time in milliseconds.
+   * @public
+   */
+  elapsedMs?: number | undefined;
 }
 
 /**

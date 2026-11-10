@@ -1627,6 +1627,24 @@
                     "target": "com.amazon.semanticcontext#HealthCheck"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.dictionary#GetDictionary"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverage"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.dictionary#GetDictionaryView"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.dictionary#ListDictionaries"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.dictionary#ListTerms"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.dictionary#RefreshDictionaries"
+                },
+                {
                     "target": "com.amazon.semanticcontext.documents#ApproveFactCandidate"
                 },
                 {
@@ -1675,6 +1693,9 @@
                     "target": "com.amazon.semanticcontext.grant#ListPrincipalGrants"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ingestion#ListIngestionRuns"
+                },
+                {
                     "target": "com.amazon.semanticcontext.metric#BulkDeleteMetrics"
                 },
                 {
@@ -1706,6 +1727,12 @@
                 },
                 {
                     "target": "com.amazon.semanticcontext.metric#ValidateMetric"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.metriccatalog#GetMetricFamily"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.metriccatalog#GetMetricReportManifest"
                 },
                 {
                     "target": "com.amazon.semanticcontext.namespace#CreateNamespace"
@@ -2394,6 +2421,540 @@
                 "smithy.api#error": "client"
             }
         },
+        "com.amazon.semanticcontext.datalayer#AnswerCandidate": {
+            "type": "structure",
+            "members": {
+                "layer": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Layer the candidate belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Candidate identifier.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable label.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "reason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why the candidate matched.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "score": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Match score in 0..1.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A ranked candidate for the question as a whole."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#AnswerCandidateList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#AnswerCandidate"
+            },
+            "traits": {
+                "smithy.api#documentation": "Ranked candidates for the question."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#AnswerTimings": {
+            "type": "structure",
+            "members": {
+                "termsMs": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology/term layer duration in milliseconds.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "metricMs": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Metric matching duration in milliseconds.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "factsMs": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Fact layer duration in milliseconds.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Per-layer evaluation timings."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#CheckAnswerable": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.datalayer#CheckAnswerableInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.datalayer#CheckAnswerableOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#AccessDeniedError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Pre-check whether an ontology can answer a question, reporting coverage for\neach of the four layers (ontology, terms, metrics, facts) and, for every\ngap, what is missing and how to fix it.\n\nRead-only. A layer whose inputs are not available reports status\n`unavailable` (or `not_applicable`) and no coverage value; it is never\nsilently reported as zero coverage.",
+                "smithy.api#examples": [
+                    {
+                        "title": "A value question that is fully covered",
+                        "input": {
+                            "namespaceId": "ed70a15c-2d42-4dc9-8c61-33b2584f05fd",
+                            "query": "上个月华东区的销售额是多少？"
+                        },
+                        "output": {
+                            "query": "上个月华东区的销售额是多少？",
+                            "answerable": true,
+                            "valueAnswerable": true,
+                            "answerMode": "value",
+                            "intent": "value",
+                            "degraded": false,
+                            "coverage": 0.92,
+                            "threshold": 0.8,
+                            "coverageChars": {
+                                "covered": 23,
+                                "total": 25
+                            },
+                            "ontologyVersion": "v3",
+                            "ontologyGraph": "https://coa.local/graph/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/urn%3Acoa%3Aontology%3Av3",
+                            "termSource": "skos(prefLabel/altLabel) when present + rdfs:label baseline",
+                            "termCount": 148,
+                            "matchedTerms": [
+                                {
+                                    "term": "urn:coa:metric:sales_amount",
+                                    "label": "销售额",
+                                    "span": [
+                                        0,
+                                        3
+                                    ]
+                                }
+                            ],
+                            "layers": [
+                                {
+                                    "layer": "ontology",
+                                    "status": "covered",
+                                    "coverage": 0.92,
+                                    "matched": [
+                                        {
+                                            "id": "urn:coa:metric:sales_amount",
+                                            "label": "销售额",
+                                            "source": "rdfs:label"
+                                        }
+                                    ],
+                                    "missing": []
+                                },
+                                {
+                                    "layer": "terms",
+                                    "status": "covered",
+                                    "coverage": 1.0,
+                                    "matched": [
+                                        {
+                                            "id": "urn:coa:term:east_china",
+                                            "label": "华东区",
+                                            "source": "skos"
+                                        }
+                                    ],
+                                    "missing": []
+                                },
+                                {
+                                    "layer": "metrics",
+                                    "status": "covered",
+                                    "coverage": 1.0,
+                                    "matched": [
+                                        {
+                                            "id": "sales_amount",
+                                            "label": "销售额",
+                                            "score": 0.98
+                                        }
+                                    ],
+                                    "missing": []
+                                },
+                                {
+                                    "layer": "facts",
+                                    "status": "covered",
+                                    "coverage": 1.0,
+                                    "matched": [
+                                        {
+                                            "metricId": "sales_amount",
+                                            "status": "covered",
+                                            "code": "FACT_COVERED",
+                                            "observationRows": 12
+                                        }
+                                    ],
+                                    "missing": []
+                                }
+                            ],
+                            "missing": [],
+                            "candidates": [
+                                {
+                                    "layer": "metrics",
+                                    "id": "sales_amount",
+                                    "label": "销售额",
+                                    "reason": "exact_name",
+                                    "score": 0.98
+                                }
+                            ],
+                            "reasons": [],
+                            "timings": {
+                                "termsMs": 12,
+                                "metricMs": 3,
+                                "factsMs": 41
+                            }
+                        }
+                    },
+                    {
+                        "title": "A question with gaps in the ontology and facts layers",
+                        "input": {
+                            "namespaceId": "ed70a15c-2d42-4dc9-8c61-33b2584f05fd",
+                            "query": "上个季度供应商交货及时率是多少？"
+                        },
+                        "output": {
+                            "query": "上个季度供应商交货及时率是多少？",
+                            "answerable": false,
+                            "valueAnswerable": false,
+                            "answerMode": "none",
+                            "intent": "value",
+                            "degraded": true,
+                            "coverage": 0.55,
+                            "threshold": 0.8,
+                            "coverageChars": {
+                                "covered": 11,
+                                "total": 20
+                            },
+                            "ontologyVersion": "v3",
+                            "ontologyGraph": "https://coa.local/graph/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/urn%3Acoa%3Aontology%3Av3",
+                            "termSource": "skos(prefLabel/altLabel) when present + rdfs:label baseline",
+                            "termCount": 148,
+                            "matchedTerms": [],
+                            "layers": [
+                                {
+                                    "layer": "ontology",
+                                    "status": "partial",
+                                    "coverage": 0.55,
+                                    "matched": [],
+                                    "missing": [
+                                        "供应商"
+                                    ]
+                                },
+                                {
+                                    "layer": "terms",
+                                    "status": "missing",
+                                    "coverage": 0.0,
+                                    "matched": [],
+                                    "missing": [
+                                        "交货及时率"
+                                    ]
+                                },
+                                {
+                                    "layer": "metrics",
+                                    "status": "missing",
+                                    "coverage": 0.0,
+                                    "matched": [],
+                                    "missing": [
+                                        "on_time_delivery_rate"
+                                    ]
+                                },
+                                {
+                                    "layer": "facts",
+                                    "status": "not_applicable",
+                                    "matched": [],
+                                    "missing": []
+                                }
+                            ],
+                            "missing": [
+                                {
+                                    "layer": "ontology",
+                                    "code": "E_LAYER_ONTOLOGY_GAP",
+                                    "text": "供应商",
+                                    "span": [
+                                        8,
+                                        11
+                                    ],
+                                    "what": "本体未声明「供应商」",
+                                    "howToFix": "补充 rdfs:label / skos:prefLabel，或收窄问题范围",
+                                    "nearbyTerms": [
+                                        {
+                                            "term": "urn:coa:party:supplier",
+                                            "label": "供货方",
+                                            "similarity": 0.67
+                                        }
+                                    ]
+                                },
+                                {
+                                    "layer": "metrics",
+                                    "code": "E_LAYER_METRICS_GAP",
+                                    "what": "未匹配到可求值口径指标",
+                                    "howToFix": "指定 metricId，或补充指标名称/别名",
+                                    "candidates": [
+                                        {
+                                            "id": "on_time_delivery_rate",
+                                            "label": "交货及时率",
+                                            "score": 0.71
+                                        }
+                                    ]
+                                }
+                            ],
+                            "candidates": [
+                                {
+                                    "layer": "metrics",
+                                    "id": "on_time_delivery_rate",
+                                    "label": "交货及时率",
+                                    "reason": "fuzzy_name",
+                                    "score": 0.71
+                                }
+                            ],
+                            "reasons": [
+                                "facts layer has no metric to evaluate"
+                            ],
+                            "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+                            "hint": "本体未覆盖问题中的这些概念：供应商；请先补充术语（T-Box）或缩小问题范围",
+                            "timings": {
+                                "termsMs": 9,
+                                "metricMs": 2,
+                                "factsMs": 0
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/answerable",
+                    "code": 200
+                },
+                "smithy.api#idempotent": {}
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#CheckAnswerableInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace the question is asked in.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "query": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The natural-language question to pre-check.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 2000
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyVersion": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology version to check against; defaults to the published current one.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        }
+                    }
+                },
+                "minCoverage": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Minimum term coverage (0..1) required for `answerable: true`.",
+                        "smithy.api#range": {
+                            "min": 0.0,
+                            "max": 1.0
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Input for CheckAnswerable."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#CheckAnswerableOutput": {
+            "type": "structure",
+            "members": {
+                "query": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Echo of the checked question.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "answerable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the question can be answered: term coverage meets the\nthreshold, or an exact metric match supports a definition answer even\nwhen no fact rows are available.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "valueAnswerable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when a concrete numeric value can be produced (facts layer covered).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "answerMode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "How the question can be answered: `value`, `definition` or `none`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "intent": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Detected question intent: `value` or `definition`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "degraded": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when any layer is degraded or unavailable.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "coverage": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Character coverage of the ontology/term layer (0..1).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "threshold": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Threshold used to decide `answerable`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "coverageChars": {
+                    "target": "com.amazon.semanticcontext.datalayer#CoverageChars",
+                    "traits": {
+                        "smithy.api#documentation": "Covered / total content characters behind `coverage`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyVersion": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology version the check ran against.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyGraph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Named graph URI of that version.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "termSource": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the term source used.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "termCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of distinct terms considered.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "matchedTerms": {
+                    "target": "com.amazon.semanticcontext.datalayer#MatchedTermList",
+                    "traits": {
+                        "smithy.api#documentation": "Terms that matched the question.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "layers": {
+                    "target": "com.amazon.semanticcontext.datalayer#CoverageLayerList",
+                    "traits": {
+                        "smithy.api#documentation": "Exactly four layers, in order: ontology, terms, metrics, facts.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "missing": {
+                    "target": "com.amazon.semanticcontext.datalayer#MissingGapList",
+                    "traits": {
+                        "smithy.api#documentation": "One entry per gap, each carrying what is missing and how to fix it (F79).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "candidates": {
+                    "target": "com.amazon.semanticcontext.datalayer#AnswerCandidateList",
+                    "traits": {
+                        "smithy.api#documentation": "Ranked candidates that could close the gaps.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "reasons": {
+                    "target": "com.amazon.semanticcontext.datalayer#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable reasons collected while evaluating.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "reasonCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable reason when `answerable` is false."
+                    }
+                },
+                "hint": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Operator-facing next step when `answerable` is false."
+                    }
+                },
+                "timings": {
+                    "target": "com.amazon.semanticcontext.datalayer#AnswerTimings",
+                    "traits": {
+                        "smithy.api#documentation": "Per-layer evaluation timings in milliseconds.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Result of an answerability pre-check."
+            }
+        },
         "com.amazon.semanticcontext.datalayer#ConfidenceScore": {
             "type": "structure",
             "members": {
@@ -2450,6 +3011,79 @@
                 "target": "com.amazon.semanticcontext.datalayer#ConformanceWarning"
             }
         },
+        "com.amazon.semanticcontext.datalayer#CoverageChars": {
+            "type": "structure",
+            "members": {
+                "covered": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of content characters covered by a matched term.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of content characters in the question (stopwords/punctuation removed).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Character accounting behind the ontology/term coverage ratio."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#CoverageLayer": {
+            "type": "structure",
+            "members": {
+                "layer": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Layer name: `ontology` | `terms` | `metrics` | `facts`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`covered` | `partial` | `missing` | `degraded` | `unavailable` | `not_applicable`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "coverage": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Layer coverage in 0..1. Absent when the layer cannot be computed;\nclients must render that as \"unavailable\", never as 0."
+                    }
+                },
+                "matched": {
+                    "target": "com.amazon.semanticcontext.datalayer#LayerMatchList",
+                    "traits": {
+                        "smithy.api#documentation": "Evidence that matched in this layer. Fields are layer-specific: ontology\nand term matches carry id/label/predicate/source, metrics carry\nid/label/score, facts carry metricId/status/code/observationRows.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "missing": {
+                    "target": "com.amazon.semanticcontext.datalayer#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Short human-readable descriptions of what this layer lacks.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One of the four answerability layers."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#CoverageLayerList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#CoverageLayer"
+            },
+            "traits": {
+                "smithy.api#documentation": "The four answerability layers."
+            }
+        },
         "com.amazon.semanticcontext.datalayer#CustomerData": {
             "type": "string",
             "traits": {
@@ -2462,6 +3096,9 @@
             "version": "2025-05-01",
             "operations": [
                 {
+                    "target": "com.amazon.semanticcontext.datalayer#CheckAnswerable"
+                },
+                {
                     "target": "com.amazon.semanticcontext.datalayer#DescribeSchema"
                 },
                 {
@@ -2472,6 +3109,9 @@
                 },
                 {
                     "target": "com.amazon.semanticcontext.datalayer#Query"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#RunSparql"
                 },
                 {
                     "target": "com.amazon.semanticcontext.datalayer#TranslateSPARQL"
@@ -2758,6 +3398,44 @@
                 "smithy.api#length": {
                     "max": 50
                 }
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#GapCandidate": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Candidate identifier (metric id).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable label.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "score": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Match score in 0..1.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A ranked candidate that may close a gap."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#GapCandidateList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#GapCandidate"
+            },
+            "traits": {
+                "smithy.api#documentation": "Candidates for one gap."
             }
         },
         "com.amazon.semanticcontext.datalayer#GraphContext": {
@@ -3065,6 +3743,194 @@
                 "smithy.api#output": {}
             }
         },
+        "com.amazon.semanticcontext.datalayer#LayerMatch": {
+            "type": "structure",
+            "members": {
+                "id": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Matched identifier (term IRI or metric id)."
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable label."
+                    }
+                },
+                "predicate": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Predicate that produced the match (ontology layer)."
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source of the label: `rdfs:label` or `skos`."
+                    }
+                },
+                "score": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Match score (metrics layer)."
+                    }
+                },
+                "metricId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Metric this evidence belongs to (facts layer)."
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Fact coverage status for that metric."
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine-readable status code."
+                    }
+                },
+                "observationRows": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of fact rows backing the metric."
+                    }
+                },
+                "factFunction": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Fact function declared by the metric."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Layer-specific evidence for one match."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#LayerMatchList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#LayerMatch"
+            },
+            "traits": {
+                "smithy.api#documentation": "Evidence matched in one layer."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#MatchedTerm": {
+            "type": "structure",
+            "members": {
+                "term": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Term IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable label.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "span": {
+                    "target": "com.amazon.semanticcontext.datalayer#Span",
+                    "traits": {
+                        "smithy.api#documentation": "Inclusive-exclusive [start, end) character span in the normalized question.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A term that matched part of the question."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#MatchedTermList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#MatchedTerm"
+            },
+            "traits": {
+                "smithy.api#documentation": "Terms that matched the question."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#MissingGap": {
+            "type": "structure",
+            "members": {
+                "layer": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Layer the gap belongs to: `ontology` | `terms` | `metrics` | `facts`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine-readable code, e.g. `E_LAYER_ONTOLOGY_GAP`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "text": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The question fragment that could not be covered (ontology layer)."
+                    }
+                },
+                "span": {
+                    "target": "com.amazon.semanticcontext.datalayer#Span",
+                    "traits": {
+                        "smithy.api#documentation": "Inclusive-exclusive [start, end) span of that fragment, when known."
+                    }
+                },
+                "what": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "What exactly is missing, phrased as an operator action target."
+                    }
+                },
+                "howToFix": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "How to close the gap."
+                    }
+                },
+                "metricId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Metric this gap belongs to (facts layer)."
+                    }
+                },
+                "nearbyTerms": {
+                    "target": "com.amazon.semanticcontext.datalayer#NearbyTermList",
+                    "traits": {
+                        "smithy.api#documentation": "Lexically nearby terms that may be the intended concept."
+                    }
+                },
+                "candidates": {
+                    "target": "com.amazon.semanticcontext.datalayer#GapCandidateList",
+                    "traits": {
+                        "smithy.api#documentation": "Ranked candidates that may close this gap."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A gap: what is missing, in which layer, and how to fix it (F79)."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#MissingGapList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#MissingGap"
+            },
+            "traits": {
+                "smithy.api#documentation": "Gaps found while pre-checking, each with a fix."
+            }
+        },
         "com.amazon.semanticcontext.datalayer#NamespaceNotFoundError": {
             "type": "structure",
             "members": {
@@ -3097,6 +3963,44 @@
                     "max": 4000
                 },
                 "smithy.api#sensitive": {}
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#NearbyTerm": {
+            "type": "structure",
+            "members": {
+                "term": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Term IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable label.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "similarity": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Lexical similarity in 0..1.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A lexically similar term offered for an uncovered fragment."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#NearbyTermList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#NearbyTerm"
+            },
+            "traits": {
+                "smithy.api#documentation": "Nearby terms for one gap."
             }
         },
         "com.amazon.semanticcontext.datalayer#NoResultError": {
@@ -3617,6 +4521,186 @@
                 "target": "com.amazon.semanticcontext.datalayer#ResultRow"
             }
         },
+        "com.amazon.semanticcontext.datalayer#RunSparql": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.datalayer#RunSparqlInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.datalayer#RunSparqlOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#NamespaceNotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlBadRequestError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlProviderError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlQuotaExceededError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlResultTooLargeError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlScopeTooLargeError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlTimeoutError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Runs one SPARQL SELECT or ASK in the SPARQL console.\n\nThe query is confined to the namespace's own graphs: they form the default\ngraph and each stays addressable as a named graph. The statement is refused\nwhen it carries `FROM` / `FROM NAMED`, uses `SERVICE` or `LOAD`, names a graph\noutside the namespace, is not SELECT/ASK, runs longer than 10 seconds, or\nproduces more than 4 MiB. At most 5,000 rows are returned; `truncated` says\nwhether the provider produced more.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List five subjects in the namespace",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "sparql": "SELECT ?s WHERE { ?s ?p ?o } LIMIT 5"
+                        },
+                        "output": {
+                            "form": "SELECT",
+                            "variables": [
+                                "s"
+                            ],
+                            "rows": [
+                                [
+                                    "https://coa.local/entity/customer-42"
+                                ]
+                            ],
+                            "rowCount": 1,
+                            "returnedRows": 1,
+                            "truncated": false,
+                            "graphCount": 2,
+                            "elapsedMs": 37
+                        }
+                    },
+                    {
+                        "title": "Ask whether any triple exists",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "sparql": "ASK { ?s ?p ?o }"
+                        },
+                        "output": {
+                            "form": "ASK",
+                            "answer": true,
+                            "rowCount": 0,
+                            "returnedRows": 0,
+                            "truncated": false,
+                            "graphCount": 2,
+                            "elapsedMs": 12
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/sparql",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#RunSparqlInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The namespace whose graphs the query may read.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "sparql": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "SPARQL text: one SELECT or ASK statement.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 6000
+                        },
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The namespace and the statement to run."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#RunSparqlOutput": {
+            "type": "structure",
+            "members": {
+                "form": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The executed form: `SELECT` or `ASK`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "answer": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "The ASK answer; present only when `form` is `ASK`."
+                    }
+                },
+                "variables": {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlVariableList",
+                    "traits": {
+                        "smithy.api#documentation": "Column names, in the provider's order (SELECT only)."
+                    }
+                },
+                "rows": {
+                    "target": "com.amazon.semanticcontext.datalayer#SparqlRowList",
+                    "traits": {
+                        "smithy.api#documentation": "Rows, each aligned to `variables` (SELECT only)."
+                    }
+                },
+                "rowCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows the provider produced before the 5,000-row display cap (SELECT only).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "returnedRows": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows actually returned in `rows` (SELECT only; at most 5,000).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "truncated": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the provider produced more than 5,000 rows and `rows` was cut.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "graphCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of namespace graphs the query was confined to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "elapsedMs": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Server-side execution time in milliseconds."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One executed statement: its form, the ASK answer, or the SELECT columns and rows."
+            }
+        },
         "com.amazon.semanticcontext.datalayer#SchemaClass": {
             "type": "structure",
             "members": {
@@ -3701,6 +4785,219 @@
             "type": "list",
             "member": {
                 "target": "com.amazon.semanticcontext.datalayer#SchemaProperty"
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#Span": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#Integer"
+            },
+            "traits": {
+                "smithy.api#documentation": "A character span in the normalized question."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlBadRequestError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the refusal.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code, e.g. `E_SPARQL_SYNTAX` or `E_SPARQL_FEDERATED`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "providerCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The provider's own code when the refusal came from the provider."
+                    }
+                },
+                "providerMessage": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The provider's own message, truncated for display."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The statement was refused before execution: syntax, form, dataset clause,\nfederation, `LOAD`, length, or a graph outside the namespace.",
+                "smithy.api#error": "client",
+                "smithy.api#httpError": 400
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlProviderError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the provider failure.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code: `E_SPARQL_PROVIDER_ERROR` or `E_SPARQL_PROVIDER_REJECTED`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "providerCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The provider's own code, e.g. `HTTP_400`."
+                    }
+                },
+                "providerMessage": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The provider's own message, truncated for display."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The provider could not execute the statement.",
+                "smithy.api#error": "server",
+                "smithy.api#httpError": 502
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlQuotaExceededError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the quota refusal.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code: `E_SPARQL_QUOTA_EXCEEDED`.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The caller exceeded the console quota.",
+                "smithy.api#error": "client",
+                "smithy.api#httpError": 429
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlResultTooLargeError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the size refusal.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code: `E_SPARQL_RESULT_TOO_LARGE`.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The result exceeded the 4 MiB response cap.",
+                "smithy.api#error": "client",
+                "smithy.api#httpError": 413
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlRow": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "One RDF term: an IRI as-is, a literal with its language/datatype suffix,\nor a blank node as `_:id`."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One result row; each value is an RDF term rendered for display."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlRowList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#SparqlRow",
+                "traits": {
+                    "smithy.api#documentation": "One result row aligned to `variables`."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "All returned rows, at most 5,000."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlScopeTooLargeError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the scope refusal.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code: `E_SPARQL_SCOPE_TOO_LARGE` or `E_SPARQL_SCOPE_EMPTY`.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The namespace needs more graphs than the console admits.",
+                "smithy.api#error": "server",
+                "smithy.api#httpError": 503
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlTimeoutError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description of the timeout.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code: `E_SPARQL_TIMEOUT`.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The statement exceeded the 10 second limit.",
+                "smithy.api#error": "server",
+                "smithy.api#httpError": 504
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#SparqlVariableList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "One variable name, without the leading `?`."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Column names of a SELECT result, in provider order."
             }
         },
         "com.amazon.semanticcontext.datalayer#StringList": {
@@ -3990,6 +5287,1442 @@
                 "smithy.api#documentation": "Returned with HTTP 502 when the virtual knowledge graph fails to execute the\ngenerated SPARQL query.\n\nCarries a fixed, client-safe message only. The failing query and the\nbackend's own error text are deliberately not returned: they name internal\nschema objects and endpoints. Operators correlate a failure through the\nrequest id instead.",
                 "smithy.api#error": "server",
                 "smithy.api#httpError": 502
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#CommentCoverage": {
+            "type": "structure",
+            "members": {
+                "total": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows considered.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "commented": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows carrying a comment.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "missing": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows with no comment.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ratio": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Commented rows divided by total, 0..1."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Comment coverage rollup (F66). `ratio` is absent when there are no rows."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionaryColumn": {
+            "type": "structure",
+            "members": {
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source this column snapshot belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "catalog": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Catalog the source exposes the table under.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "schema": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Schema the source exposes the table under.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "table": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Table name.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "column": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Column name.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "dataType": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Column data type as reported by the source.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "isNullable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Whether the column admits NULL.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceKind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source engine kind, e.g. `postgresql` or `snowflake`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "bindingMethod": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "How the binding was resolved: `explicit`, `name_match`, `manual` or `none`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "comment": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Column comment captured from the source, when present."
+                    }
+                },
+                "propertyIri": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology property this column is bound to, when bound."
+                    }
+                },
+                "confidence": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Confidence of a `name_match` binding, 0..1."
+                    }
+                },
+                "bindingNote": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human note attached to a `manual` binding."
+                    }
+                },
+                "observedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "ISO-8601 time the snapshot observed this column."
+                    }
+                },
+                "lastRefreshRunId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Refresh run that last wrote this row."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One column row in the dictionary (ten-column view, F63)."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionaryColumnList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.dictionary#DictionaryColumn"
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionaryRefreshRun": {
+            "type": "structure",
+            "members": {
+                "runId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Server-minted identifier of this introspection pass.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source whose dictionary was introspected.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`running`, `succeeded` or `failed`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "idempotencyKey": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Caller-supplied key that makes the refresh replayable."
+                    }
+                },
+                "requestedBy": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Principal that requested the refresh, when recorded."
+                    }
+                },
+                "startedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "ISO-8601 start time."
+                    }
+                },
+                "finishedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "ISO-8601 finish time; absent while still running."
+                    }
+                },
+                "processed": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column rows read from the source."
+                    }
+                },
+                "inserted": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column rows newly inserted into the snapshot."
+                    }
+                },
+                "updated": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column rows updated in the snapshot."
+                    }
+                },
+                "unchanged": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column rows that were already identical."
+                    }
+                },
+                "removed": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column rows dropped because the source no longer exposes them."
+                    }
+                },
+                "error": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Failure message when `status` is `failed`; absent otherwise."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Lifecycle of one dictionary introspection pass."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionarySummary": {
+            "type": "structure",
+            "members": {
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source the snapshot belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceKind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source engine kind, e.g. `postgresql` or `snowflake`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "tables": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct tables in the snapshot.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "columns": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column count in the snapshot.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "commented": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Columns carrying a source comment.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "bound": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Columns bound to an ontology property.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "observedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "ISO-8601 time the snapshot was last observed."
+                    }
+                },
+                "lastRun": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionaryRefreshRun",
+                    "traits": {
+                        "smithy.api#documentation": "Most recent refresh run for this source."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Per-source rollup shown in the source list."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionarySummaryList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.dictionary#DictionarySummary"
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionaryTableSummary": {
+            "type": "structure",
+            "members": {
+                "table": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Table name.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "columns": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Column count in the table.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "commented": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Columns carrying a source comment.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "bound": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Columns bound to an ontology property.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "missingComment": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Columns with no source comment.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "unbound": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Columns not bound to any ontology property.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Per-table rollup on the source dictionary page."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#DictionaryTableSummaryList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.dictionary#DictionaryTableSummary"
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionary": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.dictionary#GetDictionaryInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.dictionary#GetDictionaryOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Describe one source's dictionary: table rollups + exact comment coverage.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Describe one source's dictionary",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d"
+                        },
+                        "output": {
+                            "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d",
+                            "sourceKind": "postgresql",
+                            "catalog": "analytics",
+                            "schema": "public",
+                            "tables": [
+                                {
+                                    "table": "loan_account",
+                                    "columns": 21,
+                                    "commented": 20,
+                                    "bound": 18,
+                                    "missingComment": 1,
+                                    "unbound": 3
+                                }
+                            ],
+                            "totals": {
+                                "total": 21,
+                                "commented": 20,
+                                "missing": 1,
+                                "ratio": 0.952
+                            },
+                            "boundColumns": 18
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/dictionaries/{sourceId}",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverage": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverageInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverageOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Comment coverage for one source (F66).",
+                "smithy.api#examples": [
+                    {
+                        "title": "Comment coverage for one source",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d"
+                        },
+                        "output": {
+                            "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d",
+                            "coverage": {
+                                "total": 143,
+                                "commented": 118,
+                                "missing": 25,
+                                "ratio": 0.825
+                            },
+                            "tables": [
+                                {
+                                    "table": "loan_account",
+                                    "columns": 21,
+                                    "commented": 20,
+                                    "bound": 18,
+                                    "missingComment": 1,
+                                    "unbound": 3
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverageInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source whose dictionary is read or refreshed.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "table": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict the coverage rollup to one table.",
+                        "smithy.api#httpQuery": "table",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverageOutput": {
+            "type": "structure",
+            "members": {
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source the coverage applies to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "coverage": {
+                    "target": "com.amazon.semanticcontext.dictionary#CommentCoverage",
+                    "traits": {
+                        "smithy.api#documentation": "Comment coverage for the whole source.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "tables": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionaryTableSummaryList",
+                    "traits": {
+                        "smithy.api#documentation": "Per-table coverage rollups.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source whose dictionary is read or refreshed.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "table": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict the table rollups to one table.",
+                        "smithy.api#httpQuery": "table",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryOutput": {
+            "type": "structure",
+            "members": {
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source the dictionary belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceKind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source engine kind, e.g. `postgresql` or `snowflake`."
+                    }
+                },
+                "catalog": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Catalog the source exposes tables under."
+                    }
+                },
+                "schema": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Schema the source exposes tables under."
+                    }
+                },
+                "tables": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionaryTableSummaryList",
+                    "traits": {
+                        "smithy.api#documentation": "Per-table rollups.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "totals": {
+                    "target": "com.amazon.semanticcontext.dictionary#CommentCoverage",
+                    "traits": {
+                        "smithy.api#documentation": "Comment coverage for the whole source.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "boundColumns": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Bindings already resolved (`binding_method` != `none`).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "latestRun": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionaryRefreshRun"
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryView": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.dictionary#GetDictionaryViewInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.dictionary#GetDictionaryViewOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Page the column view with the four dashboard filters (F60/F61/F64/F65).",
+                "smithy.api#examples": [
+                    {
+                        "title": "Page columns that are missing a comment",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d",
+                            "view": "missing_comment",
+                            "limit": 50,
+                            "offset": 0
+                        },
+                        "output": {
+                            "items": [
+                                {
+                                    "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d",
+                                    "catalog": "analytics",
+                                    "schema": "public",
+                                    "table": "loan_account",
+                                    "column": "legacy_flag",
+                                    "dataType": "boolean",
+                                    "isNullable": true,
+                                    "sourceKind": "postgresql",
+                                    "bindingMethod": "none",
+                                    "observedAt": "2026-11-10T09:15:00Z"
+                                }
+                            ],
+                            "total": 1,
+                            "offset": 0,
+                            "limit": 50,
+                            "view": "missing_comment",
+                            "coverage": {
+                                "total": 21,
+                                "commented": 20,
+                                "missing": 1,
+                                "ratio": 0.952
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/dictionaries/{sourceId}/view",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryViewInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source whose dictionary is read or refreshed.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "view": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`all`, `missing_comment`, `unbound` or `mappable_unbound`.",
+                        "smithy.api#httpQuery": "view",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 32
+                        }
+                    }
+                },
+                "table": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict to one table name.",
+                        "smithy.api#httpQuery": "table",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "column": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict to one column name.",
+                        "smithy.api#httpQuery": "column",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "bindingMethod": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`explicit`, `name_match`, `manual` or `none`.",
+                        "smithy.api#httpQuery": "bindingMethod",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 32
+                        }
+                    }
+                },
+                "sourceKind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`postgresql`, `mysql`, `redshift`, `sqlserver`, `snowflake`,\n`glue` or `duckdb`.",
+                        "smithy.api#httpQuery": "sourceKind",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 32
+                        }
+                    }
+                },
+                "query": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Case-insensitive substring match on table, column or comment.",
+                        "smithy.api#httpQuery": "q",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size (default 50, max 200).",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 200
+                        }
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows to skip (default 0).",
+                        "smithy.api#httpQuery": "offset",
+                        "smithy.api#range": {
+                            "min": 0,
+                            "max": 100000
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#GetDictionaryViewOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionaryColumnList",
+                    "traits": {
+                        "smithy.api#documentation": "Column rows for this page.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows after filtering.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows skipped.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size actually applied.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "view": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The filter view that was applied.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "coverage": {
+                    "target": "com.amazon.semanticcontext.dictionary#CommentCoverage",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "warnings": {
+                    "target": "com.amazon.semanticcontext.dictionary#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Non-fatal notes, e.g. an empty mappable set. Never silent."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#ListDictionaries": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.dictionary#ListDictionariesInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.dictionary#ListDictionariesOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "List sources that have a dictionary snapshot.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List sources that have a dictionary snapshot",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "limit": 50,
+                            "offset": 0
+                        },
+                        "output": {
+                            "items": [
+                                {
+                                    "sourceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                                    "sourceKind": "postgresql",
+                                    "tables": 12,
+                                    "columns": 143,
+                                    "commented": 118,
+                                    "bound": 96,
+                                    "observedAt": "2026-11-10T09:15:00Z"
+                                }
+                            ],
+                            "total": 1,
+                            "offset": 0,
+                            "limit": 50
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/dictionaries",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#ListDictionariesInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size (default 50, max 200).",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 200
+                        }
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows to skip (default 0).",
+                        "smithy.api#httpQuery": "offset",
+                        "smithy.api#range": {
+                            "min": 0,
+                            "max": 100000
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#ListDictionariesOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionarySummaryList",
+                    "traits": {
+                        "smithy.api#documentation": "Per-source dictionary rollups for this page.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of sources that have a snapshot.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows skipped.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size actually applied.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#ListTerms": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.dictionary#ListTermsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.dictionary#ListTermsOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "List the namespace's alias entries with anchor-class counts (F58/F59).",
+                "smithy.api#examples": [
+                    {
+                        "title": "List the first page of alias entries",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "limit": 100,
+                            "offset": 0
+                        },
+                        "output": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "graph": "https://coa.local/graph/lexicon",
+                            "counts": {
+                                "anchorClasses": 42,
+                                "termEntries": 318,
+                                "evidenced": 261,
+                                "inferred": 57
+                            },
+                            "entries": [
+                                {
+                                    "entry": "https://coa.local/term/customer",
+                                    "classIri": "https://coa.local/ontology#Customer",
+                                    "classLabel": "Customer",
+                                    "label": "客户",
+                                    "status": "evidenced",
+                                    "confidence": 0.98
+                                }
+                            ],
+                            "total": 318,
+                            "offset": 0,
+                            "limit": 100
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/terms",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#ListTermsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "query": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Case-insensitive substring match on label, class label or class IRI.",
+                        "smithy.api#httpQuery": "q",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Filter by entry status: `evidenced` or `inferred`.",
+                        "smithy.api#httpQuery": "status",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 32
+                        }
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size (default 100, max 500).",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 500
+                        }
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows to skip (default 0).",
+                        "smithy.api#httpQuery": "offset",
+                        "smithy.api#range": {
+                            "min": 0,
+                            "max": 100000
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#ListTermsOutput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "graph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "IRI of the graph the entries were read from; absent when the\nnamespace has no lexicon graph."
+                    }
+                },
+                "counts": {
+                    "target": "com.amazon.semanticcontext.dictionary#TermCounts",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "entries": {
+                    "target": "com.amazon.semanticcontext.dictionary#TermEntryList",
+                    "traits": {
+                        "smithy.api#documentation": "The alias rows for this page.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of entries after filtering.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows skipped.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size actually applied.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#RefreshDictionaries": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.dictionary#RefreshDictionariesInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.dictionary#RefreshDictionariesOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#InternalServerError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ServiceUnavailableError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Introspect a source and replace its dictionary snapshot.\n\nA repeated `idempotencyKey` for a succeeded run returns that run instead of\nintrospecting again. A still-running duplicate is a conflict. Columns whose\nstored `binding_method` is `manual` are never overwritten.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Refresh a source's dictionary (idempotent retry)",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d",
+                            "idempotencyKey": "refresh-20261110-0915",
+                            "requestedBy": "data-team@example.com"
+                        },
+                        "output": {
+                            "run": {
+                                "runId": "5c1e7a90-2b4f-4d8a-a1c3-7e9f0b2d4c68",
+                                "sourceId": "3f8b9c2e-1a4d-4e7b-9c5d-2a6b8e0f1c3d",
+                                "status": "succeeded",
+                                "idempotencyKey": "refresh-20261110-0915",
+                                "requestedBy": "data-team@example.com",
+                                "startedAt": "2026-11-10T09:15:00Z",
+                                "finishedAt": "2026-11-10T09:15:02Z",
+                                "processed": 143,
+                                "inserted": 2,
+                                "updated": 5,
+                                "unchanged": 136,
+                                "removed": 0
+                            },
+                            "bindingBasis": "published-ontology"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#RefreshDictionariesInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "sourceId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Source whose dictionary is read or refreshed.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "idempotencyKey": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Caller-supplied key; generated per request when absent.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        }
+                    }
+                },
+                "requestedBy": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Principal requesting the refresh, when the caller supplies one.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 128
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#RefreshDictionariesOutput": {
+            "type": "structure",
+            "members": {
+                "run": {
+                    "target": "com.amazon.semanticcontext.dictionary#DictionaryRefreshRun",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "bindingBasis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "How bindings were resolved: `published-ontology`,\n`published-ontology-empty`, or `replay` when an already-succeeded\nidempotency key returned its prior run.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "warnings": {
+                    "target": "com.amazon.semanticcontext.dictionary#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Non-fatal notes (e.g. a source with zero columns). Never silent."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#StringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#TermCounts": {
+            "type": "structure",
+            "members": {
+                "anchorClasses": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct owl:Class nodes that an alias entry points at (F58).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "termEntries": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of skos:Concept / term:TermEntry alias entries (F59).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "evidenced": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Entries whose status is `evidenced`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "inferred": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Entries whose status is `inferred`.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Anchor-class and alias counts for the namespace's published T-Box."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#TermEntry": {
+            "type": "structure",
+            "members": {
+                "entry": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "IRI of the skos:Concept / term:TermEntry node.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "classIri": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "IRI of the anchored class."
+                    }
+                },
+                "classLabel": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "rdfs:label of the anchored class, when the graph carries one."
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The alias surface form (skos:prefLabel or term:label).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`evidenced` or `inferred`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "confidence": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Term confidence, 0..1, when recorded."
+                    }
+                },
+                "guardRegex": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Guard regular expression that must pass before the alias is used."
+                    }
+                },
+                "canonicalFor": {
+                    "target": "com.amazon.semanticcontext.dictionary#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Concepts this surface is the canonical label for."
+                    }
+                },
+                "suppressedSurface": {
+                    "target": "com.amazon.semanticcontext.dictionary#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Surface forms suppressed in favour of this entry."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One alias row. The seven data columns are class, label, status,\nconfidence, guard regex, canonical-for targets and suppressed surfaces."
+            }
+        },
+        "com.amazon.semanticcontext.dictionary#TermEntryList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.dictionary#TermEntry"
             }
         },
         "com.amazon.semanticcontext.documents#ApproveFactCandidate": {
@@ -6768,6 +9501,374 @@
                 }
             }
         },
+        "com.amazon.semanticcontext.ingestion#IngestionFailure": {
+            "type": "structure",
+            "members": {
+                "runId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Batch the failed item belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "relPath": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Item path relative to the batch root.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "attempts": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of processing attempts so far.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable failure code, when the importer recorded one."
+                    }
+                },
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable failure message, when the importer recorded one."
+                    }
+                },
+                "updatedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the item last changed.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One failed item surfaced in the inline failure feed."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionFailureList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ingestion#IngestionFailure",
+                "traits": {
+                    "smithy.api#documentation": "One failed item."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Ordered failed items across the returned runs."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRun": {
+            "type": "structure",
+            "members": {
+                "runId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Stable batch identifier (platform.import_batch.batch_id).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "root": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Filesystem root that was imported.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Current lifecycle state.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "stale": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when status is STALE.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "staleReason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable stale reason; present only when stale is true."
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Discovered items in this batch.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "completed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that reached a terminal state (indexed or failed).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "indexed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items indexed successfully.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "failed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that ended in failure.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "degraded": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items indexed with degraded quality (for example missing embeddings).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "createdAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the batch row was created.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "updatedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the batch row last changed.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "finishedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the batch finished; absent while running."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One import batch and its per-item counters."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunKind": {
+            "type": "enum",
+            "members": {
+                "BATCH": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Directory imports recorded in platform.import_batch.",
+                        "smithy.api#enumValue": "BATCH"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Which ingestion run family to list."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ingestion#IngestionRun",
+                "traits": {
+                    "smithy.api#documentation": "The runs in this page."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A page of ingestion runs."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunStatus": {
+            "type": "enum",
+            "members": {
+                "RUNNING": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Import is currently writing items.",
+                        "smithy.api#enumValue": "RUNNING"
+                    }
+                },
+                "COMPLETED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Every discovered item was processed (indexed or failed).",
+                        "smithy.api#enumValue": "COMPLETED"
+                    }
+                },
+                "INTERRUPTED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The run was stopped before finishing and can be resumed.",
+                        "smithy.api#enumValue": "INTERRUPTED"
+                    }
+                },
+                "STALE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The run's lease expired and a recovery pass marked it stale.",
+                        "smithy.api#enumValue": "STALE"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Lifecycle state of one ingestion run, mirroring platform.import_batch.status."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#ListIngestionRuns": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ingestion#ListIngestionRunsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ingestion#ListIngestionRunsOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "List namespace-scoped ingestion runs (F17) with counters that refresh on\neach call (F18), newest first.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List one namespace's import batches",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "kind": "BATCH"
+                        },
+                        "output": {
+                            "items": [
+                                {
+                                    "runId": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c",
+                                    "root": "/data/corpus/handbook",
+                                    "status": "COMPLETED",
+                                    "stale": false,
+                                    "total": 120,
+                                    "completed": 120,
+                                    "indexed": 118,
+                                    "failed": 2,
+                                    "degraded": 1,
+                                    "createdAt": 1762732800,
+                                    "updatedAt": 1762819200,
+                                    "finishedAt": 1762819200
+                                }
+                            ],
+                            "totalCount": 1,
+                            "failures": [
+                                {
+                                    "runId": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c",
+                                    "relPath": "appendix/legacy.docx",
+                                    "attempts": 3,
+                                    "code": "E_PARSE_UNSUPPORTED",
+                                    "message": "unsupported legacy document format",
+                                    "updatedAt": 1762819200
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/ingestion-runs"
+                },
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "maxResults",
+                    "items": "items"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#ListIngestionRunsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace whose runs are listed.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "kind": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunKind",
+                    "traits": {
+                        "smithy.api#documentation": "Run family; defaults to BATCH and only BATCH is implemented.",
+                        "smithy.api#httpQuery": "kind"
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Optional lifecycle-status filter.",
+                        "smithy.api#httpQuery": "status"
+                    }
+                },
+                "nextToken": {
+                    "target": "com.amazon.semanticcontext.common#PaginationToken",
+                    "traits": {
+                        "smithy.api#documentation": "Pagination token from a previous response.",
+                        "smithy.api#httpQuery": "nextToken"
+                    }
+                },
+                "maxResults": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum runs per page (default and maximum 50).",
+                        "smithy.api#httpQuery": "maxResults",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 50
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#ListIngestionRunsOutput": {
+            "type": "structure",
+            "mixins": [
+                {
+                    "target": "com.amazon.semanticcontext.common#PaginatedOutput"
+                }
+            ],
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunList",
+                    "traits": {
+                        "smithy.api#documentation": "Page of ingestion runs.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "totalCount": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Number of runs matching the filter across all pages.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "failures": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionFailureList",
+                    "traits": {
+                        "smithy.api#documentation": "Most recent failed items across the returned page (at most 20).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
         "com.amazon.semanticcontext.metric#BulkDeleteFilter": {
             "type": "structure",
             "members": {
@@ -8673,6 +11774,1175 @@
             },
             "traits": {
                 "smithy.api#documentation": "Severity level attached to a validation warning."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#GetMetricFamily": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.metriccatalog#GetMetricFamilyInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.metriccatalog#GetMetricFamilyOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#AccessDeniedError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Read one metric family: the index metric and its variants side by side.\nThe family index never yields a value; callers must pick a variant and use\nthe variant's metricId for output.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Insurance continuation-rate family",
+                        "input": {
+                            "namespaceId": "ed70a15c-2d42-4dc9-8c61-33b2584f05fd",
+                            "familyId": "FIN-INS-022"
+                        },
+                        "output": {
+                            "family": {
+                                "familyId": "FIN-INS-022",
+                                "indexMetricId": "FIN-INS-022",
+                                "nameZh": "13 个月保费继续率",
+                                "selectionRequired": true,
+                                "guidance": {
+                                    "code": "E_METRIC_VARIANT_REQUIRED",
+                                    "message": "该指标是口径族索引，不直接出数；请先选择变体并回填 metric_id。",
+                                    "howTo": [
+                                        "在族索引详情中选择一个变体（窗口/分母/粒度会并排展示）",
+                                        "前端将变体 metric_id 回填到详情与 URL",
+                                        "再用该 metric_id 调用 /metrics/{metric_id}/output"
+                                    ]
+                                },
+                                "variantCount": 2,
+                                "variants": [
+                                    {
+                                        "metricId": "FIN-INS-022-v1",
+                                        "nameZh": "13 个月保费继续率（宽限期口径）",
+                                        "publishable": true,
+                                        "evidenceBasis": "regulatory",
+                                        "externalEligible": true,
+                                        "formula": "13 个月继续率 = 期初后第 13 个月仍有效保单 / 期初保单",
+                                        "formulaDisabled": false,
+                                        "computability": "structurally_computable",
+                                        "computabilityLabel": "结构性可算（需事实与观测）"
+                                    },
+                                    {
+                                        "metricId": "FIN-INS-022-v2",
+                                        "nameZh": "13 个月保费继续率（自然月口径）",
+                                        "publishable": true,
+                                        "evidenceBasis": "regulatory",
+                                        "externalEligible": true,
+                                        "formula": "13 个月继续率 = 期初后第 13 个月仍有效保单 / 期初保单",
+                                        "formulaDisabled": false,
+                                        "computability": "structurally_computable",
+                                        "computabilityLabel": "结构性可算（需事实与观测）"
+                                    }
+                                ],
+                                "diffs": [
+                                    {
+                                        "field": "observationPeriod",
+                                        "label": "观察窗口",
+                                        "values": {
+                                            "FIN-INS-022-v1": "13 个月（390 天）",
+                                            "FIN-INS-022-v2": "13 个月（390 天）"
+                                        },
+                                        "different": false
+                                    }
+                                ],
+                                "source": "platform.metric_definition"
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/metrics/families/{familyId}"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#GetMetricFamilyInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace that owns the metric family.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "familyId": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyId",
+                    "traits": {
+                        "smithy.api#documentation": "Family identifier: the metric id of the family index.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#GetMetricFamilyOutput": {
+            "type": "structure",
+            "members": {
+                "family": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamily",
+                    "traits": {
+                        "smithy.api#documentation": "The family index plus every variant and their differences.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#GetMetricReportManifest": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.metriccatalog#GetMetricReportManifestInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.metriccatalog#GetMetricReportManifestOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#AccessDeniedError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Read the governed metrics report manifest. Every row carries its external\nstatus, execution path and computability, all read from\nplatform.metric_definition; nothing is computed or invented here.",
+                "smithy.api#examples": [
+                    {
+                        "title": "One manifest row",
+                        "input": {
+                            "namespaceId": "ed70a15c-2d42-4dc9-8c61-33b2584f05fd",
+                            "scope": "all"
+                        },
+                        "output": {
+                            "items": [
+                                {
+                                    "metricId": "FIN-INS-022",
+                                    "nameZh": "13 个月保费继续率",
+                                    "domain": "insurance",
+                                    "publishable": true,
+                                    "evidenceBasis": "regulatory",
+                                    "evidenceBasisLabel": "监管原文",
+                                    "evidenceSource": "监管原文",
+                                    "hasRegulatoryText": true,
+                                    "industryBaseline": false,
+                                    "e1Baseline": false,
+                                    "formula": "口径未给出",
+                                    "computability": "structurally_computable",
+                                    "computabilityLabel": "结构性可算（需事实与观测）",
+                                    "computabilityTone": "ok",
+                                    "gap": "族索引：需指定变体（E_METRIC_VARIANT_REQUIRED）",
+                                    "gapCode": "variant_required",
+                                    "externalEligible": true,
+                                    "externalStatus": "external_candidate",
+                                    "externalLabel": "对外可出数候选（需事实与观测）",
+                                    "externalReason": "证据为监管原文、publishable=true、口径结构性可算；资格判定未含观测与窗口，实际可执行性见 executionPath",
+                                    "executionPath": "unavailable",
+                                    "executable": false,
+                                    "executionReason": "该口径是族索引，需先选择变体",
+                                    "executionReasonCode": "variant_required",
+                                    "observationCount": 0,
+                                    "availableWindowDays": 0,
+                                    "minWindowDays": 390,
+                                    "windowSufficient": false,
+                                    "outputMode": "index",
+                                    "formulaDisabled": false,
+                                    "inference": false,
+                                    "evidenceStatus": "regulatory_verified",
+                                    "definitionVersion": "v3"
+                                }
+                            ],
+                            "count": 1,
+                            "meta": {
+                                "generatedAt": "2026-11-10T12:00:00+00:00",
+                                "source": "platform.metric_definition",
+                                "scope": "all",
+                                "total": 85,
+                                "allTotal": 85,
+                                "counts": {
+                                    "publishableTrue": 60,
+                                    "industry": 25,
+                                    "regulatory": 60,
+                                    "externalEligible": 35,
+                                    "externalCandidates": 35,
+                                    "executableNow": 0,
+                                    "industryExcludedFromExternal": 0,
+                                    "computability": {
+                                        "structurally_computable": 60,
+                                        "blocked_semantics": 25
+                                    }
+                                },
+                                "externalScopeRule": "evidence_basis=regulatory 且 publishable=true 且 computability_tier=structurally_computable",
+                                "disclaimer": "可算性仅表示口径四元组与公式可编译，不代表已有观测值；本清单不承诺业务数值。"
+                            },
+                            "filters": {
+                                "scope": "all"
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/metrics/report/manifest"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#GetMetricReportManifestInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace that owns the governed metrics.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "scope": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportScope",
+                    "traits": {
+                        "smithy.api#documentation": "\"all\" (everything) or \"external\" (external-eligible candidates only).",
+                        "smithy.api#httpQuery": "scope"
+                    }
+                },
+                "domain": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Optional domain filter.",
+                        "smithy.api#httpQuery": "domain",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 64
+                        }
+                    }
+                },
+                "evidenceBasis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Optional evidence-basis filter.",
+                        "smithy.api#httpQuery": "evidenceBasis",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 64
+                        }
+                    }
+                },
+                "publishable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Optional publishable filter.",
+                        "smithy.api#httpQuery": "publishable"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#GetMetricReportManifestOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportItemList",
+                    "traits": {
+                        "smithy.api#documentation": "Manifest rows after filtering.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "count": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows in items.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "meta": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportMeta",
+                    "traits": {
+                        "smithy.api#documentation": "Counters and provenance for the whole manifest.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "filters": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportFilters",
+                    "traits": {
+                        "smithy.api#documentation": "Filters that were applied to this response.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamily": {
+            "type": "structure",
+            "members": {
+                "familyId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Family identifier, equal to the index metric id.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "indexMetricId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "The metric a caller lands on before choosing a variant.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "nameZh": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display name of the family index."
+                    }
+                },
+                "selectionRequired": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Always true for a family index: output needs a variant metricId.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "guidance": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyGuidance",
+                    "traits": {
+                        "smithy.api#documentation": "How the caller must choose a variant before producing a value.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "variantCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of variants in this family.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "variants": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyVariantList",
+                    "traits": {
+                        "smithy.api#documentation": "Variants of this family, in metric id order.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "diffs": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyDiffList",
+                    "traits": {
+                        "smithy.api#documentation": "Field-by-field differences across variants.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Store the family was read from.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One metric family (a family index plus its variants)."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyDiff": {
+            "type": "structure",
+            "members": {
+                "field": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Field name used for the comparison.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display label of the field.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "values": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyDiffValues",
+                    "traits": {
+                        "smithy.api#documentation": "metricId -> rendered value.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "different": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the values are not all equal.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One field that differs (or does not differ) across variants."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyDiffList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyDiff",
+                "traits": {
+                    "smithy.api#documentation": "One compared field."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Field differences across the variants of a family."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyDiffValues": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "Variant metric id."
+                }
+            },
+            "value": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "Rendered value for that variant."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Rendered values of one diff field, keyed by variant metric id."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyGuidance": {
+            "type": "structure",
+            "members": {
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable machine code (for example E_METRIC_VARIANT_REQUIRED).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable explanation.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "howTo": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyHowToList",
+                    "traits": {
+                        "smithy.api#documentation": "Ordered steps that resolve the selection.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Instruction shown when a family index is opened instead of a variant."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyHowToList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "One step of the guidance."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Ordered guidance steps."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Metric id of a family index; allows the ids used by governed metrics.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 128
+                },
+                "smithy.api#pattern": "^[A-Za-z][A-Za-z0-9._-]{0,127}$"
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyVariant": {
+            "type": "structure",
+            "members": {
+                "metricId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Variant metric id; use this for output calls.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "nameZh": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display name of the variant."
+                    }
+                },
+                "displayName": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display label override, when the definition carries one."
+                    }
+                },
+                "publishable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Whether the variant may be published at all."
+                    }
+                },
+                "evidenceBasis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Evidence basis (regulatory, industry, none)."
+                    }
+                },
+                "externalEligible": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Whether the variant passes the external-eligibility rule."
+                    }
+                },
+                "internalNotice": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Notice shown when the variant is an internal baseline."
+                    }
+                },
+                "formula": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Formula text as declared by the definition."
+                    }
+                },
+                "formulaDisabled": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the formula is present but execution is disabled."
+                    }
+                },
+                "computability": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Computability tier code."
+                    }
+                },
+                "computabilityLabel": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Computability tier label."
+                    }
+                },
+                "window": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyVariantWindow",
+                    "traits": {
+                        "smithy.api#documentation": "Observation window declared by the variant."
+                    }
+                },
+                "denominator": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Denominator expression text, when the definition declares one."
+                    }
+                },
+                "denominatorText": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable denominator description."
+                    }
+                },
+                "grain": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Grain label (for example policy or agreement)."
+                    }
+                },
+                "grainCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Grain code as stored in the definition."
+                    }
+                },
+                "metricKind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Metric kind (ratio, duration, sum, ...)."
+                    }
+                },
+                "unit": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Unit of the produced value."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One variant of a metric family."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyVariantList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.metriccatalog#MetricFamilyVariant",
+                "traits": {
+                    "smithy.api#documentation": "One variant."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Variants of one family."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricFamilyVariantWindow": {
+            "type": "structure",
+            "members": {
+                "kind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Window kind (instant, period, rolling)."
+                    }
+                },
+                "minWindowDays": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Minimum window length in days."
+                    }
+                },
+                "text": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Rendered window description."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Observation window declared by a variant."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportComputabilityCounts": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "Computability tier code."
+                }
+            },
+            "value": {
+                "target": "smithy.api#Integer",
+                "traits": {
+                    "smithy.api#documentation": "Number of rows in that tier."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Row count per computability tier."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportCounts": {
+            "type": "structure",
+            "members": {
+                "publishableTrue": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows with publishable=true."
+                    }
+                },
+                "industry": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows whose evidence basis is industry."
+                    }
+                },
+                "regulatory": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows whose evidence basis is regulatory."
+                    }
+                },
+                "externalEligible": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows that pass the external-eligibility rule."
+                    }
+                },
+                "externalCandidates": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows with external status external_candidate."
+                    }
+                },
+                "executableNow": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows executable right now."
+                    }
+                },
+                "industryExcludedFromExternal": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Industry rows excluded from external output."
+                    }
+                },
+                "computability": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportComputabilityCounts",
+                    "traits": {
+                        "smithy.api#documentation": "Row count per computability tier."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Counter breakdown of the manifest."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportExecution": {
+            "type": "structure",
+            "members": {
+                "externalCandidates": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows with external status external_candidate."
+                    }
+                },
+                "executableNow": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows executable right now."
+                    }
+                },
+                "ruleSetOnly": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows executable from a rule set only."
+                    }
+                },
+                "unavailable": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Rows that cannot be executed yet."
+                    }
+                },
+                "byReason": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportExecutionReasons",
+                    "traits": {
+                        "smithy.api#documentation": "Unavailable rows counted by reason code."
+                    }
+                },
+                "basis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Basis used by the execution judgement."
+                    }
+                },
+                "note": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Explanatory note for the execution judgement."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Execution-path breakdown of the manifest."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportExecutionReasons": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String",
+                "traits": {
+                    "smithy.api#documentation": "Stable reason code."
+                }
+            },
+            "value": {
+                "target": "smithy.api#Integer",
+                "traits": {
+                    "smithy.api#documentation": "Number of rows with that reason."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Unavailable rows counted by reason code."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportFilters": {
+            "type": "structure",
+            "members": {
+                "scope": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Applied scope."
+                    }
+                },
+                "domain": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Applied domain filter."
+                    }
+                },
+                "evidenceBasis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Applied evidence-basis filter."
+                    }
+                },
+                "publishable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Applied publishable filter."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Filters applied to a manifest response."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportItem": {
+            "type": "structure",
+            "members": {
+                "metricId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Governed metric id (also the identifier used by /metrics/{metric_id}).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "nameZh": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display name in Chinese."
+                    }
+                },
+                "displayName": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Display label override, when the definition carries one."
+                    }
+                },
+                "domain": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Business domain."
+                    }
+                },
+                "publishable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Whether the metric may be published."
+                    }
+                },
+                "evidenceBasis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Evidence basis (regulatory, industry, none)."
+                    }
+                },
+                "evidenceBasisLabel": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Rendered evidence-basis label."
+                    }
+                },
+                "evidenceSource": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Provenance label of the evidence."
+                    }
+                },
+                "hasRegulatoryText": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when regulatory text is attached."
+                    }
+                },
+                "industryBaseline": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the metric is an industry formula (internal baseline only)."
+                    }
+                },
+                "internalNotice": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Internal-baseline notice, when applicable."
+                    }
+                },
+                "e1Baseline": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the metric is flagged as an E1 baseline."
+                    }
+                },
+                "formula": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Formula text as declared by the definition."
+                    }
+                },
+                "formulaExpr": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Formula expression used for execution, when declared."
+                    }
+                },
+                "computability": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Computability tier code."
+                    }
+                },
+                "computabilityLabel": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Computability tier label."
+                    }
+                },
+                "computabilityTone": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Computability tone used by the UI (ok, warn, blocked)."
+                    }
+                },
+                "gap": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Short computability gap description."
+                    }
+                },
+                "gapCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable gap code."
+                    }
+                },
+                "missing": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Missing component description, when the metric cannot be computed."
+                    }
+                },
+                "externalEligible": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Whether the metric passes the external-eligibility rule."
+                    }
+                },
+                "externalStatus": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable external status code."
+                    }
+                },
+                "externalLabel": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Rendered external status label."
+                    }
+                },
+                "externalReason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why the metric has this external status."
+                    }
+                },
+                "executionPath": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Execution path code (unavailable, rule_set_only, executable)."
+                    }
+                },
+                "executable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the metric can be executed right now."
+                    }
+                },
+                "executionReason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable execution blocker."
+                    }
+                },
+                "executionReasonCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Stable execution blocker code."
+                    }
+                },
+                "observationCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of observation rows available."
+                    }
+                },
+                "availableWindowDays": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Observation window currently available, in days."
+                    }
+                },
+                "minWindowDays": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Observation window required by the definition, in days."
+                    }
+                },
+                "windowSufficient": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the available window covers the required window."
+                    }
+                },
+                "windowWarning": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Window warning shown to the reporter, when applicable."
+                    }
+                },
+                "variantOf": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Family index id for a variant metric."
+                    }
+                },
+                "outputMode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Output mode (index, rule_set, value)."
+                    }
+                },
+                "formulaDisabled": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the formula exists but execution is disabled."
+                    }
+                },
+                "inference": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the definition is inferred rather than provided."
+                    }
+                },
+                "evidenceStatus": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Evidence verification status."
+                    }
+                },
+                "definitionVersion": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Definition version the row was read from."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One governed metric row as it appears in the report manifest. Fields left\nabsent were not applicable for that metric; they are never coerced to false."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportItemList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.metriccatalog#MetricReportItem",
+                "traits": {
+                    "smithy.api#documentation": "One governed metric row."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Manifest rows."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportMeta": {
+            "type": "structure",
+            "members": {
+                "generatedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Generation timestamp (ISO-8601).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Store the manifest was read from."
+                    }
+                },
+                "scope": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Scope this manifest was generated for."
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows in this response."
+                    }
+                },
+                "allTotal": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of rows in the namespace before filtering."
+                    }
+                },
+                "counts": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportCounts",
+                    "traits": {
+                        "smithy.api#documentation": "Counter breakdown."
+                    }
+                },
+                "execution": {
+                    "target": "com.amazon.semanticcontext.metriccatalog#MetricReportExecution",
+                    "traits": {
+                        "smithy.api#documentation": "Execution-path breakdown."
+                    }
+                },
+                "industryNotice": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Industry-baseline notice shared by all industry rows."
+                    }
+                },
+                "externalScopeRule": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Rule that decides external eligibility."
+                    }
+                },
+                "disclaimer": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Statement that computability does not imply business values exist."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Counters and provenance for the whole manifest."
+            }
+        },
+        "com.amazon.semanticcontext.metriccatalog#MetricReportScope": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Manifest scope: everything, or external-eligible candidates only.",
+                "smithy.api#length": {
+                    "min": 3,
+                    "max": 8
+                },
+                "smithy.api#pattern": "^(all|external)$"
             }
         },
         "com.amazon.semanticcontext.namespace#CreateNamespace": {

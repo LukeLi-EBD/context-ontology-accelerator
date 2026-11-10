@@ -103,6 +103,48 @@ export type PrincipalType = (typeof PrincipalType)[keyof typeof PrincipalType];
  * @public
  * @enum
  */
+export const IngestionRunKind = {
+  /**
+   * Directory imports recorded in platform.import_batch.
+   */
+  BATCH: "BATCH",
+} as const;
+/**
+ * @public
+ */
+export type IngestionRunKind = (typeof IngestionRunKind)[keyof typeof IngestionRunKind];
+
+/**
+ * @public
+ * @enum
+ */
+export const IngestionRunStatus = {
+  /**
+   * Every discovered item was processed (indexed or failed).
+   */
+  COMPLETED: "COMPLETED",
+  /**
+   * The run was stopped before finishing and can be resumed.
+   */
+  INTERRUPTED: "INTERRUPTED",
+  /**
+   * Import is currently writing items.
+   */
+  RUNNING: "RUNNING",
+  /**
+   * The run's lease expired and a recovery pass marked it stale.
+   */
+  STALE: "STALE",
+} as const;
+/**
+ * @public
+ */
+export type IngestionRunStatus = (typeof IngestionRunStatus)[keyof typeof IngestionRunStatus];
+
+/**
+ * @public
+ * @enum
+ */
 export const TimeGrain = {
   /**
    * Daily granularity.

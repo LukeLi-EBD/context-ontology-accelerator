@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { PutSourceRescanScheduleInput, PutSourceRescanScheduleOutput } from "../models/models_0";
+import type { PutSourceRescanScheduleInput, PutSourceRescanScheduleOutput } from "../models/models_1";
 import { PutSourceRescanSchedule$ } from "../schemas/schemas_0";
 
 /**
