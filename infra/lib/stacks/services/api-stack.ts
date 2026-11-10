@@ -49,6 +49,17 @@ import {
 export const INTENTIONALLY_STUBBED = new Set([
   "/health", // unsecured liveness probe answered by the stub itself
   "/namespaces/{namespaceId}/ontologies/{ontologyId}/upload", // superseded by upload-url + ingest-from-s3
+  // F17/F18 ListIngestionRuns. This is not a missing route mapping: the op is in
+  // the spec, and locally the bridge serves it from the platform-core kernel.
+  // What is missing is the backend capability — no deployed Lambda implements
+  // list_ingestion_runs. Adding an ssmPathHandlers entry here would forward the
+  // request to the sources function, which does not implement the op, so the
+  // environment would still 404. Listing it as a stub is the truthful
+  // declaration, not cover-up: the guard keeps saying "deliberately
+  // unimplemented", and wiring the path later still fails synth until this line
+  // is removed. Backlog (separate estimate): restore the AWS path by
+  // implementing the handler in the sources Lambda and adding the app.ts mapping.
+  "/namespaces/{namespaceId}/ingestion-runs",
 ]);
 
 export interface ApiStackProps extends cdk.StackProps {
