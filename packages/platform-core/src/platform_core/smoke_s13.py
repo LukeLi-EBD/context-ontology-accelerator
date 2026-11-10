@@ -27,6 +27,10 @@ from .importer import Importer, dry_run, list_items
 HEAVY_WAIT_SECONDS = 180.0
 HEAVY_RETRY_INTERVAL_SECONDS = 2.0
 
+# Smoke runs do not create a namespace registry entry; the batch only needs an
+# explicit, stable namespace id. Never derive one from the path.
+SMOKE_NAMESPACE_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
 
 class HeavyBlocked(Exception):
     """Raised when the wait budget is spent; maps to exit 75 (SKIP)."""
@@ -102,7 +106,9 @@ def _run_importer(
     while True:
         try:
             return Importer(runtime, progress_seconds=0).run(
-                directory, retry_failed=retry_failed
+                directory,
+                namespace_id=SMOKE_NAMESPACE_ID,
+                retry_failed=retry_failed,
             )
         except PortError as exc:
             if not _heavy_busy(exc):

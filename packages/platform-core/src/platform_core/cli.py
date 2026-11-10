@@ -286,6 +286,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     imp = sub.add_parser("import", help="bulk import a directory tree (resumable)")
     imp.add_argument("directory")
+    imp.add_argument(
+        "--namespace-id", dest="namespace_id", required=True,
+        help="namespace the batch belongs to (required, no default)",
+    )
     imp.add_argument("--config", default="/data/platform.yaml")
     imp.add_argument("--dry-run", dest="dry_run", action="store_true")
     imp.add_argument("--retry-failed", dest="retry_failed", action="store_true")
@@ -683,7 +687,11 @@ def main(argv: list[str] | None = None) -> int:
                     progress_seconds=args.progress_seconds,
                     max_files=args.batch_size,
                     max_seconds=args.max_seconds,
-                ).run(args.directory, retry_failed=args.retry_failed)
+                ).run(
+                    args.directory,
+                    namespace_id=args.namespace_id,
+                    retry_failed=args.retry_failed,
+                )
                 print(json.dumps(result, ensure_ascii=False, indent=2))
                 return int(result.get("exitCode") or EXIT_OK)
             if args.command == "imports":

@@ -178,17 +178,50 @@ def _group_entries(entries: Iterable[ScanEntry]) -> dict[str, list[ScanEntry]]:
     return groups
 
 
-def _existing_documents(runtime: Runtime, shas: Iterable[str]) -> set[str]:
+def _embedded_documents(runtime: Runtime, shas: Iterable[str]) -> set[str]:
+    """Documents whose every chunk has a vector in the active model partition.
+
+    A row in `platform.document` only proves the file was parsed. Uploads can
+    stop before embedding, and an embed failure leaves the document row behind,
+    so treating "document exists" as "indexed" would report success without
+    searchable vectors. Require at least one chunk and no un-embedded chunk.
+    """
     unique = [sha for sha in dict.fromkeys(shas) if sha]
-    found: set[str] = set()
     if not unique:
-        return found
+        return set()
+    model = str(runtime.vectors.pointer()["model"])
     rows = runtime.metadata.query(
-        "SELECT document_id FROM platform.document WHERE document_id = ANY(%s)", (unique,)
+        """
+        SELECT d.document_id
+          FROM platform.document d
+         WHERE d.document_id = ANY(%s)
+           AND EXISTS (
+                 SELECT 1 FROM platform.document_chunk c
+                  WHERE c.document_id = d.document_id)
+           AND NOT EXISTS (
+                 SELECT 1 FROM platform.document_chunk c
+                  WHERE c.document_id = d.document_id
+                    AND NOT EXISTS (
+                          SELECT 1 FROM platform.chunk_embedding e
+                           WHERE e.chunk_id = c.chunk_id AND e.model = %s))
+        """,
+        (unique, model),
     )
-    for row in rows:
-        found.add(str(row["document_id"]))
-    return found
+    return {str(row["document_id"]) for row in rows}
+
+
+def _coerce_namespace_id(value: str | uuid.UUID) -> uuid.UUID:
+    """Parse the caller-supplied namespace; never invent a default."""
+    try:
+        return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+    except (TypeError, ValueError) as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespace id is not a UUID: {value}",
+            provider="platform",
+            provider_code="E_NAMESPACE_ID_INVALID",
+            details={"namespaceId": str(value)},
+        ) from exc
 
 
 def _batch_items(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, dict[str, Any]]:
@@ -200,18 +233,49 @@ def _batch_items(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, dict[str, A
     return {str(row["rel_path"]): row for row in rows}
 
 
-def _get_or_create_batch(runtime: Runtime, root: Path, options: dict[str, Any]) -> uuid.UUID:
+def _get_or_create_batch(
+    runtime: Runtime, root: Path, options: dict[str, Any], namespace_id: uuid.UUID
+) -> uuid.UUID:
     from psycopg.types.json import Jsonb
 
+    previous = runtime.metadata.query(
+        "SELECT batch_id, namespace_id FROM platform.import_batch WHERE root_path = %s",
+        (str(root),),
+    )
+    if previous and previous[0]["namespace_id"] is not None:
+        current = str(previous[0]["namespace_id"])
+        # A directory belongs to the namespace that claimed it. Re-pointing an
+        # existing batch would silently move already-imported rows across a
+        # namespace boundary, so refuse instead of guessing.
+        if current != str(namespace_id):
+            raise PortError(
+                code="Conflict",
+                message=(
+                    f"import batch for {root} belongs to namespace {current}, "
+                    f"not {namespace_id}"
+                ),
+                provider="platform",
+                provider_code="E_IMPORT_NAMESPACE_MISMATCH",
+                details={
+                    "root": str(root),
+                    "batchId": str(previous[0]["batch_id"]),
+                    "namespaceId": current,
+                    "requestedNamespaceId": str(namespace_id),
+                },
+            )
     rows = runtime.metadata.query(
         """
-        INSERT INTO platform.import_batch (batch_id, root_path, status, options)
-        VALUES (gen_random_uuid(), %s, 'running', %s)
+        INSERT INTO platform.import_batch (batch_id, root_path, namespace_id, status, options)
+        VALUES (gen_random_uuid(), %s, %s, 'running', %s)
         ON CONFLICT (root_path) DO UPDATE
-           SET status = 'running', options = EXCLUDED.options, updated_at = now()
+           SET status = 'running',
+               namespace_id = COALESCE(platform.import_batch.namespace_id,
+                                       EXCLUDED.namespace_id),
+               options = EXCLUDED.options,
+               updated_at = now()
         RETURNING batch_id
         """,
-        (str(root), Jsonb(options)),
+        (str(root), namespace_id, Jsonb(options)),
     )
     return rows[0]["batch_id"]
 
@@ -289,7 +353,7 @@ def dry_run(runtime: Runtime, directory: str) -> dict[str, Any]:
     cache = _batch_items(runtime, batch_id) if batch_id else {}
     scan = scan_directory(runtime, root, cache)
     groups = _group_entries(scan.entries)
-    existing = _existing_documents(runtime, groups.keys())
+    existing = _embedded_documents(runtime, groups.keys())
     to_import = {sha: rows for sha, rows in groups.items() if sha not in existing}
     duplicate_within = sum(len(rows) - 1 for rows in groups.values())
     duplicate_existing = sum(len(rows) for sha, rows in groups.items() if sha in existing)
@@ -485,7 +549,15 @@ class Importer:
         self._bump("processed", len(group.rows))
         log.warning(
             "import item failed",
-            extra={"event": {"event": "import_item_failed", "sha256": group.sha, "code": code}},
+            extra={
+                "event": {
+                    "event": "import_item_failed",
+                    "batchId": str(batch_id),
+                    "relPaths": list(group.rel_paths),
+                    "sha256": group.sha,
+                    "code": code,
+                }
+            },
         )
 
     def _pending_groups(self, batch_id: uuid.UUID) -> list[_Group]:
@@ -519,16 +591,24 @@ class Importer:
         groups.sort(key=lambda item: item.rel_paths[0])
         return groups
 
-    def run(self, directory: str, retry_failed: bool = False) -> dict[str, Any]:
+    def run(
+        self,
+        directory: str,
+        *,
+        namespace_id: str | uuid.UUID,
+        retry_failed: bool = False,
+    ) -> dict[str, Any]:
         root = _resolve_root(directory)
+        namespace = _coerce_namespace_id(namespace_id)
         started = time.monotonic()
         self._started = started
         options = {
             "parseConcurrency": self._parse_concurrency,
             "embedConcurrency": self._embed_concurrency,
             "retryFailed": retry_failed,
+            "namespaceId": str(namespace),
         }
-        batch_id = _get_or_create_batch(self._runtime, root, options)
+        batch_id = _get_or_create_batch(self._runtime, root, options, namespace)
         # Simple mutual exclusion convention (no scheduler): any CPU-heavy job
         # (import / reindex / benchmark) takes `platform:heavy` first, so two
         # heavy jobs never compete for the host or the local embedding service.
@@ -551,10 +631,15 @@ class Importer:
                         provider="platform",
                         provider_code="E_IMPORT_BUSY",
                     )
-                return self._run_locked(root, batch_id, retry_failed, started)
+                return self._run_locked(root, batch_id, retry_failed, started, namespace)
 
     def _run_locked(
-        self, root: Path, batch_id: uuid.UUID, retry_failed: bool, started: float
+        self,
+        root: Path,
+        batch_id: uuid.UUID,
+        retry_failed: bool,
+        started: float,
+        namespace_id: uuid.UUID,
     ) -> dict[str, Any]:
         cache = _batch_items(self._runtime, batch_id)
         scan = scan_directory(self._runtime, root, cache)
@@ -566,7 +651,7 @@ class Importer:
                 (batch_id,),
             )
         }
-        existing = _existing_documents(self._runtime, _group_entries(scan.entries).keys())
+        existing = _embedded_documents(self._runtime, _group_entries(scan.entries).keys())
         _upsert_items(self._runtime, batch_id, scan, indexed_shas | existing)
 
         # Crash residue: a killed process leaves rows in `parsing`; they are
@@ -780,7 +865,7 @@ class Importer:
         )
         with self._lock:
             counters = dict(self._counters)
-        return {
+        result = {
             "batchId": str(batch_id),
             "root": str(root),
             "dryRun": False,
@@ -814,6 +899,30 @@ class Importer:
             "failures": failures,
             "exitCode": exit_code,
         }
+        # One structured line per invocation: the JSON goes to stdout, this is
+        # what survives in the log pipeline and can be reconciled later.
+        log.info(
+            "import run finished",
+            extra={
+                "event": {
+                    "event": "import_run_finished",
+                    "batchId": result["batchId"],
+                    "namespaceId": str(namespace_id),
+                    "total": result["total"],
+                    "alreadyDone": result["alreadyDone"],
+                    "processed": result["processed"],
+                    "indexed": result["indexed"],
+                    "failedThisRun": result["failedThisRun"],
+                    "failedTotal": result["failed"],
+                    "remainingFiles": result["remainingFiles"],
+                    "interrupted": result["interrupted"],
+                    "skipped": result["skipped"],
+                    "elapsedSeconds": result["elapsedSeconds"],
+                    "exitCode": result["exitCode"],
+                }
+            },
+        )
+        return result
 
 
 def failure_items(
