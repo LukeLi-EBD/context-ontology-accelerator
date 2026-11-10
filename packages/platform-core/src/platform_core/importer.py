@@ -326,6 +326,7 @@ def _start_run(
 def _finish_run(
     runtime: Runtime,
     run_id: uuid.UUID,
+    batch_id: uuid.UUID,
     *,
     status: str,
     counters: dict[str, Any],
@@ -342,19 +343,41 @@ def _finish_run(
             or type(error).__name__
         )
         message = getattr(error, "message", None) or str(error)
-    runtime.metadata.execute(
-        """
-        UPDATE platform.import_run
-           SET status = %s,
-               finished_at = now(),
-               exit_code = %s,
-               counters = %s,
-               error_code = %s,
-               error_message = %s
-         WHERE run_id = %s
-        """,
-        (status, exit_code, Jsonb(counters), code, message, run_id),
-    )
+    # The ledger row and the batch state close together: a failed run must not
+    # leave the batch showing "running", or the page keeps reporting a live
+    # import that no longer exists and no stale pass can ever fire on it.
+    # `lastError` is written into options so the batch carries the reason; the
+    # next invocation rewrites options from scratch and clears it.
+    with runtime.metadata.tx() as tx:
+        tx.execute(
+            """
+            UPDATE platform.import_run
+               SET status = %s,
+                   finished_at = now(),
+                   exit_code = %s,
+                   counters = %s,
+                   error_code = %s,
+                   error_message = %s
+             WHERE run_id = %s
+            """,
+            (status, exit_code, Jsonb(counters), code, message, run_id),
+        )
+        if status == "failed":
+            tx.execute(
+                """
+                UPDATE platform.import_batch
+                   SET status = 'interrupted',
+                       finished_at = now(),
+                       updated_at = now(),
+                       options = options || jsonb_build_object(
+                           'lastError', jsonb_build_object(
+                               'code', %s::text,
+                               'message', %s::text,
+                               'at', now()))
+                 WHERE batch_id = %s AND status = 'running'
+                """,
+                (code, (message or "")[:2000], batch_id),
+            )
 
 
 def _upsert_items(
@@ -713,8 +736,8 @@ class Importer:
                     result = self._run_locked(root, batch_id, retry_failed, started)
                 except Exception as exc:  # noqa: BLE001 - ledger must not hide the failure
                     _finish_run(
-                        self._runtime, run_id, status="failed", counters={},
-                        exit_code=None, error=exc,
+                        self._runtime, run_id, batch_id, status="failed",
+                        counters={}, exit_code=None, error=exc,
                     )
                     raise
                 result["runId"] = str(run_id)
@@ -722,6 +745,7 @@ class Importer:
                 _finish_run(
                     self._runtime,
                     run_id,
+                    batch_id,
                     status=run_status,
                     counters={
                         "total": result["total"],
