@@ -62,6 +62,34 @@ class ScanResult:
     total_seen: int = 0
 
 
+def _ensure_storage_dirs(runtime: Runtime) -> None:
+    """Create the storage dirs `serve` makes in its IO self-check.
+
+    The import CLI deliberately skips the self-check (it only needs PG + CAS),
+    so on a fresh host every file used to fail with E_IMPORT_UNEXPECTED: the
+    staging write ``tmp_dir/ingest-*.part`` raised FileNotFoundError. Creating
+    the same four dirs here keeps the CLI usable before the first `serve` and
+    turns a permission problem into one clear error instead of N item failures.
+    """
+    cfg = runtime.config
+    for path in (
+        Path(cfg.data_dir),
+        Path(cfg.storage.root),
+        Path(cfg.storage.root) / "blobs",
+        Path(cfg.storage.tmp_dir),
+    ):
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise PortError(
+                code="Internal",
+                message=f"import storage directory is not writable: {path}: {exc}",
+                provider="platform",
+                provider_code="E_IO_PERM",
+                details={"path": str(path)},
+            ) from exc
+
+
 def _resolve_root(directory: str) -> Path:
     root = Path(directory).expanduser()
     if not root.is_dir():
@@ -693,6 +721,7 @@ class Importer:
     ) -> dict[str, Any]:
         root = _resolve_root(directory)
         namespace = _coerce_namespace_id(namespace_id)
+        _ensure_storage_dirs(self._runtime)
         started = time.monotonic()
         self._started = started
         options = {
@@ -893,6 +922,11 @@ class Importer:
             self._mark(
                 batch_id, group, "indexed",
                 degraded=group.degraded or bool(indexed.get("degraded")),
+                # A retried file that now succeeds must not keep the old
+                # failure reason: readers filter/export on failure_code and
+                # would report a healthy document as failed.
+                failure_code=None,
+                failure_message=None,
             )
             self._bump("embedded", int(indexed.get("embedded") or 0))
             self._bump("indexed", len(group.rows))
@@ -1017,6 +1051,12 @@ class Importer:
                 (batch_id,),
             )[0]["n"]
         )
+        if not interrupted and failed_total > 0:
+            # A batch that still holds failed files is not a successful
+            # invocation. Automation must be able to branch on the exit code
+            # instead of parsing the stdout JSON; the ledger records the same
+            # number below.
+            exit_code = 1
         with self._lock:
             counters = dict(self._counters)
         result = {
@@ -1054,6 +1094,17 @@ class Importer:
             "exitCode": exit_code,
         }
         return result
+
+
+def failure_code_counts(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, int]:
+    """Exact failure-code histogram for one batch (unbounded by list limits)."""
+    rows = runtime.metadata.query(
+        "SELECT COALESCE(failure_code, 'E_UNKNOWN') AS code, COUNT(*) AS n "
+        "FROM platform.import_item WHERE batch_id = %s AND status = 'failed' "
+        "GROUP BY 1 ORDER BY n DESC, code",
+        (batch_id,),
+    )
+    return {str(row["code"]): int(row["n"]) for row in rows}
 
 
 def failure_items(
