@@ -612,6 +612,8 @@ ROUTES: list[tuple[str, str]] = [
     # pages and bounded path search.
     ("/namespaces/{namespaceId}/graph/canvas", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/path", ONTOLOGY),
+    # FindLinks: bounded (<=3 hop) neighbourhood around one IRI. Read-only.
+    ("/namespaces/{namespaceId}/graph/links", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/ontology-overview", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/class", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/object-property", ONTOLOGY),
