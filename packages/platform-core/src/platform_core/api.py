@@ -3195,6 +3195,13 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "current": runtime.ontology.current(),
         }
 
+    # Kernel-internal route, NOT the contract entrance. The contract path is
+    # GET /namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}
+    # (GetOntologyVersionProposal), served by the local bridge which rewrites to
+    # this route (doc/coa-x/tools/coa_api_local.py, `.../proposals/{proposalId}`
+    # -> /governance/proposals/{id}). Callers here: that bridge mapping, the
+    # kernel's own governance console (packages/platform-core/web/governance.js),
+    # and packages/platform-core/tests. The web app never calls this path.
     @app.get("/governance/proposals/{proposal_id}")
     def governance_get_proposal(proposal_id: str) -> dict[str, Any]:
         from . import impact as impact_module
