@@ -406,6 +406,7 @@ export function OntologyVersionsPage() {
       const res = await rollbackOntology(api, namespaceId!, appliedOntologyId, {
         targetVersionId: version.id,
         planOnly: true,
+        newVersion: false,
       });
       setRollbackPreview({ version, result: res });
       return (

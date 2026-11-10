@@ -997,6 +997,12 @@ def _kernel_translate(
         plan_only = payload["planOnly"] if "planOnly" in payload else payload.get("dryRun", False)
         if not isinstance(plan_only, bool):
             raise ValueError("planOnly must be a boolean")
+        # F112/F114: re-activate an already registered version instead of
+        # staging a new one. Rejected when not a boolean rather than coerced,
+        # so a typo cannot turn into a silent no-op.
+        publish_existing = payload.get("publishExisting", False)
+        if not isinstance(publish_existing, bool):
+            raise ValueError("publishExisting must be a boolean")
         forwarded = {
             "versionId": payload.get("versionId"),
             "proposalId": payload.get("proposalId"),
@@ -1005,6 +1011,7 @@ def _kernel_translate(
             "reason": payload.get("reason"),
             "expectedVersionId": payload.get("expectedVersionId"),
             "dryRun": plan_only,
+            "publishExisting": publish_existing,
         }
         return "POST", "/governance/publish", json.dumps(forwarded).encode("utf-8")
 
@@ -1013,14 +1020,18 @@ def _kernel_translate(
         if not target:
             raise ValueError("rollback requires targetVersionId")
         # F117: `newVersion` is the bridge switch; `mode` is the contract
-        # spelling. Pointer-only stays the default so the existing F116 call
-        # keeps its meaning, but a non-boolean switch is rejected instead of
-        # being coerced.
+        # spelling. There is no default: a caller that omits both is asking for
+        # a rollback whose effect it never stated, so the bridge rejects it
+        # instead of guessing POINTER_ONLY.
         mode = payload.get("mode")
         new_version = payload.get("newVersion")
         if new_version is not None and not isinstance(new_version, bool):
             raise ValueError("newVersion must be a boolean")
         if mode is None:
+            if new_version is None:
+                raise ValueError(
+                    "rollback requires mode=POINTER_ONLY|NEW_VERSION (or newVersion)"
+                )
             mode = "NEW_VERSION" if new_version else "POINTER_ONLY"
         if mode not in ("POINTER_ONLY", "NEW_VERSION"):
             raise ValueError("rollback mode must be POINTER_ONLY or NEW_VERSION")
