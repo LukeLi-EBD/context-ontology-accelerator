@@ -33,6 +33,7 @@ import { OntologyPage } from "./pages/OntologyPage";
 import { ProposalDetailPage } from "./pages/ontology/induce/ProposalDetail";
 import { GraphSearchPage } from "./pages/ontology/GraphSearch";
 import { CanvasPage } from "./pages/ontology/CanvasPage";
+import { TermsPage } from "./pages/ontology/TermsPage";
 import { InducedOntologyDetailPage } from "./pages/ontology/InducedOntologyDetail";
 import { OntologyClassDetailPage } from "./pages/ontology/OntologyClassDetail";
 import { OntologyVersionsPage } from "./pages/ontology/OntologyVersions";
@@ -225,6 +226,11 @@ function AppShell() {
           type: "link" as const,
           text: "画布",
           href: `${nsPath}/ontology/canvas`,
+        },
+        {
+          type: "link" as const,
+          text: "术语与别名",
+          href: `${nsPath}/ontology/terms`,
         },
         {
           type: "link" as const,
@@ -660,6 +666,10 @@ function AppShell() {
               <Route
                 path="/namespaces/:namespaceId/ontology/canvas"
                 element={<CanvasPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/ontology/terms"
+                element={<TermsPage />}
               />
               <Route
                 path="/namespaces/:namespaceId/ontology/induced"

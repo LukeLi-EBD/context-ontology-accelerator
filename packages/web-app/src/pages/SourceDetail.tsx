@@ -64,6 +64,7 @@ import { formatTimestamp } from "@utils/helpers";
 import { tableDetailPath } from "@utils/routes";
 import { useAppI18n, type AppTranslate } from "../i18n/LocaleProvider";
 import type { AppMessage } from "../i18n/appMessages";
+import { SourceDictionaryTab } from "./SourceDictionaryTab";
 
 const TABLES_PAGE_SIZE = 25;
 const METADATA_FRESHNESS_THRESHOLD_DAYS = 30;
@@ -1251,6 +1252,20 @@ export const SourceDetail: React.FC = () => {
                       ),
                     },
                   ]),
+              ...(isTabular
+                ? [
+                    {
+                      id: "dictionary",
+                      label: "字典",
+                      content: (
+                        <SourceDictionaryTab
+                          namespaceId={namespaceId ?? ""}
+                          sourceId={sourceId ?? ""}
+                        />
+                      ),
+                    },
+                  ]
+                : []),
               {
                 id: "history",
                 label: isGraph ? t("Verification history") : t("Scan history"),

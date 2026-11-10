@@ -25,8 +25,10 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from . import dictionary_api
 from . import entity_view
 from . import healthboard
+from . import term_api
 from . import termgate
 from .adapters.ontology_pg import (
     build_import_document,
@@ -2554,76 +2556,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.get("/browse/terms")
     def browse_terms() -> dict[str, Any]:
-        graph_iri = _current_graph(runtime)
-        if not graph_iri:
-            return {
-                "pointer": None,
-                "entries": [],
-                "classes": [],
-                "counts": {"anchorClasses": 0, "altLabels": 0, "evidenced": 0, "inferred": 0},
-            }
-        rows = runtime.graph.query(
-            f"""
-            SELECT ?e ?c ?classLabel ?label ?status ?confidence ?guard ?canonical ?suppressed
-              FROM <{graph_iri}> WHERE {{
-              ?e a <{_TERM}TermEntry> ;
-                 <{_TERM}forClass> ?c ;
-                 <{_TERM}label> ?label .
-              OPTIONAL {{ ?c <{_SKOS}prefLabel> ?classLabel }}
-              OPTIONAL {{ ?e <{_TERM}status> ?status }}
-              OPTIONAL {{ ?e <{_TERM}confidence> ?confidence }}
-              OPTIONAL {{ ?e <{_TERM}guardRegex> ?guard }}
-              OPTIONAL {{ ?c <{_TERM}canonicalFor> ?canonical }}
-              OPTIONAL {{ ?c <{_TERM}suppressedSurface> ?suppressed }}
-            }}
-            """
-        ).get("bindings", [])
-        entries: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            entry_iri = _binding(row, "e")
-            if not entry_iri:
-                continue
-            entry = entries.setdefault(
-                entry_iri,
-                {
-                    "entry": entry_iri,
-                    "classIri": _binding(row, "c"),
-                    "classLabel": _binding(row, "classLabel") or _local_name(_binding(row, "c")),
-                    "label": _binding(row, "label"),
-                    "status": _local_name(_binding(row, "status")),
-                    "confidence": _local_name(_binding(row, "confidence")),
-                    "guardRegex": _binding(row, "guard"),
-                    "canonicalFor": [],
-                    "suppressedSurface": [],
-                },
-            )
-            for field, key in (("canonical", "canonicalFor"), ("suppressed", "suppressedSurface")):
-                value = _binding(row, field)
-                if value and value not in entry[key]:
-                    entry[key].append(value)
-        items = sorted(entries.values(), key=lambda item: (item["classIri"] or "", item["label"] or ""))
-        classes: dict[str, dict[str, Any]] = {}
-        for entry in items:
-            class_iri = entry["classIri"]
-            if not class_iri:
-                continue
-            group = classes.setdefault(
-                class_iri,
-                {"iri": class_iri, "label": entry["classLabel"], "aliases": []},
-            )
-            group["aliases"].append(entry["label"])
-        evidenced = sum(1 for item in items if item["status"] == "evidenced")
-        inferred = sum(1 for item in items if item["status"] == "inferred")
+        result = term_api.load_terms(runtime, limit=100000)
         return {
-            "pointer": runtime.ontology.current(),
-            "entries": items,
-            "classes": sorted(classes.values(), key=lambda item: item["label"] or ""),
-            "counts": {
-                "anchorClasses": len(classes),
-                "altLabels": len(items),
-                "evidenced": evidenced,
-                "inferred": inferred,
-            },
+            "pointer": result["pointer"],
+            "entries": result["entries"],
+            "classes": result["classes"],
+            "counts": result["counts"],
         }
 
     # ---- B-06 data dictionary ---------------------------------------------
@@ -6633,5 +6571,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         )
 
     # --- end G10 ---
+
+    # --- P4 terms + data dictionary (F58-F66) ---
+    term_api.register_term_routes(app, runtime)
+    dictionary_api.register_dictionary_routes(app, runtime)
 
     return app

@@ -543,6 +543,15 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/sources/{sourceId}/event-rescan", SOURCES),
     ("/namespaces/{namespaceId}/sources/{sourceId}/metadata", SOURCES),
     ("/namespaces/{namespaceId}/sources/upload-urls", SOURCES),
+    # P4 terms + data dictionary (F58-F66). Served by the in-process
+    # platform_core kernel: terms read the published T-Box, dictionaries read
+    # platform.dictionary_column/_refresh_run.
+    ("/namespaces/{namespaceId}/terms", KERNEL),
+    ("/namespaces/{namespaceId}/dictionaries", KERNEL),
+    ("/namespaces/{namespaceId}/dictionaries/{sourceId}", KERNEL),
+    ("/namespaces/{namespaceId}/dictionaries/{sourceId}/view", KERNEL),
+    ("/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage", KERNEL),
+    ("/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh", KERNEL),
     ("/namespaces/{namespaceId}/documents", SOURCES),
     ("/namespaces/{namespaceId}/documents/{documentId}/chunks", SOURCES),
     ("/namespaces/{namespaceId}/candidates", SOURCES),
@@ -867,6 +876,26 @@ def _lifecycle_app() -> Any:
     if local_abox:
         bundle.config.reasoning.abox_graphs = [local_abox]
     runtime = assemble(bundle)
+    # F58/F59 read the lexicon folio from the namespace A-Box base
+    # (https://coa.local/graph/...), which sits outside the adapter's production
+    # write-safety whitelist (urn:platform:). The widening is opt-in so it can
+    # never be inherited by a production deployment:
+    #   COA_LOCAL_GRAPH_ALLOWED_EXTRA_PREFIXES = comma-separated prefixes,
+    #   default empty (nothing widened).
+    # 本地放宽，生产不放宽；该前缀不得进入生产白名单。
+    extra_prefixes = tuple(
+        item.strip()
+        for item in os.environ.get(
+            "COA_LOCAL_GRAPH_ALLOWED_EXTRA_PREFIXES", ""
+        ).split(",")
+        if item.strip()
+    )
+    if extra_prefixes:
+        prefixes = tuple(getattr(runtime.graph, "_allowed_prefixes", ()))
+        runtime.graph._allowed_prefixes = (
+            *prefixes,
+            *(prefix for prefix in extra_prefixes if prefix not in prefixes),
+        )
     # The CLI's self-check normally opens the pool; without it every DB route
     # answers 503 E_DB_UNAVAILABLE.  No HTTP server means no lifespan either.
     runtime.metadata.open(retry_seconds=30.0)
@@ -900,6 +929,124 @@ def _install_fact_ledger() -> None:
     print("[api] candidate approval -> platform fact ledger (in-process runtime)")
 
 
+def _install_dictionary_introspector() -> None:
+    """Wire RefreshDictionaries to the local source metadata.
+
+    The demo source declares a Glue database, but its tables are physically in
+    the same PostgreSQL that backs platform_core.  The adapter resolves the
+    source row + catalog snapshot, then reads ``information_schema`` and
+    ``pg_description`` for the snapshot's tables - real columns, real
+    nullability, real comments.  A missing source, missing schema or a table
+    that is absent from PostgreSQL fails explicitly; nothing is invented.
+    """
+    from coa_common.dao import DynamoDBDAO
+    from platform_core.catalog import introspect_pg
+    from platform_core.dictionary_api import (
+        SourceColumn,
+        SourceIntrospection,
+        SourceIntrospectionError,
+        install_source_introspector,
+    )
+    from platform_core.errors import PortError
+
+    source_kinds = {
+        "GLUE_DATABASE": "glue",
+        "POSTGRESQL": "postgresql",
+        "MYSQL": "mysql",
+        "REDSHIFT": "redshift",
+        "SQLSERVER": "sqlserver",
+        "SNOWFLAKE": "snowflake",
+        "DUCKDB": "duckdb",
+    }
+
+    def introspect(namespace_id: str, source_id: str) -> SourceIntrospection:
+        dao = DynamoDBDAO(os.environ["SOURCES_TABLE"], region=os.environ["AWS_REGION"])
+        item = dao.get({"PK": f"NS#{namespace_id}", "SK": f"SRC#{source_id}"})
+        if not item:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_NOT_FOUND",
+                f"source {source_id!r} is not registered in namespace {namespace_id!r}",
+                status_code=404,
+            )
+        try:
+            config = json.loads(item.get("configuration") or "{}")
+        except ValueError as exc:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_CONFIG_INVALID",
+                f"source {source_id!r} has an unreadable configuration: {exc}",
+                status_code=422,
+            ) from None
+        kind = source_kinds.get(str(item.get("sourceSubType") or "").upper())
+        if kind is None:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_KIND_UNSUPPORTED",
+                f"source {source_id!r} has unsupported subtype "
+                f"{item.get('sourceSubType')!r}",
+                status_code=422,
+            )
+        schema = config.get("databaseName") or config.get("schema")
+        if not schema:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_SCHEMA_MISSING",
+                f"source {source_id!r} configuration has no databaseName/schema",
+                status_code=422,
+            )
+        catalog = config.get("catalogId") or config.get("catalogName") or "local"
+        try:
+            snapshot = json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SNAPSHOT_MISSING",
+                f"catalog snapshot is missing at {SNAPSHOT_PATH}",
+                status_code=503,
+            ) from None
+        entry = (snapshot.get("data_sources") or {}).get(source_id) or {}
+        table_ids = sorted((entry.get("tables") or {}).keys())
+        tables = sorted({table_id.partition(".")[2] or table_id for table_id in table_ids})
+        if not tables:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_EMPTY",
+                f"source {source_id!r} has no tables in the catalog snapshot",
+                status_code=422,
+            )
+        try:
+            rows = introspect_pg(_lifecycle_runtime().metadata, schema, tables)
+        except PortError as exc:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_UNAVAILABLE", exc.message, status_code=503
+            ) from None
+        columns = [
+            SourceColumn(
+                table=row["table"],
+                column=row["column"],
+                data_type=row["dataType"],
+                is_nullable=bool(row["isNullable"]),
+                comment=row.get("comment"),
+            )
+            for row in rows
+        ]
+        if not columns:
+            raise SourceIntrospectionError(
+                "E_DICTIONARY_SOURCE_EMPTY",
+                f"tables {tables!r} exist in the snapshot but returned zero "
+                f"columns from {schema!r}",
+                status_code=422,
+            )
+        warnings: list[str] = []
+        if entry.get("catalog_available") is False:
+            warnings.append("E_SOURCE_CATALOG_UNAVAILABLE")
+        return SourceIntrospection(
+            source_kind=kind,
+            catalog=str(catalog),
+            schema=str(schema),
+            columns=columns,
+            warnings=warnings,
+        )
+
+    install_source_introspector(introspect)
+    print("[api] dictionary refresh -> local source metadata (information_schema)")
+
+
 def _kernel_translate(
     template: str, path_params: dict[str, str], method: str, body: bytes,
     query: dict[str, str] | None = None,
@@ -909,6 +1056,17 @@ def _kernel_translate(
     Only the five lifecycle writes plus the read routes needed to render the
     chain are mapped; anything else is a bug in ROUTES.
     """
+    # P4 terms/dictionary routes already use the kernel's contract shape
+    # (`/namespaces/{ns}/terms`, `/namespaces/{ns}/dictionaries/...`), so they
+    # are forwarded unchanged instead of being rewritten into `/ontology/*`.
+    if template.startswith("/namespaces/{namespaceId}/terms") or template.startswith(
+        "/namespaces/{namespaceId}/dictionaries"
+    ):
+        target = template.format(**path_params)
+        if query:
+            target = f"{target}?{urlencode(query)}"
+        return method, target, body or None
+
     ontology_id = path_params.get("ontologyId", "")
     version_id = path_params.get("versionId", "")
     proposal_id = path_params.get("proposalId", "")
@@ -1792,6 +1950,7 @@ def main() -> None:
     _install_local_object_store()
     _install_local_idempotency()
     _install_fact_ledger()
+    _install_dictionary_introspector()
 
     from coa_common.logging import setup_logging
 
