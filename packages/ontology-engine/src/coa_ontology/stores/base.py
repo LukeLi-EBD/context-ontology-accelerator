@@ -23,6 +23,25 @@ from typing import Any, Protocol, runtime_checkable
 
 from coa_common.label_language import LabelPreference
 
+
+class SearchScopeTooLarge(RuntimeError):
+    """An entity search would scan more than the backend's row budget.
+
+    Raised *before* the scan starts, from a cheap aggregate pre-check, so the
+    caller can answer with an explicit, actionable error instead of letting a
+    whole-namespace substring scan time out into a bare 500.
+    """
+
+    def __init__(self, quads: int, limit: int, namespace: str | None = None):
+        self.quads = quads
+        self.limit = limit
+        self.namespace = namespace or ""
+        super().__init__(
+            f"unfiltered search over namespace {self.namespace or '(default)'} "
+            f"would scan {quads} quads, above the {limit}-quad budget"
+        )
+
+
 # ── Vector store ────────────────────────────────────────────────────────
 
 

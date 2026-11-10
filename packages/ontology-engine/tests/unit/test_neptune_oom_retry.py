@@ -21,6 +21,7 @@ import httpx
 import pytest
 from coa_ontology.main import app
 from coa_ontology.stores import neptune_db_graph as ndb
+from coa_ontology.stores.base import SearchScopeTooLarge
 from coa_ontology.stores.neptune_db_graph import NeptuneDBGraphStore, NeptuneMemoryLimitError
 from fastapi.testclient import TestClient
 
@@ -163,4 +164,48 @@ class TestKindScopedScan:
     def test_no_kind_keeps_full_subject_pattern(self):
         store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
         queries = self._captured_queries(lambda: store.count_entities(query="pub", namespace=NS))
-        assert "?s ?_p ?_o" in queries[0]
+        # First query is the pre-flight quad budget check added for the
+        # unfiltered path; the search itself still uses the full subject pattern.
+        assert "COUNT(*) AS ?n" in queries[0]
+        assert "?s ?_p ?_o" in queries[1]
+
+
+def _quad_count_response(n: int) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={"head": {"vars": ["n"]}, "results": {"bindings": [{"n": {"type": "literal", "value": str(n)}}]}},
+    )
+
+
+@pytest.mark.unit
+class TestUnfilteredSearchBudget:
+    """An unfiltered search is refused explicitly, never silently timed out."""
+
+    def test_over_budget_refuses_before_scanning(self, neptune, monkeypatch):
+        monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
+        responses, calls = neptune
+        over = ndb._MAX_UNFILTERED_SEARCH_QUADS + 1
+        responses.append(_quad_count_response(over))
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        with pytest.raises(SearchScopeTooLarge) as excinfo:
+            store.search_entities(query="Claim", namespace=NS, limit=20)
+        assert excinfo.value.quads == over
+        assert len(calls) == 1  # pre-flight COUNT only: the scan never ran
+
+    def test_kind_scoped_search_does_not_measure_the_namespace(self, neptune, monkeypatch):
+        monkeypatch.setenv("COA_ONTOLOGY_GRAPH_SCOPE", "prefix")
+        responses, calls = neptune
+        responses.append(httpx.Response(200, json=_EMPTY_RESULTS))
+        store = NeptuneDBGraphStore(endpoint="https://fake:8182", namespace=NS)
+        assert store.search_entities(query="Claim", namespace=NS, kind="class") == []
+        assert len(calls) == 1  # the search itself; no budget pre-check
+
+    def test_api_maps_scope_too_large_to_422(self):
+        graph = MagicMock()
+        graph.search_entities.side_effect = SearchScopeTooLarge(121_130, ndb._MAX_UNFILTERED_SEARCH_QUADS, NS)
+        with patch("coa_ontology.catalog.routers.graph.build_stores", return_value=(graph, MagicMock())):
+            resp = TestClient(app).get("/graph/search", params={"q": "Claim", "namespace": NS})
+        assert resp.status_code == 422
+        detail = resp.json()["detail"]
+        assert "121130" in detail
+        assert "kind=class|object-property|datatype-property" in detail

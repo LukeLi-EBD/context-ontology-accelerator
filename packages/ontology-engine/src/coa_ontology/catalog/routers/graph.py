@@ -64,7 +64,7 @@ from coa_ontology.catalog.graph_schemas import (
 from coa_ontology.catalog.namespace_language import label_preference_for
 from coa_ontology.query_params import require_enum_value
 from coa_ontology.stores import build_stores
-from coa_ontology.stores.base import GraphStore
+from coa_ontology.stores.base import GraphStore, SearchScopeTooLarge
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -260,6 +260,16 @@ def search_entities(
             ontology_id=ontology_id,
             exclude_ontology_id=exclude_ontology_id,
         )
+    except SearchScopeTooLarge as e:
+        # The store refuses the scan before running it (see
+        # `_MAX_UNFILTERED_SEARCH_QUADS`): answer with an actionable 422 rather
+        # than letting a whole-namespace substring scan time out into a 500.
+        raise HTTPException(
+            422,
+            f"Unfiltered entity search would scan {e.quads} quads in this namespace, "
+            f"above the {e.limit}-quad limit. Pass kind=class|object-property|datatype-property "
+            "or ontology_id to bound the scan.",
+        ) from e
     except (NotImplementedError, AttributeError) as e:
         log.warning("entity search unsupported by backend: %s", e)
         raise HTTPException(501, "Entity search is not supported on this backend.") from e

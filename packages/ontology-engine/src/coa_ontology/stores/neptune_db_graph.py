@@ -41,7 +41,7 @@ from coa_common.constants import VOCAB_URI, StructuredBackend
 from coa_common.label_language import LabelPreference
 from coa_common.opensearch import retry_call
 
-from coa_ontology.stores.base import GraphStore
+from coa_ontology.stores.base import GraphStore, SearchScopeTooLarge
 
 log = logging.getLogger(__name__)
 
@@ -150,6 +150,18 @@ _SAMPLE_MAX_DESCENDANTS = 50
 # callers that bypass the router, since the value reaches a SPARQL LIMIT clause.
 # Keep in sync with ``_MAX_SEARCH_LIMIT`` in catalog/routers/graph.py.
 _MAX_SEARCH_PAGE_SIZE = 500
+
+# Hard ceiling on the row scan an *unfiltered* search may perform. Without a
+# ``kind`` (and without a single ``ontology_id``) the search pattern degrades to
+# "every quad in the namespace": there is no type triple to bind ?s cheaply, so
+# the filter has to look at each quad. On a namespace with a large ABox that
+# outruns the SPARQL transport timeout and surfaces as a bare 500 with no
+# message. Rather than silently scanning the whole namespace, the store
+# measures it first (a cheap COUNT) and refuses past this budget; the router
+# turns that into a readable 422 telling the caller to pass ``kind`` or
+# ``ontology_id``. Deliberately a quad budget and not a timeout: a quad count is
+# stable and reportable, a timeout depends on machine load.
+_MAX_UNFILTERED_SEARCH_QUADS = 50_000
 
 
 # ── SigV4 helper ────────────────────────────────────────────────────────
@@ -1487,6 +1499,52 @@ class NeptuneDBGraphStore(GraphStore):
           OPTIONAL {{ GRAPH ?g {{ ?s rdfs:label ?label . }} }}
           {text_filter}"""
 
+    def namespace_quad_count(self, namespace: str | None = None) -> int:
+        """Count quads across the namespace's named graphs.
+
+        A cheap aggregate, used as the pre-flight bound for an unfiltered
+        search: the substring scan that would follow has to look at every one
+        of these quads.
+        """
+        scope = self._graph_scope_filter(namespace, None, None)
+        sparql = f"""
+        SELECT (COUNT(*) AS ?n) WHERE {{
+          GRAPH ?g {{ ?s ?p ?o }}
+          {scope}
+        }}
+        """
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        if not bindings:
+            return 0
+        try:
+            return int(bindings[0].get("n", {}).get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _guard_unfiltered_search(
+        self, namespace: str | None, kind: str | None, ontology_id: str | None
+    ) -> None:
+        """Refuse a search that would scan the whole namespace unbounded.
+
+        A ``kind`` or an ``ontology_id`` bounds the pattern — type triples bind
+        ``?s`` directly, or a single graph is in scope — so those paths pass.
+        Without either, the only honest option is an explicit refusal: the scan
+        cannot be made cheap, and letting it run ends in a transport timeout
+        reported as a bare 500.
+        """
+        if kind or ontology_id:
+            return
+        quads = self.namespace_quad_count(namespace)
+        if quads > _MAX_UNFILTERED_SEARCH_QUADS:
+            scope = namespace or self._namespace
+            log.warning(
+                "refusing unfiltered entity search: %d quads exceeds the %d-quad budget (namespace=%s)",
+                quads,
+                _MAX_UNFILTERED_SEARCH_QUADS,
+                scope,
+            )
+            raise SearchScopeTooLarge(quads, _MAX_UNFILTERED_SEARCH_QUADS, scope)
+
     def count_entities(
         self,
         query: str,
@@ -1500,6 +1558,7 @@ class NeptuneDBGraphStore(GraphStore):
         Same match set as :meth:`search_entities` (independent of limit/offset),
         so a client can render a known page count. Returns 0 on an empty result.
         """
+        self._guard_unfiltered_search(namespace, kind, ontology_id)
         where = self._search_where_clause(query, namespace, kind, ontology_id, exclude_ontology_id)
         sparql = f"""
         PREFIX rdfs: <{RDFS}>
@@ -1555,6 +1614,7 @@ class NeptuneDBGraphStore(GraphStore):
         Returns:
             List of dicts with keys: uri, label, kind, graph_uris.
         """
+        self._guard_unfiltered_search(namespace, kind, ontology_id)
         preference = _preference(label_preference)
         where = self._search_where_clause(query, namespace, kind, ontology_id, exclude_ontology_id)
         safe_offset = max(0, offset)
