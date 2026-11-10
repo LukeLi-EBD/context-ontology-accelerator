@@ -7,6 +7,8 @@ SearchService. Nothing about parse or retrieval semantics changes.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import logging
 import os
@@ -974,3 +976,178 @@ def batches_overview(runtime: Runtime, limit: int = 5) -> dict[str, Any]:
     ]
     failures = failure_items(runtime, limit=20)
     return {"batches": batches, "failures": failures}
+
+
+_INGESTION_RUN_STATUSES = {"RUNNING", "COMPLETED", "INTERRUPTED", "STALE"}
+
+
+def _decode_offset(next_token: str | None) -> int:
+    if not next_token:
+        return 0
+    try:
+        raw = base64.urlsafe_b64decode(next_token.encode("ascii")).decode("ascii")
+        offset = int(raw)
+    except (ValueError, UnicodeError, binascii.Error) as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"nextToken is not a token issued by ListIngestionRuns: {next_token!r}",
+            provider="platform",
+            provider_code="E_INGESTION_TOKEN_INVALID",
+        ) from exc
+    if offset < 0:
+        raise PortError(
+            code="InvalidArgument",
+            message="nextToken points before the first page",
+            provider="platform",
+            provider_code="E_INGESTION_TOKEN_INVALID",
+        )
+    return offset
+
+
+def _encode_offset(offset: int) -> str:
+    return base64.urlsafe_b64encode(str(offset).encode("ascii")).decode("ascii")
+
+
+def ingestion_runs(
+    runtime: Runtime,
+    namespace_id: str,
+    *,
+    kind: str | None = None,
+    status: str | None = None,
+    max_results: int = 20,
+    next_token: str | None = None,
+) -> dict[str, Any]:
+    """F17/F18: namespace-scoped import batches with live per-item counters.
+
+    Reads only. Stale convergence stays with the import worker: a @readonly
+    operation must not write, so a dead `running` batch keeps reporting
+    `running` until the worker's recovery pass marks it stale.
+    """
+    try:
+        ns = uuid.UUID(namespace_id)
+    except ValueError as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespaceId is not a UUID: {namespace_id!r}",
+            provider="platform",
+            provider_code="E_NAMESPACE_ID_INVALID",
+        ) from exc
+
+    run_kind = (kind or "BATCH").upper()
+    if run_kind != "BATCH":
+        raise PortError(
+            code="InvalidArgument",
+            message=(
+                f"kind={run_kind} is not implemented; ListIngestionRuns only "
+                "serves kind=BATCH in this batch"
+            ),
+            provider="platform",
+            provider_code="E_INGESTION_KIND_UNSUPPORTED",
+        )
+
+    run_status = status.upper() if status else None
+    if run_status is not None and run_status not in _INGESTION_RUN_STATUSES:
+        raise PortError(
+            code="InvalidArgument",
+            message=(
+                f"status={status!r} is not one of "
+                f"{sorted(_INGESTION_RUN_STATUSES)}"
+            ),
+            provider="platform",
+            provider_code="E_INGESTION_STATUS_INVALID",
+        )
+    db_status = run_status.lower() if run_status else None
+
+    if max_results < 1 or max_results > 50:
+        raise PortError(
+            code="InvalidArgument",
+            message="maxResults must be between 1 and 50",
+            provider="platform",
+            provider_code="E_INGESTION_LIMIT_INVALID",
+        )
+    offset = _decode_offset(next_token)
+
+    where = "b.namespace_id = %s"
+    params: list[Any] = [ns]
+    if db_status is not None:
+        where += " AND b.status = %s"
+        params.append(db_status)
+
+    total_row = runtime.metadata.query(
+        f"SELECT count(*) AS n FROM platform.import_batch b WHERE {where}",
+        tuple(params),
+    )
+    total_count = int(total_row[0]["n"])
+
+    rows = runtime.metadata.query(
+        f"""
+        SELECT b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+               b.finished_at,
+               COUNT(i.rel_path) AS total,
+               COUNT(i.rel_path) FILTER (
+                   WHERE i.status IN ('indexed', 'failed')) AS completed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'indexed') AS indexed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'failed') AS failed,
+               COUNT(i.rel_path) FILTER (WHERE i.degraded) AS degraded
+          FROM platform.import_batch b
+          LEFT JOIN platform.import_item i ON i.batch_id = b.batch_id
+         WHERE {where}
+         GROUP BY b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+                  b.finished_at
+         ORDER BY b.updated_at DESC, b.batch_id
+         LIMIT %s OFFSET %s
+        """,
+        tuple(params) + (max_results + 1, offset),
+    )
+    has_more = len(rows) > max_results
+    rows = rows[:max_results]
+
+    items = [
+        {
+            "runId": str(row["batch_id"]),
+            "root": row["root_path"],
+            "status": row["status"].upper(),
+            "stale": row["status"] == "stale",
+            "staleReason": "E_BATCH_TIMEOUT" if row["status"] == "stale" else None,
+            "total": int(row["total"]),
+            "completed": int(row["completed"]),
+            "indexed": int(row["indexed"]),
+            "failed": int(row["failed"]),
+            "degraded": int(row["degraded"]),
+            "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
+            "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
+            "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+        }
+        for row in rows
+    ]
+
+    failures = runtime.metadata.query(
+        """
+        SELECT i.batch_id, i.rel_path, i.attempts, i.failure_code,
+               i.failure_message, i.updated_at
+          FROM platform.import_item i
+          JOIN platform.import_batch b ON b.batch_id = i.batch_id
+         WHERE i.status = 'failed' AND b.namespace_id = %s
+         ORDER BY i.updated_at DESC
+         LIMIT 20
+        """,
+        (ns,),
+    )
+    failure_feed = [
+        {
+            "runId": str(row["batch_id"]),
+            "relPath": row["rel_path"],
+            "attempts": int(row["attempts"]),
+            "code": row["failure_code"],
+            "message": row["failure_message"],
+            "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
+        }
+        for row in failures
+    ]
+
+    return {
+        "items": items,
+        "totalCount": total_count,
+        "failures": failure_feed,
+        "nextToken": _encode_offset(offset + max_results) if has_more else None,
+    }
