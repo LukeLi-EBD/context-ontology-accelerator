@@ -212,15 +212,8 @@ structure OntologyValidationJob {
 @examples([
     {
         title: "Queue a three-tier validation of a catalog ontology"
-        input: {
-            namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
-            ontologyId: "urn:acme:ontology:supply-chain"
-        }
-        output: {
-            jobId: "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d"
-            status: "pending"
-            createdAt: "2026-11-10T09:12:44Z"
-        }
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", ontologyId: "urn:acme:ontology:supply-chain" }
+        output: { jobId: "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d", status: "pending", createdAt: "2026-11-10T09:12:44Z" }
     }
 ])
 @http(method: "POST", uri: "/namespaces/{namespaceId}/validate", code: 202)
@@ -260,10 +253,7 @@ operation StartOntologyValidation {
 @examples([
     {
         title: "Read a completed job with two findings"
-        input: {
-            namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
-            jobId: "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d"
-        }
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", jobId: "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d" }
         output: {
             jobId: "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d"
             status: "completed"
@@ -291,14 +281,7 @@ operation StartOntologyValidation {
                         message: "Only 0.21 of relations are non-inheritance."
                     }
                 ]
-                metrics: {
-                    classCount: 42
-                    objectPropertyCount: 18
-                    datatypePropertyCount: 27
-                    relationshipRichness: 0.21
-                    maxDepth: 4
-                    connectedComponents: 1
-                }
+                metrics: { classCount: 42, objectPropertyCount: 18, datatypePropertyCount: 27, relationshipRichness: 0.21, maxDepth: 4, connectedComponents: 1 }
             }
         }
     }
