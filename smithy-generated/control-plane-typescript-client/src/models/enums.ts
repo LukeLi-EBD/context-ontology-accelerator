@@ -1137,6 +1137,80 @@ export type OntologyRollbackMode = (typeof OntologyRollbackMode)[keyof typeof On
  * @public
  * @enum
  */
+export const OntologyValidationSeverity = {
+  /**
+   * Blocking finding; any `error` makes the report fail.
+   */
+  error: "error",
+  /**
+   * Informational, flagged for review.
+   */
+  info: "info",
+  /**
+   * Non-blocking scoring warning.
+   */
+  warning: "warning",
+} as const;
+/**
+ * @public
+ */
+export type OntologyValidationSeverity = (typeof OntologyValidationSeverity)[keyof typeof OntologyValidationSeverity];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyValidationTier = {
+  /**
+   * Blocking checks: SHACL conformance, fatal structural errors.
+   */
+  tier1_blocking: "tier1_blocking",
+  /**
+   * Scoring checks: OntoQA-style structural metrics.
+   */
+  tier2_scoring: "tier2_scoring",
+  /**
+   * Review checks: findings surfaced for a human, not blocking.
+   */
+  tier3_review: "tier3_review",
+} as const;
+/**
+ * @public
+ */
+export type OntologyValidationTier = (typeof OntologyValidationTier)[keyof typeof OntologyValidationTier];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyValidationJobStatus = {
+  /**
+   * All requested tiers finished; `report` is present.
+   */
+  completed: "completed",
+  /**
+   * The job aborted; `error` carries the reason and there is no report.
+   */
+  failed: "failed",
+  /**
+   * Accepted and queued; no work has started.
+   */
+  pending: "pending",
+  /**
+   * The worker is running the requested tiers.
+   */
+  running: "running",
+} as const;
+/**
+ * @public
+ */
+export type OntologyValidationJobStatus =
+  (typeof OntologyValidationJobStatus)[keyof typeof OntologyValidationJobStatus];
+
+/**
+ * @public
+ * @enum
+ */
 export const AnswerQualityStrategy = {
   /**
    * Hybrid lexical + vector retrieval.

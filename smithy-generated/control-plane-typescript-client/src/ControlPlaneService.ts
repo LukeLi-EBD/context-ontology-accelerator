@@ -263,6 +263,11 @@ import {
   GetOntologyUploadUrlCommand,
 } from "./commands/GetOntologyUploadUrlCommand";
 import {
+  type GetOntologyValidationJobCommandInput,
+  type GetOntologyValidationJobCommandOutput,
+  GetOntologyValidationJobCommand,
+} from "./commands/GetOntologyValidationJobCommand";
+import {
   type GetOntologyVersionCommandInput,
   type GetOntologyVersionCommandOutput,
   GetOntologyVersionCommand,
@@ -617,6 +622,11 @@ import {
   StartInductionCommand,
 } from "./commands/StartInductionCommand";
 import {
+  type StartOntologyValidationCommandInput,
+  type StartOntologyValidationCommandOutput,
+  StartOntologyValidationCommand,
+} from "./commands/StartOntologyValidationCommand";
+import {
   type UndoFactConflictResolutionCommandInput,
   type UndoFactConflictResolutionCommandOutput,
   UndoFactConflictResolutionCommand,
@@ -822,6 +832,8 @@ const commands = {
   ReviewOntologyProposalCommand,
   RollbackOntologyCommand,
   VerifyOntologyCommand,
+  GetOntologyValidationJobCommand,
+  StartOntologyValidationCommand,
   GetMetricCardCommand,
   GetAnswerQualityCommand,
   ListAnswerQualityRunsCommand,
@@ -2862,6 +2874,40 @@ export interface ControlPlaneService {
     args: VerifyOntologyCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: VerifyOntologyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetOntologyValidationJobCommand}
+   */
+  getOntologyValidationJob(
+    args: GetOntologyValidationJobCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetOntologyValidationJobCommandOutput>;
+  getOntologyValidationJob(
+    args: GetOntologyValidationJobCommandInput,
+    cb: (err: any, data?: GetOntologyValidationJobCommandOutput) => void
+  ): void;
+  getOntologyValidationJob(
+    args: GetOntologyValidationJobCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetOntologyValidationJobCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link StartOntologyValidationCommand}
+   */
+  startOntologyValidation(
+    args: StartOntologyValidationCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<StartOntologyValidationCommandOutput>;
+  startOntologyValidation(
+    args: StartOntologyValidationCommandInput,
+    cb: (err: any, data?: StartOntologyValidationCommandOutput) => void
+  ): void;
+  startOntologyValidation(
+    args: StartOntologyValidationCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: StartOntologyValidationCommandOutput) => void
   ): void;
 
   /**

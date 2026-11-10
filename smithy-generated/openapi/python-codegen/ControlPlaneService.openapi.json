@@ -10541,7 +10541,8 @@
                                     "summary": "Restore a retracted fact",
                                     "description": "",
                                     "value": {
-                                        "actor": "operator"
+                                        "actor": "operator",
+                                        "reason": "retracted in error"
                                     }
                                 }
                             }
@@ -39038,6 +39039,530 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/validate": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidValidate",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace the job is scoped to.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace the job is scoped to."
+                        },
+                        "required": true,
+                        "examples": {
+                            "StartOntologyValidation_example1": {
+                                "summary": "Queue a three-tier validation of a catalog ontology",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Start an asynchronous multi-tier validation of one ontology.\n\nReturns as soon as the job is queued (HTTP 202); poll\n`GetOntologyValidationJob` with the returned `jobId`. The ontology is read\nfrom the catalog by id unless `ontologyTurtle` supplies it inline.",
+                "operationId": "StartOntologyValidation",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartOntologyValidationRequestContent"
+                            },
+                            "examples": {
+                                "StartOntologyValidation_example1": {
+                                    "summary": "Queue a three-tier validation of a catalog ontology",
+                                    "description": "",
+                                    "value": {
+                                        "ontologyId": "urn:acme:ontology:supply-chain"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace the job is scoped to.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace the job is scoped to."
+                        },
+                        "required": true,
+                        "examples": {
+                            "StartOntologyValidation_example1": {
+                                "summary": "Queue a three-tier validation of a catalog ontology",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "StartOntologyValidation 202 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StartOntologyValidationResponseContent"
+                                },
+                                "examples": {
+                                    "StartOntologyValidation_example1": {
+                                        "summary": "Queue a three-tier validation of a catalog ontology",
+                                        "description": "",
+                                        "value": {
+                                            "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d",
+                                            "status": "pending",
+                                            "createdAt": "2026-11-10T09:12:44Z"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/validate/jobs/{jobId}": {
+            "get": {
+                "description": "Read the current state of one validation job.\n\nPoll this after `StartOntologyValidation`. Unknown ids, and jobs belonging\nto another namespace, both answer `NotFoundError` \u2014 the two are not\ndistinguished so a caller cannot probe for foreign job ids.",
+                "operationId": "GetOntologyValidationJob",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace the job is scoped to.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace the job is scoped to."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyValidationJob_example1": {
+                                "summary": "Read a completed job with two findings",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "jobId",
+                        "in": "path",
+                        "description": "Job to read.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "description": "Job to read."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyValidationJob_example1": {
+                                "summary": "Read a completed job with two findings",
+                                "description": "",
+                                "value": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetOntologyValidationJob 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetOntologyValidationJobResponseContent"
+                                },
+                                "examples": {
+                                    "GetOntologyValidationJob_example1": {
+                                        "summary": "Read a completed job with two findings",
+                                        "description": "",
+                                        "value": {
+                                            "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d",
+                                            "status": "completed",
+                                            "createdAt": "2026-11-10T09:12:44Z",
+                                            "report": {
+                                                "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d",
+                                                "ontologyId": "urn:acme:ontology:supply-chain",
+                                                "passed": false,
+                                                "tiersRun": [
+                                                    "tier1_blocking",
+                                                    "tier2_scoring"
+                                                ],
+                                                "createdAt": "2026-11-10T09:12:51Z",
+                                                "findings": [
+                                                    {
+                                                        "validator": "shacl",
+                                                        "tier": "tier1_blocking",
+                                                        "severity": "error",
+                                                        "code": "SHACL_VALIDATION_FAILED",
+                                                        "message": "Property ex:supplier is required but missing on 3 instances.",
+                                                        "subject": "urn:acme:entity:shipment-42"
+                                                    },
+                                                    {
+                                                        "validator": "structural",
+                                                        "tier": "tier2_scoring",
+                                                        "severity": "warning",
+                                                        "code": "LOW_RELATIONSHIP_RICHNESS",
+                                                        "message": "Only 0.21 of relations are non-inheritance."
+                                                    }
+                                                ],
+                                                "metrics": {
+                                                    "classCount": 42,
+                                                    "objectPropertyCount": 18,
+                                                    "datatypePropertyCount": 27,
+                                                    "relationshipRichness": 0.21,
+                                                    "maxDepth": 4,
+                                                    "connectedComponents": 1
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidValidateJobsJobid",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace the job is scoped to.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace the job is scoped to."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyValidationJob_example1": {
+                                "summary": "Read a completed job with two findings",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "jobId",
+                        "in": "path",
+                        "description": "Job to read.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "description": "Job to read."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyValidationJob_example1": {
+                                "summary": "Read a completed job with two findings",
+                                "description": "",
+                                "value": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/principals/{principalId}/grants": {
             "get": {
                 "description": "Lists the namespace grants held by a single principal (and the groups it\nbelongs to) across all namespaces, with cursor-based pagination. Only the\n`me` principal (the caller) is accepted. The default page size is the\nmaximum, so a caller holding up to 1,000 grants gets them all in one page.",
@@ -45270,6 +45795,37 @@
                     "uploadUrl"
                 ]
             },
+            "GetOntologyValidationJobResponseContent": {
+                "type": "object",
+                "description": "One asynchronous validation job, as returned by start and by poll.",
+                "properties": {
+                    "jobId": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "description": "Server-assigned job identifier."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OntologyValidationJobStatus"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "When the job was accepted (ISO-8601)."
+                    },
+                    "report": {
+                        "$ref": "#/components/schemas/OntologyValidationReport"
+                    },
+                    "error": {
+                        "type": "string",
+                        "description": "Failure reason, present only when `status` is `failed`."
+                    }
+                },
+                "required": [
+                    "createdAt",
+                    "jobId",
+                    "status"
+                ]
+            },
             "GetOntologyVersionProposalResponseContent": {
                 "type": "object",
                 "description": "A proposal plus its version and the diff stored at propose time.",
@@ -50949,6 +51505,167 @@
                     "user_uploaded"
                 ]
             },
+            "OntologyValidationFinding": {
+                "type": "object",
+                "description": "One validation finding.",
+                "properties": {
+                    "validator": {
+                        "type": "string",
+                        "description": "Validator that produced the finding, e.g. `shacl` or `structural`."
+                    },
+                    "tier": {
+                        "$ref": "#/components/schemas/OntologyValidationTier"
+                    },
+                    "severity": {
+                        "$ref": "#/components/schemas/OntologyValidationSeverity"
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Machine-readable finding code."
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description."
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "URI of the offending element, when the finding names one."
+                    },
+                    "details": {
+                        "description": "Validator-specific detail (SHACL path, metric values). Shape is not\npinned because it varies per validator."
+                    }
+                },
+                "required": [
+                    "code",
+                    "message",
+                    "severity",
+                    "tier",
+                    "validator"
+                ]
+            },
+            "OntologyValidationJobStatus": {
+                "type": "string",
+                "description": "Lifecycle state of an asynchronous validation job.",
+                "enum": [
+                    "pending",
+                    "running",
+                    "completed",
+                    "failed"
+                ]
+            },
+            "OntologyValidationMetrics": {
+                "type": "object",
+                "description": "OntoQA-style structural metrics produced by the Tier-2 pass.\n\nAbsent members mean the metric could not be computed. This is distinct from\nzero: `connectedComponents: 0` would claim the graph is empty.",
+                "properties": {
+                    "classCount": {
+                        "type": "number",
+                        "description": "Declared classes."
+                    },
+                    "objectPropertyCount": {
+                        "type": "number",
+                        "description": "Declared object properties."
+                    },
+                    "datatypePropertyCount": {
+                        "type": "number",
+                        "description": "Declared datatype properties."
+                    },
+                    "relationshipRichness": {
+                        "type": "number",
+                        "description": "Non-inheritance relations divided by total relations.",
+                        "format": "double"
+                    },
+                    "attributeRichness": {
+                        "type": "number",
+                        "description": "Datatype properties divided by classes.",
+                        "format": "double"
+                    },
+                    "inheritanceRichness": {
+                        "type": "number",
+                        "description": "Subclass relations divided by classes.",
+                        "format": "double"
+                    },
+                    "maxDepth": {
+                        "type": "number",
+                        "description": "Deepest subclass chain."
+                    },
+                    "connectedComponents": {
+                        "type": "number",
+                        "description": "Number of subgraphs not joined by any relation."
+                    }
+                }
+            },
+            "OntologyValidationReport": {
+                "type": "object",
+                "description": "Result of a completed job.",
+                "properties": {
+                    "jobId": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "description": "Job this report belongs to."
+                    },
+                    "ontologyId": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Ontology the job validated."
+                    },
+                    "passed": {
+                        "type": "boolean",
+                        "description": "True only when no finding has severity `error`."
+                    },
+                    "findings": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OntologyValidationFinding"
+                        },
+                        "maxItems": 5000,
+                        "minItems": 0,
+                        "description": "Every finding across the requested tiers."
+                    },
+                    "metrics": {
+                        "$ref": "#/components/schemas/OntologyValidationMetrics"
+                    },
+                    "tiersRun": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OntologyValidationTier"
+                        },
+                        "maxItems": 3,
+                        "minItems": 1,
+                        "description": "Tiers that actually ran."
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "When the report was produced (ISO-8601)."
+                    }
+                },
+                "required": [
+                    "createdAt",
+                    "findings",
+                    "jobId",
+                    "passed",
+                    "tiersRun"
+                ]
+            },
+            "OntologyValidationSeverity": {
+                "type": "string",
+                "description": "Severity of one finding, mirroring the tier that produced it.",
+                "enum": [
+                    "error",
+                    "warning",
+                    "info"
+                ]
+            },
+            "OntologyValidationTier": {
+                "type": "string",
+                "description": "Which validation tier a job runs.",
+                "enum": [
+                    "tier1_blocking",
+                    "tier2_scoring",
+                    "tier3_review"
+                ]
+            },
             "OntologyVersion": {
                 "type": "object",
                 "description": "One T-Box version row, as the registry stores it.",
@@ -52567,6 +53284,12 @@
                         "maxLength": 256,
                         "minLength": 1,
                         "description": "Identity recorded on the restore event; defaults to `api`."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 0,
+                        "description": "Why the row is restored."
                     }
                 }
             },
@@ -53800,6 +54523,84 @@
                 },
                 "required": [
                     "jobId"
+                ]
+            },
+            "StartOntologyValidationRequestContent": {
+                "type": "object",
+                "properties": {
+                    "ontologyId": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Ontology to validate, resolved through the catalog."
+                    },
+                    "ontologyTurtle": {
+                        "type": "string",
+                        "maxLength": 1000000,
+                        "minLength": 1,
+                        "description": "Inline Turtle that overrides the catalog copy."
+                    },
+                    "tiers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OntologyValidationTier"
+                        },
+                        "maxItems": 3,
+                        "minItems": 1,
+                        "description": "Tiers to run; all three when absent."
+                    },
+                    "shaclShapesTurtle": {
+                        "type": "string",
+                        "maxLength": 1000000,
+                        "minLength": 1,
+                        "description": "Custom SHACL shapes applied by the Tier-1 pass."
+                    },
+                    "competencyQuestions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 1024,
+                            "minLength": 1,
+                            "description": "One natural-language competency question the ontology should answer.\n\nNamespaced because `ontologyinduction` already defines `CompetencyQuestion`;\na service closure requires shape names to be unique case-insensitively\nacross namespaces."
+                        },
+                        "maxItems": 50,
+                        "minItems": 0,
+                        "description": "Competency questions the Tier-3 review answers."
+                    }
+                },
+                "required": [
+                    "ontologyId"
+                ]
+            },
+            "StartOntologyValidationResponseContent": {
+                "type": "object",
+                "description": "One asynchronous validation job, as returned by start and by poll.",
+                "properties": {
+                    "jobId": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "description": "Server-assigned job identifier."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/OntologyValidationJobStatus"
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "When the job was accepted (ISO-8601)."
+                    },
+                    "report": {
+                        "$ref": "#/components/schemas/OntologyValidationReport"
+                    },
+                    "error": {
+                        "type": "string",
+                        "description": "Failure reason, present only when `status` is `failed`."
+                    }
+                },
+                "required": [
+                    "createdAt",
+                    "jobId",
+                    "status"
                 ]
             },
             "SupersededAnnotations": {

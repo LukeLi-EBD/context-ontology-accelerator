@@ -14,6 +14,9 @@ import type {
   OntologyProposalDecision,
   OntologyProposalStatus,
   OntologyRollbackMode,
+  OntologyValidationJobStatus,
+  OntologyValidationSeverity,
+  OntologyValidationTier,
   OntologyVersionStatus,
   PreprocessingIssueType,
   ProposalStatus,
@@ -3333,6 +3336,254 @@ export interface VerifyOntologyInput {
    * @public
    */
   ontologyId: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetOntologyValidationJobInput {
+  /**
+   * Namespace the job is scoped to.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Job to read.
+   * @public
+   */
+  jobId: string | undefined;
+}
+
+/**
+ * One validation finding.
+ * @public
+ */
+export interface OntologyValidationFinding {
+  /**
+   * Validator that produced the finding, e.g. `shacl` or `structural`.
+   * @public
+   */
+  validator: string | undefined;
+
+  /**
+   * Tier the finding belongs to.
+   * @public
+   */
+  tier: OntologyValidationTier | undefined;
+
+  /**
+   * Severity; `error` blocks, the other two do not.
+   * @public
+   */
+  severity: OntologyValidationSeverity | undefined;
+
+  /**
+   * Machine-readable finding code.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * Human-readable description.
+   * @public
+   */
+  message: string | undefined;
+
+  /**
+   * URI of the offending element, when the finding names one.
+   * @public
+   */
+  subject?: string | undefined;
+
+  /**
+   * Validator-specific detail (SHACL path, metric values). Shape is not
+   * pinned because it varies per validator.
+   * @public
+   */
+  details?: __DocumentType | undefined;
+}
+
+/**
+ * OntoQA-style structural metrics produced by the Tier-2 pass.
+ *
+ * Absent members mean the metric could not be computed. This is distinct from
+ * zero: `connectedComponents: 0` would claim the graph is empty.
+ * @public
+ */
+export interface OntologyValidationMetrics {
+  /**
+   * Declared classes.
+   * @public
+   */
+  classCount?: number | undefined;
+
+  /**
+   * Declared object properties.
+   * @public
+   */
+  objectPropertyCount?: number | undefined;
+
+  /**
+   * Declared datatype properties.
+   * @public
+   */
+  datatypePropertyCount?: number | undefined;
+
+  /**
+   * Non-inheritance relations divided by total relations.
+   * @public
+   */
+  relationshipRichness?: number | undefined;
+
+  /**
+   * Datatype properties divided by classes.
+   * @public
+   */
+  attributeRichness?: number | undefined;
+
+  /**
+   * Subclass relations divided by classes.
+   * @public
+   */
+  inheritanceRichness?: number | undefined;
+
+  /**
+   * Deepest subclass chain.
+   * @public
+   */
+  maxDepth?: number | undefined;
+
+  /**
+   * Number of subgraphs not joined by any relation.
+   * @public
+   */
+  connectedComponents?: number | undefined;
+}
+
+/**
+ * Result of a completed job.
+ * @public
+ */
+export interface OntologyValidationReport {
+  /**
+   * Job this report belongs to.
+   * @public
+   */
+  jobId: string | undefined;
+
+  /**
+   * Ontology the job validated.
+   * @public
+   */
+  ontologyId?: string | undefined;
+
+  /**
+   * True only when no finding has severity `error`.
+   * @public
+   */
+  passed: boolean | undefined;
+
+  /**
+   * Every finding across the requested tiers.
+   * @public
+   */
+  findings: OntologyValidationFinding[] | undefined;
+
+  /**
+   * Structural metrics; absent when Tier 2 did not run.
+   * @public
+   */
+  metrics?: OntologyValidationMetrics | undefined;
+
+  /**
+   * Tiers that actually ran.
+   * @public
+   */
+  tiersRun: OntologyValidationTier[] | undefined;
+
+  /**
+   * When the report was produced (ISO-8601).
+   * @public
+   */
+  createdAt: string | undefined;
+}
+
+/**
+ * One asynchronous validation job, as returned by start and by poll.
+ * @public
+ */
+export interface OntologyValidationJob {
+  /**
+   * Server-assigned job identifier.
+   * @public
+   */
+  jobId: string | undefined;
+
+  /**
+   * Current lifecycle state.
+   * @public
+   */
+  status: OntologyValidationJobStatus | undefined;
+
+  /**
+   * When the job was accepted (ISO-8601).
+   * @public
+   */
+  createdAt: string | undefined;
+
+  /**
+   * Result, present only when `status` is `completed`.
+   * @public
+   */
+  report?: OntologyValidationReport | undefined;
+
+  /**
+   * Failure reason, present only when `status` is `failed`.
+   * @public
+   */
+  error?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface StartOntologyValidationInput {
+  /**
+   * Namespace the job is scoped to.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Ontology to validate, resolved through the catalog.
+   * @public
+   */
+  ontologyId: string | undefined;
+
+  /**
+   * Inline Turtle that overrides the catalog copy.
+   * @public
+   */
+  ontologyTurtle?: string | undefined;
+
+  /**
+   * Tiers to run; all three when absent.
+   * @public
+   */
+  tiers?: OntologyValidationTier[] | undefined;
+
+  /**
+   * Custom SHACL shapes applied by the Tier-1 pass.
+   * @public
+   */
+  shaclShapesTurtle?: string | undefined;
+
+  /**
+   * Competency questions the Tier-3 review answers.
+   * @public
+   */
+  competencyQuestions?: string[] | undefined;
 }
 
 /**

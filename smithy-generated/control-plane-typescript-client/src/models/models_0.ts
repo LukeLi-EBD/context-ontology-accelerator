@@ -3929,6 +3929,12 @@ export interface RestoreFactInput {
    * @public
    */
   actor?: string | undefined;
+
+  /**
+   * Why the row is restored.
+   * @public
+   */
+  reason?: string | undefined;
 }
 
 /**

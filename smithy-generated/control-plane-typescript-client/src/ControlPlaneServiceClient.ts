@@ -188,6 +188,10 @@ import type {
   GetOntologyUploadUrlCommandOutput,
 } from "./commands/GetOntologyUploadUrlCommand";
 import type {
+  GetOntologyValidationJobCommandInput,
+  GetOntologyValidationJobCommandOutput,
+} from "./commands/GetOntologyValidationJobCommand";
+import type {
   GetOntologyVersionCommandInput,
   GetOntologyVersionCommandOutput,
 } from "./commands/GetOntologyVersionCommand";
@@ -379,6 +383,10 @@ import type { RunValidationCommandInput, RunValidationCommandOutput } from "./co
 import type { SearchEmbeddingsCommandInput, SearchEmbeddingsCommandOutput } from "./commands/SearchEmbeddingsCommand";
 import type { StartInductionCommandInput, StartInductionCommandOutput } from "./commands/StartInductionCommand";
 import type {
+  StartOntologyValidationCommandInput,
+  StartOntologyValidationCommandOutput,
+} from "./commands/StartOntologyValidationCommand";
+import type {
   UndoFactConflictResolutionCommandInput,
   UndoFactConflictResolutionCommandOutput,
 } from "./commands/UndoFactConflictResolutionCommand";
@@ -481,6 +489,7 @@ export type ServiceInputTypes =
   | GetOntologyOverviewCommandInput
   | GetOntologySnapshotCommandInput
   | GetOntologyUploadUrlCommandInput
+  | GetOntologyValidationJobCommandInput
   | GetOntologyVersionCommandInput
   | GetOntologyVersionProposalCommandInput
   | GetOsiUploadUrlCommandInput
@@ -555,6 +564,7 @@ export type ServiceInputTypes =
   | RunValidationCommandInput
   | SearchEmbeddingsCommandInput
   | StartInductionCommandInput
+  | StartOntologyValidationCommandInput
   | UndoFactConflictResolutionCommandInput
   | UpdateMetricCommandInput
   | UpdateNamespaceCommandInput
@@ -630,6 +640,7 @@ export type ServiceOutputTypes =
   | GetOntologyOverviewCommandOutput
   | GetOntologySnapshotCommandOutput
   | GetOntologyUploadUrlCommandOutput
+  | GetOntologyValidationJobCommandOutput
   | GetOntologyVersionCommandOutput
   | GetOntologyVersionProposalCommandOutput
   | GetOsiUploadUrlCommandOutput
@@ -704,6 +715,7 @@ export type ServiceOutputTypes =
   | RunValidationCommandOutput
   | SearchEmbeddingsCommandOutput
   | StartInductionCommandOutput
+  | StartOntologyValidationCommandOutput
   | UndoFactConflictResolutionCommandOutput
   | UpdateMetricCommandOutput
   | UpdateNamespaceCommandOutput

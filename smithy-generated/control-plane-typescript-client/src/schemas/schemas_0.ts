@@ -291,6 +291,8 @@ const _GOUUOe = "GetOntologyUploadUrlOutput";
 const _GOUUe = "GetOntologyUploadUrl";
 const _GOV = "GetOntologyVersion";
 const _GOVI = "GetOntologyVersionInput";
+const _GOVJ = "GetOntologyValidationJob";
+const _GOVJI = "GetOntologyValidationJobInput";
 const _GOVP = "GetOntologyVersionProposal";
 const _GOVPI = "GetOntologyVersionProposalInput";
 const _GP = "GrantPrincipal";
@@ -568,9 +570,14 @@ const _OTNL = "OntologyTreeNodeList";
 const _OTR = "OntologyTreeResult";
 const _OV = "OntologyVersion";
 const _OVD = "OntologyVersionDetail";
+const _OVF = "OntologyValidationFinding";
+const _OVFL = "OntologyValidationFindingList";
+const _OVJ = "OntologyValidationJob";
 const _OVL = "OntologyVersionList";
+const _OVM = "OntologyValidationMetrics";
 const _OVP = "OntologyVersionPage";
 const _OVR = "OntologyVerifyResult";
+const _OVRn = "OntologyValidationReport";
 const _PA = "ProvenanceActivity";
 const _PAL = "ProvenanceActivityList";
 const _PB = "PublishBlocker";
@@ -673,6 +680,8 @@ const _SII = "StartInductionInput";
 const _SIO = "StartInductionOutput";
 const _SJE = "ScanJobEntry";
 const _SJEL = "ScanJobEntryList";
+const _SOV = "StartOntologyValidation";
+const _SOVI = "StartOntologyValidationInput";
 const _SR = "ShaclReport";
 const _SS = "SourceSummary";
 const _SSL = "SourceSummaryList";
@@ -759,6 +768,7 @@ const _aM = "allowedMetrics";
 const _aMn = "answerMode";
 const _aMu = "authMode";
 const _aP = "addedProperties";
+const _aR = "attributeRichness";
 const _aT = "allTotal";
 const _aTE = "appendedToExisting";
 const _aTd = "addedTriples";
@@ -831,7 +841,8 @@ const _cCC = "customConnectorConfiguration";
 const _cCR = "citationCoverageRate";
 const _cCl = "classCount";
 const _cCla = "classCoverage";
-const _cCo = "columnCount";
+const _cCo = "connectedComponents";
+const _cCol = "columnCount";
 const _cD = "columnDenylist";
 const _cDOR = "confirmDiscardOpenReview";
 const _cDo = "columnDefinitions";
@@ -936,6 +947,7 @@ const _dNG = "dataNamedGraph";
 const _dNa = "databaseName";
 const _dO = "declaredOn";
 const _dP = "datatypeProperties";
+const _dPC = "datatypePropertyCount";
 const _dPV = "deletePrevVersions";
 const _dPa = "dataProperties";
 const _dPo = "documentsProcessed";
@@ -1157,6 +1169,7 @@ const _iOI = "inducedOntologyId";
 const _iP = "implicitProposal";
 const _iPK = "isPartitionKey";
 const _iR = "importsResolved";
+const _iRn = "inheritanceRichness";
 const _iRs = "isRescan";
 const _iT = "inferredTriples";
 const _ic = "inferred_constraints";
@@ -1221,6 +1234,7 @@ const _mC = "missingComment";
 const _mCU = "matchedClassUri";
 const _mCe = "metricsCreated";
 const _mCi = "minCount";
+const _mD = "maxDepth";
 const _mE = "maxEdges";
 const _mEE = "metadataEnrichmentEnabled";
 const _mF = "mergedFrom";
@@ -1291,6 +1305,7 @@ const _oIr = "orphanInstances";
 const _oK = "objectKind";
 const _oM = "outputMode";
 const _oP = "objectProperties";
+const _oPC = "objectPropertyCount";
 const _oPT = "observationPeriodText";
 const _oPU = "ontologyPutUrl";
 const _oT = "ontologyType";
@@ -1414,8 +1429,9 @@ const _rPU = "r2rmlPutUrl";
 const _rPe = "relPath";
 const _rPem = "removedProperties";
 const _rR = "retractReason";
-const _rRe = "resolvableRate";
+const _rRe = "relationshipRichness";
 const _rRef = "refusalRate";
+const _rRes = "resolvableRate";
 const _rS = "requiredStatus";
 const _rSO = "ruleSetOnly";
 const _rSe = "reviewStatus";
@@ -1659,10 +1675,11 @@ const n14 = "com.amazon.semanticcontext.ontologybundle";
 const n15 = "com.amazon.semanticcontext.ontologygraph";
 const n16 = "com.amazon.semanticcontext.ontologyinduction";
 const n17 = "com.amazon.semanticcontext.ontologylifecycle";
-const n18 = "com.amazon.semanticcontext.platformmetric";
-const n19 = "com.amazon.semanticcontext.quality";
+const n18 = "com.amazon.semanticcontext.ontologyvalidation";
+const n19 = "com.amazon.semanticcontext.platformmetric";
 const n2 = "com.amazon.semanticcontext.namespace";
-const n20 = "com.amazon.semanticcontext.role";
+const n20 = "com.amazon.semanticcontext.quality";
+const n21 = "com.amazon.semanticcontext.role";
 const n3 = "com.amazon.semanticcontext.unifiedsources";
 const n4 = "com.amazon.semanticcontext";
 const n5 = "com.amazon.semanticcontext.browse";
@@ -2264,8 +2281,8 @@ export var ResolveFactConflictsInput$: StaticStructureSchema = [3, n10, _RFCIe,
 ];
 export var RestoreFactInput$: StaticStructureSchema = [3, n10, _RFI,
   0,
-  [_nI, _fI, _a],
-  [[0, 1], [0, 1], 0], 2
+  [_nI, _fI, _a, _rea],
+  [[0, 1], [0, 1], 0, 0], 2
 ];
 export var RetractFactInput$: StaticStructureSchema = [3, n10, _RFIe,
   0,
@@ -3627,122 +3644,152 @@ export var VerifyOntologyInput$: StaticStructureSchema = [3, n17, _VOI,
   [_nI, _oIn],
   [[0, 1], [0, 1]], 2
 ];
-export var GetMetricCardInput$: StaticStructureSchema = [3, n18, _GMCI,
+export var GetOntologyValidationJobInput$: StaticStructureSchema = [3, n18, _GOVJI,
+  0,
+  [_nI, _jI],
+  [[0, 1], [0, 1]], 2
+];
+export var OntologyValidationFinding$: StaticStructureSchema = [3, n18, _OVF,
+  0,
+  [_vali, _tie, _sev, _cod, _m, _su, _deta],
+  [0, 0, 0, 0, 0, 0, 15], 5
+];
+export var OntologyValidationJob$: StaticStructureSchema = [3, n18, _OVJ,
+  0,
+  [_jI, _st, _cA, _repo, _e],
+  [0, 0, 0, () => OntologyValidationReport$, 0], 3
+];
+export var OntologyValidationMetrics$: StaticStructureSchema = [3, n18, _OVM,
+  0,
+  [_cCl, _oPC, _dPC, _rRe, _aR, _iRn, _mD, _cCo],
+  [1, 1, 1, 1, 1, 1, 1, 1]
+];
+export var OntologyValidationReport$: StaticStructureSchema = [3, n18, _OVRn,
+  0,
+  [_jI, _pas, _fin, _tR, _cA, _oIn, _metr],
+  [0, 2, () => OntologyValidationFindingList, 64 | 0, 0, 0, () => OntologyValidationMetrics$], 5
+];
+export var StartOntologyValidationInput$: StaticStructureSchema = [3, n18, _SOVI,
+  0,
+  [_nI, _oIn, _oTn, _tier, _sST, _cQ],
+  [[0, 1], 0, 0, 64 | 0, 0, 64 | 0], 2
+];
+export var GetMetricCardInput$: StaticStructureSchema = [3, n19, _GMCI,
   0,
   [_mIe],
   [[0, 1]], 1
 ];
-export var MetricCard$: StaticStructureSchema = [3, n18, _MC,
+export var MetricCard$: StaticStructureSchema = [3, n19, _MC,
   0,
   [_mIe, _bS, _fB, _vMI, _nam, _do, _eBv, _pu, _infe, _fD, _mi, _eSv, _not, _eD, _vO, _oM, _rSu, _def, _fTo, _dTe, _oPT, _gTr, _gr, _pLr, _uni, _dVe, _eE, _eSx, _eL, _eRx, _fIam],
   [0, 0, () => MetricFieldBindingList, 64 | 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0], 4
 ];
-export var MetricFieldBinding$: StaticStructureSchema = [3, n18, _MFB,
+export var MetricFieldBinding$: StaticStructureSchema = [3, n19, _MFB,
   0,
   [_ro, _fT, _eC, _vE, _agg_, _fSi, _wC, _wM],
   [0, 0, 0, 0, 0, 0, 0, 0]
 ];
-export var AnswerQualityActual$: StaticStructureSchema = [3, n19, _AQA,
+export var AnswerQualityActual$: StaticStructureSchema = [3, n20, _AQA,
   0,
   [_refu, _aTn, _aMn, _de, _ci, _cK, _mL, _rCea],
   [2, 0, 0, 2, () => AnswerQualityCitationList, 64 | 0, 64 | 0, 0], 7
 ];
-export var AnswerQualityByType$: StaticStructureSchema = [3, n19, _AQBT,
+export var AnswerQualityByType$: StaticStructureSchema = [3, n20, _AQBT,
   0,
-  [_typ, _cas, _refu, _ci, _cCR, _wCi, _resol, _rRe, _rRef],
+  [_typ, _cas, _refu, _ci, _cCR, _wCi, _resol, _rRes, _rRef],
   [0, 1, 1, 1, 1, 1, 1, 1, 1], 5
 ];
-export var AnswerQualityCase$: StaticStructureSchema = [3, n19, _AQC,
+export var AnswerQualityCase$: StaticStructureSchema = [3, n20, _AQC,
   0,
   [_id, _q, _typ, _eRxp, _actu, _pass, _fail, _dDU],
   [0, 0, 0, 2, () => AnswerQualityActual$, 2, 64 | 0, 0], 7
 ];
-export var AnswerQualityCitation$: StaticStructureSchema = [3, n19, _AQCn,
+export var AnswerQualityCitation$: StaticStructureSchema = [3, n20, _AQCn,
   0,
   [_id, _k, _ref, _resol, _vI, _rU],
   [0, 0, 0, 2, 0, 0], 4
 ];
-export var AnswerQualityGoldenSet$: StaticStructureSchema = [3, n19, _AQGS,
+export var AnswerQualityGoldenSet$: StaticStructureSchema = [3, n20, _AQGS,
   0,
   [_id, _coun, _eva, _cIas],
   [0, 1, 1, 0], 3
 ];
-export var AnswerQualityRefusalReason$: StaticStructureSchema = [3, n19, _AQRR,
+export var AnswerQualityRefusalReason$: StaticStructureSchema = [3, n20, _AQRR,
   0,
   [_typ, _rCea, _coun],
   [0, 0, 1], 3
 ];
-export var AnswerQualityResponse$: StaticStructureSchema = [3, n19, _AQR,
+export var AnswerQualityResponse$: StaticStructureSchema = [3, n20, _AQR,
   0,
   [_str, _gSo, _sum, _cas, _emp, _rO, _cCBT, _rBRe, _rBT, _rWL, _bL, _eR],
   [0, () => AnswerQualityGoldenSet$, () => AnswerQualitySummary$, () => AnswerQualityCaseList, 2, 2, () => AnswerQualityByTypeList, () => AnswerQualityRefusalReasonList, () => AnswerQualityByTypeList, 64 | 15, 64 | 15, 0], 6
 ];
-export var AnswerQualityRun$: StaticStructureSchema = [3, n19, _AQRn,
+export var AnswerQualityRun$: StaticStructureSchema = [3, n20, _AQRn,
   0,
   [_rI, _rAa, _str, _gSo, _eva, _pas, _fai, _pR, _cCR, _cRR, _bLR, _regr, _lCa],
   [0, 5, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, () => QualityLayerCoverageList], 12
 ];
-export var AnswerQualitySummary$: StaticStructureSchema = [3, n19, _AQS,
+export var AnswerQualitySummary$: StaticStructureSchema = [3, n20, _AQS,
   0,
   [_cas, _pas, _fai, _pR, _cWC, _cCR, _ci, _rCes, _cRR, _bLR, _bBLR, _regr],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2], 12
 ];
-export var GetAnswerQualityInput$: StaticStructureSchema = [3, n19, _GAQI,
+export var GetAnswerQualityInput$: StaticStructureSchema = [3, n20, _GAQI,
   0,
   [_str, _l],
   [[0, { [_hQ]: _str }], [1, { [_hQ]: _l }]], 1
 ];
-export var ListAnswerQualityRunsInput$: StaticStructureSchema = [3, n19, _LAQRI,
+export var ListAnswerQualityRunsInput$: StaticStructureSchema = [3, n20, _LAQRI,
   0,
   [_l, _str, _sin],
   [[1, { [_hQ]: _l }], [0, { [_hQ]: _str }], [5, { [_hQ]: _sin }]]
 ];
-export var ListAnswerQualityRunsOutput$: StaticStructureSchema = [3, n19, _LAQRO,
+export var ListAnswerQualityRunsOutput$: StaticStructureSchema = [3, n20, _LAQRO,
   0,
   [_it, _tC, _l, _rO, _str, _sin],
   [() => AnswerQualityRunList, 1, 1, 2, 0, 5], 4
 ];
-export var QualityLayerCoverage$: StaticStructureSchema = [3, n19, _QLC,
+export var QualityLayerCoverage$: StaticStructureSchema = [3, n20, _QLC,
   0,
   [_lay, _cove, _eva, _rate],
   [0, 1, 1, 1], 4
 ];
-export var GetNamespaceRoleInput$: StaticStructureSchema = [3, n20, _GNRI,
+export var GetNamespaceRoleInput$: StaticStructureSchema = [3, n21, _GNRI,
   0,
   [_nI, _rIo],
   [[0, 1], [0, 1]], 2
 ];
-export var GetNamespaceRoleOutput$: StaticStructureSchema = [3, n20, _GNRO,
+export var GetNamespaceRoleOutput$: StaticStructureSchema = [3, n21, _GNRO,
   0,
   [_ro],
   [() => RoleDetail$], 1
 ];
-export var ListNamespaceRolesInput$: StaticStructureSchema = [3, n20, _LNRI,
+export var ListNamespaceRolesInput$: StaticStructureSchema = [3, n21, _LNRI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var ListNamespaceRolesOutput$: StaticStructureSchema = [3, n20, _LNRO,
+export var ListNamespaceRolesOutput$: StaticStructureSchema = [3, n21, _LNRO,
   0,
   [_rol],
   [() => RoleSummaryList], 1
 ];
-export var ListPlatformRolesInput$: StaticStructureSchema = [3, n20, _LPRI,
+export var ListPlatformRolesInput$: StaticStructureSchema = [3, n21, _LPRI,
   0,
   [],
   []
 ];
-export var ListPlatformRolesOutput$: StaticStructureSchema = [3, n20, _LPRO,
+export var ListPlatformRolesOutput$: StaticStructureSchema = [3, n21, _LPRO,
   0,
   [_rol],
   [() => RoleSummaryList], 1
 ];
-export var RoleDetail$: StaticStructureSchema = [3, n20, _RD,
+export var RoleDetail$: StaticStructureSchema = [3, n21, _RD,
   0,
   [_rIo, _nam, _sco, _iBI, _des, _cPe],
   [0, 0, 0, 2, 0, 0], 4
 ];
-export var RoleSummary$: StaticStructureSchema = [3, n20, _RSo,
+export var RoleSummary$: StaticStructureSchema = [3, n21, _RSo,
   0,
   [_rIo, _nam, _sco, _iBI, _des],
   [0, 0, 0, 2, 0], 4
@@ -4059,12 +4106,12 @@ export var SparqlConfiguration$: StaticStructureSchema = [3, n3, _SC,
 ];
 export var TableSummary$: StaticStructureSchema = [3, n3, _TS,
   0,
-  [_tI, _nam, _dat, _rSe, _cCo, _cAol, _cPD, _pRe, _eSn, _pD, _add],
+  [_tI, _nam, _dat, _rSe, _cCol, _cAol, _cPD, _pRe, _eSn, _pD, _add],
   [0, 0, 0, 0, 1, 1, 1, 1, 0, 2, 2], 4
 ];
 export var TechnicalMetadataOutput$: StaticStructureSchema = [3, n3, _TMO,
   0,
-  [_cCo, _pKa, _fo, _lo],
+  [_cCol, _pKa, _fo, _lo],
   [1, 64 | 0, 0, 0]
 ];
 export var UpdateSourceColumnMetadataInput$: StaticStructureSchema = [3, n3, _USCMI,
@@ -4401,28 +4448,33 @@ var OntologyStringList = 64 | 0;
 var OntologyVersionList: StaticListSchema = [1, n17, _OVL,
   0, () => OntologyVersion$
 ];
-var MetricFieldBindingList: StaticListSchema = [1, n18, _MFBL,
+var OntologyValidationFindingList: StaticListSchema = [1, n18, _OVFL,
+  0, () => OntologyValidationFinding$
+];
+var OntologyValidationQuestionList = 64 | 0;
+var OntologyValidationTierList = 64 | 0;
+var MetricFieldBindingList: StaticListSchema = [1, n19, _MFBL,
   0, () => MetricFieldBinding$
 ];
-var AnswerQualityByTypeList: StaticListSchema = [1, n19, _AQBTL,
+var AnswerQualityByTypeList: StaticListSchema = [1, n20, _AQBTL,
   0, () => AnswerQualityByType$
 ];
-var AnswerQualityCaseList: StaticListSchema = [1, n19, _AQCL,
+var AnswerQualityCaseList: StaticListSchema = [1, n20, _AQCL,
   0, () => AnswerQualityCase$
 ];
-var AnswerQualityCitationList: StaticListSchema = [1, n19, _AQCLn,
+var AnswerQualityCitationList: StaticListSchema = [1, n20, _AQCLn,
   0, () => AnswerQualityCitation$
 ];
-var AnswerQualityRefusalReasonList: StaticListSchema = [1, n19, _AQRRL,
+var AnswerQualityRefusalReasonList: StaticListSchema = [1, n20, _AQRRL,
   0, () => AnswerQualityRefusalReason$
 ];
-var AnswerQualityRunList: StaticListSchema = [1, n19, _AQRL,
+var AnswerQualityRunList: StaticListSchema = [1, n20, _AQRL,
   0, () => AnswerQualityRun$
 ];
-var QualityLayerCoverageList: StaticListSchema = [1, n19, _QLCL,
+var QualityLayerCoverageList: StaticListSchema = [1, n20, _QLCL,
   0, () => QualityLayerCoverage$
 ];
-var RoleSummaryList: StaticListSchema = [1, n20, _RSL,
+var RoleSummaryList: StaticListSchema = [1, n21, _RSL,
   0, () => RoleSummary$
 ];
 var ColumnMetadataList: StaticListSchema = [1, n3, _CMLo,
@@ -4836,22 +4888,28 @@ export var RollbackOntology$: StaticOperationSchema = [9, n17, _RO,
 export var VerifyOntology$: StaticOperationSchema = [9, n17, _VO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/verify", 200] }, () => VerifyOntologyInput$, () => OntologyVerifyResult$
 ];
-export var GetMetricCard$: StaticOperationSchema = [9, n18, _GMC,
+export var GetOntologyValidationJob$: StaticOperationSchema = [9, n18, _GOVJ,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/validate/jobs/{jobId}", 200] }, () => GetOntologyValidationJobInput$, () => OntologyValidationJob$
+];
+export var StartOntologyValidation$: StaticOperationSchema = [9, n18, _SOV,
+  { [_ht]: ["POST", "/namespaces/{namespaceId}/validate", 202] }, () => StartOntologyValidationInput$, () => OntologyValidationJob$
+];
+export var GetMetricCard$: StaticOperationSchema = [9, n19, _GMC,
   { [_ht]: ["GET", "/metrics/{metricId}", 200] }, () => GetMetricCardInput$, () => MetricCard$
 ];
-export var GetAnswerQuality$: StaticOperationSchema = [9, n19, _GAQ,
+export var GetAnswerQuality$: StaticOperationSchema = [9, n20, _GAQ,
   { [_ht]: ["GET", "/answer/quality", 200] }, () => GetAnswerQualityInput$, () => AnswerQualityResponse$
 ];
-export var ListAnswerQualityRuns$: StaticOperationSchema = [9, n19, _LAQR,
+export var ListAnswerQualityRuns$: StaticOperationSchema = [9, n20, _LAQR,
   { [_ht]: ["GET", "/answer/quality/runs", 200] }, () => ListAnswerQualityRunsInput$, () => ListAnswerQualityRunsOutput$
 ];
-export var GetNamespaceRole$: StaticOperationSchema = [9, n20, _GNR,
+export var GetNamespaceRole$: StaticOperationSchema = [9, n21, _GNR,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/roles/{roleId}", 200] }, () => GetNamespaceRoleInput$, () => GetNamespaceRoleOutput$
 ];
-export var ListNamespaceRoles$: StaticOperationSchema = [9, n20, _LNR,
+export var ListNamespaceRoles$: StaticOperationSchema = [9, n21, _LNR,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/roles", 200] }, () => ListNamespaceRolesInput$, () => ListNamespaceRolesOutput$
 ];
-export var ListPlatformRoles$: StaticOperationSchema = [9, n20, _LPR,
+export var ListPlatformRoles$: StaticOperationSchema = [9, n21, _LPR,
   { [_ht]: ["GET", "/roles", 200] }, () => ListPlatformRolesInput$, () => ListPlatformRolesOutput$
 ];
 export var ApproveSource$: StaticOperationSchema = [9, n3, _AS,

@@ -457,6 +457,12 @@
                     "target": "com.amazon.semanticcontext.ontologylifecycle#VerifyOntology"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#GetOntologyValidationJob"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#StartOntologyValidation"
+                },
+                {
                     "target": "com.amazon.semanticcontext.platformmetric#GetMetricCard"
                 },
                 {
@@ -10909,6 +10915,16 @@
                         "smithy.api#length": {
                             "min": 1,
                             "max": 256
+                        }
+                    }
+                },
+                "reason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why the row is restored.",
+                        "smithy.api#length": {
+                            "min": 0,
+                            "max": 1024
                         }
                     }
                 }
@@ -29567,6 +29583,560 @@
             },
             "traits": {
                 "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#GetOntologyValidationJob": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#GetOntologyValidationJobInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJob"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Read the current state of one validation job.\n\nPoll this after `StartOntologyValidation`. Unknown ids, and jobs belonging\nto another namespace, both answer `NotFoundError` — the two are not\ndistinguished so a caller cannot probe for foreign job ids.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Read a completed job with two findings",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d"
+                        },
+                        "output": {
+                            "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d",
+                            "status": "completed",
+                            "createdAt": "2026-11-10T09:12:44Z",
+                            "report": {
+                                "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d",
+                                "ontologyId": "urn:acme:ontology:supply-chain",
+                                "passed": false,
+                                "tiersRun": [
+                                    "tier1_blocking",
+                                    "tier2_scoring"
+                                ],
+                                "createdAt": "2026-11-10T09:12:51Z",
+                                "findings": [
+                                    {
+                                        "validator": "shacl",
+                                        "tier": "tier1_blocking",
+                                        "severity": "error",
+                                        "code": "SHACL_VALIDATION_FAILED",
+                                        "message": "Property ex:supplier is required but missing on 3 instances.",
+                                        "subject": "urn:acme:entity:shipment-42"
+                                    },
+                                    {
+                                        "validator": "structural",
+                                        "tier": "tier2_scoring",
+                                        "severity": "warning",
+                                        "code": "LOW_RELATIONSHIP_RICHNESS",
+                                        "message": "Only 0.21 of relations are non-inheritance."
+                                    }
+                                ],
+                                "metrics": {
+                                    "classCount": 42,
+                                    "objectPropertyCount": 18,
+                                    "datatypePropertyCount": 27,
+                                    "relationshipRichness": 0.21,
+                                    "maxDepth": 4,
+                                    "connectedComponents": 1
+                                }
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/validate/jobs/{jobId}",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#GetOntologyValidationJobInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace the job is scoped to.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "jobId": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJobId",
+                    "traits": {
+                        "smithy.api#documentation": "Job to read.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationCompetencyQuestion": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "One natural-language competency question the ontology should answer.\n\nNamespaced because `ontologyinduction` already defines `CompetencyQuestion`;\na service closure requires shape names to be unique case-insensitively\nacross namespaces.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 1024
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationFinding": {
+            "type": "structure",
+            "members": {
+                "validator": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Validator that produced the finding, e.g. `shacl` or `structural`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "tier": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier",
+                    "traits": {
+                        "smithy.api#documentation": "Tier the finding belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "severity": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity",
+                    "traits": {
+                        "smithy.api#documentation": "Severity; `error` blocks, the other two do not.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "code": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable finding code.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable description.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "URI of the offending element, when the finding names one."
+                    }
+                },
+                "details": {
+                    "target": "smithy.api#Document",
+                    "traits": {
+                        "smithy.api#documentation": "Validator-specific detail (SHACL path, metric values). Shape is not\npinned because it varies per validator."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One validation finding."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationFindingList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationFinding"
+            },
+            "traits": {
+                "smithy.api#documentation": "Findings produced by one job, in tier order.",
+                "smithy.api#length": {
+                    "min": 0,
+                    "max": 5000
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJob": {
+            "type": "structure",
+            "members": {
+                "jobId": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJobId",
+                    "traits": {
+                        "smithy.api#documentation": "Server-assigned job identifier.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJobStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Current lifecycle state.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "createdAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the job was accepted (ISO-8601).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "report": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationReport",
+                    "traits": {
+                        "smithy.api#documentation": "Result, present only when `status` is `completed`."
+                    }
+                },
+                "error": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Failure reason, present only when `status` is `failed`."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One asynchronous validation job, as returned by start and by poll."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJobId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Identifier of an asynchronous validation job.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 128
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJobStatus": {
+            "type": "enum",
+            "members": {
+                "pending": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Accepted and queued; no work has started.",
+                        "smithy.api#enumValue": "pending"
+                    }
+                },
+                "running": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The worker is running the requested tiers.",
+                        "smithy.api#enumValue": "running"
+                    }
+                },
+                "completed": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "All requested tiers finished; `report` is present.",
+                        "smithy.api#enumValue": "completed"
+                    }
+                },
+                "failed": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The job aborted; `error` carries the reason and there is no report.",
+                        "smithy.api#enumValue": "failed"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Lifecycle state of an asynchronous validation job."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationMetrics": {
+            "type": "structure",
+            "members": {
+                "classCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Declared classes."
+                    }
+                },
+                "objectPropertyCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Declared object properties."
+                    }
+                },
+                "datatypePropertyCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Declared datatype properties."
+                    }
+                },
+                "relationshipRichness": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Non-inheritance relations divided by total relations."
+                    }
+                },
+                "attributeRichness": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Datatype properties divided by classes."
+                    }
+                },
+                "inheritanceRichness": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Subclass relations divided by classes."
+                    }
+                },
+                "maxDepth": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Deepest subclass chain."
+                    }
+                },
+                "connectedComponents": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of subgraphs not joined by any relation."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "OntoQA-style structural metrics produced by the Tier-2 pass.\n\nAbsent members mean the metric could not be computed. This is distinct from\nzero: `connectedComponents: 0` would claim the graph is empty."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationQuestionList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationCompetencyQuestion"
+            },
+            "traits": {
+                "smithy.api#documentation": "Competency questions the Tier-3 review checks against.",
+                "smithy.api#length": {
+                    "min": 0,
+                    "max": 50
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationReport": {
+            "type": "structure",
+            "members": {
+                "jobId": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJobId",
+                    "traits": {
+                        "smithy.api#documentation": "Job this report belongs to.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyId": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#ValidationOntologyId",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology the job validated."
+                    }
+                },
+                "passed": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True only when no finding has severity `error`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "findings": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationFindingList",
+                    "traits": {
+                        "smithy.api#documentation": "Every finding across the requested tiers.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "metrics": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationMetrics",
+                    "traits": {
+                        "smithy.api#documentation": "Structural metrics; absent when Tier 2 did not run."
+                    }
+                },
+                "tiersRun": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTierList",
+                    "traits": {
+                        "smithy.api#documentation": "Tiers that actually ran.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "createdAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the report was produced (ISO-8601).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Result of a completed job."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity": {
+            "type": "enum",
+            "members": {
+                "error": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Blocking finding; any `error` makes the report fail.",
+                        "smithy.api#enumValue": "error"
+                    }
+                },
+                "warning": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Non-blocking scoring warning.",
+                        "smithy.api#enumValue": "warning"
+                    }
+                },
+                "info": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Informational, flagged for review.",
+                        "smithy.api#enumValue": "info"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Severity of one finding, mirroring the tier that produced it."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier": {
+            "type": "enum",
+            "members": {
+                "tier1_blocking": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Blocking checks: SHACL conformance, fatal structural errors.",
+                        "smithy.api#enumValue": "tier1_blocking"
+                    }
+                },
+                "tier2_scoring": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Scoring checks: OntoQA-style structural metrics.",
+                        "smithy.api#enumValue": "tier2_scoring"
+                    }
+                },
+                "tier3_review": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Review checks: findings surfaced for a human, not blocking.",
+                        "smithy.api#enumValue": "tier3_review"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Which validation tier a job runs."
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTierList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier"
+            },
+            "traits": {
+                "smithy.api#documentation": "Tiers requested for one job, in the order they run.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 3
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#StartOntologyValidation": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#StartOntologyValidationInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationJob"
+            },
+            "traits": {
+                "smithy.api#documentation": "Start an asynchronous multi-tier validation of one ontology.\n\nReturns as soon as the job is queued (HTTP 202); poll\n`GetOntologyValidationJob` with the returned `jobId`. The ontology is read\nfrom the catalog by id unless `ontologyTurtle` supplies it inline.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Queue a three-tier validation of a catalog ontology",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "ontologyId": "urn:acme:ontology:supply-chain"
+                        },
+                        "output": {
+                            "jobId": "b7c9e2a1-4d3f-4a6b-9c8d-0e1f2a3b4c5d",
+                            "status": "pending",
+                            "createdAt": "2026-11-10T09:12:44Z"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/validate",
+                    "code": 202
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#StartOntologyValidationInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace the job is scoped to.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyId": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#ValidationOntologyId",
+                    "traits": {
+                        "smithy.api#documentation": "Ontology to validate, resolved through the catalog.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyTurtle": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#ValidationTurtle",
+                    "traits": {
+                        "smithy.api#documentation": "Inline Turtle that overrides the catalog copy."
+                    }
+                },
+                "tiers": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTierList",
+                    "traits": {
+                        "smithy.api#documentation": "Tiers to run; all three when absent."
+                    }
+                },
+                "shaclShapesTurtle": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#ValidationTurtle",
+                    "traits": {
+                        "smithy.api#documentation": "Custom SHACL shapes applied by the Tier-1 pass."
+                    }
+                },
+                "competencyQuestions": {
+                    "target": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationQuestionList",
+                    "traits": {
+                        "smithy.api#documentation": "Competency questions the Tier-3 review answers."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#ValidationOntologyId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Identifier of a document or ontology the validation reads.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 2048
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologyvalidation#ValidationTurtle": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Turtle payload supplied inline instead of fetched from the catalog.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 1000000
+                }
             }
         },
         "com.amazon.semanticcontext.platformmetric#GetMetricCard": {

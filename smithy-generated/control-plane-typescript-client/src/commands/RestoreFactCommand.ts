@@ -46,6 +46,7 @@ export interface RestoreFactCommandOutput extends FactRecord, __MetadataBearer {
  *   namespaceId: "STRING_VALUE", // required
  *   factId: "STRING_VALUE", // required
  *   actor: "STRING_VALUE",
+ *   reason: "STRING_VALUE",
  * };
  * const command = new RestoreFactCommand(input);
  * const response = await client.send(command);

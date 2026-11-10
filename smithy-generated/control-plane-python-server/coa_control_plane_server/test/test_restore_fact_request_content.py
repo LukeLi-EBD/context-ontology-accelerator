@@ -35,7 +35,8 @@ class TestRestoreFactRequestContent(unittest.TestCase):
         model = RestoreFactRequestContent()
         if include_optional:
             return RestoreFactRequestContent(
-                actor = '0'
+                actor = '0',
+                reason = ''
             )
         else:
             return RestoreFactRequestContent(

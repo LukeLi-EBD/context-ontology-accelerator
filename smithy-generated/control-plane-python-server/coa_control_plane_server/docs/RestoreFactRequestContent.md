@@ -6,6 +6,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **actor** | **str** | Identity recorded on the restore event; defaults to &#x60;api&#x60;. | [optional] 
+**reason** | **str** | Why the row is restored. | [optional] 
 
 ## Example
 

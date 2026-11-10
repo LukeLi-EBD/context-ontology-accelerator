@@ -28,7 +28,8 @@ class RestoreFactRequestContent(BaseModel):
     RestoreFactRequestContent
     """ # noqa: E501
     actor: Optional[Annotated[str, Field(min_length=1, strict=True, max_length=256)]] = Field(default=None, description="Identity recorded on the restore event; defaults to `api`.")
-    __properties: ClassVar[List[str]] = ["actor"]
+    reason: Optional[Annotated[str, Field(min_length=0, strict=True, max_length=1024)]] = Field(default=None, description="Why the row is restored.")
+    __properties: ClassVar[List[str]] = ["actor", "reason"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -81,7 +82,8 @@ class RestoreFactRequestContent(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate({
-            "actor": obj.get("actor")
+            "actor": obj.get("actor"),
+            "reason": obj.get("reason")
         })
         return _obj
 
