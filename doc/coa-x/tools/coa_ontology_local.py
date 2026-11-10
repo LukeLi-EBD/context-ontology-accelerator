@@ -150,6 +150,13 @@ def _configure_environment() -> None:
         # local runs never touch S3.
         "ONTOLOGY_ARTIFACTS_BUCKET": "coa-local-ontology-artifacts",
         "DYNAMODB_DEFAULT_NAMESPACE": "default",
+        # Proposals live in the platform database, not in the job item table
+        # (P1-06). The local stack keeps governance tables in serve_local; the
+        # override wins when the caller already points at another database.
+        "COA_ONTOLOGY_PROPOSALS_PG_DSN": os.environ.get(
+            "PLATFORM__DATABASE__URL",
+            "postgresql://platform:platform_dev@127.0.0.1:5444/serve_local",
+        ),
         "ALLOWED_ORIGIN": "http://127.0.0.1:5173",
         "NDB_REGION": "us-east-1",
         # Local object store (COA_PROVIDER_ONTOLOGY_OBJECTS=fs). Keep artifact
