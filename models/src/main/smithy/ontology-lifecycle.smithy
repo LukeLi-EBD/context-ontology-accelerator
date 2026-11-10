@@ -650,9 +650,12 @@ structure OntologyImpactClassInstances {
 
     /// Instances of the class across the A-Box graphs.
     ///
-    /// Absent when no A-Box graph is configured: the count is not computable,
-    /// and absence is not the same as zero. A configured A-Box that genuinely
-    /// holds no instance reports `0`.
+    /// Not computable when no A-Box graph is configured. Both an absent member
+    /// and an explicit `null` mean exactly that, and the kernel sends `null`;
+    /// neither is `0`. A configured A-Box that genuinely holds no instance
+    /// reports `0`. Client generators model this as an optional member
+    /// (`?: number`), so treat `null` as a value the field can actually hold
+    /// at runtime.
     instances: Integer
 }
 
@@ -660,9 +663,11 @@ structure OntologyImpactClassInstances {
 structure OntologyImpactInstances {
     /// Instances across every A-Box graph.
     ///
-    /// Absent when no A-Box graph is configured: the count is not computable,
-    /// and absence is not the same as zero. A configured A-Box with no
-    /// instances reports `0`.
+    /// Not computable when no A-Box graph is configured. Both an absent member
+    /// and an explicit `null` mean exactly that, and the kernel sends `null`;
+    /// neither is `0`. A configured A-Box with no instances reports `0`.
+    /// Client generators model this as an optional member (`?: number`), so
+    /// treat `null` as a value the field can actually hold at runtime.
     total: Integer
 
     /// Per-class counts, one entry per affected class.
@@ -877,8 +882,11 @@ structure OntologyImpactVerification {
 
     /// True when every sampled class agreed.
     ///
-    /// Absent when the counts are not computable (no A-Box graph) and when
-    /// nothing was sampled; absence is not `false`.
+    /// Not computable when there is no A-Box graph, or when nothing was
+    /// sampled. Both an absent member and an explicit `null` mean "cannot be
+    /// computed", and the kernel sends `null`; neither is `false`. Client
+    /// generators model this as an optional member (`?: boolean`), so treat
+    /// `null` as a value the field can actually hold at runtime.
     consistent: Boolean
 
     /// Why no sample was taken, or which class disagreed.
