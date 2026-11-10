@@ -127,9 +127,10 @@ class MigrationGapTest(unittest.TestCase):
             (35, "V35__c2_quota.sql", "withdrawn C2 branch"),
             (36, "V36__unused.sql", "never used"),
         ]
-        history = [v for v in REGISTERED if v <= 48]
+        current = metadata_pg.SUPPORTED_SCHEMA_VERSION
+        history = [v for v in REGISTERED if v <= current]
         with mock.patch.object(metadata_pg, "MIGRATIONS", patched):
-            meta = _meta(current=48, versions=history)
+            meta = _meta(current=current, versions=history)
             result = meta.migrate()
         self.assertEqual(result["applied"], [])
 

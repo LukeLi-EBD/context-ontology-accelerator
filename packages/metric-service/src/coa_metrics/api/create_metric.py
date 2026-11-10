@@ -293,9 +293,15 @@ def _metric_to_dict(metric: MetricDefinition) -> dict[str, Any]:
         "expression": {
             "dialects": [{"dialect": d.dialect, "expression": d.expression} for d in metric.expression_dialects],
         },
-        "dataSourceId": metric.data_source_id,
-        "sourceTable": metric.source_table,
     }
+    # Omitted (not empty-stringed) when the metric has no physical source, so a
+    # client can tell "unbound" from "bound to something blank".
+    if metric.data_source_id:
+        result["dataSourceId"] = metric.data_source_id
+    if metric.source_table:
+        result["sourceTable"] = metric.source_table
+    if metric.binding_status:
+        result["bindingStatus"] = metric.binding_status
     if metric.label:
         result["label"] = metric.label
     if metric.default_time_grain:
