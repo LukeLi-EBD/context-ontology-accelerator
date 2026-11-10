@@ -139,7 +139,9 @@ Write-Host "Starting COA local stack"
 # rewrites models/src, so a dirty tree means the stack and the committed
 # contract disagree. See "契约改动的验证顺序" in 10-本地起栈.md.
 & $Python (Join-Path $Repo "scripts\check-smithy-sources.py")
-if ($LASTEXITCODE -ne 0) { throw "models/src has uncommitted changes - see message above" }
+if ($LASTEXITCODE -ne 0) {
+    throw "models/src has uncommitted changes - 按上方出路处理：提交 / 暂存 / 或先跑生成再看产物"
+}
 
 # 1) containers
 Ensure-Container $PgName @(
@@ -164,19 +166,19 @@ Wait-Port 7878 "coa-local-oxigraph" 30
 # (COA_CONTROL_PLANE_PG_DSN).  One migration chain serves both, but they are
 # separate databases: migrating only one leaves the other starting fine and
 # failing on its first write to a new table/column.
-$PlatformDsn = "postgresql://platform:platform_dev@127.0.0.1:5444/platform"
-$ServeDsn    = "postgresql://platform:platform_dev@127.0.0.1:5444/serve_local"
-$hasServeDb = docker exec $PgName psql -U platform -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='serve_local'" 2>$null
-if (-not ($hasServeDb -match "1")) {
+$SchemaPlatformDsn = "postgresql://platform:platform_dev@127.0.0.1:5444/platform"
+$ServeLocalDsn     = "postgresql://platform:platform_dev@127.0.0.1:5444/serve_local"
+$SchemaServeDbExists = docker exec $PgName psql -U platform -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='serve_local'" 2>$null
+if (-not ($SchemaServeDbExists -match "1")) {
     Write-Host "  [create] database serve_local"
     docker exec $PgName psql -U platform -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE serve_local" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "failed to create database serve_local" }
 }
-foreach ($dsn in @($PlatformDsn, $ServeDsn)) {
-    $db = ($dsn -split "/")[-1]
-    Write-Host ("  [migrate] {0}" -f $db)
-    & $Python (Join-Path $Tools "local_bootstrap.py") migrate --dsn $dsn
-    if ($LASTEXITCODE -ne 0) { throw ("schema migration failed: {0}" -f $db) }
+foreach ($SchemaDsn in @($SchemaPlatformDsn, $ServeLocalDsn)) {
+    $SchemaDb = ($SchemaDsn -split "/")[-1]
+    Write-Host ("  [migrate] {0}" -f $SchemaDb)
+    & $Python (Join-Path $Tools "local_bootstrap.py") migrate --dsn $SchemaDsn
+    if ($LASTEXITCODE -ne 0) { throw ("schema migration failed: {0}" -f $SchemaDb) }
 }
 
 # 2) environment for both local processes (no secrets; local DSN only)
@@ -287,15 +289,15 @@ if (Test-PortListening 8091) {
     $env:COA_PROVIDER_GRAPH_ADMIN       = "oxigraph"
     $env:COA_PROVIDER_METRIC_GRAPH      = "oxigraph"
     $env:COA_PROVIDER_VECTOR            = "platform-pgvector"
-    $env:COA_VECTOR_PG_DSN              = $ServeDsn
+    $env:COA_VECTOR_PG_DSN              = $ServeLocalDsn
     $env:COA_PROVIDER_METADATA_STORE    = "postgres"
-    $env:COA_METADATA_PG_DSN            = $ServeDsn
+    $env:COA_METADATA_PG_DSN            = $ServeLocalDsn
     $env:COA_PROVIDER_QUERY_EXECUTOR    = "postgres"
-    $env:COA_EXECUTOR_POSTGRES_DSN      = $ServeDsn
+    $env:COA_EXECUTOR_POSTGRES_DSN      = $ServeLocalDsn
     $env:COA_PROVIDER_WAREHOUSE_ADMIN   = "postgres"
-    $env:COA_WAREHOUSE_ADMIN_PG_DSN     = $ServeDsn
+    $env:COA_WAREHOUSE_ADMIN_PG_DSN     = $ServeLocalDsn
     $env:COA_PROVIDER_METRIC_INDEX      = "platform-pg"
-    $env:COA_METRIC_INDEX_PG_DSN        = $ServeDsn
+    $env:COA_METRIC_INDEX_PG_DSN        = $ServeLocalDsn
     $env:COA_PROVIDER_EMBEDDING         = "bge-local"
     $env:COA_EMBEDDING_BGE_ENDPOINT     = "http://127.0.0.1:8081/v1"
     $env:COA_PROVIDER_LLM               = "openai-http"
@@ -310,8 +312,8 @@ if (Test-PortListening 8091) {
     $env:GRAPH_URI_TEMPLATE             = "https://coa.local/graph/{namespace}"
     $env:RESOLVE_TIMEOUT_S              = "420"
 
-    $hasServeDb = docker exec $PgName psql -U platform -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='serve_local'" 2>$null
-    if (-not ($hasServeDb -match "1")) {
+    $ServeLocalDbExists = docker exec $PgName psql -U platform -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='serve_local'" 2>$null
+    if (-not ($ServeLocalDbExists -match "1")) {
         Write-Host "  [warn] database serve_local disappeared after step 1.5 - Query / KBSearch will fail"
     }
 
