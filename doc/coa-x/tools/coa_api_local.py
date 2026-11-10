@@ -39,7 +39,12 @@ from fastapi.responses import JSONResponse, Response
 
 REPO = Path(__file__).resolve().parents[3]
 TOOLS = Path(__file__).resolve().parent
-SNAPSHOT_PATH = TOOLS / "local-catalog.json"
+# The snapshot is written at start-up.  In the container stack the worktree is
+# mounted read-only, so allow the location to be redirected into a writable
+# volume; the default keeps the host workflow unchanged.
+SNAPSHOT_PATH = Path(
+    os.environ.get("COA_LOCAL_CATALOG_SNAPSHOT") or (TOOLS / "local-catalog.json")
+)
 SEED_DIR = REPO / "libs/common/src/coa_authorization/seed"
 
 # The local MetricGraph provider (oxigraph) and the pg-backed providers reuse
@@ -1771,18 +1776,27 @@ async def _local_system_health() -> dict[str, Any]:
                 **graph,
             }
         )
+        # Probe the endpoints the process was actually configured with.  The
+        # container stack puts the engine on a service name, not 127.0.0.1;
+        # hard-coding the host ports made a healthy engine look down.
+        ontology_engine = os.environ.get(
+            "ONTOLOGY_ENGINE_ENDPOINT", "http://127.0.0.1:8101"
+        ).rstrip("/")
+        context_manager = os.environ.get(
+            "COA_CONTEXT_MANAGER_ENDPOINT", "http://127.0.0.1:8091"
+        ).rstrip("/")
         components.append(
             {
                 "name": "ontologyService",
-                "label": "本体服务（8101）",
-                **(await _probe_http(client, "http://127.0.0.1:8101/health")),
+                "label": "本体服务",
+                **(await _probe_http(client, f"{ontology_engine}/health")),
             }
         )
         components.append(
             {
                 "name": "contextManager",
-                "label": "上下文服务（8091）",
-                **(await _probe_http(client, "http://127.0.0.1:8091/ping")),
+                "label": "上下文服务",
+                **(await _probe_http(client, f"{context_manager}/ping")),
             }
         )
 
