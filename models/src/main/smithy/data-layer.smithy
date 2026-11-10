@@ -41,6 +41,7 @@ service DataLayerService {
         KBSearch
         GraphTraverse
         DescribeSchema
+        CheckAnswerable
     ]
     errors: [
         ValidationError
