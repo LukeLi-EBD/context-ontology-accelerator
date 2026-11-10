@@ -83,6 +83,422 @@ BUILT_IN_ROLES = [
 
 
 # ---------------------------------------------------------------------------
+# Authentication / authorization (parity with the API Gateway authorizer)
+# ---------------------------------------------------------------------------
+
+from coa_common.auth.token_authorizer import TokenAuthorizer  # noqa: E402
+
+# ``enforce`` is the only default. ``disabled`` exists solely for a local
+# developer who explicitly opts out; it prints a loud warning at startup.
+_AUTH_MODE_ENFORCE = "enforce"
+_AUTH_MODE_DISABLED = "disabled"
+_AUTH_MODE = _AUTH_MODE_ENFORCE
+
+_DEV_AUTH_ENABLED = False
+_DEV_AUTH_ISSUER = ""
+_DEV_AUTH_KID = "coa-local-dev"
+_DEV_AUTH_PRIVATE_KEY: Any = None
+_DEV_AUTH_JWKS: dict[str, Any] = {}
+_DEV_AUTH_USERS: set[str] = set()
+
+# Routes that exist in this local bridge but are newer than the authorizer's
+# ``_PATH_MAPPING`` (they were added by parallel lines before the contract was
+# regenerated). Without an entry the authorizer denies them for every role, so
+# the local stack is extended here — visibly, and only in this process.
+# Action choices follow the closest already-mapped sibling; global (namespace-
+# less) reads rely on the ``platform-viewer`` grant seeded below.
+_LOCAL_AUTHZ_EXTENSIONS: dict[str, dict[str, tuple[str, str]]] = {
+    "/namespaces/{namespaceId}/terms": {
+        "GET": ("viewNamespace", "Namespace"),
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/dictionaries": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}/view": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage": {
+        "GET": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh": {"POST": ("manageSource", "Namespace")},
+    "/namespaces/{namespaceId}/ingestion-runs": {
+        "GET": ("viewNamespace", "Namespace"),
+        "POST": ("manageSource", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/sparql": {"POST": ("query", "Namespace")},
+    "/namespaces/{namespaceId}/metrics/report/manifest": {"GET": ("readMetric", "Namespace")},
+    "/namespaces/{namespaceId}/metrics/families/{familyId}": {"GET": ("readMetric", "Namespace")},
+    "/namespaces/{namespaceId}/induce/datasources": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/embeddings": {"POST": ("manageSource", "Namespace")},
+    "/namespaces/{namespaceId}/embeddings/batch": {"POST": ("manageSource", "Namespace")},
+    "/namespaces/{namespaceId}/embeddings/by-ontology/{ontologyId}": {
+        "GET": ("searchDocuments", "Namespace")
+    },
+    "/namespaces/{namespaceId}/validate": {"POST": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/validate/jobs": {
+        "GET": ("viewNamespace", "Namespace"),
+        "POST": ("viewNamespace", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/validate/jobs/{jobId}": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions": {
+        "GET": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}": {
+        "GET": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/diff": {
+        "GET": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/export": {
+        "GET": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/import": {
+        "POST": ("manageOntology", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals": {
+        "GET": ("viewNamespace", "Namespace"),
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}": {
+        "GET": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}/review": {
+        "POST": ("manageOntology", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/publish": {
+        "POST": ("manageOntology", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/rollback": {
+        "POST": ("manageOntology", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/events": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/verify": {
+        "POST": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/export": {
+        "POST": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/inspect": {
+        "POST": ("viewNamespace", "Namespace")
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/import": {
+        "POST": ("manageOntology", "Namespace")
+    },
+    "/namespaces/{namespaceId}/facts": {
+        "GET": ("viewNamespace", "Namespace"),
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/conflicts": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/facts/conflicts/undo": {"POST": ("manageOntology", "Namespace")},
+    "/namespaces/{namespaceId}/facts/conflicts/batch": {"POST": ("manageOntology", "Namespace")},
+    "/namespaces/{namespaceId}/facts/retract": {"POST": ("manageOntology", "Namespace")},
+    "/namespaces/{namespaceId}/facts/{factId}": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/facts/{factId}/retract": {"POST": ("manageOntology", "Namespace")},
+    "/namespaces/{namespaceId}/facts/{factId}/restore": {"POST": ("manageOntology", "Namespace")},
+    "/namespaces/{namespaceId}/facts/{factId}/events": {"GET": ("viewNamespace", "Namespace")},
+    "/namespaces/{namespaceId}/answerable": {"POST": ("query", "Namespace")},
+    # Global reads: the path carries no namespace, so namespace roles cannot
+    # match. They map onto the read actions platform-viewer already grants.
+    "/entities/{entityId}": {"GET": ("searchDocuments", "Namespace")},
+    "/entities/{entityId}/provenance": {"GET": ("searchDocuments", "Namespace")},
+    "/metrics/{metricId}": {"GET": ("readMetric", "Namespace")},
+    "/browse/ontology/tree": {"GET": ("viewNamespace", "Namespace")},
+    "/browse/ontology/instances": {"GET": ("viewNamespace", "Namespace")},
+    "/answer/quality": {"GET": ("query", "Namespace")},
+}
+
+
+class _LocalDevTokenAuthorizer(TokenAuthorizer):  # type: ignore[misc]
+    """RS256 verifier backed by an in-memory JWKS (no HTTP round-trip).
+
+    The bridge mints its own development tokens. Fetching the JWKS over HTTP
+    from the same process would block the event loop that has to serve it, so
+    the key set is held in memory while signature/issuer/expiry checks stay
+    exactly the ones the production authorizer uses.
+    """
+
+    def __init__(self, *, issuer: str, jwks: dict[str, Any]) -> None:
+        super().__init__(issuer=issuer)
+        self._memory_jwks = jwks
+
+    def _extract_groups(self, claims: dict[str, Any]) -> list[str]:
+        from coa_common.auth.token_authorizer import extract_groups_claim
+
+        return extract_groups_claim(claims)
+
+    def _get_jwks_uri(self) -> str:  # pragma: no cover - never used
+        return "memory://coa-local-dev/jwks"
+
+    def _get_jwks(self) -> dict[str, Any]:
+        return self._memory_jwks
+
+
+def _init_auth() -> None:
+    """Configure authentication from explicit local settings.
+
+    Refuses to start in ``enforce`` mode without an identity source instead of
+    silently falling back to an anonymous principal.
+    """
+    global _AUTH_MODE, _DEV_AUTH_ENABLED, _DEV_AUTH_ISSUER
+    global _DEV_AUTH_PRIVATE_KEY, _DEV_AUTH_JWKS, _DEV_AUTH_USERS
+
+    mode = os.environ.get("COA_LOCAL_AUTH_MODE", _AUTH_MODE_ENFORCE).strip().lower()
+    if mode not in (_AUTH_MODE_ENFORCE, _AUTH_MODE_DISABLED):
+        raise SystemExit(
+            f"refusing to start: COA_LOCAL_AUTH_MODE={mode!r} is not one of "
+            f"{_AUTH_MODE_ENFORCE!r}/{_AUTH_MODE_DISABLED!r}"
+        )
+    _AUTH_MODE = mode
+
+    # The authorizer Lambda's own env names, backed by the local PG partitions.
+    os.environ.setdefault("ROLES_TABLE_NAME", os.environ["ROLES_TABLE"])
+    os.environ.setdefault(
+        "RESOURCE_ROLE_MAPPINGS_TABLE_NAME", os.environ["RESOURCE_ROLE_MAPPINGS_TABLE"]
+    )
+    os.environ.setdefault("NAMESPACES_TABLE_NAME", os.environ["NAMESPACES_TABLE"])
+
+    if mode == _AUTH_MODE_DISABLED:
+        print(
+            "[api] WARNING: COA_LOCAL_AUTH_MODE=disabled — EVERY route is served as "
+            f"{LOCAL_EMAIL} with role {LOCAL_ROLES!r}; there is no authentication or "
+            "authorization. Never expose this bridge beyond 127.0.0.1.",
+            file=sys.stderr,
+        )
+        return
+
+    dev_auth = os.environ.get("COA_LOCAL_DEV_AUTH", "off").strip().lower()
+    if dev_auth not in ("on", "off"):
+        raise SystemExit(
+            f"refusing to start: COA_LOCAL_DEV_AUTH={dev_auth!r} must be 'on' or 'off'"
+        )
+
+    if dev_auth == "on":
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from jwt.algorithms import RSAAlgorithm
+
+        port = int(os.environ.get("COA_LOCAL_API_PORT", "8099"))
+        host_for_issuer = os.environ.get("COA_LOCAL_AUTH_ISSUER_HOST", "127.0.0.1")
+        _DEV_AUTH_ISSUER = (
+            os.environ.get("COA_LOCAL_AUTH_ISSUER")
+            or f"http://{host_for_issuer}:{port}/local/auth"
+        ).rstrip("/")
+        users = os.environ.get("COA_LOCAL_DEV_USERS") or LOCAL_EMAIL
+        _DEV_AUTH_USERS = {u.strip() for u in users.split(",") if u.strip()}
+        if not _DEV_AUTH_USERS:
+            raise SystemExit("refusing to start: COA_LOCAL_DEV_USERS resolved to an empty list")
+
+        _DEV_AUTH_PRIVATE_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        jwk = json.loads(RSAAlgorithm.to_jwk(_DEV_AUTH_PRIVATE_KEY.public_key()))
+        jwk.update({"kid": _DEV_AUTH_KID, "use": "sig", "alg": "RS256"})
+        _DEV_AUTH_JWKS = {"keys": [jwk]}
+
+        import coa_control_plane.authorization.handler as authz_handler
+
+        authz_handler._token_authorizer = _LocalDevTokenAuthorizer(  # noqa: SLF001
+            issuer=_DEV_AUTH_ISSUER, jwks=_DEV_AUTH_JWKS
+        )
+        _DEV_AUTH_ENABLED = True
+        print(
+            "[api] WARNING: COA_LOCAL_DEV_AUTH=on — POST /local/auth/token mints real "
+            f"RS256 tokens for {sorted(_DEV_AUTH_USERS)} without any IdP. This is a "
+            "local development convenience only; never expose it or ship it.",
+            file=sys.stderr,
+        )
+        print(f"[api] dev token issuer: {_DEV_AUTH_ISSUER}")
+    else:
+        issuer = os.environ.get("JWKS_ISSUER")
+        if not issuer:
+            raise SystemExit(
+                "refusing to start: authentication is enabled but no identity source is "
+                "configured. Set JWKS_ISSUER (and optionally JWKS_URI/CLIENT_ID) for a real "
+                "OIDC issuer, or COA_LOCAL_DEV_AUTH=on for the explicit local dev issuer. "
+                "COA_LOCAL_AUTH_MODE=disabled bypasses checks and is not a default."
+            )
+        print(f"[api] authentication: enforcing bearer tokens from {issuer}")
+
+
+def _apply_local_authz_extensions() -> None:
+    """Register bridge-only routes in the authorizer's path map (this process only)."""
+    import coa_control_plane.authorization.handler as authz_handler
+
+    added = 0
+    for resource, methods in _LOCAL_AUTHZ_EXTENSIONS.items():
+        if resource in authz_handler._PATH_MAPPING:  # noqa: SLF001
+            continue
+        authz_handler._PATH_MAPPING[resource] = dict(methods)  # noqa: SLF001
+        added += 1
+    if added:
+        print(
+            f"[api] authorization map: +{added} local-only routes "
+            "(not in the deployed contract; fail-closed in AWS)"
+        )
+
+
+def _seed_dev_global_viewer() -> None:
+    """Bootstrap real global grants for the local dev users.
+
+    The primary dev account gets ``platform-admin`` (production bootstraps its
+    first admin out of band; this is the local equivalent, and it is a normal
+    ResourceRoleMappings row that can be revoked through the API). Any other
+    configured dev user only gets ``platform-viewer``, so 403 behaviour stays
+    testable. No write ever falls back to a role without a row.
+    """
+    if not _DEV_AUTH_ENABLED:
+        return
+    from coa_common.dao import DynamoDBDAO
+    from coa_common.principal_keys import sanitize_principal_key
+
+    dao = DynamoDBDAO(
+        os.environ["RESOURCE_ROLE_MAPPINGS_TABLE"], region=os.environ["AWS_REGION"]
+    )
+    now = datetime.now(timezone.utc).isoformat()
+    primary = (os.environ.get("COA_LOCAL_DEV_ADMIN_USER") or LOCAL_EMAIL).strip()
+    granted: list[tuple[str, str]] = []
+    for email in sorted(_DEV_AUTH_USERS):
+        role = "platform-admin" if email == primary else "platform-viewer"
+        principal = sanitize_principal_key(email)
+        key = f"Platform::GLOBAL#User::{principal}"
+        if dao.get({"PK": key, "SK": f"ROLE#{role}"}):
+            continue
+        item = {
+            "PK": key,
+            "SK": f"ROLE#{role}",
+            "resourceType": "Platform",
+            "resourceId": "GLOBAL",
+            "principalType": "User",
+            "principalId": email,
+            "role": role,
+            "principalKey": f"User::{principal}",
+            "resourceRoleKey": f"Platform::GLOBAL#ROLE#{role}",
+            "namespaceKey": "GLOBAL",
+            "principalRoleKey": f"User::{principal}#ROLE#{role}",
+            "grantedBy": "coa-local-bootstrap",
+            "grantedAt": now,
+        }
+        dao.put(item, auto_timestamp=False)
+        granted.append((email, role))
+    if granted:
+        print(f"[api] dev role bootstrap: {granted}")
+
+
+def _auth_error_json(status: int, error: str, message: str, **extra: Any) -> JSONResponse:
+    body: dict[str, Any] = {"error": error, "message": message, **extra}
+    headers = {"WWW-Authenticate": "Bearer"} if status == 401 else None
+    return JSONResponse(body, status_code=status, headers=headers)
+
+
+_LOOPBACK_ORIGIN = re.compile(r"^http://(localhost|127\.0\.0\.1)(:\d+)?$")
+
+
+def _origin_allowed(origin: str) -> bool:
+    """Allow configured origins plus loopback on any port; reject the rest."""
+    configured = os.environ.get("ALLOWED_ORIGIN", "").strip()
+    if configured and origin == configured:
+        return True
+    return bool(_LOOPBACK_ORIGIN.match(origin))
+
+
+def _authorize_request(
+    method: str,
+    template: str,
+    path_params: dict[str, str],
+    headers: dict[str, str],
+) -> tuple[dict[str, Any] | None, JSONResponse | None]:
+    """Run the real authorizer for one request; return (context, error)."""
+    if _AUTH_MODE == _AUTH_MODE_DISABLED:
+        return {
+            "principalId": LOCAL_EMAIL,
+            "userId": LOCAL_EMAIL,
+            "email": LOCAL_EMAIL,
+            "globalRoles": LOCAL_ROLES,
+            "groups": "",
+            "tokenType": "JWT",
+        }, None
+
+    import coa_control_plane.authorization.handler as authz_handler
+
+    event = {
+        "methodArn": f"arn:aws:execute-api:local:000000000000:local/prod/{method}{template}",
+        "resource": template,
+        "httpMethod": method.upper(),
+        "headers": headers,
+        "pathParameters": path_params,
+        "requestContext": {"path": template, "httpMethod": method.upper()},
+    }
+    policy = authz_handler.handler(event, None)
+    statements = (policy.get("policyDocument") or {}).get("Statement") or [{}]
+    effect = statements[0].get("Effect")
+    principal_id = policy.get("principalId") or ""
+
+    if effect == "Allow":
+        context = dict(policy.get("context") or {})
+        context["principalId"] = principal_id
+        context.setdefault("userId", principal_id)
+        return context, None
+
+    action = authz_handler._map_request_to_cedar(  # noqa: SLF001
+        method.upper(), template, path_params
+    )[0]
+    if not principal_id:
+        return None, _auth_error_json(
+            401,
+            "E_UNAUTHENTICATED",
+            "Missing or invalid bearer token",
+            detail="Send 'Authorization: Bearer <token>'.",
+        )
+    if action == authz_handler._UNMAPPED_ACTION:  # noqa: SLF001
+        return None, _auth_error_json(
+            403,
+            "E_UNMAPPED_ROUTE",
+            "This route has no authorization mapping; access is denied.",
+            action=action,
+        )
+    return None, _auth_error_json(
+        403,
+        "E_FORBIDDEN",
+        f"Permission denied for action {action!r}.",
+        action=action,
+    )
+
+
+def _safe_authorize(
+    method: str,
+    template: str,
+    path_params: dict[str, str],
+    headers: dict[str, str],
+) -> tuple[dict[str, Any] | None, JSONResponse | None]:
+    """Fail closed: any authorizer failure becomes an explicit 503, never allow."""
+    try:
+        return _authorize_request(method, template, path_params, headers)
+    except Exception as exc:  # noqa: BLE001 - boundary: must not leak a stack trace
+        print(
+            f"[api] authorization backend failure for {method} {template}: {exc!r}",
+            file=sys.stderr,
+        )
+        return None, _auth_error_json(
+            503,
+            "E_AUTHZ_UNAVAILABLE",
+            "Authorization could not be evaluated; the request was denied.",
+        )
+
+
+def _mint_dev_token(email: str, ttl_seconds: int = 3600) -> dict[str, Any]:
+    """Mint a real RS256 JWT for an allow-listed local dev user."""
+    import jwt as pyjwt
+
+    now = int(datetime.now(timezone.utc).timestamp())
+    claims = {
+        "iss": _DEV_AUTH_ISSUER,
+        "sub": email,
+        "email": email,
+        "iat": now,
+        "exp": now + ttl_seconds,
+    }
+    token = pyjwt.encode(
+        claims, _DEV_AUTH_PRIVATE_KEY, algorithm="RS256", headers={"kid": _DEV_AUTH_KID}
+    )
+    return {"accessToken": token, "token": token, "tokenType": "Bearer", "expiresIn": ttl_seconds}
+
+
+# ---------------------------------------------------------------------------
 # Environment (explicit local configuration; no AWS calls)
 # ---------------------------------------------------------------------------
 
@@ -165,7 +581,13 @@ def _configure_environment() -> None:
         # Local object transport (S3 role). The provider key itself stays
         # unset here: it is chosen by 10-本地起栈.ps1 and fails closed.
         "COA_LOCAL_OBJECT_ROOT": os.path.join(tempfile.gettempdir(), "coa-local-stack", "objects"),
-        "COA_LOCAL_OBJECT_BASE": "http://127.0.0.1:8099/_local/objects",
+        # Presigned object URLs must point at *this* bridge; several parallel
+        # local lines run on different ports, so never hardcode 8099.
+        "COA_LOCAL_OBJECT_BASE": (
+            "http://127.0.0.1:"
+            + os.environ.get("COA_LOCAL_API_PORT", "8099")
+            + "/_local/objects"
+        ),
     }
     for key, value in defaults.items():
         os.environ.setdefault(key, value)
@@ -444,7 +866,7 @@ def _write_snapshot() -> None:
     SNAPSHOT_PATH.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
 
 
-def _seed_demo_catalog(namespace_id: str) -> dict[str, Any]:
+def _seed_demo_catalog(namespace_id: str, created_by: str) -> dict[str, Any]:
     """Attach the demo warehouse to a namespace.
 
     Stands in for the Glue/DataZone scan pipeline, which has no local
@@ -481,7 +903,7 @@ def _seed_demo_catalog(namespace_id: str) -> dict[str, Any]:
             }
         ),
         "tenantId": f"ns-{namespace_id}",
-        "createdBy": LOCAL_EMAIL,
+        "createdBy": created_by,
         "createdAt": created,
         "updatedAt": created,
         "sourceTypeCreatedAt": f"DATABASE#{created}",
@@ -749,6 +1171,10 @@ def _match(path: str) -> tuple[str, dict[str, str], str] | None:
 # caller passing the namespace *name* then reads "no data" instead of "bad
 # request". That failure mode is silent, so it is gated before dispatch rather
 # than left to each handler.
+#
+# Ordering contract: this gate runs AFTER the authorization gate. A request
+# without a valid bearer token is 401 even when the path id is malformed; only
+# an authenticated caller may learn that the id itself is invalid (400).
 _NAMESPACE_ID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 )
@@ -769,11 +1195,15 @@ def _invalid_namespace_id(path_params: dict[str, str]) -> str | None:
 
 async def _kernel_call(method: str, path: str, body: bytes | None = None,
                        content_type: str = "application/json",
-                       timeout: float = 120.0) -> tuple[int, bytes, str]:
+                       timeout: float = 120.0,
+                       actor: str | None = None) -> tuple[int, bytes, str]:
     """One request to the lifecycle app, in process (httpx ASGITransport)."""
     import httpx
 
     headers = {"content-type": content_type} if body else {}
+    if actor:
+        # The kernel's own provenance seam (`Request.headers["x-actor"]`).
+        headers["x-actor"] = actor
     transport = httpx.ASGITransport(app=_lifecycle_app())
     async with httpx.AsyncClient(
         transport=transport, base_url="http://lifecycle", timeout=timeout
@@ -1096,7 +1526,7 @@ def _install_dictionary_introspector() -> None:
 
 def _kernel_translate(
     template: str, path_params: dict[str, str], method: str, body: bytes,
-    query: dict[str, str] | None = None,
+    query: dict[str, str] | None = None, actor: str = "operator",
 ) -> tuple[str, str, bytes | None]:
     """Map a contract path onto the kernel's ``/ontology/*`` surface.
 
@@ -1114,7 +1544,17 @@ def _kernel_translate(
         target = template.format(**path_params)
         if query:
             target = f"{target}?{urlencode(query)}"
-        return method, target, body or None
+        forwarded = body or None
+        if method == "POST" and template.endswith("/dictionaries/{sourceId}/refresh") and body:
+            try:
+                payload = json.loads(body.decode("utf-8"))
+            except ValueError:
+                payload = None
+            if isinstance(payload, dict):
+                # `requestedBy` is provenance; it must not come from the client.
+                payload["requestedBy"] = actor
+                forwarded = json.dumps(payload).encode("utf-8")
+        return method, target, forwarded
 
     ontology_id = path_params.get("ontologyId", "")
     version_id = path_params.get("versionId", "")
@@ -1125,6 +1565,9 @@ def _kernel_translate(
         payload = {}
     if not isinstance(payload, dict):
         payload = {}
+    # Provenance is taken from the authenticated caller, never from the body:
+    # a client-supplied actor would let one user write audit rows as another.
+    payload = {**payload, "actor": actor}
 
     # Bundle migration must be matched before the generic `/import` and
     # `/export` routes: `.../bundles/import` also ends with `/import`.
@@ -1519,7 +1962,7 @@ def _kernel_translate(
 
 
 async def _kernel_register_version(
-    template: str, path_params: dict[str, str], body: bytes
+    template: str, path_params: dict[str, str], body: bytes, actor: str
 ) -> tuple[int, bytes, str]:
     """ImportOntology: register the uploaded T-Box as a *draft* version.
 
@@ -1543,7 +1986,7 @@ async def _kernel_register_version(
     }
     register["targetNamespace"] = payload.get("targetNamespace") or ontology_id
     status, content, ctype = await _kernel_call(
-        "POST", "/local/ontology/register", json.dumps(register).encode("utf-8")
+        "POST", "/local/ontology/register", json.dumps(register).encode("utf-8"), actor=actor
     )
     if status >= 300:
         return status, content, ctype
@@ -1567,7 +2010,7 @@ async def _kernel_register_version(
 
 
 async def _kernel_proxy(
-    request: Request, template: str, path_params: dict[str, str]
+    request: Request, template: str, path_params: dict[str, str], actor: str
 ) -> Response:
     """Forward one lifecycle request and normalise the contract's field names."""
     body = await request.body()
@@ -1575,11 +2018,13 @@ async def _kernel_proxy(
         request.method == "POST"
         and template.endswith("/ontologies/{ontologyId}/import")
     ):
-        status, content, ctype = await _kernel_register_version(template, path_params, body)
+        status, content, ctype = await _kernel_register_version(
+            template, path_params, body, actor
+        )
         return Response(content=content, status_code=status, media_type=ctype)
     try:
         method, target, forwarded = _kernel_translate(
-            template, path_params, request.method, body, dict(request.query_params)
+            template, path_params, request.method, body, dict(request.query_params), actor
         )
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
@@ -1592,6 +2037,7 @@ async def _kernel_proxy(
             # RDFS closure + ELK on the demo A-Box takes ~13s at the engine;
             # the rdflib diff around it needs a longer socket budget.
             timeout=600.0 if template.endswith("/graph/reasoning/materialize") else 120.0,
+            actor=actor,
         )
     except Exception as exc:  # kernel down: say so instead of a bare 500
         return JSONResponse(
@@ -1881,7 +2327,10 @@ def _make_app() -> Any:
     app = FastAPI(title="COA control-plane (local)")
 
     def _cors(response: Response, origin: str | None, requested_headers: str | None = None) -> Response:
-        if origin:
+        # Never reflect an arbitrary origin: with real bearer tokens a hostile
+        # page must not be able to read responses cross-origin. Local browser
+        # origins on any port are allowed; anything else gets no CORS headers.
+        if origin and _origin_allowed(origin):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Vary"] = "Origin"
             # Echo the preflight's requested headers: the Smithy client signs
@@ -1909,13 +2358,70 @@ def _make_app() -> Any:
         if request.method == "OPTIONS":
             return _cors(Response(status_code=204), origin, request.headers.get("access-control-request-headers"))
 
+        # Explicit local development issuer (COA_LOCAL_DEV_AUTH=on only).
+        # It mints signed tokens, it does not bypass validation: every other
+        # route still goes through the authorizer below.
+        if path == "/local/auth/config" and request.method == "GET":
+            if not _DEV_AUTH_ENABLED:
+                return _cors(JSONResponse({"enabled": False}, status_code=404), origin)
+            return _cors(
+                JSONResponse(
+                    {
+                        "enabled": True,
+                        "issuer": _DEV_AUTH_ISSUER,
+                        "users": sorted(_DEV_AUTH_USERS),
+                    }
+                ),
+                origin,
+            )
+        if path == "/local/auth/jwks" and request.method == "GET":
+            if not _DEV_AUTH_ENABLED:
+                return _cors(JSONResponse({"error": "dev auth is disabled"}, status_code=404), origin)
+            return _cors(JSONResponse(_DEV_AUTH_JWKS), origin)
+        if path == "/local/auth/token" and request.method == "POST":
+            if not _DEV_AUTH_ENABLED:
+                return _cors(JSONResponse({"error": "dev auth is disabled"}, status_code=404), origin)
+            try:
+                payload = json.loads((await request.body()) or b"{}")
+            except ValueError:
+                return _cors(JSONResponse({"error": "body is not valid JSON"}, status_code=400), origin)
+            email = str((payload or {}).get("email") or "").strip()
+            if not email and len(_DEV_AUTH_USERS) == 1:
+                email = next(iter(_DEV_AUTH_USERS))
+            if email not in _DEV_AUTH_USERS:
+                return _cors(
+                    JSONResponse(
+                        {
+                            "error": "E_UNKNOWN_DEV_USER",
+                            "message": f"{email!r} is not in COA_LOCAL_DEV_USERS",
+                        },
+                        status_code=403,
+                    ),
+                    origin,
+                )
+            return _cors(JSONResponse(_mint_dev_token(email)), origin)
+
+        request_headers = {k.lower(): v for k, v in request.headers.items()}
+
         # Local-only fixture endpoint, explicitly outside the Smithy contract.
+        # It writes a source, so it is authorized as one (manageSource).
         if path == "/local/seed-catalog" and request.method == "POST":
-            body = json.loads((await request.body()) or b"{}")
-            namespace_id = body.get("namespaceId")
+            try:
+                body = json.loads((await request.body()) or b"{}")
+            except ValueError:
+                return _cors(JSONResponse({"error": "body is not valid JSON"}, status_code=400), origin)
+            namespace_id = (body or {}).get("namespaceId")
             if not namespace_id:
                 return _cors(JSONResponse({"error": "namespaceId is required"}, status_code=400), origin)
-            item = _seed_demo_catalog(namespace_id)
+            auth_context, auth_error = _safe_authorize(
+                "POST",
+                "/namespaces/{namespaceId}/sources",
+                {"namespaceId": namespace_id},
+                request_headers,
+            )
+            if auth_error is not None:
+                return _cors(auth_error, origin)
+            item = _seed_demo_catalog(namespace_id, auth_context["email"])
             return _cors(JSONResponse({"seeded": True, "sourceId": item["sourceId"]}), origin)
 
         # Local-only object transport (S3 role). Not a business route: it serves
@@ -1957,7 +2463,13 @@ def _make_app() -> Any:
 
         # GetSystemHealth is answered here, not forwarded: the AWS handler can
         # only report DynamoDB/Neptune/OpenSearch, which this stack does not use.
+        # It is still authorized (the deployed authorizer protects it too).
         if path == "/system-health" and request.method == "GET":
+            _ctx, auth_error = _safe_authorize(
+                "GET", "/system-health", {}, request_headers
+            )
+            if auth_error is not None:
+                return _cors(auth_error, origin)
             return _cors(JSONResponse(await _local_system_health()), origin)
 
         matched = _match(path)
@@ -1968,6 +2480,14 @@ def _make_app() -> Any:
             )
         template, path_params, module = matched
         decoded_params = {k: unquote(v) for k, v in path_params.items()}
+        auth_context, auth_error = _safe_authorize(
+            request.method, template, decoded_params, request_headers
+        )
+        if auth_error is not None:
+            return _cors(auth_error, origin)
+        actor = auth_context["email"]
+        # Authorization first, id shape second. Flipping these two would make an
+        # unauthenticated caller able to probe id validity (400 before 401).
         bad_namespace_id = _invalid_namespace_id(decoded_params)
         if bad_namespace_id is not None:
             print(f"[api] {request.method} {path} -> 400 E_NAMESPACE_ID_INVALID")
@@ -1985,9 +2505,9 @@ def _make_app() -> Any:
                 origin,
             )
         if module == KERNEL:
-            print(f"[api] {request.method} {path} -> kernel ({template})")
+            print(f"[api] {request.method} {path} -> kernel ({template}) as {actor}")
             return _cors(
-                await _kernel_proxy(request, template, decoded_params),
+                await _kernel_proxy(request, template, decoded_params, actor),
                 origin,
             )
         handler = _load_handler(module)
@@ -1996,7 +2516,7 @@ def _make_app() -> Any:
             "resource": template,
             "path": path,
             "httpMethod": request.method,
-            "headers": {k.lower(): v for k, v in request.headers.items()},
+            "headers": request_headers,
             "multiValueHeaders": {k: [v] for k, v in request.headers.items()},
             "queryStringParameters": dict(request.query_params) or None,
             "multiValueQueryStringParameters": {k: [v] for k, v in request.query_params.items()}
@@ -2014,18 +2534,12 @@ def _make_app() -> Any:
                     "sourceIp": "127.0.0.1",
                     "userAgent": request.headers.get("user-agent", ""),
                 },
-                "authorizer": {
-                    "principalId": LOCAL_USER,
-                    "userId": LOCAL_USER,
-                    "email": LOCAL_EMAIL,
-                    "globalRoles": LOCAL_ROLES,
-                    "groups": "",
-                },
+                "authorizer": auth_context,
             },
             "body": body.decode("utf-8") if body else None,
             "isBase64Encoded": False,
         }
-        print(f"[api] {request.method} {path} -> {module} ({template})")
+        print(f"[api] {request.method} {path} -> {module} ({template}) as {actor}")
         try:
             if module == DATA_LAYER:
                 # The data-layer Lambda handler drives the ContextManagerPort with
@@ -2086,6 +2600,9 @@ def main() -> None:
         raise SystemExit(1) from None
 
     _seed_roles()
+    _init_auth()
+    _apply_local_authz_extensions()
+    _seed_dev_global_viewer()
     _write_snapshot()
 
     import uvicorn
