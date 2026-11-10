@@ -702,6 +702,9 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/graph/datatype-property": {
         "GET": ("viewNamespace", "Ontology"),
     },
+    "/namespaces/{namespaceId}/graph/statements": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
     # ── Platform-scoped ─────────────────────────────────────────────────
     # No {namespaceId}, so the resource id resolves to "*" (see
     # _map_request_to_cedar) and no namespace-scoped grant can ever match it.

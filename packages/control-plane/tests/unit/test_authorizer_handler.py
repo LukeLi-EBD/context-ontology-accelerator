@@ -658,6 +658,7 @@ CONTROL_PLANE_ROUTES: list[tuple[str, str, str]] = [
     ("GET", "/namespaces/{namespaceId}/graph/class", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/graph/object-property", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/graph/datatype-property", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/graph/statements", "viewNamespace"),
 ]
 
 
@@ -825,10 +826,12 @@ class TestMapRequestToCedar:
         )
 
         # Tolerates both the single-line and multi-line @http(...) forms, and any
-        # traits sitting between the trait and the operation keyword.
+        # traits sitting between the trait and the operation keyword — including
+        # @examples([...]), whose payload contains brackets, slashes and URIs.
         http_trait = re.compile(
             r'@http\(\s*method:\s*"(\w+)"\s*,?\s*uri:\s*"([^"]+)"[^)]*\)'
-            r'((?:\s*@[\w()"\s:,.\-]*?)*)\s*operation\s+(\w+)'
+            r'(.*?)\s*operation\s+(\w+)',
+            re.S,
         )
         routes = {
             match.group(4): (match.group(1), match.group(2))
