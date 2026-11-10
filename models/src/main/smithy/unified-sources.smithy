@@ -17,6 +17,7 @@ use com.amazon.semanticcontext.common#PaginationToken
 use com.amazon.semanticcontext.common#PresignedUrl
 use com.amazon.semanticcontext.common#S3BucketArn
 use com.amazon.semanticcontext.common#S3Prefix
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 
 /// Table identifier (database.table format).
@@ -853,10 +854,6 @@ structure TableSummary {
 
 list TableSummaryList {
     member: TableSummary
-}
-
-list StringList {
-    member: String
 }
 
 /// Values sampled from a customer's table. They are row data, not metadata,

@@ -16,6 +16,7 @@ use com.amazon.semanticcontext.common#PaginatedOutput
 use com.amazon.semanticcontext.common#PaginationToken
 use com.amazon.semanticcontext.common#PresignedUrl
 use com.amazon.semanticcontext.common#ServiceUnavailableError
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 use com.amazon.semanticcontext.metric#DataSourceId
@@ -1410,10 +1411,6 @@ list InducedDatasourceList {
 
 list ProposalIdList {
     member: Uuid
-}
-
-list StringList {
-    member: String
 }
 
 // ── Proposal validation ─────────────────────────────────────────────

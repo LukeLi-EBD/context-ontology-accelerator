@@ -19,6 +19,7 @@ $version: "2"
 namespace com.amazon.semanticcontext.ontologylifecycle
 
 use com.amazon.semanticcontext.common#ConflictError
+use com.amazon.semanticcontext.common#DocumentList
 use com.amazon.semanticcontext.common#NotFoundError
 use com.amazon.semanticcontext.common#OntologyId
 use com.amazon.semanticcontext.common#Uuid
@@ -1588,11 +1589,6 @@ list OntologyBlockerList {
     member: PublishBlocker
 }
 
-/// Free-form JSON documents in a lifecycle response.
-list DocumentList {
-    member: Document
-}
-
 /// Affected classes in an impact analysis.
 list OntologyImpactClassList {
     member: OntologyImpactClass
@@ -1660,13 +1656,7 @@ list OntologyImpactSampleList {
             count: 1
             total: 1
             deprecated: 0
-            pointer: {
-                name: "tbox/current"
-                versionId: "ont-1a2b3c4d5e6f"
-                semver: "1.0.0"
-                graph: "urn:platform:graph:tbox:1a2b3c4d"
-                updatedAt: "2026-10-02T09:30:00Z"
-            }
+            pointer: { name: "tbox/current", versionId: "ont-1a2b3c4d5e6f", semver: "1.0.0", graph: "urn:platform:graph:tbox:1a2b3c4d", updatedAt: "2026-10-02T09:30:00Z" }
         }
     }
 ])
@@ -1753,7 +1743,7 @@ operation GetOntologyVersion {
             summary: {
                 addedTriples: 12
                 removedTriples: 0
-                addedClasses: [ "https://example.com/ontology/core#Invoice" ]
+                addedClasses: ["https://example.com/ontology/core#Invoice"]
                 removedClasses: []
                 addedProperties: []
                 removedProperties: []
@@ -1843,13 +1833,7 @@ operation ExportOntologyVersion {
 @examples([
     {
         title: "Register a Turtle draft"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            ontologyId: "https://example.com/ontology/core"
-            content: "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n<https://example.com/ontology/core#Invoice> a owl:Class .\n"
-            format: "turtle"
-            changeSummary: "add Invoice class"
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", content: "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n<https://example.com/ontology/core#Invoice> a owl:Class .\n", format: "turtle", changeSummary: "add Invoice class" }
         output: {
             importId: "imp-1a2b3c4d5e6f"
             versionId: "ont-draft-9f8e7d6c5b4a"
@@ -1908,22 +1892,8 @@ operation ImportOntology {
 @examples([
     {
         title: "Propose a draft against the current version"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            ontologyId: "https://example.com/ontology/core"
-            versionId: "ont-draft-9f8e7d6c5b4a"
-            rationale: "add Invoice class"
-            againstVersion: "ont-1a2b3c4d5e6f"
-            actor: "operator"
-        }
-        output: {
-            proposalId: "prop-1a2b3c4d5e6f"
-            versionId: "ont-draft-9f8e7d6c5b4a"
-            againstVersion: "ont-1a2b3c4d5e6f"
-            changeSummary: "add Invoice class"
-            status: "proposed"
-            breaking: false
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", versionId: "ont-draft-9f8e7d6c5b4a", rationale: "add Invoice class", againstVersion: "ont-1a2b3c4d5e6f", actor: "operator" }
+        output: { proposalId: "prop-1a2b3c4d5e6f", versionId: "ont-draft-9f8e7d6c5b4a", againstVersion: "ont-1a2b3c4d5e6f", changeSummary: "add Invoice class", status: "proposed", breaking: false }
     }
 ])
 operation ProposeOntologyVersion {
@@ -2014,19 +1984,8 @@ operation ListOntologyProposals {
         title: "Read one proposal"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", proposalId: "prop-1a2b3c4d5e6f" }
         output: {
-            proposal: {
-                proposalId: "prop-1a2b3c4d5e6f"
-                versionId: "ont-draft-9f8e7d6c5b4a"
-                againstVersion: "ont-1a2b3c4d5e6f"
-                changeSummary: "add Invoice class"
-                status: "proposed"
-                breaking: false
-            }
-            version: {
-                id: "ont-draft-9f8e7d6c5b4a"
-                semver: "1.1.0"
-                status: "proposed"
-            }
+            proposal: { proposalId: "prop-1a2b3c4d5e6f", versionId: "ont-draft-9f8e7d6c5b4a", againstVersion: "ont-1a2b3c4d5e6f", changeSummary: "add Invoice class", status: "proposed", breaking: false }
+            version: { id: "ont-draft-9f8e7d6c5b4a", semver: "1.1.0", status: "proposed" }
             versionStatus: "proposed"
             diff: {
                 from: "ont-1a2b3c4d5e6f"
@@ -2060,17 +2019,8 @@ operation ListOntologyProposals {
                     from: "ont-1a2b3c4d5e6f"
                     to: "ont-draft-9f8e7d6c5b4a"
                     changeSet: {
-                        counts: {
-                            addedTriples: 12
-                            removedTriples: 0
-                            addedClasses: 1
-                            removedClasses: 0
-                            addedProperties: 0
-                            removedProperties: 0
-                            domainChanges: 0
-                            rangeChanges: 0
-                        }
-                        addedClasses: [ "urn:coa:class:Invoice" ]
+                        counts: { addedTriples: 12, removedTriples: 0, addedClasses: 1, removedClasses: 0, addedProperties: 0, removedProperties: 0, domainChanges: 0, rangeChanges: 0 }
+                        addedClasses: ["urn:coa:class:Invoice"]
                         removedClasses: []
                         addedProperties: []
                         removedProperties: []
@@ -2092,7 +2042,10 @@ operation ListOntologyProposals {
                         properties: []
                         instances: {
                             byClass: [
-                                { iri: "urn:coa:class:Invoice", label: "Invoice" }
+                                {
+                                    iri: "urn:coa:class:Invoice"
+                                    label: "Invoice"
+                                }
                             ]
                             source: "A-Box 未配置"
                             note: "没有 A-Box 图，实例数不可算；未以 0 代替"
@@ -2100,7 +2053,12 @@ operation ListOntologyProposals {
                     }
                     aggregations: {
                         byClass: [
-                            { iri: "urn:coa:class:Invoice", label: "Invoice", addedTriples: 12, removedTriples: 0 }
+                            {
+                                iri: "urn:coa:class:Invoice"
+                                label: "Invoice"
+                                addedTriples: 12
+                                removedTriples: 0
+                            }
                         ]
                         byProperty: []
                         unclassified: { addedTriples: 0, removedTriples: 0 }
@@ -2131,20 +2089,24 @@ operation ListOntologyProposals {
         title: "Read one proposal whose impact analysis failed"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", proposalId: "prop-6f5e4d3c2b1a" }
         output: {
-            proposal: {
-                proposalId: "prop-6f5e4d3c2b1a"
-                versionId: "ont-draft-1029384756ab"
-                status: "proposed"
-            }
-            version: {
-                id: "ont-draft-1029384756ab"
-                semver: "1.1.0"
-                status: "proposed"
-            }
+            proposal: { proposalId: "prop-6f5e4d3c2b1a", versionId: "ont-draft-1029384756ab", status: "proposed", breaking: false }
+            version: { id: "ont-draft-1029384756ab", semver: "1.1.0", status: "proposed" }
             versionStatus: "proposed"
             diff: {
                 to: "ont-draft-1029384756ab"
                 breaking: false
+                breakingItems: []
+                summary: {
+                    addedTriples: 0
+                    removedTriples: 0
+                    addedClasses: []
+                    removedClasses: []
+                    addedProperties: []
+                    removedProperties: []
+                    domainChanges: []
+                    rangeChanges: []
+                    removedClassInstances: []
+                }
             }
             impact: {
                 addedTriples: 0
@@ -2235,7 +2197,17 @@ operation ReviewOntologyProposal {
     {
         title: "Plan a publish"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", versionId: "ont-draft-9f8e7d6c5b4a", planOnly: true }
-        output: { dryRun: true, versionId: "ont-draft-9f8e7d6c5b4a", versionStatus: "approved", wouldPublish: true, breaking: false, gates: { integrity: { ok: true, triples: 1292, declared: 1292 } }, blockers: [] }
+        output: {
+            dryRun: true
+            versionId: "ont-draft-9f8e7d6c5b4a"
+            versionStatus: "approved"
+            wouldPublish: true
+            breaking: false
+            gates: {
+                integrity: { ok: true, triples: 1292, declared: 1292 }
+            }
+            blockers: []
+        }
     }
 ])
 operation PublishOntology {
@@ -2409,7 +2381,11 @@ operation ListOntologyEvents {
     {
         title: "Verify both audit chains"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core" }
-        output: { ok: true, checked: 41, prov: { ok: true, checked: 12, graph: "urn:platform:graph:prov" } }
+        output: {
+            ok: true
+            checked: 41
+            prov: { ok: true, checked: 12, graph: "urn:platform:graph:prov" }
+        }
     }
 ])
 operation VerifyOntology {

@@ -143,3 +143,17 @@ string OntologyId
 /// expires, so it is a bearer credential: generated clients keep it out of logs.
 @sensitive
 string PresignedUrl
+
+/// A list of strings. Shared by every namespace so the whole model has exactly
+/// one such type; per-namespace copies would collide inside a service closure,
+/// where shape names must be unique case-insensitively across namespaces.
+list StringList {
+    member: String
+}
+
+/// A list of free-form JSON documents, used where a response hands back
+/// provider payloads the model does not pin down. Shared for the same reason as
+/// `StringList`.
+list DocumentList {
+    member: Document
+}

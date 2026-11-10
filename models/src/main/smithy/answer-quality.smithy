@@ -10,6 +10,9 @@ $version: "2"
 
 namespace com.amazon.semanticcontext.quality
 
+use com.amazon.semanticcontext.common#DocumentList
+use com.amazon.semanticcontext.common#StringList
+
 /// Retrieval strategy used for the run.
 enum AnswerQualityStrategy {
     /// Lexical retrieval only.
@@ -250,15 +253,6 @@ structure AnswerQualityGoldenSet {
     caseId: String
 }
 
-list StringList {
-    member: String
-}
-
-/// Free-form JSON documents in an answer-quality response.
-list DocumentList {
-    member: Document
-}
-
 /// One answer-quality run over the fixed golden set.
 structure AnswerQualityResponse {
     /// Retrieval strategy used for the run.
@@ -317,29 +311,34 @@ structure AnswerQualityResponse {
         output: {
             strategy: "lexical"
             goldenSet: { id: "golden-v1", count: 12, evaluated: 12 }
-            summary: {
-                cases: 12
-                passed: 11
-                failed: 1
-                passRate: 0.9167
-                casesWithCitations: 10
-                citationCoverageRate: 0.8333
-                citations: 18
-                resolvableCitations: 17
-                citationResolvableRate: 0.9444
-                brokenLinkRate: 0.0556
-                baselineBrokenLinkRate: 0.06
-                regression: false
-            }
+            summary: { cases: 12, passed: 11, failed: 1, passRate: 0.9167, casesWithCitations: 10, citationCoverageRate: 0.8333, citations: 18, resolvableCitations: 17, citationResolvableRate: 0.9444, brokenLinkRate: 0.0556, baselineBrokenLinkRate: 0.06, regression: false }
             citationCoverageByType: [
-                { type: "entity", cases: 4, refused: 0, withCitations: 4, citations: 6, resolvable: 6, citationCoverageRate: 1.0, resolvableRate: 1.0 }
+                {
+                    type: "entity"
+                    cases: 4
+                    refused: 0
+                    withCitations: 4
+                    citations: 6
+                    resolvable: 6
+                    citationCoverageRate: 1.0
+                    resolvableRate: 1.0
+                }
             ]
             refusalsByReason: [
-                { type: "out-of-scope", reasonCode: "E_NO_EVIDENCE", count: 1 }
+                {
+                    type: "out-of-scope"
+                    reasonCode: "E_NO_EVIDENCE"
+                    count: 1
+                }
             ]
             refusalsByType: []
             refusalsWithoutLayers: []
-            brokenLinks: [{ citationId: "cit-9", ref: "doc-missing" }]
+            brokenLinks: [
+                {
+                    citationId: "cit-9"
+                    ref: "doc-missing"
+                }
+            ]
             cases: [
                 {
                     id: "case-001"
@@ -351,7 +350,14 @@ structure AnswerQualityResponse {
                         answerType: "graph"
                         answerMode: "strict"
                         degraded: false
-                        citations: [{ id: "cit-1", kind: "fact", ref: "fact-1a2b3c4d5e6f", resolvable: true }]
+                        citations: [
+                            {
+                                id: "cit-1"
+                                kind: "fact"
+                                ref: "fact-1a2b3c4d5e6f"
+                                resolvable: true
+                            }
+                        ]
                         citationKinds: ["fact"]
                         missingLayers: []
                     }

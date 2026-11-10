@@ -31,7 +31,6 @@ use com.amazon.semanticcontext.entity#GetEntity
 use com.amazon.semanticcontext.entity#GetEntityProvenance
 use com.amazon.semanticcontext.facts#AssertFact
 use com.amazon.semanticcontext.facts#BatchKeepFactConflicts
-use com.amazon.semanticcontext.facts#RetractFacts
 use com.amazon.semanticcontext.facts#GetFact
 use com.amazon.semanticcontext.facts#ListFactConflicts
 use com.amazon.semanticcontext.facts#ListFactEvents
@@ -39,6 +38,7 @@ use com.amazon.semanticcontext.facts#ListFacts
 use com.amazon.semanticcontext.facts#ResolveFactConflicts
 use com.amazon.semanticcontext.facts#RestoreFact
 use com.amazon.semanticcontext.facts#RetractFact
+use com.amazon.semanticcontext.facts#RetractFacts
 use com.amazon.semanticcontext.facts#UndoFactConflictResolution
 use com.amazon.semanticcontext.grant#CreateGrant
 use com.amazon.semanticcontext.grant#CreatePlatformGrant
@@ -113,15 +113,15 @@ use com.amazon.semanticcontext.ontologyinduction#RepairProposalDatatypes
 use com.amazon.semanticcontext.ontologyinduction#StartInduction
 use com.amazon.semanticcontext.ontologyinduction#UpdateProposal
 use com.amazon.semanticcontext.ontologyinduction#ValidateProposal
-use com.amazon.semanticcontext.ontologylifecycle#ProposeOntologyVersion
 use com.amazon.semanticcontext.ontologylifecycle#DiffOntologyVersions
 use com.amazon.semanticcontext.ontologylifecycle#ExportOntologyVersion
-use com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersionProposal
 use com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersion
+use com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersionProposal
 use com.amazon.semanticcontext.ontologylifecycle#ImportOntology
 use com.amazon.semanticcontext.ontologylifecycle#ListOntologyEvents
 use com.amazon.semanticcontext.ontologylifecycle#ListOntologyProposals
 use com.amazon.semanticcontext.ontologylifecycle#ListOntologyVersions
+use com.amazon.semanticcontext.ontologylifecycle#ProposeOntologyVersion
 use com.amazon.semanticcontext.ontologylifecycle#PublishOntology
 use com.amazon.semanticcontext.ontologylifecycle#ReviewOntologyProposal
 use com.amazon.semanticcontext.ontologylifecycle#RollbackOntology

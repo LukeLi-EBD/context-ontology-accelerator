@@ -13,13 +13,13 @@ namespace com.amazon.semanticcontext.dictionary
 use com.amazon.semanticcontext.common#InternalServerError
 use com.amazon.semanticcontext.common#NotFoundError
 use com.amazon.semanticcontext.common#ServiceUnavailableError
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 
 // ---------------------------------------------------------------------------
 // Terms (F58/F59)
 // ---------------------------------------------------------------------------
-
 /// Anchor-class and alias counts for the namespace's published T-Box.
 structure TermCounts {
     /// Distinct owl:Class nodes that an alias entry points at (F58).
@@ -75,10 +75,6 @@ structure TermEntry {
 
 list TermEntryList {
     member: TermEntry
-}
-
-list StringList {
-    member: String
 }
 
 /// List the namespace's alias entries with anchor-class counts (F58/F59).
@@ -146,7 +142,6 @@ operation ListTerms {
 // ---------------------------------------------------------------------------
 // Data dictionary (F60-F66)
 // ---------------------------------------------------------------------------
-
 /// Lifecycle of one dictionary introspection pass.
 structure DictionaryRefreshRun {
     @required

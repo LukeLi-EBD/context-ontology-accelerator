@@ -263,7 +263,13 @@ operation ExportOntologyBundle {
     {
         title: "Inspect a bundle on disk"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", bundleRef: "/data/bundles/release-2026-11" }
-        output: { ok: true, path: "/data/bundles/release-2026-11", tag: "release-2026-11", totals: { documents: 12, triples: 4200 }, files: 42 }
+        output: {
+            ok: true
+            path: "/data/bundles/release-2026-11"
+            tag: "release-2026-11"
+            totals: { documents: 12, triples: 4200 }
+            files: 42
+        }
     }
 ])
 operation InspectOntologyBundle {
@@ -298,7 +304,13 @@ operation InspectOntologyBundle {
     {
         title: "Restore a bundle into a test database"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", bundleRef: "/data/bundles/release-2026-11", database: "platform_restore_test", replace: false, actor: "operator" }
-        output: { ok: true, database: "platform_restore_test", bundle: "/data/bundles/release-2026-11", tbox: { versionId: "ont-1a2b3c4d5e6f", graph: "urn:platform:graph:tbox:1a2b3c4d" }, ledger: { events: 41, facts: 1280, chain: true } }
+        output: {
+            ok: true
+            database: "platform_restore_test"
+            bundle: "/data/bundles/release-2026-11"
+            tbox: { versionId: "ont-1a2b3c4d5e6f", graph: "urn:platform:graph:tbox:1a2b3c4d" }
+            ledger: { events: 41, facts: 1280, chain: true }
+        }
     }
 ])
 operation ImportBundle {

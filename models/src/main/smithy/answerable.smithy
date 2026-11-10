@@ -34,6 +34,7 @@ namespace com.amazon.semanticcontext.datalayer
 use com.amazon.semanticcontext.common#AccessDeniedError
 use com.amazon.semanticcontext.common#InternalServerError
 use com.amazon.semanticcontext.common#ServiceUnavailableError
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 
