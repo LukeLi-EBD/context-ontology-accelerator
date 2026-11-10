@@ -740,7 +740,16 @@ export const MetricList: React.FC = () => {
           {
             id: "sourceTable",
             header: t("Table"),
-            cell: (item: MetricDefinition) => item.sourceTable,
+            // ``bindingStatus`` is written by the metric graph; the generated
+            // client type predates it, so read it structurally. Records without
+            // a table are "unbound" rather than blank — blank reads as a bug.
+            cell: (item: MetricDefinition) =>
+              (item as MetricDefinition & { bindingStatus?: string }).bindingStatus === "unbound" ||
+              !item.sourceTable ? (
+                <Box color="text-status-inactive">{t("Unbound")}</Box>
+              ) : (
+                item.sourceTable
+              ),
           },
           {
             id: "dialects",
