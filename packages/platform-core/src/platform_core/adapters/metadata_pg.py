@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 48
+SUPPORTED_SCHEMA_VERSION = 49
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -76,6 +76,7 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     # any database and main is at 47, so it merges as V48 to keep the registry
     # gapless against MAX(version) (see doc/coa-x/14-契约批次设计.md §8.4).
     (48, "V48__dictionary_storage.sql", "P4 dictionary storage: namespace-scoped snapshot + idempotent refresh runs"),
+    (49, "V49__import_failed_feed_index.sql", "P8 ingestion runs: partial index for the namespace-scoped failure feed"),
 ]
 
 # Retired migration numbers, kept permanently empty.
