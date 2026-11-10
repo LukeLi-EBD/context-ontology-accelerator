@@ -724,6 +724,47 @@ def _configure_lifecycle_env() -> None:
         (work / sub).mkdir(parents=True, exist_ok=True)
 
 
+def _assert_schema_version(metadata: Any, *, where: str) -> None:
+    """Refuse to run when the database is not at the code's schema version.
+
+    The bridge never migrates: applying DDL from a request path is the CLI's
+    job.  Without this check a stale database starts fine and fails on the
+    first write to a new table/column, so compare at start-up instead.
+    """
+    from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+
+    row = metadata.query("SELECT to_regclass('platform.schema_version') AS reg")
+    actual = 0
+    if row and row[0]["reg"]:
+        actual = int(
+            metadata.query(
+                "SELECT COALESCE(MAX(version), 0) AS v FROM platform.schema_version"
+            )[0]["v"]
+        )
+    if actual == SUPPORTED_SCHEMA_VERSION:
+        return
+    database = (os.environ.get("PLATFORM__DATABASE__URL") or "<unset>").rsplit("/", 1)[-1]
+    raise RuntimeError(
+        f"E_DB_SCHEMA_VERSION_MISMATCH ({where}): database {database!r} is at "
+        f"schema_version={actual}, code expects {SUPPORTED_SCHEMA_VERSION}. "
+        "8099 does not migrate at request time; migrate both local databases, "
+        "then restart: python doc/coa-x/tools/local_bootstrap.py migrate --dsn <dsn>"
+    )
+
+
+def _assert_lifecycle_schema() -> None:
+    """Start-up gate for the embedded app's database (``serve_local``)."""
+    _configure_lifecycle_env()
+    from platform_core.adapters.metadata_pg import MetadataPg
+
+    meta = MetadataPg(os.environ["PLATFORM__DATABASE__URL"], pool_max=1)
+    try:
+        meta.open(retry_seconds=15)
+        _assert_schema_version(meta, where="8099 startup")
+    finally:
+        meta.close()
+
+
 def _add_register_route(app: Any, runtime: Any) -> None:
     """Local draft-only registration: platform's HTTP import cannot do it.
 
@@ -783,6 +824,8 @@ def _lifecycle_app() -> Any:
     # The CLI's self-check normally opens the pool; without it every DB route
     # answers 503 E_DB_UNAVAILABLE.  No HTTP server means no lifespan either.
     runtime.metadata.open(retry_seconds=30.0)
+    # Same gate as start-up, for processes that build the app without main().
+    _assert_schema_version(runtime.metadata, where="in-process app")
     start_ontology(runtime)
     app = create_app(runtime, [])
     _add_register_route(app, runtime)
@@ -1515,6 +1558,14 @@ def main() -> None:
     from coa_common.logging import setup_logging
 
     setup_logging(os.environ.get("LOG_LEVEL", "INFO"))
+
+    # Fail fast: the in-process app never migrates, so a stale serve_local
+    # would otherwise start and only fail on the first write to a new table.
+    try:
+        _assert_lifecycle_schema()
+    except RuntimeError as exc:
+        print(f"[api] refusing to start: {exc}", file=sys.stderr)
+        raise SystemExit(1) from None
 
     _seed_roles()
     _write_snapshot()

@@ -5,7 +5,7 @@
 .DESCRIPTION
   本脚本只管理下面五个东西（其余一律不碰）：
 
-    容器 coa-local-pg        127.0.0.1:5444  pgvector/pgvector:pg18-trixie，库 platform
+    容器 coa-local-pg        127.0.0.1:5444  pgvector/pgvector:pg18-trixie，库 platform + serve_local
     容器 coa-local-oxigraph  127.0.0.1:7878  oxigraph/oxigraph:0.5.7，数据卷 coa-local-oxigraph-data
     进程 coa-api-local       127.0.0.1:8099  doc/coa-x/tools/coa_api_local.py
     进程 coa-ontology-local  127.0.0.1:8101  doc/coa-x/tools/coa_ontology_local.py
@@ -152,6 +152,27 @@ Ensure-Container $OxiName @(
 Wait-Port 5444 "coa-local-pg" 60
 Wait-Port 7878 "coa-local-oxigraph" 30
 
+# 1.5) Schema for BOTH databases, before any process starts.
+# 8099's in-process app reads serve_local (PLATFORM__DATABASE__URL); 8101's
+# registry, the fact ledger and the control-plane handlers read platform
+# (COA_CONTROL_PLANE_PG_DSN).  One migration chain serves both, but they are
+# separate databases: migrating only one leaves the other starting fine and
+# failing on its first write to a new table/column.
+$PlatformDsn = "postgresql://platform:platform_dev@127.0.0.1:5444/platform"
+$ServeDsn    = "postgresql://platform:platform_dev@127.0.0.1:5444/serve_local"
+$hasServeDb = docker exec $PgName psql -U platform -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='serve_local'" 2>$null
+if (-not ($hasServeDb -match "1")) {
+    Write-Host "  [create] database serve_local"
+    docker exec $PgName psql -U platform -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE serve_local" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "failed to create database serve_local" }
+}
+foreach ($dsn in @($PlatformDsn, $ServeDsn)) {
+    $db = ($dsn -split "/")[-1]
+    Write-Host ("  [migrate] {0}" -f $db)
+    & $Python (Join-Path $Tools "local_bootstrap.py") migrate --dsn $dsn
+    if ($LASTEXITCODE -ne 0) { throw ("schema migration failed: {0}" -f $db) }
+}
+
 # 2) environment for both local processes (no secrets; local DSN only)
 # Prompt/template files are UTF-8; without this the child falls back to the
 # console code page (cp936) and 8101 dies on UnicodeDecodeError at import time.
@@ -222,7 +243,6 @@ Wait-Port 8101 "coa-ontology-local" 90
 if (Test-PortListening 8091) {
     Write-Host "  [ok] coa-serve-local already listening on :8091 (not restarted)"
 } else {
-    $ServeDsn = "postgresql://platform:platform_dev@127.0.0.1:5444/serve_local"
     $ServeDir = Join-Path $RunDir "serve"
     New-Item -ItemType Directory -Force -Path $ServeDir | Out-Null
     $AuthzFile = Join-Path $ServeDir "authz.json"
@@ -286,8 +306,7 @@ if (Test-PortListening 8091) {
 
     $hasServeDb = docker exec $PgName psql -U platform -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='serve_local'" 2>$null
     if (-not ($hasServeDb -match "1")) {
-        Write-Host "  [warn] database serve_local is missing - Query / KBSearch will fail until it is bootstrapped"
-        Write-Host "         see 10-本地起栈.md §serve 库一次性初始化"
+        Write-Host "  [warn] database serve_local disappeared after step 1.5 - Query / KBSearch will fail"
     }
 
     $out = Join-Path $Tools "serve-8091.log"
@@ -339,7 +358,7 @@ Write-Host "Stack is up:"
 Write-Host "  8099  coa-api-local      (bridge -> 8101 for /ontology/*, lifecycle in-process, -> 8091 for /query|/kb/search)"
 Write-Host "  8101  coa-ontology-local (Oxigraph 7878, PG registry 5444)"
 Write-Host "  8091  coa-serve-local    (context-manager, serve_local DB)"
-Write-Host "  5444  coa-local-pg"
+Write-Host "  5444  coa-local-pg      (platform = control plane, serve_local = query chain)"
 Write-Host "  7878  coa-local-oxigraph"
 Write-Host ""
 Write-Host "Frontend: run the 5173 dev server separately (local-only vite config)."
