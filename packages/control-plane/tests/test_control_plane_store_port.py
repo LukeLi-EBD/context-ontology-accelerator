@@ -13,6 +13,8 @@ import pytest
 
 from coa_control_plane.ports import ControlPlaneStore, Page
 
+pytestmark = pytest.mark.unit
+
 
 def test_port_is_a_runtime_checkable_protocol() -> None:
     assert getattr(ControlPlaneStore, "_is_runtime_protocol", False)

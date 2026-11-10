@@ -17,6 +17,7 @@ the real helper run — that's what fires the ``on_embeddings_sync`` callback.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -58,7 +59,7 @@ def _run(monkeypatch, *, wait_spy):
     store = _fake_store(
         b"@prefix ex: <http://ex/> . ex:A a <http://www.w3.org/2002/07/owl#Class> ."
     )
-    monkeypatch.setattr("coa_runtime.registry.resolve", lambda *a, **k: store)
+    monkeypatch.setattr("coa_runtime.registry.resolve", lambda *a, **k: SimpleNamespace(instance=store))
 
     monkeypatch.setattr(mod, "_stores", lambda ns: (MagicMock(), MagicMock()))
     # Patch the inner seams the shared helper calls, NOT the helper itself, so
@@ -114,7 +115,7 @@ def test_worker_enters_wait_only_after_embeddings_sync(monkeypatch):
     with (
         patch.object(mod.dynamo_store, "update_ingest_job", _update_ingest_job),
         patch.object(mod.dynamo_store, "get_ontology_registry", lambda ns, oid: {}),
-        patch("coa_runtime.registry.resolve", lambda *a, **k: store),
+        patch("coa_runtime.registry.resolve", lambda *a, **k: SimpleNamespace(instance=store)),
         patch.object(mod, "_stores", lambda ns: (MagicMock(), MagicMock())),
         patch.object(
             ingest_mod,
@@ -158,7 +159,7 @@ def test_worker_reports_validation_failures_to_the_author(monkeypatch):
     with (
         patch.object(mod.dynamo_store, "update_ingest_job", _update_ingest_job),
         patch.object(mod, "_fail_ingest_stub", lambda ns, oid, msg: stub_failures.append(msg)),
-        patch("coa_runtime.registry.resolve", lambda *a, **k: store),
+        patch("coa_runtime.registry.resolve", lambda *a, **k: SimpleNamespace(instance=store)),
         patch.object(mod, "_stores", lambda ns: (MagicMock(), MagicMock())),
         patch.object(ingest_mod, "ingest_ontology", _reject),
     ):

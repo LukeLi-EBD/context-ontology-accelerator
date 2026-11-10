@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from coa_metrics.neptune_client import MetricDefinition, MetricDialect, MetricNeptuneClient
+
+pytestmark = pytest.mark.unit
 
 
 class RecordingTransport:

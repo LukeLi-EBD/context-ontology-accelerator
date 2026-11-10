@@ -1,6 +1,6 @@
 [project]
 name = "coa-runtime"
-version = "0.1.0"
+version = "0.3.9"
 description = "Composition root: one configuration key per interface, no defaults"
 requires-python = ">=3.12"
 dependencies = [
