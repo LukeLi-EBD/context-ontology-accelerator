@@ -50,10 +50,11 @@ env:
   ALLOWED_ORIGIN: "https://ci-test.example.com"
 
 jobs:
-  # smithy-generated/ is not committed, and both the uv workspace and the pnpm
-  # workspace declare members inside it — so every downstream job needs this
-  # first. Generated once and passed along as an artifact rather than rebuilt
-  # per job (~1 Gradle build + 2 npm builds).
+  # smithy-generated/ is committed (the drift gate below keeps the committed
+  # copy equal to what the generator emits), and both the uv workspace and the
+  # pnpm workspace declare members inside it — so every downstream job needs
+  # this first. Generated once and passed along as an artifact rather than
+  # rebuilt per job (~1 Gradle build + 2 npm builds).
   smithy-generate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -83,6 +84,24 @@ jobs:
           set -euo pipefail
           chmod +x models/gradlew
           ./scripts/smithy-generate.sh
+
+      # Drift gate: the committed copy of smithy-generated/ must equal what the
+      # generator just emitted from the current models. Without this a model
+      # change that was never regenerated still passes CI and ships a stale
+      # contract — the ListStatements client was missing from the repo that way.
+      # `git status` also reports files the generator creates, which a plain
+      # `git diff` over tracked files misses. The clients' own .gitignore keeps
+      # build output (dist-*, node_modules, *.tsbuildinfo) out of the comparison.
+      - name: Check generated artifacts are committed
+        run: |
+          set -euo pipefail
+          changed="$(git status --porcelain -- smithy-generated)"
+          if [ -n "$changed" ]; then
+            echo "$changed"
+            git --no-pager diff --stat -- smithy-generated
+            echo "::error::smithy-generated/ differs from the generator output; run ./scripts/smithy-generate.sh and commit the result."
+            exit 1
+          fi
 
       # node_modules is excluded: it exists only to build the clients' dist
       # output, and downstream jobs get their own copy from `pnpm install`.
