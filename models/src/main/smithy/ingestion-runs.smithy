@@ -127,60 +127,78 @@ enum IngestionAttemptStatus {
 
 /// Scan buckets that never became import items.
 structure IngestionRunSkipped {
+    /// Dotfiles and other paths ignored by the scanner.
     @required
     hidden: Long
 
+    /// Files whose extension is outside ALLOWED_EXTENSIONS.
     @required
     unsupported: Long
 
+    /// Zero-byte files.
     @required
     empty: Long
 
+    /// Files above documents.max_upload_bytes.
     @required
     tooLarge: Long
 
+    /// Files that could not be stat'ed or hashed.
     @required
     unreadable: Long
 }
 
 /// Counters exactly as reported by one invocation.
 structure IngestionRunCounters {
+    /// Items discovered by this scan.
     @required
     total: Long
 
+    /// Items that were already embedded before this invocation.
     @required
     alreadyDone: Long
 
+    /// Items this invocation reached a terminal state for.
     @required
     processed: Long
 
+    /// Items successfully parsed.
     @required
     parsed: Long
 
+    /// Items that resumed from a previous chunking step.
     @required
     resumedChunked: Long
 
+    /// Items indexed with vectors in the active model partition.
     @required
     indexed: Long
 
+    /// Document rows created by this invocation.
     @required
     documentsAdded: Long
 
+    /// Items that failed during this invocation.
     @required
     failedThisRun: Long
 
+    /// Items still marked failed at the end of this invocation.
     @required
     failedTotal: Long
 
+    /// Items left pending, parsing or chunked when the invocation stopped.
     @required
     remainingFiles: Long
 
+    /// True when the invocation stopped at a segment boundary and can resume.
     @required
     interrupted: Boolean
 
+    /// Scan buckets that never became items.
     @required
     skipped: IngestionRunSkipped
 
+    /// Wall-clock duration of the invocation.
     @required
     elapsedSeconds: Double
 }
@@ -194,9 +212,11 @@ structure IngestionRunAttempt {
     @required
     status: IngestionAttemptStatus
 
+    /// When the invocation opened its ledger row.
     @required
     startedAt: Timestamp
 
+    /// When the invocation closed its ledger row; absent while running.
     finishedAt: Timestamp
 
     /// Process exit code reported by the CLI.
