@@ -6,11 +6,16 @@
 # packages/platform-core/docker-compose.yml (the 8080/8082 old stack), and
 # keeping the two apart makes it impossible to start the wrong one by accident.
 #
-# Port contract (do not reuse the shared stack's ports):
+# Host port defaults (preferred, never hard-coded at run time):
 #   PostgreSQL   127.0.0.1:6044
 #   Oxigraph     127.0.0.1:7988   (loopback only)
 #   engine       127.0.0.1:8812
 #   bridge       127.0.0.1:8799   (also serves the control-plane kernel)
+# All four are published through COA_STACK_*_PORT, which the start script
+# fills with a free port it has probed; the values above are only the fallback
+# when someone runs `docker compose up` directly.  Container-side ports stay
+# fixed (5432 / 7988 / 8812 / 8799), so a shifted host port never changes how
+# the services talk to each other.
 # Reserved for the future standalone control-plane split: 8798 (not published).
 #
 # Services that exist today:
@@ -74,7 +79,9 @@ x-app-env: &app-env
   COA_GRAPH_OXIGRAPH_URL: http://oxigraph:7988
   COA_ONTOLOGY_OXIGRAPH_URL: http://oxigraph:7988
   COA_LOCAL_OBJECT_ROOT: /data/objects
-  COA_LOCAL_OBJECT_BASE: http://127.0.0.1:8799/_local/objects
+  # The bridge's host port is auto-detected by the start script; object URLs
+  # must carry whatever port was actually published, not a hard-coded 8799.
+  COA_LOCAL_OBJECT_BASE: http://127.0.0.1:${COA_STACK_BRIDGE_PORT:-8799}/_local/objects
   COA_EMBEDDING_URL: http://host.docker.internal:8081/v1
   ONTOLOGY_ENGINE_ENDPOINT: http://ontology-engine:8812
   COA_CONTEXT_MANAGER_ENDPOINT: http://host.docker.internal:8091
@@ -101,7 +108,7 @@ services:
       POSTGRES_DB: platform
       POSTGRES_INITDB_ARGS: --data-checksums
     ports:
-      - "127.0.0.1:6044:5432"
+      - "127.0.0.1:${COA_STACK_PG_PORT:-6044}:5432"
     volumes:
       - m3-local-pg-data:/var/lib/postgresql/18/docker
       - ./initdb:/docker-entrypoint-initdb.d:ro
@@ -117,7 +124,7 @@ services:
     # Consumers retry on first use instead of depending on a probe.
     command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7988"]
     ports:
-      - "127.0.0.1:7988:7988"
+      - "127.0.0.1:${COA_STACK_OXIGRAPH_PORT:-7988}:7988"
     volumes:
       - m3-local-oxigraph-data:/data
 
@@ -176,7 +183,7 @@ services:
       COA_LOCAL_API_HOST: 0.0.0.0
       COA_LOCAL_API_PORT: "8799"
     ports:
-      - "127.0.0.1:8799:8799"
+      - "127.0.0.1:${COA_STACK_BRIDGE_PORT:-8799}:8799"
     depends_on:
       postgres:
         condition: service_healthy
