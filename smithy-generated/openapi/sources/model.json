@@ -220,6 +220,9 @@
                     "target": "com.amazon.semanticcontext.grant#ListPrincipalGrants"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ingestion#GetIngestionRun"
+                },
+                {
                     "target": "com.amazon.semanticcontext.ingestion#ListIngestionRuns"
                 },
                 {
@@ -12281,6 +12284,147 @@
                 }
             }
         },
+        "com.amazon.semanticcontext.ingestion#GetIngestionRun": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ingestion#GetIngestionRunInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ingestion#GetIngestionRunOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Read one namespace-scoped ingestion run (F17) with its latest attempt and\nits per-item rows.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Read one import batch",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "runId": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c"
+                        },
+                        "output": {
+                            "run": {
+                                "runId": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c",
+                                "root": "/data/corpus/handbook",
+                                "status": "COMPLETED",
+                                "stale": false,
+                                "total": 2,
+                                "completed": 2,
+                                "indexed": 1,
+                                "failed": 1,
+                                "degraded": 0,
+                                "createdAt": "2025-11-10T00:00:00Z",
+                                "updatedAt": "2025-11-11T00:00:00Z",
+                                "finishedAt": "2025-11-11T00:00:00Z",
+                                "items": [
+                                    {
+                                        "relPath": "appendix/legacy.docx",
+                                        "status": "failed",
+                                        "attempts": 3,
+                                        "failureCode": "E_PARSE_UNSUPPORTED",
+                                        "failureMessage": "unsupported legacy document format",
+                                        "updatedAt": "2025-11-11T00:00:00Z"
+                                    },
+                                    {
+                                        "relPath": "chapter-1.md",
+                                        "status": "indexed",
+                                        "attempts": 1,
+                                        "updatedAt": "2025-11-11T00:00:00Z"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/ingestion-runs/{runId}"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#GetIngestionRunInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Namespace that owns the run.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "runId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Batch identifier as returned by ListIngestionRuns.runId.",
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#GetIngestionRunOutput": {
+            "type": "structure",
+            "members": {
+                "run": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunDetail",
+                    "traits": {
+                        "smithy.api#documentation": "The run, its latest invocation and its per-item rows.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionAttemptStatus": {
+            "type": "enum",
+            "members": {
+                "RUNNING": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The process was still working when the snapshot was taken.",
+                        "smithy.api#enumValue": "RUNNING"
+                    }
+                },
+                "COMPLETED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The invocation returned normally (items may still have failed).",
+                        "smithy.api#enumValue": "COMPLETED"
+                    }
+                },
+                "INTERRUPTED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Stopped by the operator; the next invocation resumes.",
+                        "smithy.api#enumValue": "INTERRUPTED"
+                    }
+                },
+                "FAILED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "The invocation raised before it could finish.",
+                        "smithy.api#enumValue": "FAILED"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Final state of one import invocation."
+            }
+        },
         "com.amazon.semanticcontext.ingestion#IngestionFailure": {
             "type": "structure",
             "members": {
@@ -12321,7 +12465,8 @@
                     "target": "smithy.api#Timestamp",
                     "traits": {
                         "smithy.api#documentation": "When the item last changed.",
-                        "smithy.api#required": {}
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
                     }
                 }
             },
@@ -12417,25 +12562,367 @@
                     "target": "smithy.api#Timestamp",
                     "traits": {
                         "smithy.api#documentation": "When the batch row was created.",
-                        "smithy.api#required": {}
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
                     }
                 },
                 "updatedAt": {
                     "target": "smithy.api#Timestamp",
                     "traits": {
                         "smithy.api#documentation": "When the batch row last changed.",
-                        "smithy.api#required": {}
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
                     }
                 },
                 "finishedAt": {
                     "target": "smithy.api#Timestamp",
                     "traits": {
-                        "smithy.api#documentation": "When the batch finished; absent while running."
+                        "smithy.api#documentation": "When the batch finished; absent while running.",
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                },
+                "lastRun": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunAttempt",
+                    "traits": {
+                        "smithy.api#documentation": "Most recent invocation of `platform import` for this batch\n(platform.import_run). Absent for batches imported before the ledger."
                     }
                 }
             },
             "traits": {
                 "smithy.api#documentation": "One import batch and its per-item counters."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunAttempt": {
+            "type": "structure",
+            "members": {
+                "runId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Invocation identifier (platform.import_run.run_id), not the batch id.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionAttemptStatus",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "startedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the invocation opened its ledger row.",
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                },
+                "finishedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the invocation closed its ledger row; absent while running.",
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                },
+                "exitCode": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Process exit code reported by the CLI."
+                    }
+                },
+                "errorCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable failure code when status is FAILED."
+                    }
+                },
+                "errorMessage": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable failure message when status is FAILED."
+                    }
+                },
+                "counters": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunCounters",
+                    "traits": {
+                        "smithy.api#documentation": "Counters are absent when the invocation failed before counting."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One invocation of `platform import` (platform.import_run)."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunCounters": {
+            "type": "structure",
+            "members": {
+                "total": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items discovered by this scan.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "alreadyDone": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that were already embedded before this invocation.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "processed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items this invocation reached a terminal state for.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "parsed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items successfully parsed.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "resumedChunked": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that resumed from a previous chunking step.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "indexed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items indexed with vectors in the active model partition.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "documentsAdded": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Document rows created by this invocation.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "failedThisRun": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that failed during this invocation.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "failedTotal": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items still marked failed at the end of this invocation.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "remainingFiles": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items left pending, parsing or chunked when the invocation stopped.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "interrupted": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the invocation stopped at a segment boundary and can resume.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "skipped": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunSkipped",
+                    "traits": {
+                        "smithy.api#documentation": "Scan buckets that never became items.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "elapsedSeconds": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "Wall-clock duration of the invocation.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Counters exactly as reported by one invocation."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunDetail": {
+            "type": "structure",
+            "members": {
+                "runId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Stable batch identifier (platform.import_batch.batch_id).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "root": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Filesystem root that was imported.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunStatus",
+                    "traits": {
+                        "smithy.api#documentation": "Current lifecycle state.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "stale": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when status is STALE.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "staleReason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable stale reason; present only when stale is true."
+                    }
+                },
+                "total": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Discovered items in this batch.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "completed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that reached a terminal state (indexed or failed).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "indexed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items indexed successfully.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "failed": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items that ended in failure.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "degraded": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Items indexed with degraded quality (for example missing embeddings).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "createdAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the batch row was created.",
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                },
+                "updatedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the batch row last changed.",
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                },
+                "finishedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the batch finished; absent while running.",
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                },
+                "lastRun": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunAttempt",
+                    "traits": {
+                        "smithy.api#documentation": "Most recent invocation of `platform import` for this batch\n(platform.import_run). Absent for batches imported before the ledger."
+                    }
+                },
+                "items": {
+                    "target": "com.amazon.semanticcontext.ingestion#IngestionRunItemList",
+                    "traits": {
+                        "smithy.api#documentation": "Per-file rows of this batch, ordered by relative path (at most 1000).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One import batch with its latest invocation and its per-item rows."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunItem": {
+            "type": "structure",
+            "members": {
+                "relPath": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Path relative to the batch root.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Item lifecycle state exactly as stored by the importer\n(pending / parsing / chunked / indexed / failed).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "attempts": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of processing attempts so far.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "failureCode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Machine-readable failure code; absent unless the item failed."
+                    }
+                },
+                "failureMessage": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable failure message; absent unless the item failed."
+                    }
+                },
+                "updatedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#documentation": "When the item last changed.",
+                        "smithy.api#required": {},
+                        "smithy.api#timestampFormat": "date-time"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One discovered file inside an import batch (platform.import_item)."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunItemList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ingestion#IngestionRunItem",
+                "traits": {
+                    "smithy.api#documentation": "One discovered file."
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Items discovered in one run, ordered by relative path."
             }
         },
         "com.amazon.semanticcontext.ingestion#IngestionRunKind": {
@@ -12463,6 +12950,49 @@
             },
             "traits": {
                 "smithy.api#documentation": "A page of ingestion runs."
+            }
+        },
+        "com.amazon.semanticcontext.ingestion#IngestionRunSkipped": {
+            "type": "structure",
+            "members": {
+                "hidden": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Dotfiles and other paths ignored by the scanner.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "unsupported": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Files whose extension is outside ALLOWED_EXTENSIONS.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "empty": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Zero-byte files.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "tooLarge": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Files above documents.max_upload_bytes.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "unreadable": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#documentation": "Files that could not be stat'ed or hashed.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Scan buckets that never became import items."
             }
         },
         "com.amazon.semanticcontext.ingestion#IngestionRunStatus": {
@@ -12535,9 +13065,9 @@
                                     "indexed": 118,
                                     "failed": 2,
                                     "degraded": 1,
-                                    "createdAt": 1762732800,
-                                    "updatedAt": 1762819200,
-                                    "finishedAt": 1762819200
+                                    "createdAt": "2025-11-10T00:00:00Z",
+                                    "updatedAt": "2025-11-11T00:00:00Z",
+                                    "finishedAt": "2025-11-11T00:00:00Z"
                                 }
                             ],
                             "totalCount": 1,
@@ -12548,7 +13078,7 @@
                                     "attempts": 3,
                                     "code": "E_PARSE_UNSUPPORTED",
                                     "message": "unsupported legacy document format",
-                                    "updatedAt": 1762819200
+                                    "updatedAt": "2025-11-11T00:00:00Z"
                                 }
                             ]
                         }

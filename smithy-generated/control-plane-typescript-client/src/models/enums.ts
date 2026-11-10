@@ -218,16 +218,28 @@ export type PrincipalType = (typeof PrincipalType)[keyof typeof PrincipalType];
  * @public
  * @enum
  */
-export const IngestionRunKind = {
+export const IngestionAttemptStatus = {
   /**
-   * Directory imports recorded in platform.import_batch.
+   * The invocation returned normally (items may still have failed).
    */
-  BATCH: "BATCH",
+  COMPLETED: "COMPLETED",
+  /**
+   * The invocation raised before it could finish.
+   */
+  FAILED: "FAILED",
+  /**
+   * Stopped by the operator; the next invocation resumes.
+   */
+  INTERRUPTED: "INTERRUPTED",
+  /**
+   * The process was still working when the snapshot was taken.
+   */
+  RUNNING: "RUNNING",
 } as const;
 /**
  * @public
  */
-export type IngestionRunKind = (typeof IngestionRunKind)[keyof typeof IngestionRunKind];
+export type IngestionAttemptStatus = (typeof IngestionAttemptStatus)[keyof typeof IngestionAttemptStatus];
 
 /**
  * @public
@@ -255,6 +267,21 @@ export const IngestionRunStatus = {
  * @public
  */
 export type IngestionRunStatus = (typeof IngestionRunStatus)[keyof typeof IngestionRunStatus];
+
+/**
+ * @public
+ * @enum
+ */
+export const IngestionRunKind = {
+  /**
+   * Directory imports recorded in platform.import_batch.
+   */
+  BATCH: "BATCH",
+} as const;
+/**
+ * @public
+ */
+export type IngestionRunKind = (typeof IngestionRunKind)[keyof typeof IngestionRunKind];
 
 /**
  * @public

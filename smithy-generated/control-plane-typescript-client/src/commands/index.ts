@@ -44,6 +44,7 @@ export * from "./GetImportJobCommand";
 export * from "./GetInductionJobCommand";
 export * from "./GetInferConstraintsJobCommand";
 export * from "./GetIngestStatusCommand";
+export * from "./GetIngestionRunCommand";
 export * from "./GetMetricCardCommand";
 export * from "./GetMetricCommand";
 export * from "./GetMetricFamilyCommand";

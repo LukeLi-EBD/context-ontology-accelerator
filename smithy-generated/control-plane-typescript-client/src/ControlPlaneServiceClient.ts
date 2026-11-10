@@ -163,6 +163,7 @@ import type {
   GetInferConstraintsJobCommandInput,
   GetInferConstraintsJobCommandOutput,
 } from "./commands/GetInferConstraintsJobCommand";
+import type { GetIngestionRunCommandInput, GetIngestionRunCommandOutput } from "./commands/GetIngestionRunCommand";
 import type { GetIngestStatusCommandInput, GetIngestStatusCommandOutput } from "./commands/GetIngestStatusCommand";
 import type { GetMetricCardCommandInput, GetMetricCardCommandOutput } from "./commands/GetMetricCardCommand";
 import type { GetMetricCommandInput, GetMetricCommandOutput } from "./commands/GetMetricCommand";
@@ -478,6 +479,7 @@ export type ServiceInputTypes =
   | GetInductionJobCommandInput
   | GetInferConstraintsJobCommandInput
   | GetIngestStatusCommandInput
+  | GetIngestionRunCommandInput
   | GetMetricCardCommandInput
   | GetMetricCommandInput
   | GetMetricFamilyCommandInput
@@ -629,6 +631,7 @@ export type ServiceOutputTypes =
   | GetInductionJobCommandOutput
   | GetInferConstraintsJobCommandOutput
   | GetIngestStatusCommandOutput
+  | GetIngestionRunCommandOutput
   | GetMetricCardCommandOutput
   | GetMetricCommandOutput
   | GetMetricFamilyCommandOutput
