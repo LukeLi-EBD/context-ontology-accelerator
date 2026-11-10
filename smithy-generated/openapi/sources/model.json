@@ -136,6 +136,9 @@
                     "target": "com.amazon.semanticcontext.embeddings#SearchEmbeddings"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.facts#ResolveFactConflicts"
+                },
+                {
                     "target": "com.amazon.semanticcontext.grant#CreateGrant"
                 },
                 {
@@ -266,6 +269,9 @@
                 },
                 {
                     "target": "com.amazon.semanticcontext.ontologygraph#ListStatements"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.ontologygraph#MaterializeReasoning"
                 },
                 {
                     "target": "com.amazon.semanticcontext.ontologygraph#RunValidation"
@@ -3793,6 +3799,443 @@
                         "smithy.api#range": {
                             "min": 1,
                             "max": 100
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactBatchKeepResult": {
+            "type": "structure",
+            "members": {
+                "batchId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier shared by every event this batch wrote.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "dryRun": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when nothing was written (the default).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "keep": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Value the rule keeps.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "matched": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Pending groups inside the scope.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "kept": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Groups kept (or that would be kept, on a dry run).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "skipped": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Groups where `keep` is not one of the values.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "affectedFacts": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Facts retired across the matched groups.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Scope the caller supplied; absent members did not narrow it."
+                    }
+                },
+                "predicate": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri"
+                },
+                "sourceDocumentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid"
+                },
+                "results": {
+                    "target": "com.amazon.semanticcontext.facts#FactBatchKeepRowList",
+                    "traits": {
+                        "smithy.api#documentation": "Per-group outcome, in ledger order."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Result of `batch`: the scope that was applied and what it touched."
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactBatchKeepRow": {
+            "type": "structure",
+            "members": {
+                "subject": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "predicate": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "One of `would_keep` (dry run), `kept`, or `skipped`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "retired": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Facts retired by this row (0 for a skipped group)."
+                    }
+                },
+                "reason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why the group was skipped."
+                    }
+                },
+                "values": {
+                    "target": "com.amazon.semanticcontext.facts#FactIriList",
+                    "traits": {
+                        "smithy.api#documentation": "Values the group had before the decision."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One group of a batch keep. `status` is one of `would_keep` (dry run),\n`kept`, or `skipped`."
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactBatchKeepRowList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.facts#FactBatchKeepRow"
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactConflictAction": {
+            "type": "enum",
+            "members": {
+                "keep": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Keep one value, retire the others.",
+                        "smithy.api#enumValue": "keep"
+                    }
+                },
+                "keep_both": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Accept the conflict: every value stays active.",
+                        "smithy.api#enumValue": "keep_both"
+                    }
+                },
+                "merge": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Retire every conflicting value and record one merged value.",
+                        "smithy.api#enumValue": "merge"
+                    }
+                },
+                "batch": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#documentation": "Apply one `keep` rule to every pending group inside the scope.",
+                        "smithy.api#enumValue": "batch"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Adjudication applied to a conflict group. Wire values stay lowercase\nbecause the ledger and the console have used them since the first\nrelease; the model follows the wire rather than renaming it."
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactConflictResolutionOutcome": {
+            "type": "structure",
+            "members": {
+                "action": {
+                    "target": "com.amazon.semanticcontext.facts#FactConflictAction",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Conflict group subject; absent on `batch` when the scope did not\nnarrow by subject."
+                    }
+                },
+                "predicate": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Conflict group predicate; absent on `batch` when the scope did not\nnarrow by predicate."
+                    }
+                },
+                "kept": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Value kept by `keep`."
+                    }
+                },
+                "keptFactIds": {
+                    "target": "com.amazon.semanticcontext.facts#FactIdList",
+                    "traits": {
+                        "smithy.api#documentation": "Assertion rows kept by `keep`."
+                    }
+                },
+                "retiredFactIds": {
+                    "target": "com.amazon.semanticcontext.facts#FactIdList",
+                    "traits": {
+                        "smithy.api#documentation": "Assertion rows retired by `keep`."
+                    }
+                },
+                "retired": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of retired rows (`keep`)."
+                    }
+                },
+                "values": {
+                    "target": "com.amazon.semanticcontext.facts#FactIriList",
+                    "traits": {
+                        "smithy.api#documentation": "Values the group had before the decision."
+                    }
+                },
+                "acceptedFactIds": {
+                    "target": "com.amazon.semanticcontext.facts#FactIdList",
+                    "traits": {
+                        "smithy.api#documentation": "Assertion rows accepted by `keep_both`."
+                    }
+                },
+                "mergedFactId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "New assertion row written by `merge`."
+                    }
+                },
+                "originalFactIds": {
+                    "target": "com.amazon.semanticcontext.facts#FactIdList",
+                    "traits": {
+                        "smithy.api#documentation": "Rows `merge` retired, in ledger order."
+                    }
+                },
+                "batch": {
+                    "target": "com.amazon.semanticcontext.facts#FactBatchKeepResult",
+                    "traits": {
+                        "smithy.api#documentation": "Batch outcome (`batch` only)."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Outcome of one adjudication. Only the members for the chosen `action` are\npopulated: `keep` fills kept/retired, `keep_both` fills acceptedFactIds,\n`merge` fills mergedFactId/originalFactIds, `batch` fills batch."
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "Identifier of a fact assertion row.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 64
+                }
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactIdList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.facts#FactId"
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactIri": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "IRI of a subject, predicate or object in the namespace A-Box.",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 2048
+                }
+            }
+        },
+        "com.amazon.semanticcontext.facts#FactIriList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.facts#FactIri"
+            }
+        },
+        "com.amazon.semanticcontext.facts#ResolveFactConflicts": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.facts#ResolveFactConflictsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.facts#FactConflictResolutionOutcome"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#ConflictError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Adjudicate fact conflicts for this namespace.\n\n`keep` and `keep_both` require `subject` + `predicate`. `merge` also\nrequires `mergedObject` (an IRI unless `mergedObjectKind` is `literal`).\n`batch` requires `keep` plus at least one scope member\n(`predicate`, `subject` or `sourceDocumentId`) and previews by default:\nnothing is written unless `dryRun` is false.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Merge two conflicting values",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "subject": "urn:coa:entity:contract-ledger",
+                            "predicate": "urn:coa:predicate:belongs-to",
+                            "action": "merge",
+                            "mergedObject": "urn:coa:entity:archive"
+                        },
+                        "output": {
+                            "action": "merge",
+                            "subject": "urn:coa:entity:contract-ledger",
+                            "predicate": "urn:coa:predicate:belongs-to",
+                            "mergedFactId": "fact-1a2b3c4d5e6f",
+                            "originalFactIds": [
+                                "fact-0f1e2d3c4b5a",
+                                "fact-a9b8c7d6e5f4"
+                            ]
+                        }
+                    },
+                    {
+                        "title": "Preview a batch keep for one predicate",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11",
+                            "action": "batch",
+                            "keep": "urn:coa:entity:archive",
+                            "predicate": "urn:coa:predicate:belongs-to",
+                            "dryRun": true
+                        },
+                        "output": {
+                            "action": "batch",
+                            "predicate": "urn:coa:predicate:belongs-to",
+                            "batch": {
+                                "batchId": "resolve-1a2b3c4d5e",
+                                "dryRun": true,
+                                "keep": "urn:coa:entity:archive",
+                                "matched": 3,
+                                "kept": 3,
+                                "skipped": 0,
+                                "affectedFacts": 3
+                            }
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/facts/conflicts/resolve",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.facts#ResolveFactConflictsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Conflict group subject. Required unless `action` is `batch`."
+                    }
+                },
+                "predicate": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Conflict group predicate. Required unless `action` is `batch`."
+                    }
+                },
+                "action": {
+                    "target": "com.amazon.semanticcontext.facts#FactConflictAction",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "keep": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Value to keep (`batch` only; `keep` takes it from `keep` on the\nconsole path, which sends the chosen value here too)."
+                    }
+                },
+                "mergedObject": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Value that replaces the conflicting ones (`merge`)."
+                    }
+                },
+                "mergedObjectKind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`iri` (default) or `literal`.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 16
+                        }
+                    }
+                },
+                "graph": {
+                    "target": "com.amazon.semanticcontext.facts#FactIri",
+                    "traits": {
+                        "smithy.api#documentation": "Graph for the merged fact; defaults to the group's graph."
+                    }
+                },
+                "sourceDocumentId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#documentation": "Scope by source document (`batch`)."
+                    }
+                },
+                "dryRun": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Preview only (`batch`); defaults to true."
+                    }
+                },
+                "actor": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Identity recorded on the audit event; defaults to `operator`.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 256
+                        }
+                    }
+                },
+                "reason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why the decision was taken.",
+                        "smithy.api#length": {
+                            "min": 0,
+                            "max": 1024
                         }
                     }
                 }
@@ -9341,6 +9784,18 @@
                         "smithy.api#documentation": "When the status was sampled (ISO-8601).",
                         "smithy.api#required": {}
                     }
+                },
+                "inferredTriples": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Triples the recorded pointer holds; null until the first run."
+                    }
+                },
+                "lastJob": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ReasoningJobSummary",
+                    "traits": {
+                        "smithy.api#documentation": "Last materialization job, with its per-stage results. Null before\nthe first run."
+                    }
                 }
             },
             "traits": {
@@ -10343,6 +10798,198 @@
                 "smithy.api#output": {}
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#MaterializeReasoning": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#MaterializeReasoningInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#MaterializeReasoningOutput"
+            },
+            "errors": [
+                {
+                    "target": "com.amazon.semanticcontext.common#ConflictError"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.common#NotFoundError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Run inference over the published T-Box plus this namespace's A-Box graphs\nand replace the inferred graph for the published version.\n\nThe call is synchronous and can take a minute on a large A-Box. A second\nconcurrent call for the same target answers 409. When the inputs hash the\nsame as the recorded pointer and the target graph still holds exactly that\nmany triples, the run is reported as `skipped` without writing.\n\nThe reported `inferred` count is what this run added; it is not the size\nof the inferred graph.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Materialize with the default profile",
+                        "input": {
+                            "namespaceId": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                        },
+                        "output": {
+                            "jobId": "rsn-1a2b3c4d5e6f",
+                            "mode": "materialize",
+                            "profile": "EL",
+                            "ontologyVersion": "ont-7c6971e77b7d",
+                            "targetGraph": "urn:platform:inferred:ont-7c6971e77b7d",
+                            "inferred": 91052,
+                            "skipped": false,
+                            "consistent": true,
+                            "inputHash": "7ef8727158b43f4ae92054670a79a28aa8c3199f877d11f0a07679f83b6196de",
+                            "ms": 72891,
+                            "stages": {
+                                "rdfs": {
+                                    "triples": 53366,
+                                    "ms": 17342
+                                },
+                                "owl": {
+                                    "triples": 37686,
+                                    "ms": 26234
+                                },
+                                "shacl": {
+                                    "conforms": true,
+                                    "violations": 0,
+                                    "ms": 22484
+                                }
+                            },
+                            "warnings": []
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/graph/reasoning/materialize",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#MaterializeReasoningInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "profile": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`EL` (default) or `OWL2EL`.",
+                        "smithy.api#length": {
+                            "min": 1,
+                            "max": 32
+                        }
+                    }
+                },
+                "force": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Re-run even when the inputs are unchanged."
+                    }
+                },
+                "aboxGraphs": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#PlatformGraphIriList",
+                    "traits": {
+                        "smithy.api#documentation": "A-Box graphs to reason over. Every IRI must be a `urn:platform:`\ngraph, so a namespace cannot read another namespace's graph. When\nomitted the deployment's configured A-Box graphs are used.",
+                        "smithy.api#length": {
+                            "max": 64
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#MaterializeReasoningOutput": {
+            "type": "structure",
+            "members": {
+                "jobId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Identifier of the row in `platform.reasoning_job`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "mode": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`materialize` or `rdfs`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "profile": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Reasoning profile that was used.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "ontologyVersion": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Published ontology version the run read.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "targetGraph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Graph the run would replace (and did replace unless skipped).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "inferred": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Triples this run added; 0 when skipped.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "skipped": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the inputs were unchanged and nothing was written.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "consistent": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Consistency verdict from the reasoner. False fails the job and\nleaves the target graph untouched.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "inputHash": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Hash of (T-Box, A-Box, profile, mode) used to decide `skipped`."
+                    }
+                },
+                "ms": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Wall time of the run.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "stages": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ReasoningStages",
+                    "traits": {
+                        "smithy.api#documentation": "Per-stage results, in execution order.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "warnings": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Non-fatal notes, for example axioms the EL profile ignores.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#OntologyClassSummary": {
             "type": "structure",
             "members": {
@@ -10880,6 +11527,22 @@
                 "smithy.api#pattern": "^(?!/)(?!(?:.*/)?\\.\\.(?:/|$))[^\\\\]+$"
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#PlatformGraphIri": {
+            "type": "string",
+            "traits": {
+                "smithy.api#documentation": "IRI of a `urn:platform:` named graph (the only graphs a namespace may ask\nthe reasoner to read).",
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 2048
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#PlatformGraphIriList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologygraph#PlatformGraphIri"
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#QualityCount": {
             "type": "structure",
             "members": {
@@ -10898,6 +11561,116 @@
             },
             "traits": {
                 "smithy.api#documentation": "A measured count that may be unavailable."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ReasoningJobSummary": {
+            "type": "structure",
+            "members": {
+                "jobId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Row identifier in `platform.reasoning_job`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "state": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`queued`, `running`, `succeeded`, `skipped`, `failed` or `canceled`.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "inferred": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Triples the run added."
+                    }
+                },
+                "consistent": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "Consistency verdict; false fails the run."
+                    }
+                },
+                "finishedAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the run finished (ISO-8601)."
+                    }
+                },
+                "skipped": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the run short-circuited because the inputs were unchanged."
+                    }
+                },
+                "stages": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ReasoningStages",
+                    "traits": {
+                        "smithy.api#documentation": "Per-stage results, empty when nothing ran."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "What the last materialization job left behind."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ReasoningStage": {
+            "type": "structure",
+            "members": {
+                "triples": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Triples this stage added to the inferred graph."
+                    }
+                },
+                "conforms": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the SHACL gate ran and found no violations."
+                    }
+                },
+                "violations": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Violations found by the SHACL gate."
+                    }
+                },
+                "ms": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Wall time for this stage."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One stage of a materialization run. Only the members the stage produces\nare set: `rdfs`/`owl` report triples added, `shacl` reports the gate."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ReasoningStages": {
+            "type": "structure",
+            "members": {
+                "rdfs": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ReasoningStage",
+                    "traits": {
+                        "smithy.api#documentation": "RDFS closure (Jena `riot --rdfs`); skipped in `rdfs`-only mode."
+                    }
+                },
+                "owl": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ReasoningStage",
+                    "traits": {
+                        "smithy.api#documentation": "OWL EL materialization (ROBOT + ELK); absent in `rdfs`-only mode."
+                    }
+                },
+                "shacl": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ReasoningStage",
+                    "traits": {
+                        "smithy.api#documentation": "SHACL gate; runs before any write, so a violation leaves the target\ngraph untouched."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Stages of a materialization run, in execution order."
             }
         },
         "com.amazon.semanticcontext.ontologygraph#RunValidation": {

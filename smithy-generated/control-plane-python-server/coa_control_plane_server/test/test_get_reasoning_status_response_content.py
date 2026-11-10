@@ -42,7 +42,27 @@ class TestGetReasoningStatusResponseContent(unittest.TestCase):
                     detail = '', ),
                 detail = '',
                 source = '',
-                sampled_at = ''
+                sampled_at = '',
+                inferred_triples = 1.337,
+                last_job = coa_control_plane_server.models.reasoning_job_summary.ReasoningJobSummary(
+                    job_id = '', 
+                    state = '', 
+                    inferred = 1.337, 
+                    consistent = True, 
+                    finished_at = '', 
+                    skipped = True, 
+                    stages = coa_control_plane_server.models.reasoning_stages.ReasoningStages(
+                        rdfs = coa_control_plane_server.models.reasoning_stage.ReasoningStage(
+                            triples = 1.337, 
+                            conforms = True, 
+                            violations = 1.337, 
+                            ms = 1.337, ), 
+                        owl = coa_control_plane_server.models.reasoning_stage.ReasoningStage(
+                            triples = 1.337, 
+                            conforms = True, 
+                            violations = 1.337, 
+                            ms = 1.337, ), 
+                        shacl = , ), )
             )
         else:
             return GetReasoningStatusResponseContent(

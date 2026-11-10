@@ -362,6 +362,11 @@ import {
   LoadFoundationalOntologyCommand,
 } from "./commands/LoadFoundationalOntologyCommand";
 import {
+  type MaterializeReasoningCommandInput,
+  type MaterializeReasoningCommandOutput,
+  MaterializeReasoningCommand,
+} from "./commands/MaterializeReasoningCommand";
+import {
   type PutSourceEventRescanCommandInput,
   type PutSourceEventRescanCommandOutput,
   PutSourceEventRescanCommand,
@@ -396,6 +401,11 @@ import {
   type RescanSourceCommandOutput,
   RescanSourceCommand,
 } from "./commands/RescanSourceCommand";
+import {
+  type ResolveFactConflictsCommandInput,
+  type ResolveFactConflictsCommandOutput,
+  ResolveFactConflictsCommand,
+} from "./commands/ResolveFactConflictsCommand";
 import {
   type ReviewSourceColumnCommandInput,
   type ReviewSourceColumnCommandOutput,
@@ -509,6 +519,7 @@ const commands = {
   UploadDocumentCommand,
   GetEntityEmbeddingsCommand,
   SearchEmbeddingsCommand,
+  ResolveFactConflictsCommand,
   CreateGrantCommand,
   CreatePlatformGrantCommand,
   DeleteGrantCommand,
@@ -553,6 +564,7 @@ const commands = {
   IngestOntologyFromS3Command,
   ListOntologiesCommand,
   ListStatementsCommand,
+  MaterializeReasoningCommand,
   RunValidationCommand,
   UploadOntologyCommand,
   AcceptProposalCommand,
@@ -788,6 +800,23 @@ export interface ControlPlaneService {
     args: SearchEmbeddingsCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: SearchEmbeddingsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ResolveFactConflictsCommand}
+   */
+  resolveFactConflicts(
+    args: ResolveFactConflictsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ResolveFactConflictsCommandOutput>;
+  resolveFactConflicts(
+    args: ResolveFactConflictsCommandInput,
+    cb: (err: any, data?: ResolveFactConflictsCommandOutput) => void
+  ): void;
+  resolveFactConflicts(
+    args: ResolveFactConflictsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ResolveFactConflictsCommandOutput) => void
   ): void;
 
   /**
@@ -1538,6 +1567,23 @@ export interface ControlPlaneService {
     args: ListStatementsCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ListStatementsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link MaterializeReasoningCommand}
+   */
+  materializeReasoning(
+    args: MaterializeReasoningCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<MaterializeReasoningCommandOutput>;
+  materializeReasoning(
+    args: MaterializeReasoningCommandInput,
+    cb: (err: any, data?: MaterializeReasoningCommandOutput) => void
+  ): void;
+  materializeReasoning(
+    args: MaterializeReasoningCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: MaterializeReasoningCommandOutput) => void
   ): void;
 
   /**

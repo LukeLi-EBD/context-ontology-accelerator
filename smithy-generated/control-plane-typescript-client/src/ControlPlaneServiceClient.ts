@@ -234,6 +234,10 @@ import type {
   LoadFoundationalOntologyCommandOutput,
 } from "./commands/LoadFoundationalOntologyCommand";
 import type {
+  MaterializeReasoningCommandInput,
+  MaterializeReasoningCommandOutput,
+} from "./commands/MaterializeReasoningCommand";
+import type {
   PutSourceEventRescanCommandInput,
   PutSourceEventRescanCommandOutput,
 } from "./commands/PutSourceEventRescanCommand";
@@ -252,6 +256,10 @@ import type {
   RepairProposalDatatypesCommandOutput,
 } from "./commands/RepairProposalDatatypesCommand";
 import type { RescanSourceCommandInput, RescanSourceCommandOutput } from "./commands/RescanSourceCommand";
+import type {
+  ResolveFactConflictsCommandInput,
+  ResolveFactConflictsCommandOutput,
+} from "./commands/ResolveFactConflictsCommand";
 import type {
   ReviewSourceColumnCommandInput,
   ReviewSourceColumnCommandOutput,
@@ -380,6 +388,7 @@ export type ServiceInputTypes =
   | ListSourcesCommandInput
   | ListStatementsCommandInput
   | LoadFoundationalOntologyCommandInput
+  | MaterializeReasoningCommandInput
   | PutSourceEventRescanCommandInput
   | PutSourceRescanScheduleCommandInput
   | RejectFactCandidateCommandInput
@@ -387,6 +396,7 @@ export type ServiceInputTypes =
   | RejectSourceCommandInput
   | RepairProposalDatatypesCommandInput
   | RescanSourceCommandInput
+  | ResolveFactConflictsCommandInput
   | ReviewSourceColumnCommandInput
   | ReviewSourceTableCommandInput
   | RunValidationCommandInput
@@ -484,6 +494,7 @@ export type ServiceOutputTypes =
   | ListSourcesCommandOutput
   | ListStatementsCommandOutput
   | LoadFoundationalOntologyCommandOutput
+  | MaterializeReasoningCommandOutput
   | PutSourceEventRescanCommandOutput
   | PutSourceRescanScheduleCommandOutput
   | RejectFactCandidateCommandOutput
@@ -491,6 +502,7 @@ export type ServiceOutputTypes =
   | RejectSourceCommandOutput
   | RepairProposalDatatypesCommandOutput
   | RescanSourceCommandOutput
+  | ResolveFactConflictsCommandOutput
   | ReviewSourceColumnCommandOutput
   | ReviewSourceTableCommandOutput
   | RunValidationCommandOutput

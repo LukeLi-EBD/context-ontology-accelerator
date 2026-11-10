@@ -53,6 +53,33 @@ export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus
  * @public
  * @enum
  */
+export const FactConflictAction = {
+  /**
+   * Apply one `keep` rule to every pending group inside the scope.
+   */
+  batch: "batch",
+  /**
+   * Keep one value, retire the others.
+   */
+  keep: "keep",
+  /**
+   * Accept the conflict: every value stays active.
+   */
+  keep_both: "keep_both",
+  /**
+   * Retire every conflicting value and record one merged value.
+   */
+  merge: "merge",
+} as const;
+/**
+ * @public
+ */
+export type FactConflictAction = (typeof FactConflictAction)[keyof typeof FactConflictAction];
+
+/**
+ * @public
+ * @enum
+ */
 export const PrincipalType = {
   /**
    * A non-human agent identity (e.g. a service or automation).

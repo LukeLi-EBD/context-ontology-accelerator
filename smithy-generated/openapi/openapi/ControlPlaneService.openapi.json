@@ -4510,6 +4510,319 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/facts/conflicts/resolve": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidFactsConflictsResolve",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ResolveFactConflicts_example1": {
+                                "summary": "Merge two conflicting values",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            },
+                            "ResolveFactConflicts_example2": {
+                                "summary": "Preview a batch keep for one predicate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Adjudicate fact conflicts for this namespace.\n\n`keep` and `keep_both` require `subject` + `predicate`. `merge` also\nrequires `mergedObject` (an IRI unless `mergedObjectKind` is `literal`).\n`batch` requires `keep` plus at least one scope member\n(`predicate`, `subject` or `sourceDocumentId`) and previews by default:\nnothing is written unless `dryRun` is false.",
+                "operationId": "ResolveFactConflicts",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResolveFactConflictsRequestContent"
+                            },
+                            "examples": {
+                                "ResolveFactConflicts_example1": {
+                                    "summary": "Merge two conflicting values",
+                                    "description": "",
+                                    "value": {
+                                        "subject": "urn:coa:entity:contract-ledger",
+                                        "predicate": "urn:coa:predicate:belongs-to",
+                                        "action": "merge",
+                                        "mergedObject": "urn:coa:entity:archive"
+                                    }
+                                },
+                                "ResolveFactConflicts_example2": {
+                                    "summary": "Preview a batch keep for one predicate",
+                                    "description": "",
+                                    "value": {
+                                        "action": "batch",
+                                        "keep": "urn:coa:entity:archive",
+                                        "predicate": "urn:coa:predicate:belongs-to",
+                                        "dryRun": true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ResolveFactConflicts_example1": {
+                                "summary": "Merge two conflicting values",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            },
+                            "ResolveFactConflicts_example2": {
+                                "summary": "Preview a batch keep for one predicate",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ResolveFactConflicts 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResolveFactConflictsResponseContent"
+                                },
+                                "examples": {
+                                    "ResolveFactConflicts_example1": {
+                                        "summary": "Merge two conflicting values",
+                                        "description": "",
+                                        "value": {
+                                            "action": "merge",
+                                            "subject": "urn:coa:entity:contract-ledger",
+                                            "predicate": "urn:coa:predicate:belongs-to",
+                                            "mergedFactId": "fact-1a2b3c4d5e6f",
+                                            "originalFactIds": [
+                                                "fact-0f1e2d3c4b5a",
+                                                "fact-a9b8c7d6e5f4"
+                                            ]
+                                        }
+                                    },
+                                    "ResolveFactConflicts_example2": {
+                                        "summary": "Preview a batch keep for one predicate",
+                                        "description": "",
+                                        "value": {
+                                            "action": "batch",
+                                            "predicate": "urn:coa:predicate:belongs-to",
+                                            "batch": {
+                                                "batchId": "resolve-1a2b3c4d5e",
+                                                "dryRun": true,
+                                                "keep": "urn:coa:entity:archive",
+                                                "matched": 3,
+                                                "kept": 3,
+                                                "skipped": 0,
+                                                "affectedFacts": 3
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ConflictError 409 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConflictErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/namespaces/{namespaceId}/grants": {
             "get": {
                 "description": "Lists the grants defined within a namespace, optionally filtered to a single\nprincipal, with cursor-based pagination.",
@@ -7760,6 +8073,294 @@
                     },
                     "type": "mock",
                     "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/graph/reasoning/materialize": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphReasoningMaterialize",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "MaterializeReasoning_example1": {
+                                "summary": "Materialize with the default profile",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Length,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Run inference over the published T-Box plus this namespace's A-Box graphs\nand replace the inferred graph for the published version.\n\nThe call is synchronous and can take a minute on a large A-Box. A second\nconcurrent call for the same target answers 409. When the inputs hash the\nsame as the recorded pointer and the target graph still holds exactly that\nmany triples, the run is reported as `skipped` without writing.\n\nThe reported `inferred` count is what this run added; it is not the size\nof the inferred graph.",
+                "operationId": "MaterializeReasoning",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/MaterializeReasoningRequestContent"
+                            },
+                            "examples": {
+                                "MaterializeReasoning_example1": {
+                                    "summary": "Materialize with the default profile",
+                                    "description": "",
+                                    "value": {}
+                                }
+                            }
+                        }
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "MaterializeReasoning_example1": {
+                                "summary": "Materialize with the default profile",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "MaterializeReasoning 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MaterializeReasoningResponseContent"
+                                },
+                                "examples": {
+                                    "MaterializeReasoning_example1": {
+                                        "summary": "Materialize with the default profile",
+                                        "description": "",
+                                        "value": {
+                                            "jobId": "rsn-1a2b3c4d5e6f",
+                                            "mode": "materialize",
+                                            "profile": "EL",
+                                            "ontologyVersion": "ont-7c6971e77b7d",
+                                            "targetGraph": "urn:platform:inferred:ont-7c6971e77b7d",
+                                            "inferred": 91052,
+                                            "skipped": false,
+                                            "consistent": true,
+                                            "inputHash": "7ef8727158b43f4ae92054670a79a28aa8c3199f877d11f0a07679f83b6196de",
+                                            "ms": 72891,
+                                            "stages": {
+                                                "rdfs": {
+                                                    "triples": 53366,
+                                                    "ms": 17342
+                                                },
+                                                "owl": {
+                                                    "triples": 37686,
+                                                    "ms": 26234
+                                                },
+                                                "shacl": {
+                                                    "conforms": true,
+                                                    "violations": 0,
+                                                    "ms": 22484
+                                                }
+                                            },
+                                            "warnings": []
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "ConflictError 409 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ConflictErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -27928,6 +28529,122 @@
                     "separated"
                 ]
             },
+            "FactBatchKeepResult": {
+                "type": "object",
+                "description": "Result of `batch`: the scope that was applied and what it touched.",
+                "properties": {
+                    "batchId": {
+                        "type": "string",
+                        "description": "Identifier shared by every event this batch wrote."
+                    },
+                    "dryRun": {
+                        "type": "boolean",
+                        "description": "True when nothing was written (the default)."
+                    },
+                    "keep": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Value the rule keeps."
+                    },
+                    "matched": {
+                        "type": "number",
+                        "description": "Pending groups inside the scope."
+                    },
+                    "kept": {
+                        "type": "number",
+                        "description": "Groups kept (or that would be kept, on a dry run)."
+                    },
+                    "skipped": {
+                        "type": "number",
+                        "description": "Groups where `keep` is not one of the values."
+                    },
+                    "affectedFacts": {
+                        "type": "number",
+                        "description": "Facts retired across the matched groups."
+                    },
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Scope the caller supplied; absent members did not narrow it."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "IRI of a subject, predicate or object in the namespace A-Box."
+                    },
+                    "sourceDocumentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "UUID v4 identifier."
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/FactBatchKeepRow"
+                        },
+                        "description": "Per-group outcome, in ledger order."
+                    }
+                },
+                "required": [
+                    "affectedFacts",
+                    "batchId",
+                    "dryRun",
+                    "keep",
+                    "kept",
+                    "matched",
+                    "skipped"
+                ]
+            },
+            "FactBatchKeepRow": {
+                "type": "object",
+                "description": "One group of a batch keep. `status` is one of `would_keep` (dry run),\n`kept`, or `skipped`.",
+                "properties": {
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "IRI of a subject, predicate or object in the namespace A-Box."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "IRI of a subject, predicate or object in the namespace A-Box."
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "One of `would_keep` (dry run), `kept`, or `skipped`."
+                    },
+                    "retired": {
+                        "type": "number",
+                        "description": "Facts retired by this row (0 for a skipped group)."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Why the group was skipped."
+                    },
+                    "values": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "IRI of a subject, predicate or object in the namespace A-Box."
+                        },
+                        "description": "Values the group had before the decision."
+                    }
+                },
+                "required": [
+                    "predicate",
+                    "status",
+                    "subject"
+                ]
+            },
             "FactCandidate": {
                 "type": "object",
                 "description": "One subject-predicate-object candidate extracted from a document chunk.",
@@ -27994,6 +28711,16 @@
                     "PENDING",
                     "APPROVED",
                     "REJECTED"
+                ]
+            },
+            "FactConflictAction": {
+                "type": "string",
+                "description": "Adjudication applied to a conflict group. Wire values stay lowercase\nbecause the ledger and the console have used them since the first\nrelease; the model follows the wire rather than renaming it.",
+                "enum": [
+                    "keep",
+                    "keep_both",
+                    "merge",
+                    "batch"
                 ]
             },
             "FactOverrides": {
@@ -29051,6 +29778,13 @@
                     "sampledAt": {
                         "type": "string",
                         "description": "When the status was sampled (ISO-8601)."
+                    },
+                    "inferredTriples": {
+                        "type": "number",
+                        "description": "Triples the recorded pointer holds; null until the first run."
+                    },
+                    "lastJob": {
+                        "$ref": "#/components/schemas/ReasoningJobSummary"
                     }
                 },
                 "required": [
@@ -30659,6 +31393,100 @@
                     "novel"
                 ]
             },
+            "MaterializeReasoningRequestContent": {
+                "type": "object",
+                "properties": {
+                    "profile": {
+                        "type": "string",
+                        "maxLength": 32,
+                        "minLength": 1,
+                        "description": "`EL` (default) or `OWL2EL`."
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Re-run even when the inputs are unchanged."
+                    },
+                    "aboxGraphs": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "IRI of a `urn:platform:` named graph (the only graphs a namespace may ask\nthe reasoner to read)."
+                        },
+                        "maxItems": 64,
+                        "description": "A-Box graphs to reason over. Every IRI must be a `urn:platform:`\ngraph, so a namespace cannot read another namespace's graph. When\nomitted the deployment's configured A-Box graphs are used."
+                    }
+                }
+            },
+            "MaterializeReasoningResponseContent": {
+                "type": "object",
+                "properties": {
+                    "jobId": {
+                        "type": "string",
+                        "description": "Identifier of the row in `platform.reasoning_job`."
+                    },
+                    "mode": {
+                        "type": "string",
+                        "description": "`materialize` or `rdfs`."
+                    },
+                    "profile": {
+                        "type": "string",
+                        "description": "Reasoning profile that was used."
+                    },
+                    "ontologyVersion": {
+                        "type": "string",
+                        "description": "Published ontology version the run read."
+                    },
+                    "targetGraph": {
+                        "type": "string",
+                        "description": "Graph the run would replace (and did replace unless skipped)."
+                    },
+                    "inferred": {
+                        "type": "number",
+                        "description": "Triples this run added; 0 when skipped."
+                    },
+                    "skipped": {
+                        "type": "boolean",
+                        "description": "True when the inputs were unchanged and nothing was written."
+                    },
+                    "consistent": {
+                        "type": "boolean",
+                        "description": "Consistency verdict from the reasoner. False fails the job and\nleaves the target graph untouched."
+                    },
+                    "inputHash": {
+                        "type": "string",
+                        "description": "Hash of (T-Box, A-Box, profile, mode) used to decide `skipped`."
+                    },
+                    "ms": {
+                        "type": "number",
+                        "description": "Wall time of the run."
+                    },
+                    "stages": {
+                        "$ref": "#/components/schemas/ReasoningStages"
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Non-fatal notes, for example axioms the EL profile ignores."
+                    }
+                },
+                "required": [
+                    "consistent",
+                    "inferred",
+                    "jobId",
+                    "mode",
+                    "ms",
+                    "ontologyVersion",
+                    "profile",
+                    "skipped",
+                    "stages",
+                    "targetGraph",
+                    "warnings"
+                ]
+            },
             "MetadataOverrides": {
                 "type": "object",
                 "description": "Steward-supplied overrides applied to discovered metadata: description,\nsynonyms, glossary terms, and tags.",
@@ -31750,6 +32578,80 @@
                     "REDSHIFT"
                 ]
             },
+            "ReasoningJobSummary": {
+                "type": "object",
+                "description": "What the last materialization job left behind.",
+                "properties": {
+                    "jobId": {
+                        "type": "string",
+                        "description": "Row identifier in `platform.reasoning_job`."
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "`queued`, `running`, `succeeded`, `skipped`, `failed` or `canceled`."
+                    },
+                    "inferred": {
+                        "type": "number",
+                        "description": "Triples the run added."
+                    },
+                    "consistent": {
+                        "type": "boolean",
+                        "description": "Consistency verdict; false fails the run."
+                    },
+                    "finishedAt": {
+                        "type": "string",
+                        "description": "When the run finished (ISO-8601)."
+                    },
+                    "skipped": {
+                        "type": "boolean",
+                        "description": "True when the run short-circuited because the inputs were unchanged."
+                    },
+                    "stages": {
+                        "$ref": "#/components/schemas/ReasoningStages"
+                    }
+                },
+                "required": [
+                    "jobId",
+                    "state"
+                ]
+            },
+            "ReasoningStage": {
+                "type": "object",
+                "description": "One stage of a materialization run. Only the members the stage produces\nare set: `rdfs`/`owl` report triples added, `shacl` reports the gate.",
+                "properties": {
+                    "triples": {
+                        "type": "number",
+                        "description": "Triples this stage added to the inferred graph."
+                    },
+                    "conforms": {
+                        "type": "boolean",
+                        "description": "True when the SHACL gate ran and found no violations."
+                    },
+                    "violations": {
+                        "type": "number",
+                        "description": "Violations found by the SHACL gate."
+                    },
+                    "ms": {
+                        "type": "number",
+                        "description": "Wall time for this stage."
+                    }
+                }
+            },
+            "ReasoningStages": {
+                "type": "object",
+                "description": "Stages of a materialization run, in execution order.",
+                "properties": {
+                    "rdfs": {
+                        "$ref": "#/components/schemas/ReasoningStage"
+                    },
+                    "owl": {
+                        "$ref": "#/components/schemas/ReasoningStage"
+                    },
+                    "shacl": {
+                        "$ref": "#/components/schemas/ReasoningStage"
+                    }
+                }
+            },
             "RejectFactCandidateRequestContent": {
                 "type": "object",
                 "properties": {
@@ -32012,6 +32914,167 @@
                         "description": "Per-column added / removed / modified breakdown."
                     }
                 }
+            },
+            "ResolveFactConflictsRequestContent": {
+                "type": "object",
+                "properties": {
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Conflict group subject. Required unless `action` is `batch`."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Conflict group predicate. Required unless `action` is `batch`."
+                    },
+                    "action": {
+                        "$ref": "#/components/schemas/FactConflictAction"
+                    },
+                    "keep": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Value to keep (`batch` only; `keep` takes it from `keep` on the\nconsole path, which sends the chosen value here too)."
+                    },
+                    "mergedObject": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Value that replaces the conflicting ones (`merge`)."
+                    },
+                    "mergedObjectKind": {
+                        "type": "string",
+                        "maxLength": 16,
+                        "minLength": 1,
+                        "description": "`iri` (default) or `literal`."
+                    },
+                    "graph": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Graph for the merged fact; defaults to the group's graph."
+                    },
+                    "sourceDocumentId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Scope by source document (`batch`)."
+                    },
+                    "dryRun": {
+                        "type": "boolean",
+                        "description": "Preview only (`batch`); defaults to true."
+                    },
+                    "actor": {
+                        "type": "string",
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "description": "Identity recorded on the audit event; defaults to `operator`."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": 1024,
+                        "minLength": 0,
+                        "description": "Why the decision was taken."
+                    }
+                },
+                "required": [
+                    "action"
+                ]
+            },
+            "ResolveFactConflictsResponseContent": {
+                "type": "object",
+                "description": "Outcome of one adjudication. Only the members for the chosen `action` are\npopulated: `keep` fills kept/retired, `keep_both` fills acceptedFactIds,\n`merge` fills mergedFactId/originalFactIds, `batch` fills batch.",
+                "properties": {
+                    "action": {
+                        "$ref": "#/components/schemas/FactConflictAction"
+                    },
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Conflict group subject; absent on `batch` when the scope did not\nnarrow by subject."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Conflict group predicate; absent on `batch` when the scope did not\nnarrow by predicate."
+                    },
+                    "kept": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "minLength": 1,
+                        "description": "Value kept by `keep`."
+                    },
+                    "keptFactIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "description": "Identifier of a fact assertion row."
+                        },
+                        "description": "Assertion rows kept by `keep`."
+                    },
+                    "retiredFactIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "description": "Identifier of a fact assertion row."
+                        },
+                        "description": "Assertion rows retired by `keep`."
+                    },
+                    "retired": {
+                        "type": "number",
+                        "description": "Number of retired rows (`keep`)."
+                    },
+                    "values": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "description": "IRI of a subject, predicate or object in the namespace A-Box."
+                        },
+                        "description": "Values the group had before the decision."
+                    },
+                    "acceptedFactIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "description": "Identifier of a fact assertion row."
+                        },
+                        "description": "Assertion rows accepted by `keep_both`."
+                    },
+                    "mergedFactId": {
+                        "type": "string",
+                        "description": "New assertion row written by `merge`."
+                    },
+                    "originalFactIds": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 1,
+                            "description": "Identifier of a fact assertion row."
+                        },
+                        "description": "Rows `merge` retired, in ledger order."
+                    },
+                    "batch": {
+                        "$ref": "#/components/schemas/FactBatchKeepResult"
+                    }
+                },
+                "required": [
+                    "action"
+                ]
             },
             "ReviewDecision": {
                 "type": "string",

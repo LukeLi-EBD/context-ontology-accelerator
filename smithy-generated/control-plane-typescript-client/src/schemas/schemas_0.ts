@@ -94,8 +94,12 @@ const _EOO = "ExportOsiOutput";
 const _ER = "EmbeddingRecord";
 const _ERC = "EventRescanConfig";
 const _ERL = "EmbeddingRecordList";
+const _FBKR = "FactBatchKeepResult";
+const _FBKRL = "FactBatchKeepRowList";
+const _FBKRa = "FactBatchKeepRow";
 const _FC = "FactCandidate";
 const _FCL = "FactCandidateList";
+const _FCRO = "FactConflictResolutionOutcome";
 const _FGP = "FindGraphPath";
 const _FGPI = "FindGraphPathInput";
 const _FGPO = "FindGraphPathOutput";
@@ -294,6 +298,9 @@ const _MDLe = "MetricDialectList";
 const _MDe = "MetricDialect";
 const _ME = "MetricExpression";
 const _MO = "MetadataOverrides";
+const _MR = "MaterializeReasoning";
+const _MRI = "MaterializeReasoningInput";
+const _MRO = "MaterializeReasoningOutput";
 const _ND = "NamespaceDetail";
 const _NFE = "NotFoundError";
 const _NS = "NamespaceSummary";
@@ -338,16 +345,19 @@ const _RCCL = "RescanColumnChangeList";
 const _RD = "RoleDetail";
 const _RFC = "RescanFieldChange";
 const _RFCI = "RejectFactCandidateInput";
+const _RFCIe = "ResolveFactConflictsInput";
 const _RFCL = "RescanFieldChangeList";
 const _RFCO = "RejectFactCandidateOutput";
 const _RFCe = "RejectFactCandidate";
+const _RFCes = "ResolveFactConflicts";
+const _RJS = "ReasoningJobSummary";
 const _RP = "RejectProposals";
 const _RPD = "RepairProposalDatatypes";
 const _RPDI = "RepairProposalDatatypesInput";
 const _RPDO = "RepairProposalDatatypesOutput";
 const _RPI = "RejectProposalsInput";
 const _RPO = "RejectProposalsOutput";
-const _RS = "RoleSummary";
+const _RS = "ReasoningStage";
 const _RSC = "ReviewSourceColumn";
 const _RSCI = "ReviewSourceColumnInput";
 const _RSCO = "ReviewSourceColumnOutput";
@@ -359,9 +369,11 @@ const _RSOe = "RescanSourceOutput";
 const _RST = "ReviewSourceTable";
 const _RSTI = "ReviewSourceTableInput";
 const _RSTO = "ReviewSourceTableOutput";
-const _RSe = "RescanSchedule";
+const _RSe = "ReasoningStages";
 const _RSej = "RejectSource";
-const _RSes = "RescanSource";
+const _RSes = "RescanSchedule";
+const _RSesc = "RescanSource";
+const _RSo = "RoleSummary";
 const _RTD = "RescanTableDiff";
 const _RV = "RunValidation";
 const _RVI = "RunValidationInput";
@@ -434,6 +446,9 @@ const _aCd = "addedClasses";
 const _aCx = "axiomCount";
 const _aDCN = "athenaDataCatalogName";
 const _aE = "acceptError";
+const _aF = "affectedFacts";
+const _aFI = "acceptedFactIds";
+const _aG = "aboxGraphs";
 const _aL = "altLabels";
 const _aM = "allowedMetrics";
 const _aMu = "authMode";
@@ -442,17 +457,20 @@ const _aT = "addedTriples";
 const _aTE = "appendedToExisting";
 const _aWN = "athenaWorkgroupName";
 const _ab = "abox";
+const _ac = "action";
 const _ad = "added";
 const _al = "alt_labels";
 const _at = "at";
 const _av = "available";
-const _b = "body";
+const _b = "batch";
 const _bE = "bedrockEmbeddings";
 const _bG = "baselineGraph";
+const _bI = "batchId";
 const _bM = "businessMetadata";
 const _bMA = "bedrockModelArn";
 const _bO = "bridgeOptions";
 const _bR = "bridgeReport";
+const _bo = "body";
 const _c = "client";
 const _cA = "createdAt";
 const _cARA = "crossAccountRoleArn";
@@ -533,8 +551,8 @@ const _dNa = "databaseName";
 const _dP = "datatypeProperties";
 const _dPV = "deletePrevVersions";
 const _dPo = "documentsProcessed";
-const _dR = "datasetsResolved";
-const _dRr = "dryRun";
+const _dR = "dryRun";
+const _dRa = "datasetsResolved";
 const _dS = "databaseSource";
 const _dSI = "dataSourceId";
 const _dSWC = "databricksSqlWarehouseConfiguration";
@@ -599,6 +617,7 @@ const _ev = "evidence";
 const _ex = "expression";
 const _exa = "examples";
 const _f = "filename";
+const _fA = "finishedAt";
 const _fE = "filesErrored";
 const _fG = "fromGraph";
 const _fI = "factId";
@@ -616,9 +635,10 @@ const _fiel = "fields";
 const _fil = "files";
 const _fin = "findings";
 const _fo = "format";
+const _for = "force";
 const _fou = "found";
 const _fr = "from";
-const _g = "grant";
+const _g = "graph";
 const _gA = "grantedAt";
 const _gAr = "graphArn";
 const _gB = "grantedBy";
@@ -634,8 +654,8 @@ const _gT = "groundedTo";
 const _gTl = "glossaryTerms";
 const _gU = "graphUris";
 const _gUr = "graphUri";
-const _gr = "grants";
-const _gra = "graph";
+const _gr = "grant";
+const _gra = "grants";
 const _grap = "graphs";
 const _gu = "graph_uris";
 const _h = "hops";
@@ -649,26 +669,33 @@ const _i = "items";
 const _iBI = "isBuiltIn";
 const _iEC = "inferEntityClassifications";
 const _iF = "inferenceFailures";
+const _iH = "inputHash";
 const _iM = "isMapped";
 const _iOI = "inducedOntologyId";
 const _iPK = "isPartitionKey";
 const _iR = "isRescan";
+const _iT = "inferredTriples";
 const _ic = "inferred_constraints";
 const _id = "id";
 const _im = "is_mapped";
 const _in = "instructions";
 const _inc = "include";
+const _inf = "inferred";
 const _ins = "instances";
 const _j = "jobs";
 const _jC = "jdbcConfiguration";
 const _jI = "jobId";
 const _jN = "jsonName";
-const _k = "kind";
-const _ke = "key";
-const _ki = "kinds";
+const _k = "keep";
+const _kFI = "keptFactIds";
+const _ke = "kept";
+const _key = "key";
+const _ki = "kind";
+const _kin = "kinds";
 const _l = "label";
 const _lC = "llmCalls";
 const _lF = "llmFailures";
+const _lJ = "lastJob";
 const _lSA = "lastScanAt";
 const _lSJI = "lastScanJobId";
 const _lT = "licenseTier";
@@ -684,11 +711,14 @@ const _mC = "metricsCreated";
 const _mCU = "matchedClassUri";
 const _mE = "maxEdges";
 const _mEE = "metadataEnrichmentEnabled";
+const _mFI = "mergedFactId";
 const _mH = "maxHops";
 const _mI = "modelId";
 const _mIe = "metricId";
 const _mN = "maxNodes";
+const _mO = "mergedObject";
 const _mOI = "matchedOntologyId";
+const _mOK = "mergedObjectKind";
 const _mP = "metricsProcessed";
 const _mPS = "maxPageSize";
 const _mR = "maxResults";
@@ -697,12 +727,15 @@ const _mTa = "matchType";
 const _mTax = "maxTables";
 const _mU = "metricsUpdated";
 const _mUa = "matchesUrl";
-const _ma = "matches";
+const _ma = "matched";
+const _mat = "matches";
 const _me = "metadata";
 const _met = "metric";
 const _metr = "metrics";
 const _mh = "max_hops";
 const _mi = "model_id";
+const _mo = "mode";
+const _ms = "ms";
 const _n = "names";
 const _nC = "nodeCount";
 const _nCC = "novelClassesCreated";
@@ -723,6 +756,7 @@ const _not = "notes";
 const _nu = "nullable";
 const _o = "opensearch";
 const _oC = "ontologyConcepts";
+const _oFI = "originalFactIds";
 const _oI = "ontologyInduction";
 const _oIn = "ontologyId";
 const _oIr = "orphanInstances";
@@ -734,6 +768,7 @@ const _oU = "ontologyUrl";
 const _oUP = "ontologyUriPrefix";
 const _oUn = "ontologyUploaded";
 const _oV = "objectValue";
+const _oVn = "ontologyVersion";
 const _ob = "object";
 const _of = "offset";
 const _oi = "ontology_id";
@@ -743,6 +778,7 @@ const _ont = "ontologies";
 const _ot = "ontology_type";
 const _ov = "overrides";
 const _ow = "owner";
+const _owl = "owl";
 const _p = "page";
 const _pC = "propertyCount";
 const _pD = "pendingDeletion";
@@ -765,7 +801,8 @@ const _pl = "predicate_label";
 const _po = "port";
 const _pr = "predicate";
 const _pri = "principal";
-const _pro = "progress";
+const _pro = "profile";
+const _prog = "progress";
 const _prop = "proposals";
 const _prov = "provenance";
 const _pu = "publishable";
@@ -780,6 +817,7 @@ const _rBR = "replacedByRule";
 const _rC = "removedClasses";
 const _rCe = "repairedCount";
 const _rD = "rescanDiff";
+const _rFI = "retiredFactIds";
 const _rI = "revisionId";
 const _rIo = "roleId";
 const _rMT = "rerankMaxTokens";
@@ -794,10 +832,13 @@ const _rU = "r2rmlUrl";
 const _rUr = "r2rmlUploaded";
 const _rW = "redshiftWorkgroup";
 const _ra = "range";
-const _re = "result";
+const _rd = "rdfs";
+const _re = "results";
 const _reg = "region";
 const _rej = "rejected";
 const _rep = "report";
+const _res = "result";
+const _ret = "retired";
 const _ro = "role";
 const _rol = "roles";
 const _s = "smithy.ts.sdk.synthetic.com.amazon.semanticcontext";
@@ -809,6 +850,7 @@ const _sC = "sourceCount";
 const _sCO = "subClassOf";
 const _sCo = "sourceColumn";
 const _sCp = "sparqlConfiguration";
+const _sDI = "sourceDocumentId";
 const _sE = "scheduleExpression";
 const _sEF = "schemaExcludeFilter";
 const _sF = "schemaFilter";
@@ -832,13 +874,16 @@ const _se = "server";
 const _sev = "severity";
 const _sh = "shacl";
 const _si = "similarity";
+const _sk = "skipped";
 const _so = "source";
 const _sr = "source_registry";
 const _st = "status";
 const _st_ = "shapes_turtle";
 const _st__ = "source_type";
 const _sta = "start";
+const _stag = "stages";
 const _stat = "statements";
+const _state = "state";
 const _sto = "store";
 const _str = "strategy";
 const _su = "subject";
@@ -888,6 +933,7 @@ const _tim = "timezone";
 const _tk = "top_k";
 const _to = "to";
 const _tr = "truncated";
+const _tri = "triples";
 const _ty = "types";
 const _typ = "type";
 const _u = "unit";
@@ -903,7 +949,8 @@ const _v = "version";
 const _vH = "vkgHealth";
 const _vHR = "vkgHealthReason";
 const _vS = "vectorStore";
-const _va = "validator";
+const _va = "values";
+const _val = "validator";
 const _ve = "vector";
 const _vi = "violations";
 const _w = "warnings";
@@ -911,15 +958,16 @@ const _wH = "workspaceHostname";
 const _wa = "warehouse";
 const n0 = "com.amazon.semanticcontext.common";
 const n1 = "com.amazon.semanticcontext.grant";
-const n10 = "com.amazon.semanticcontext.role";
+const n10 = "com.amazon.semanticcontext.ontologyinduction";
+const n11 = "com.amazon.semanticcontext.role";
 const n2 = "com.amazon.semanticcontext.namespace";
 const n3 = "com.amazon.semanticcontext.unifiedsources";
 const n4 = "com.amazon.semanticcontext";
 const n5 = "com.amazon.semanticcontext.documents";
 const n6 = "com.amazon.semanticcontext.embeddings";
-const n7 = "com.amazon.semanticcontext.metric";
-const n8 = "com.amazon.semanticcontext.ontologygraph";
-const n9 = "com.amazon.semanticcontext.ontologyinduction";
+const n7 = "com.amazon.semanticcontext.facts";
+const n8 = "com.amazon.semanticcontext.metric";
+const n9 = "com.amazon.semanticcontext.ontologygraph";
 
 // smithy-typescript generated code
 import { TypeRegistry } from "@smithy/core/schema";
@@ -1112,14 +1160,34 @@ export var SearchEmbeddingsInput$: StaticStructureSchema = [3, n6, _SEI,
   [_nI, _ve, _eTm, _mI, _eT, _oIn, _tK],
   [[0, 1], 64 | 1, [0, { [_jN]: _et_ }], [0, { [_jN]: _mi }], [0, { [_jN]: _et }], [0, { [_jN]: _oi }], [1, { [_jN]: _tk }]], 4
 ];
+export var FactBatchKeepResult$: StaticStructureSchema = [3, n7, _FBKR,
+  0,
+  [_bI, _dR, _k, _ma, _ke, _sk, _aF, _su, _pr, _sDI, _re],
+  [0, 2, 0, 1, 1, 1, 1, 0, 0, 0, () => FactBatchKeepRowList], 7
+];
+export var FactBatchKeepRow$: StaticStructureSchema = [3, n7, _FBKRa,
+  0,
+  [_su, _pr, _st, _ret, _r, _va],
+  [0, 0, 0, 1, 0, 64 | 0], 3
+];
+export var FactConflictResolutionOutcome$: StaticStructureSchema = [3, n7, _FCRO,
+  0,
+  [_ac, _su, _pr, _ke, _kFI, _rFI, _ret, _va, _aFI, _mFI, _oFI, _b],
+  [0, 0, 0, 0, 64 | 0, 64 | 0, 1, 64 | 0, 64 | 0, 0, 64 | 0, () => FactBatchKeepResult$], 1
+];
+export var ResolveFactConflictsInput$: StaticStructureSchema = [3, n7, _RFCIe,
+  0,
+  [_nI, _ac, _su, _pr, _k, _mO, _mOK, _g, _sDI, _dR, _a, _r],
+  [[0, 1], 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0], 2
+];
 export var CreateGrantInput$: StaticStructureSchema = [3, n1, _CGI,
   0,
-  [_nI, _b],
+  [_nI, _bo],
   [[0, 1], [() => CreateGrantRequest$, 16]], 2
 ];
 export var CreateGrantOutput$: StaticStructureSchema = [3, n1, _CGO,
   0,
-  [_g],
+  [_gr],
   [[() => GrantSummary$, 0]], 1
 ];
 export var CreateGrantRequest$: StaticStructureSchema = [3, n1, _CGR,
@@ -1129,12 +1197,12 @@ export var CreateGrantRequest$: StaticStructureSchema = [3, n1, _CGR,
 ];
 export var CreatePlatformGrantInput$: StaticStructureSchema = [3, n1, _CPGI,
   0,
-  [_b],
+  [_bo],
   [[() => CreatePlatformGrantRequest$, 16]], 1
 ];
 export var CreatePlatformGrantOutput$: StaticStructureSchema = [3, n1, _CPGO,
   0,
-  [_g],
+  [_gr],
   [[() => PlatformGrantSummary$, 0]], 1
 ];
 export var CreatePlatformGrantRequest$: StaticStructureSchema = [3, n1, _CPGR,
@@ -1174,7 +1242,7 @@ export var ListNamespaceGrantsInput$: StaticStructureSchema = [3, n1, _LNGI,
 ];
 export var ListNamespaceGrantsOutput$: StaticStructureSchema = [3, n1, _LNGO,
   0,
-  [_gr, _nT],
+  [_gra, _nT],
   [[() => GrantSummaryList, 0], 0], 1
 ];
 export var ListPlatformGrantsInput$: StaticStructureSchema = [3, n1, _LPGI,
@@ -1184,7 +1252,7 @@ export var ListPlatformGrantsInput$: StaticStructureSchema = [3, n1, _LPGI,
 ];
 export var ListPlatformGrantsOutput$: StaticStructureSchema = [3, n1, _LPGO,
   0,
-  [_gr, _nT],
+  [_gra, _nT],
   [[() => PlatformGrantSummaryList, 0], 0], 1
 ];
 export var ListPrincipalGrantsInput$: StaticStructureSchema = [3, n1, _LPGIi,
@@ -1194,7 +1262,7 @@ export var ListPrincipalGrantsInput$: StaticStructureSchema = [3, n1, _LPGIi,
 ];
 export var ListPrincipalGrantsOutput$: StaticStructureSchema = [3, n1, _LPGOi,
   0,
-  [_gr, _nT],
+  [_gra, _nT],
   [[() => GrantSummaryList, 0], 0], 1
 ];
 export var PlatformGrantSummary$: StaticStructureSchema = [3, n1, _PGS,
@@ -1202,137 +1270,137 @@ export var PlatformGrantSummary$: StaticStructureSchema = [3, n1, _PGS,
   [_gI, _pT, _pI, _ro, _gB, _gA],
   [0, 0, [() => GrantPrincipal, 0], 0, [() => GrantPrincipal, 0], 0], 6
 ];
-export var BulkDeleteFilter$: StaticStructureSchema = [3, n7, _BDF,
+export var BulkDeleteFilter$: StaticStructureSchema = [3, n8, _BDF,
   0,
   [_dSI, _sT, _nP],
   [0, 0, 0]
 ];
-export var BulkDeleteMetricsInput$: StaticStructureSchema = [3, n7, _BDMI,
+export var BulkDeleteMetricsInput$: StaticStructureSchema = [3, n8, _BDMI,
   0,
   [_nI, _n, _fi, _dA],
   [[0, 1], 64 | 0, () => BulkDeleteFilter$, 2], 1
 ];
-export var BulkDeleteMetricsOutput$: StaticStructureSchema = [3, n7, _BDMO,
+export var BulkDeleteMetricsOutput$: StaticStructureSchema = [3, n8, _BDMO,
   0,
   [_de, _nF],
   [1, 64 | 0], 1
 ];
-export var CreateMetricInput$: StaticStructureSchema = [3, n7, _CMI,
+export var CreateMetricInput$: StaticStructureSchema = [3, n8, _CMI,
   0,
   [_nI, _na, _des, _ex, _dSI, _sT, _l, _dTG, _u, _rT, _aC, _oC, _cTl],
   [[0, 1], 0, 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0, [0, 4]], 6
 ];
-export var CreateMetricOutput$: StaticStructureSchema = [3, n7, _CMO,
+export var CreateMetricOutput$: StaticStructureSchema = [3, n8, _CMO,
   0,
   [_met, _w],
   [() => MetricDefinition$, () => ValidationWarningList], 1
 ];
-export var DeleteMetricInput$: StaticStructureSchema = [3, n7, _DMI,
+export var DeleteMetricInput$: StaticStructureSchema = [3, n8, _DMI,
   0,
   [_nI, _na],
   [[0, 1], [0, 1]], 2
 ];
-export var ExportOsiInput$: StaticStructureSchema = [3, n7, _EOI,
+export var ExportOsiInput$: StaticStructureSchema = [3, n8, _EOI,
   0,
   [_nI, _fo, _n],
   [[0, 1], [0, { [_hQ]: _fo }], [64 | 0, { [_hQ]: _n }]], 1
 ];
-export var ExportOsiOutput$: StaticStructureSchema = [3, n7, _EOO,
+export var ExportOsiOutput$: StaticStructureSchema = [3, n8, _EOO,
   0,
   [_cont, _dU, _eI],
   [0, [() => PresignedUrl, 0], 1]
 ];
-export var GetImportJobInput$: StaticStructureSchema = [3, n7, _GIJI,
+export var GetImportJobInput$: StaticStructureSchema = [3, n8, _GIJI,
   0,
   [_nI, _jI],
   [[0, 1], [0, 1]], 2
 ];
-export var GetMetricInput$: StaticStructureSchema = [3, n7, _GMI,
+export var GetMetricInput$: StaticStructureSchema = [3, n8, _GMI,
   0,
   [_nI, _na],
   [[0, 1], [0, 1]], 2
 ];
-export var GetMetricOutput$: StaticStructureSchema = [3, n7, _GMO,
+export var GetMetricOutput$: StaticStructureSchema = [3, n8, _GMO,
   0,
   [_met],
   [() => MetricDefinition$], 1
 ];
-export var GetOsiUploadUrlInput$: StaticStructureSchema = [3, n7, _GOUUI,
+export var GetOsiUploadUrlInput$: StaticStructureSchema = [3, n8, _GOUUI,
   0,
   [_nI, _f],
   [[0, 1], 0], 2
 ];
-export var GetOsiUploadUrlOutput$: StaticStructureSchema = [3, n7, _GOUUO,
+export var GetOsiUploadUrlOutput$: StaticStructureSchema = [3, n8, _GOUUO,
   0,
   [_uU, _sK, _eI],
   [[() => PresignedUrl, 0], 0, 1], 3
 ];
-export var ImportJobOutput$: StaticStructureSchema = [3, n7, _IJO,
+export var ImportJobOutput$: StaticStructureSchema = [3, n8, _IJO,
   0,
   [_jI, _st, _mT, _mP, _mC, _mU, _er, _w],
   [0, 0, 1, 1, 1, 1, 64 | 0, 64 | 0], 6
 ];
-export var ImportOsiInput$: StaticStructureSchema = [3, n7, _IOI,
+export var ImportOsiInput$: StaticStructureSchema = [3, n8, _IOI,
   0,
   [_nI, _cont, _sK, _cTl],
   [[0, 1], 0, 0, [0, 4]], 1
 ];
-export var ImportOsiOutput$: StaticStructureSchema = [3, n7, _IOO,
+export var ImportOsiOutput$: StaticStructureSchema = [3, n8, _IOO,
   0,
-  [_dR, _mC, _mU, _w, _jI, _st],
+  [_dRa, _mC, _mU, _w, _jI, _st],
   [1, 1, 1, 64 | 0, 0, 0], 3
 ];
-export var ListMetricsInput$: StaticStructureSchema = [3, n7, _LMI,
+export var ListMetricsInput$: StaticStructureSchema = [3, n8, _LMI,
   0,
   [_nI, _nT, _mR, _dSI, _sT],
   [[0, 1], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }], [0, { [_hQ]: _dSI }], [0, { [_hQ]: _sT }]], 1
 ];
-export var ListMetricsOutput$: StaticStructureSchema = [3, n7, _LMO,
+export var ListMetricsOutput$: StaticStructureSchema = [3, n8, _LMO,
   0,
   [_metr, _nT],
   [() => MetricDefinitionList, 0], 1
 ];
-export var MetricAiContext$: StaticStructureSchema = [3, n7, _MAC,
+export var MetricAiContext$: StaticStructureSchema = [3, n8, _MAC,
   0,
   [_sy, _in, _exa],
   [64 | 0, 0, 64 | 0]
 ];
-export var MetricDefinition$: StaticStructureSchema = [3, n7, _MD,
+export var MetricDefinition$: StaticStructureSchema = [3, n8, _MD,
   0,
   [_na, _des, _ex, _dSI, _sT, _mIe, _nI, _l, _dTG, _u, _rT, _aC, _oC, _dB, _eF, _do, _eB, _pu],
   [0, 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0, 0, 0, 0, 0, 2], 5
 ];
-export var MetricDialect$: StaticStructureSchema = [3, n7, _MDe,
+export var MetricDialect$: StaticStructureSchema = [3, n8, _MDe,
   0,
   [_dia, _ex],
   [0, 0], 2
 ];
-export var MetricExpression$: StaticStructureSchema = [3, n7, _ME,
+export var MetricExpression$: StaticStructureSchema = [3, n8, _ME,
   0,
   [_dial],
   [() => MetricDialectList], 1
 ];
-export var UpdateMetricInput$: StaticStructureSchema = [3, n7, _UMI,
+export var UpdateMetricInput$: StaticStructureSchema = [3, n8, _UMI,
   0,
   [_nI, _na, _des, _ex, _dSI, _sT, _l, _dTG, _u, _rT, _aC, _oC],
   [[0, 1], [0, 1], 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0], 6
 ];
-export var UpdateMetricOutput$: StaticStructureSchema = [3, n7, _UMO,
+export var UpdateMetricOutput$: StaticStructureSchema = [3, n8, _UMO,
   0,
   [_met, _w],
   [() => MetricDefinition$, () => ValidationWarningList], 1
 ];
-export var ValidateMetricInput$: StaticStructureSchema = [3, n7, _VMI,
+export var ValidateMetricInput$: StaticStructureSchema = [3, n8, _VMI,
   0,
   [_nI, _na, _des, _ex, _dSI, _sT, _l, _dTG, _u, _rT, _aC, _oC],
   [[0, 1], 0, 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0], 6
 ];
-export var ValidateMetricOutput$: StaticStructureSchema = [3, n7, _VMO,
+export var ValidateMetricOutput$: StaticStructureSchema = [3, n8, _VMO,
   0,
   [_w],
   [() => ValidationWarningList], 1
 ];
-export var ValidationWarning$: StaticStructureSchema = [3, n7, _VW,
+export var ValidationWarning$: StaticStructureSchema = [3, n8, _VW,
   0,
   [_fie, _m, _sev],
   [0, 0, 0], 3
@@ -1407,607 +1475,632 @@ export var UpdateNamespaceStatusOutput$: StaticStructureSchema = [3, n2, _UNSO,
   [_nam],
   [[() => NamespaceDetail$, 0]], 1
 ];
-export var CanvasEdge$: StaticStructureSchema = [3, n8, _CEa,
+export var CanvasEdge$: StaticStructureSchema = [3, n9, _CEa,
   0,
-  [_so, _pr, _ta, _pL, _gra, _dir],
+  [_so, _pr, _ta, _pL, _g, _dir],
   [0, 0, 0, 0, 0, 0], 3
 ];
-export var CanvasLimits$: StaticStructureSchema = [3, n8, _CL,
+export var CanvasLimits$: StaticStructureSchema = [3, n9, _CL,
   0,
   [_mN, _mE, _mPS],
   [1, 1, 1], 3
 ];
-export var CanvasNode$: StaticStructureSchema = [3, n8, _CN,
+export var CanvasNode$: StaticStructureSchema = [3, n9, _CN,
   0,
-  [_ur, _l, _k],
+  [_ur, _l, _ki],
   [0, 0, 0], 1
 ];
-export var DeleteOntologyInput$: StaticStructureSchema = [3, n8, _DOI,
+export var DeleteOntologyInput$: StaticStructureSchema = [3, n9, _DOI,
   0,
   [_nI, _oIn],
   [[0, 1], [0, { [_hQ]: _oi }]], 2
 ];
-export var DownloadOntologyInput$: StaticStructureSchema = [3, n8, _DOIo,
+export var DownloadOntologyInput$: StaticStructureSchema = [3, n9, _DOIo,
   0,
   [_nI, _oIn],
   [[0, 1], [0, 1]], 2
 ];
-export var DownloadOntologyOutput$: StaticStructureSchema = [3, n8, _DOO,
+export var DownloadOntologyOutput$: StaticStructureSchema = [3, n9, _DOO,
   0,
   [_dU, _eIS],
   [[() => PresignedUrl, 0], 1], 1
 ];
-export var FetchOntologyInput$: StaticStructureSchema = [3, n8, _FOI,
+export var FetchOntologyInput$: StaticStructureSchema = [3, n9, _FOI,
   0,
   [_nI, _oIn, _sU],
   [[0, 1], [0, 1], 0], 2
 ];
-export var FetchOntologyOutput$: StaticStructureSchema = [3, n8, _FOO,
+export var FetchOntologyOutput$: StaticStructureSchema = [3, n9, _FOO,
   0,
-  [_re],
+  [_res],
   [15], 1
 ];
-export var FindGraphPathInput$: StaticStructureSchema = [3, n8, _FGPI,
+export var FindGraphPathInput$: StaticStructureSchema = [3, n9, _FGPI,
   0,
   [_nI, _sta, _en, _mH, _li],
   [[0, 1], [0, { [_hQ]: _sta }], [0, { [_hQ]: _en }], [1, { [_hQ]: _mh }], [1, { [_hQ]: _li }]], 3
 ];
-export var FindGraphPathOutput$: StaticStructureSchema = [3, n8, _FGPO,
+export var FindGraphPathOutput$: StaticStructureSchema = [3, n9, _FGPO,
   0,
   [_pa, _tr],
   [() => GraphPathList, 2], 2
 ];
-export var GetCanvasManifestInput$: StaticStructureSchema = [3, n8, _GCMI,
+export var GetCanvasManifestInput$: StaticStructureSchema = [3, n9, _GCMI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var GetCanvasManifestOutput$: StaticStructureSchema = [3, n8, _GCMO,
+export var GetCanvasManifestOutput$: StaticStructureSchema = [3, n9, _GCMO,
   0,
   [_cap, _lim],
   [64 | 0, () => CanvasLimits$], 2
 ];
-export var GetCanvasSubgraphInput$: StaticStructureSchema = [3, n8, _GCSI,
+export var GetCanvasSubgraphInput$: StaticStructureSchema = [3, n9, _GCSI,
   0,
-  [_nI, _ki, _gra, _li, _of],
-  [[0, 1], [0, { [_hQ]: _ki }], [0, { [_hQ]: _gra }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 1
+  [_nI, _kin, _g, _li, _of],
+  [[0, 1], [0, { [_hQ]: _kin }], [0, { [_hQ]: _g }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 1
 ];
-export var GetCanvasSubgraphOutput$: StaticStructureSchema = [3, n8, _GCSO,
+export var GetCanvasSubgraphOutput$: StaticStructureSchema = [3, n9, _GCSO,
   0,
   [_no, _ed, _tr, _nC, _eC, _nO],
   [() => CanvasNodeList, () => CanvasEdgeList, 2, 1, 1, 1], 5
 ];
-export var GetGraphClassInput$: StaticStructureSchema = [3, n8, _GGCI,
+export var GetGraphClassInput$: StaticStructureSchema = [3, n9, _GGCI,
   0,
   [_nI, _ur],
   [[0, 1], [0, { [_hQ]: _ur }]], 2
 ];
-export var GetGraphDatatypePropertyInput$: StaticStructureSchema = [3, n8, _GGDPI,
+export var GetGraphDatatypePropertyInput$: StaticStructureSchema = [3, n9, _GGDPI,
   0,
   [_nI, _ur],
   [[0, 1], [0, { [_hQ]: _ur }]], 2
 ];
-export var GetGraphObjectPropertyInput$: StaticStructureSchema = [3, n8, _GGOPI,
+export var GetGraphObjectPropertyInput$: StaticStructureSchema = [3, n9, _GGOPI,
   0,
   [_nI, _ur],
   [[0, 1], [0, { [_hQ]: _ur }]], 2
 ];
-export var GetIngestStatusInput$: StaticStructureSchema = [3, n8, _GISI,
+export var GetIngestStatusInput$: StaticStructureSchema = [3, n9, _GISI,
   0,
   [_nI, _oIn, _jI],
   [[0, 1], [0, 1], [0, 1]], 3
 ];
-export var GetIngestStatusOutput$: StaticStructureSchema = [3, n8, _GISO,
+export var GetIngestStatusOutput$: StaticStructureSchema = [3, n9, _GISO,
   0,
-  [_re],
+  [_res],
   [() => IngestJob$], 1
 ];
-export var GetOntologyDiffInput$: StaticStructureSchema = [3, n8, _GODI,
+export var GetOntologyDiffInput$: StaticStructureSchema = [3, n9, _GODI,
   0,
   [_nI, _fG, _tG, _li],
   [[0, 1], [0, { [_hQ]: _fr }], [0, { [_hQ]: _to }], [1, { [_hQ]: _li }]], 3
 ];
-export var GetOntologyDiffOutput$: StaticStructureSchema = [3, n8, _GODO,
+export var GetOntologyDiffOutput$: StaticStructureSchema = [3, n9, _GODO,
   0,
   [_bG, _tGa, _cou, _aCd, _rC, _aP, _rP, _exa, _tr, _so, _sA],
   [0, 0, () => OntologyDiffCounts$, 64 | 0, 64 | 0, 64 | 0, 64 | 0, () => OntologyDiffExamples$, 2, 0, 0], 11
 ];
-export var GetOntologyInput$: StaticStructureSchema = [3, n8, _GOI,
+export var GetOntologyInput$: StaticStructureSchema = [3, n9, _GOI,
   0,
   [_nI, _oIn],
   [[0, 1], [0, 1]], 2
 ];
-export var GetOntologyOutput$: StaticStructureSchema = [3, n8, _GOO,
+export var GetOntologyOutput$: StaticStructureSchema = [3, n9, _GOO,
   0,
   [_on],
   [15], 1
 ];
-export var GetOntologyOverviewInput$: StaticStructureSchema = [3, n8, _GOOI,
+export var GetOntologyOverviewInput$: StaticStructureSchema = [3, n9, _GOOI,
   0,
   [_nI, _oIn, _li, _of, _sa],
   [[0, 1], [0, { [_hQ]: _oi }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }], [2, { [_hQ]: _sa }]], 2
 ];
-export var GetOntologySnapshotInput$: StaticStructureSchema = [3, n8, _GOSI,
+export var GetOntologySnapshotInput$: StaticStructureSchema = [3, n9, _GOSI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var GetOntologySnapshotOutput$: StaticStructureSchema = [3, n8, _GOSO,
+export var GetOntologySnapshotOutput$: StaticStructureSchema = [3, n9, _GOSO,
   0,
   [_tb, _ab, _cov, _grap, _so, _sA],
   [() => OntologySnapshotTbox$, () => OntologySnapshotAbox$, () => OntologyCoverage$, 64 | 0, 0, 0], 6
 ];
-export var GetOntologyUploadUrlInput$: StaticStructureSchema = [3, n8, _GOUUIe,
+export var GetOntologyUploadUrlInput$: StaticStructureSchema = [3, n9, _GOUUIe,
   0,
   [_nI, _f, _cT, _oIn, _ti],
   [[0, 1], 0, 0, 0, 0], 2
 ];
-export var GetOntologyUploadUrlOutput$: StaticStructureSchema = [3, n8, _GOUUOe,
+export var GetOntologyUploadUrlOutput$: StaticStructureSchema = [3, n9, _GOUUOe,
   0,
   [_uU, _sK, _oIn],
   [[() => PresignedUrl, 0], 0, 0], 3
 ];
-export var GetReasoningStatusInput$: StaticStructureSchema = [3, n8, _GRSI,
+export var GetReasoningStatusInput$: StaticStructureSchema = [3, n9, _GRSI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var GetReasoningStatusOutput$: StaticStructureSchema = [3, n8, _GRSO,
+export var GetReasoningStatusOutput$: StaticStructureSchema = [3, n9, _GRSO,
   0,
-  [_av, _so, _sA, _eng, _fa, _det],
-  [2, 0, 0, 0, () => QualityCount$, 0], 3
+  [_av, _so, _sA, _eng, _fa, _det, _iT, _lJ],
+  [2, 0, 0, 0, () => QualityCount$, 0, 1, () => ReasoningJobSummary$], 3
 ];
-export var GraphEdge$: StaticStructureSchema = [3, n8, _GE,
+export var GraphEdge$: StaticStructureSchema = [3, n9, _GE,
   0,
   [_pr, _dir, _ne, _pL],
   [0, 0, () => GraphNeighbor$, [0, { [_jN]: _pl }]], 3
 ];
-export var GraphNeighbor$: StaticStructureSchema = [3, n8, _GN,
+export var GraphNeighbor$: StaticStructureSchema = [3, n9, _GN,
   0,
-  [_ur, _k, _l],
+  [_ur, _ki, _l],
   [0, 0, 0], 2
 ];
-export var GraphPath$: StaticStructureSchema = [3, n8, _GPr,
+export var GraphPath$: StaticStructureSchema = [3, n9, _GPr,
   0,
   [_no, _ed, _h],
   [() => CanvasNodeList, () => CanvasEdgeList, 1], 3
 ];
-export var GraphSearchHit$: StaticStructureSchema = [3, n8, _GSH,
+export var GraphSearchHit$: StaticStructureSchema = [3, n9, _GSH,
   0,
-  [_ur, _k, _l, _gU],
+  [_ur, _ki, _l, _gU],
   [0, 0, 0, [64 | 0, { [_jN]: _gu }]], 2
 ];
-export var GraphSearchInput$: StaticStructureSchema = [3, n8, _GSI,
+export var GraphSearchInput$: StaticStructureSchema = [3, n9, _GSI,
   0,
-  [_nI, _q, _k, _oIn, _eOI, _li, _of],
-  [[0, 1], [0, { [_hQ]: _q }], [0, { [_hQ]: _k }], [0, { [_hQ]: _oi }], [0, { [_hQ]: _eoi }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 2
+  [_nI, _q, _ki, _oIn, _eOI, _li, _of],
+  [[0, 1], [0, { [_hQ]: _q }], [0, { [_hQ]: _ki }], [0, { [_hQ]: _oi }], [0, { [_hQ]: _eoi }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 2
 ];
-export var GraphSearchOutput$: StaticStructureSchema = [3, n8, _GSO,
+export var GraphSearchOutput$: StaticStructureSchema = [3, n9, _GSO,
   0,
   [_hi, _tC],
   [[() => GraphSearchHitList, 0], [1, { [_jN]: _tc }]], 1
 ];
-export var GraphStatement$: StaticStructureSchema = [3, n8, _GSr,
+export var GraphStatement$: StaticStructureSchema = [3, n9, _GSr,
   0,
-  [_gra, _su, _pr, _ob],
+  [_g, _su, _pr, _ob],
   [0, 0, 0, 0], 4
 ];
-export var GraphVertex$: StaticStructureSchema = [3, n8, _GV,
+export var GraphVertex$: StaticStructureSchema = [3, n9, _GV,
   0,
-  [_ur, _k, _nam, _ty, _lab, _com, _aL, _gU, _iM, _sup, _ed],
-  [0, 0, 0, 64 | 0, 64 | 0, 64 | 0, [64 | 0, { [_jN]: _al }], [64 | 0, { [_jN]: _gu }], [2, { [_jN]: _im }], [2, n8, _SA, 0, 0, 64 | 0], [() => GraphEdgeList, 0]], 3
+  [_ur, _ki, _nam, _ty, _lab, _com, _aL, _gU, _iM, _sup, _ed],
+  [0, 0, 0, 64 | 0, 64 | 0, 64 | 0, [64 | 0, { [_jN]: _al }], [64 | 0, { [_jN]: _gu }], [2, { [_jN]: _im }], [2, n9, _SA, 0, 0, 64 | 0], [() => GraphEdgeList, 0]], 3
 ];
-export var IngestJob$: StaticStructureSchema = [3, n8, _IJ,
+export var IngestJob$: StaticStructureSchema = [3, n9, _IJ,
   0,
-  [_jI, _oIn, _st, _e, _re],
+  [_jI, _oIn, _st, _e, _res],
   [0, 0, 0, 0, () => IngestJobResult$], 3
 ];
-export var IngestJobResult$: StaticStructureSchema = [3, n8, _IJR,
+export var IngestJobResult$: StaticStructureSchema = [3, n9, _IJR,
   0,
   [_oIn, _cCl, _eCm],
   [0, 1, 1]
 ];
-export var IngestOntologyFromS3Input$: StaticStructureSchema = [3, n8, _IOFSI,
+export var IngestOntologyFromS3Input$: StaticStructureSchema = [3, n9, _IOFSI,
   0,
   [_nI, _oIn, _sK, _fo, _ti, _oT, _cTl],
   [[0, 1], [0, 1], 0, 0, 0, 0, [0, 4]], 3
 ];
-export var IngestOntologyFromS3Output$: StaticStructureSchema = [3, n8, _IOFSO,
+export var IngestOntologyFromS3Output$: StaticStructureSchema = [3, n9, _IOFSO,
   0,
-  [_re],
+  [_res],
   [() => IngestJob$], 1
 ];
-export var ListOntologiesInput$: StaticStructureSchema = [3, n8, _LOI,
+export var ListOntologiesInput$: StaticStructureSchema = [3, n9, _LOI,
   0,
   [_nI, _oT, _dT, _ur, _sR, _lT, _li, _nT, _mR],
   [[0, 1], [0, { [_hQ]: _ot }], [0, { [_hQ]: _dt }], [0, { [_hQ]: _ur }], [0, { [_hQ]: _sr }], [0, { [_hQ]: _lt }], [1, { [_hQ]: _li }], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
 ];
-export var ListOntologiesOutput$: StaticStructureSchema = [3, n8, _LOO,
+export var ListOntologiesOutput$: StaticStructureSchema = [3, n9, _LOO,
   0,
   [_ont, _nT],
   [() => OntologyRecordList, 0], 1
 ];
-export var ListStatementsInput$: StaticStructureSchema = [3, n8, _LSI,
+export var ListStatementsInput$: StaticStructureSchema = [3, n9, _LSI,
   0,
-  [_nI, _su, _pr, _oV, _gra, _li, _of],
-  [[0, 1], [0, { [_hQ]: _su }], [0, { [_hQ]: _pr }], [0, { [_hQ]: _ob }], [0, { [_hQ]: _gra }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 1
+  [_nI, _su, _pr, _oV, _g, _li, _of],
+  [[0, 1], [0, { [_hQ]: _su }], [0, { [_hQ]: _pr }], [0, { [_hQ]: _ob }], [0, { [_hQ]: _g }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 1
 ];
-export var ListStatementsOutput$: StaticStructureSchema = [3, n8, _LSO,
+export var ListStatementsOutput$: StaticStructureSchema = [3, n9, _LSO,
   0,
   [_stat, _tr],
   [() => GraphStatementList, 2], 1
 ];
-export var OntologyClassSummary$: StaticStructureSchema = [3, n8, _OCS,
+export var MaterializeReasoningInput$: StaticStructureSchema = [3, n9, _MRI,
+  0,
+  [_nI, _pro, _for, _aG],
+  [[0, 1], 0, 2, 64 | 0], 1
+];
+export var MaterializeReasoningOutput$: StaticStructureSchema = [3, n9, _MRO,
+  0,
+  [_jI, _mo, _pro, _oVn, _tGa, _inf, _sk, _co, _ms, _stag, _w, _iH],
+  [0, 0, 0, 0, 0, 1, 2, 2, 1, () => ReasoningStages$, 64 | 0, 0], 11
+];
+export var OntologyClassSummary$: StaticStructureSchema = [3, n9, _OCS,
   0,
   [_ur, _l, _comm, _gT, _mTa, _sCO],
   [0, 0, 0, 0, 0, 64 | 0], 1
 ];
-export var OntologyCoverage$: StaticStructureSchema = [3, n8, _OC,
+export var OntologyCoverage$: StaticStructureSchema = [3, n9, _OC,
   0,
   [_cCla, _uC],
   [1, 1], 2
 ];
-export var OntologyDiffCounts$: StaticStructureSchema = [3, n8, _ODC,
+export var OntologyDiffCounts$: StaticStructureSchema = [3, n9, _ODC,
   0,
   [_aT, _rTe, _aCd, _rC, _aP, _rP],
   [1, 1, 1, 1, 1, 1], 6
 ];
-export var OntologyDiffExamples$: StaticStructureSchema = [3, n8, _ODE,
+export var OntologyDiffExamples$: StaticStructureSchema = [3, n9, _ODE,
   0,
   [_aT, _rTe],
   [() => TripleExampleList, () => TripleExampleList], 2
 ];
-export var OntologyOverview$: StaticStructureSchema = [3, n8, _OO,
+export var OntologyOverview$: StaticStructureSchema = [3, n9, _OO,
   0,
   [_oIn, _nam, _gUr, _cl, _oP, _dP, _tCo, _tOP, _tDP],
   [0, 0, 0, () => OntologyClassSummaryList, () => OntologyPropertySummaryList, () => OntologyPropertySummaryList, 1, 1, 1], 2
 ];
-export var OntologyPropertySummary$: StaticStructureSchema = [3, n8, _OPS,
+export var OntologyPropertySummary$: StaticStructureSchema = [3, n9, _OPS,
   0,
   [_ur, _l, _do, _ra],
   [0, 0, 0, 0], 1
 ];
-export var OntologyRecord$: StaticStructureSchema = [3, n8, _OR,
+export var OntologyRecord$: StaticStructureSchema = [3, n9, _OR,
   0,
   [_oIn, _ur, _ti, _des, _oT, _pS, _st, _dE, _fo, _dTo, _cCl, _pC, _aCx, _eCm, _gUr, _cA, _uA],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 64 | 0, 1, 1, 1, 1, 0, 0, 0], 2
 ];
-export var OntologySnapshotAbox$: StaticStructureSchema = [3, n8, _OSA,
+export var OntologySnapshotAbox$: StaticStructureSchema = [3, n9, _OSA,
   0,
   [_ins, _cWI],
   [1, 1], 2
 ];
-export var OntologySnapshotTbox$: StaticStructureSchema = [3, n8, _OST,
+export var OntologySnapshotTbox$: StaticStructureSchema = [3, n9, _OST,
   0,
   [_cl, _oP, _dP],
   [1, 1, 1], 3
 ];
-export var QualityCount$: StaticStructureSchema = [3, n8, _QC,
+export var QualityCount$: StaticStructureSchema = [3, n9, _QC,
   0,
   [_coun, _det],
   [1, 0]
 ];
-export var RunValidationInput$: StaticStructureSchema = [3, n8, _RVI,
+export var ReasoningJobSummary$: StaticStructureSchema = [3, n9, _RJS,
+  0,
+  [_jI, _state, _inf, _co, _fA, _sk, _stag],
+  [0, 0, 1, 2, 0, 2, () => ReasoningStages$], 2
+];
+export var ReasoningStage$: StaticStructureSchema = [3, n9, _RS,
+  0,
+  [_tri, _conf, _vi, _ms],
+  [1, 2, 1, 1]
+];
+export var ReasoningStages$: StaticStructureSchema = [3, n9, _RSe,
+  0,
+  [_rd, _owl, _sh],
+  [() => ReasoningStage$, () => ReasoningStage$, () => ReasoningStage$]
+];
+export var RunValidationInput$: StaticStructureSchema = [3, n9, _RVI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var RunValidationOutput$: StaticStructureSchema = [3, n8, _RVO,
+export var RunValidationOutput$: StaticStructureSchema = [3, n9, _RVO,
   0,
   [_oIr, _uC, _sh, _iF, _so, _sA],
   [() => QualityCount$, () => QualityCount$, () => ShaclReport$, () => QualityCount$, 0, 0], 6
 ];
-export var ShaclReport$: StaticStructureSchema = [3, n8, _SR,
+export var ShaclReport$: StaticStructureSchema = [3, n9, _SR,
   0,
   [_st, _vi, _conf, _det],
   [0, 1, 2, 0], 1
 ];
-export var TripleExample$: StaticStructureSchema = [3, n8, _TE,
+export var TripleExample$: StaticStructureSchema = [3, n9, _TE,
   0,
   [_su, _pr, _ob],
   [0, 0, 0], 3
 ];
-export var UploadOntologyInput$: StaticStructureSchema = [3, n8, _UOI,
+export var UploadOntologyInput$: StaticStructureSchema = [3, n9, _UOI,
   0,
-  [_nI, _oIn, _b],
+  [_nI, _oIn, _bo],
   [[0, 1], [0, 1], [21, 16]], 3
 ];
-export var UploadOntologyOutput$: StaticStructureSchema = [3, n8, _UOO,
+export var UploadOntologyOutput$: StaticStructureSchema = [3, n9, _UOO,
   0,
-  [_re],
+  [_res],
   [15], 1
 ];
-export var AcceptProposalInput$: StaticStructureSchema = [3, n9, _API,
+export var AcceptProposalInput$: StaticStructureSchema = [3, n10, _API,
   0,
   [_nI, _pIr, _oIn],
   [[0, 1], [0, 1], 0], 2
 ];
-export var AcceptProposalOutput$: StaticStructureSchema = [3, n9, _APO,
+export var AcceptProposalOutput$: StaticStructureSchema = [3, n10, _APO,
   0,
   [_pIr, _st],
   [0, 0], 2
 ];
-export var BridgeOptions$: StaticStructureSchema = [3, n9, _BO,
+export var BridgeOptions$: StaticStructureSchema = [3, n10, _BO,
   0,
-  [_mTax, _conc, _dRr],
+  [_mTax, _conc, _dR],
   [1, 1, 2]
 ];
-export var BridgeReport$: StaticStructureSchema = [3, n9, _BR,
+export var BridgeReport$: StaticStructureSchema = [3, n10, _BR,
   0,
-  [_oIn, _dRr, _pIr, _tCa, _tWE, _tWEa, _tD, _cDo, _rB, _rBR, _rBM, _rBMS, _aTE, _tL, _cL, _dTe, _dC, _lin, _lC, _lF, _fLE, _fT, _not, _eS],
+  [_oIn, _dR, _pIr, _tCa, _tWE, _tWEa, _tD, _cDo, _rB, _rBR, _rBM, _rBMS, _aTE, _tL, _cL, _dTe, _dC, _lin, _lC, _lF, _fLE, _fT, _not, _eS],
   [0, 2, 0, 1, 1, 64 | 0, 1, 1, 1, 1, 1, 64 | 0, 1, 1, 1, 64 | 0, 64 | 0, 64 | 0, 1, 1, 0, 64 | 0, 64 | 0, 1]
 ];
-export var CancelProposalInput$: StaticStructureSchema = [3, n9, _CPI,
+export var CancelProposalInput$: StaticStructureSchema = [3, n10, _CPI,
   0,
   [_nI, _pIr],
   [[0, 1], [0, 1]], 2
 ];
-export var CancelProposalOutput$: StaticStructureSchema = [3, n9, _CPO,
+export var CancelProposalOutput$: StaticStructureSchema = [3, n10, _CPO,
   0,
   [_pIr, _st],
   [0, 0], 2
 ];
-export var CompileConstraintsInput$: StaticStructureSchema = [3, n9, _CCI,
+export var CompileConstraintsInput$: StaticStructureSchema = [3, n10, _CCI,
   0,
   [_nI, _pIr, _cc, _ct],
   [[0, 1], [0, 1], 15, 0], 3
 ];
-export var CompileConstraintsOutput$: StaticStructureSchema = [3, n9, _CCO,
+export var CompileConstraintsOutput$: StaticStructureSchema = [3, n10, _CCO,
   0,
   [_pIr, _st_],
   [0, 0], 2
 ];
-export var ConceptMatch$: StaticStructureSchema = [3, n9, _CM,
+export var ConceptMatch$: StaticStructureSchema = [3, n10, _CM,
   0,
   [_sT, _sCo, _mTa, _sTI, _mCU, _mOI, _si],
   [0, 0, 0, 0, 0, 0, 1], 3
 ];
-export var DatatypeRepairChange$: StaticStructureSchema = [3, n9, _DRC,
+export var DatatypeRepairChange$: StaticStructureSchema = [3, n10, _DRC,
   0,
   [_fou, _can],
   [0, 0], 2
 ];
-export var DroppedTable$: StaticStructureSchema = [3, n9, _DT,
+export var DroppedTable$: StaticStructureSchema = [3, n10, _DT,
   0,
   [_tN, _r],
   [0, 0], 2
 ];
-export var FoundationalOntologySummary$: StaticStructureSchema = [3, n9, _FOS,
+export var FoundationalOntologySummary$: StaticStructureSchema = [3, n10, _FOS,
   0,
-  [_ke, _ti, _des, _ur, _dTo],
+  [_key, _ti, _des, _ur, _dTo],
   [0, 0, 0, 0, 64 | 0], 2
 ];
-export var GetInductionJobInput$: StaticStructureSchema = [3, n9, _GIJIe,
+export var GetInductionJobInput$: StaticStructureSchema = [3, n10, _GIJIe,
   0,
   [_nI, _jI, _inc],
   [[0, 1], [0, 1], [0, { [_hQ]: _inc }]], 2
 ];
-export var GetInductionJobOutput$: StaticStructureSchema = [3, n9, _GIJO,
+export var GetInductionJobOutput$: StaticStructureSchema = [3, n10, _GIJO,
   0,
-  [_jI, _st, _cA, _rep, _sTo, _pro, _bR, _e],
+  [_jI, _st, _cA, _rep, _sTo, _prog, _bR, _e],
   [0, 0, 4, () => InductionReport$, 0, 0, () => BridgeReport$, 0], 3
 ];
-export var GetInferConstraintsJobInput$: StaticStructureSchema = [3, n9, _GICJI,
+export var GetInferConstraintsJobInput$: StaticStructureSchema = [3, n10, _GICJI,
   0,
   [_nI, _pIr, _jI],
   [[0, 1], [0, 1], [0, 1]], 3
 ];
-export var GetInferConstraintsJobOutput$: StaticStructureSchema = [3, n9, _GICJO,
+export var GetInferConstraintsJobOutput$: StaticStructureSchema = [3, n10, _GICJO,
   0,
   [_jI, _pIr, _st, _e, _ic],
   [0, 0, 0, 0, 15], 3
 ];
-export var GetProposalInput$: StaticStructureSchema = [3, n9, _GPI,
+export var GetProposalInput$: StaticStructureSchema = [3, n10, _GPI,
   0,
   [_nI, _pIr],
   [[0, 1], [0, 1]], 2
 ];
-export var GetProposalOutput$: StaticStructureSchema = [3, n9, _GPO,
+export var GetProposalOutput$: StaticStructureSchema = [3, n10, _GPO,
   0,
   [_pIr, _st, _oIn, _oTn, _rTr, _oU, _rU, _mUa, _cU, _me, _aE],
   [0, 0, 0, 0, 0, [() => PresignedUrl, 0], [() => PresignedUrl, 0], [() => PresignedUrl, 0], [() => PresignedUrl, 0], () => ProposalMetadata$, 0], 3
 ];
-export var GetProposalUploadUrlsInput$: StaticStructureSchema = [3, n9, _GPUUI,
+export var GetProposalUploadUrlsInput$: StaticStructureSchema = [3, n10, _GPUUI,
   0,
   [_nI, _pIr],
   [[0, 1], [0, 1]], 2
 ];
-export var GetProposalUploadUrlsOutput$: StaticStructureSchema = [3, n9, _GPUUO,
+export var GetProposalUploadUrlsOutput$: StaticStructureSchema = [3, n10, _GPUUO,
   0,
   [_rI, _oPU, _rPU],
   [0, [() => PresignedUrl, 0], [() => PresignedUrl, 0]], 3
 ];
-export var GetProposalValidationJobInput$: StaticStructureSchema = [3, n9, _GPVJI,
+export var GetProposalValidationJobInput$: StaticStructureSchema = [3, n10, _GPVJI,
   0,
   [_nI, _pIr, _jI],
   [[0, 1], [0, 1], [0, 1]], 3
 ];
-export var GetProposalValidationJobOutput$: StaticStructureSchema = [3, n9, _GPVJO,
+export var GetProposalValidationJobOutput$: StaticStructureSchema = [3, n10, _GPVJO,
   0,
   [_jI, _pIr, _st, _cA, _e, _rep],
   [0, 0, 0, 0, 0, () => ProposalValidationReport$], 4
 ];
-export var InducedDatasource$: StaticStructureSchema = [3, n9, _ID,
+export var InducedDatasource$: StaticStructureSchema = [3, n10, _ID,
   0,
   [_dIa, _pIr, _oIn, _l, _tP, _cP, _nCC],
   [0, 0, 0, 0, 1, 1, 1], 1
 ];
-export var InductionJobSummary$: StaticStructureSchema = [3, n9, _IJS,
+export var InductionJobSummary$: StaticStructureSchema = [3, n10, _IJS,
   0,
   [_jI, _st, _cA, _sTo, _tP, _nCC, _e],
   [0, 0, 4, 0, 1, 1, 0], 3
 ];
-export var InductionReport$: StaticStructureSchema = [3, n9, _IR,
+export var InductionReport$: StaticStructureSchema = [3, n10, _IR,
   0,
-  [_tP, _cP, _nCC, _ma, _gOU, _iOI, _dTr],
+  [_tP, _cP, _nCC, _mat, _gOU, _iOI, _dTr],
   [1, 1, 1, () => ConceptMatchList, 64 | 0, 0, () => DroppedTableList], 4
 ];
-export var InferConstraintsInput$: StaticStructureSchema = [3, n9, _ICI,
+export var InferConstraintsInput$: StaticStructureSchema = [3, n10, _ICI,
   0,
   [_nI, _pIr, _cTl],
   [[0, 1], [0, 1], [0, 4]], 2
 ];
-export var InferConstraintsOutput$: StaticStructureSchema = [3, n9, _ICO,
+export var InferConstraintsOutput$: StaticStructureSchema = [3, n10, _ICO,
   0,
   [_jI, _pIr, _st],
   [0, 0, 0], 3
 ];
-export var ListFoundationalOntologiesInput$: StaticStructureSchema = [3, n9, _LFOI,
+export var ListFoundationalOntologiesInput$: StaticStructureSchema = [3, n10, _LFOI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var ListFoundationalOntologiesOutput$: StaticStructureSchema = [3, n9, _LFOO,
+export var ListFoundationalOntologiesOutput$: StaticStructureSchema = [3, n10, _LFOO,
   0,
   [_i],
   [() => FoundationalOntologyList], 1
 ];
-export var ListInducedDatasourcesInput$: StaticStructureSchema = [3, n9, _LIDI,
+export var ListInducedDatasourcesInput$: StaticStructureSchema = [3, n10, _LIDI,
   0,
   [_nI, _nT, _mR],
   [[0, 1], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
 ];
-export var ListInducedDatasourcesOutput$: StaticStructureSchema = [3, n9, _LIDO,
+export var ListInducedDatasourcesOutput$: StaticStructureSchema = [3, n10, _LIDO,
   0,
   [_da, _nT],
   [() => InducedDatasourceList, 0], 1
 ];
-export var ListInductionJobsInput$: StaticStructureSchema = [3, n9, _LIJI,
+export var ListInductionJobsInput$: StaticStructureSchema = [3, n10, _LIJI,
   0,
   [_nI, _st, _nT, _mR],
   [[0, 1], [0, { [_hQ]: _st }], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
 ];
-export var ListInductionJobsOutput$: StaticStructureSchema = [3, n9, _LIJO,
+export var ListInductionJobsOutput$: StaticStructureSchema = [3, n10, _LIJO,
   0,
   [_j, _nT],
   [() => InductionJobSummaryList, 0], 1
 ];
-export var ListProposalsInput$: StaticStructureSchema = [3, n9, _LPI,
+export var ListProposalsInput$: StaticStructureSchema = [3, n10, _LPI,
   0,
   [_nI, _st, _oIn, _sTo, _pTr, _nT, _mR],
   [[0, 1], [0, { [_hQ]: _st }], [0, { [_hQ]: _oIn }], [0, { [_hQ]: _st__ }], [0, { [_hQ]: _typ }], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
 ];
-export var ListProposalsOutput$: StaticStructureSchema = [3, n9, _LPO,
+export var ListProposalsOutput$: StaticStructureSchema = [3, n10, _LPO,
   0,
   [_prop, _nT],
   [() => ProposalSummaryList, 0], 1
 ];
-export var LoadFoundationalOntologyInput$: StaticStructureSchema = [3, n9, _LFOIo,
+export var LoadFoundationalOntologyInput$: StaticStructureSchema = [3, n10, _LFOIo,
   0,
-  [_nI, _ke, _cTl],
+  [_nI, _key, _cTl],
   [[0, 1], [0, 1], [0, 4]], 2
 ];
-export var LoadFoundationalOntologyOutput$: StaticStructureSchema = [3, n9, _LFOOo,
+export var LoadFoundationalOntologyOutput$: StaticStructureSchema = [3, n10, _LFOOo,
   0,
   [_st, _oIn, _cCl, _eCm],
   [0, 0, 1, 1], 1
 ];
-export var ProposalMetadata$: StaticStructureSchema = [3, n9, _PM,
+export var ProposalMetadata$: StaticStructureSchema = [3, n10, _PM,
   0,
   [_dIat, _l, _tP, _cP, _nCC],
   [64 | 0, 0, 1, 1, 1]
 ];
-export var ProposalSummary$: StaticStructureSchema = [3, n9, _PS,
+export var ProposalSummary$: StaticStructureSchema = [3, n10, _PS,
   0,
   [_pIr, _st, _oIn, _sTo, _me],
   [0, 0, 0, 0, () => ProposalMetadata$], 3
 ];
-export var ProposalValidationFinding$: StaticStructureSchema = [3, n9, _PVF,
+export var ProposalValidationFinding$: StaticStructureSchema = [3, n10, _PVF,
   0,
-  [_va, _tie, _sev, _cod, _m, _su, _deta],
+  [_val, _tie, _sev, _cod, _m, _su, _deta],
   [0, 0, 0, 0, 0, 0, 15], 5
 ];
-export var ProposalValidationReport$: StaticStructureSchema = [3, n9, _PVR,
+export var ProposalValidationReport$: StaticStructureSchema = [3, n10, _PVR,
   0,
   [_jI, _pIr, _pas, _fin, _tR, _cA],
   [0, 0, 2, () => ProposalValidationFindingList, 64 | 0, 0], 6
 ];
-export var RejectProposalsInput$: StaticStructureSchema = [3, n9, _RPI,
+export var RejectProposalsInput$: StaticStructureSchema = [3, n10, _RPI,
   0,
   [_nI, _pIro, _r],
   [[0, 1], 64 | 0, 0], 3
 ];
-export var RejectProposalsOutput$: StaticStructureSchema = [3, n9, _RPO,
+export var RejectProposalsOutput$: StaticStructureSchema = [3, n10, _RPO,
   0,
   [_rej],
   [1], 1
 ];
-export var RepairProposalDatatypesInput$: StaticStructureSchema = [3, n9, _RPDI,
+export var RepairProposalDatatypesInput$: StaticStructureSchema = [3, n10, _RPDI,
   0,
-  [_nI, _pIr, _dRr],
+  [_nI, _pIr, _dR],
   [[0, 1], [0, 1], 2], 2
 ];
-export var RepairProposalDatatypesOutput$: StaticStructureSchema = [3, n9, _RPDO,
+export var RepairProposalDatatypesOutput$: StaticStructureSchema = [3, n10, _RPDO,
   0,
-  [_pIr, _rCe, _ch, _dRr],
+  [_pIr, _rCe, _ch, _dR],
   [0, 1, () => DatatypeRepairChangeList, 2], 3
 ];
-export var StartInductionInput$: StaticStructureSchema = [3, n9, _SII,
+export var StartInductionInput$: StaticStructureSchema = [3, n10, _SII,
   0,
   [_nI, _dIat, _oUP, _l, _cTo, _rMT, _str, _bO, _gOI, _gM, _gAr, _cTl],
   [[0, 1], 64 | 0, 0, 0, 1, 1, 0, () => BridgeOptions$, 64 | 0, 0, 0, [0, 4]], 3
 ];
-export var StartInductionOutput$: StaticStructureSchema = [3, n9, _SIO,
+export var StartInductionOutput$: StaticStructureSchema = [3, n10, _SIO,
   0,
   [_jI],
   [0], 1
 ];
-export var UpdateProposalInput$: StaticStructureSchema = [3, n9, _UPI,
+export var UpdateProposalInput$: StaticStructureSchema = [3, n10, _UPI,
   0,
   [_nI, _pIr, _oTn, _rTr, _gO, _nTo, _oUn, _rUr, _uRI],
   [[0, 1], 0, 0, 0, 128 | 0, 64 | 0, 2, 2, 0], 2
 ];
-export var UpdateProposalOutput$: StaticStructureSchema = [3, n9, _UPO,
+export var UpdateProposalOutput$: StaticStructureSchema = [3, n10, _UPO,
   0,
   [_pIr, _st],
   [0, 0], 2
 ];
-export var ValidateProposalInput$: StaticStructureSchema = [3, n9, _VPI,
+export var ValidateProposalInput$: StaticStructureSchema = [3, n10, _VPI,
   0,
   [_nI, _pIr, _tier, _sST, _cQ, _cTl],
   [[0, 1], [0, 1], 64 | 0, 0, 64 | 0, [0, 4]], 2
 ];
-export var ValidateProposalOutput$: StaticStructureSchema = [3, n9, _VPO,
+export var ValidateProposalOutput$: StaticStructureSchema = [3, n10, _VPO,
   0,
   [_jI, _pIr, _st, _cA],
   [0, 0, 0, 0], 4
 ];
-export var GetNamespaceRoleInput$: StaticStructureSchema = [3, n10, _GNRI,
+export var GetNamespaceRoleInput$: StaticStructureSchema = [3, n11, _GNRI,
   0,
   [_nI, _rIo],
   [[0, 1], [0, 1]], 2
 ];
-export var GetNamespaceRoleOutput$: StaticStructureSchema = [3, n10, _GNRO,
+export var GetNamespaceRoleOutput$: StaticStructureSchema = [3, n11, _GNRO,
   0,
   [_ro],
   [() => RoleDetail$], 1
 ];
-export var ListNamespaceRolesInput$: StaticStructureSchema = [3, n10, _LNRI,
+export var ListNamespaceRolesInput$: StaticStructureSchema = [3, n11, _LNRI,
   0,
   [_nI],
   [[0, 1]], 1
 ];
-export var ListNamespaceRolesOutput$: StaticStructureSchema = [3, n10, _LNRO,
+export var ListNamespaceRolesOutput$: StaticStructureSchema = [3, n11, _LNRO,
   0,
   [_rol],
   [() => RoleSummaryList], 1
 ];
-export var ListPlatformRolesInput$: StaticStructureSchema = [3, n10, _LPRI,
+export var ListPlatformRolesInput$: StaticStructureSchema = [3, n11, _LPRI,
   0,
   [],
   []
 ];
-export var ListPlatformRolesOutput$: StaticStructureSchema = [3, n10, _LPRO,
+export var ListPlatformRolesOutput$: StaticStructureSchema = [3, n11, _LPRO,
   0,
   [_rol],
   [() => RoleSummaryList], 1
 ];
-export var RoleDetail$: StaticStructureSchema = [3, n10, _RD,
+export var RoleDetail$: StaticStructureSchema = [3, n11, _RD,
   0,
   [_rIo, _na, _sc, _iBI, _des, _cPe],
   [0, 0, 0, 2, 0, 0], 4
 ];
-export var RoleSummary$: StaticStructureSchema = [3, n10, _RS,
+export var RoleSummary$: StaticStructureSchema = [3, n11, _RSo,
   0,
   [_rIo, _na, _sc, _iBI, _des],
   [0, 0, 0, 2, 0], 4
@@ -2049,12 +2142,12 @@ export var CreateSourceInput$: StaticStructureSchema = [3, n3, _CSI,
 ];
 export var CreateSourceOperationInput$: StaticStructureSchema = [3, n3, _CSOI,
   0,
-  [_nI, _b],
+  [_nI, _bo],
   [[0, 1], [() => CreateSourceInput$, 16]], 2
 ];
 export var CreateSourceOperationOutput$: StaticStructureSchema = [3, n3, _CSOO,
   0,
-  [_b],
+  [_bo],
   [[() => CreateSourceOutput$, 16]], 1
 ];
 export var CreateSourceOutput$: StaticStructureSchema = [3, n3, _CSO,
@@ -2119,7 +2212,7 @@ export var GetSourceOperationInput$: StaticStructureSchema = [3, n3, _GSOI,
 ];
 export var GetSourceOperationOutput$: StaticStructureSchema = [3, n3, _GSOO,
   0,
-  [_b],
+  [_bo],
   [[() => GetSourceOutput$, 16]], 1
 ];
 export var GetSourceOutput$: StaticStructureSchema = [3, n3, _GSOe,
@@ -2264,10 +2357,10 @@ export var RescanColumnChange$: StaticStructureSchema = [3, n3, _RCC,
 ];
 export var RescanFieldChange$: StaticStructureSchema = [3, n3, _RFC,
   0,
-  [_fie, _k, _ol, _new],
+  [_fie, _ki, _ol, _new],
   [0, 0, 0, 0], 2
 ];
-export var RescanSchedule$: StaticStructureSchema = [3, n3, _RSe,
+export var RescanSchedule$: StaticStructureSchema = [3, n3, _RSes,
   0,
   [_ena, _sE, _tim],
   [2, 0, 0], 1
@@ -2397,6 +2490,11 @@ var EmbeddingRecordList: StaticListSchema = [1, n6, _ERL,
   0, [() => EmbeddingRecord$,
     0]
 ];
+var FactBatchKeepRowList: StaticListSchema = [1, n7, _FBKRL,
+  0, () => FactBatchKeepRow$
+];
+var FactIdList = 64 | 0;
+var FactIriList = 64 | 0;
 var ColumnList = 64 | 0;
 var GrantSummaryList: StaticListSchema = [1, n1, _GSL,
   0, [() => GrantSummary$,
@@ -2409,91 +2507,92 @@ var PlatformGrantSummaryList: StaticListSchema = [1, n1, _PGSL,
 ];
 var TableAllowlist = 64 | 0;
 var ExampleList = 64 | 0;
-var MetricDefinitionList: StaticListSchema = [1, n7, _MDL,
+var MetricDefinitionList: StaticListSchema = [1, n8, _MDL,
   0, () => MetricDefinition$
 ];
-var MetricDialectList: StaticListSchema = [1, n7, _MDLe,
+var MetricDialectList: StaticListSchema = [1, n8, _MDLe,
   0, () => MetricDialect$
 ];
 var MetricNameList = 64 | 0;
 var OntologyConceptList = 64 | 0;
 var OsiWarningList = 64 | 0;
 var SynonymList = 64 | 0;
-var ValidationWarningList: StaticListSchema = [1, n7, _VWL,
+var ValidationWarningList: StaticListSchema = [1, n8, _VWL,
   0, () => ValidationWarning$
 ];
 var NamespaceSummaryList: StaticListSchema = [1, n2, _NSL,
   0, () => NamespaceSummary$
 ];
 var CanvasCapabilityList = 64 | 0;
-var CanvasEdgeList: StaticListSchema = [1, n8, _CEL,
+var CanvasEdgeList: StaticListSchema = [1, n9, _CEL,
   0, () => CanvasEdge$
 ];
-var CanvasNodeList: StaticListSchema = [1, n8, _CNL,
+var CanvasNodeList: StaticListSchema = [1, n9, _CNL,
   0, () => CanvasNode$
 ];
-var GraphEdgeList: StaticListSchema = [1, n8, _GEL,
+var GraphEdgeList: StaticListSchema = [1, n9, _GEL,
   0, [() => GraphEdge$,
     0]
 ];
-var GraphPathList: StaticListSchema = [1, n8, _GPL,
+var GraphPathList: StaticListSchema = [1, n9, _GPL,
   0, () => GraphPath$
 ];
-var GraphSearchHitList: StaticListSchema = [1, n8, _GSHL,
+var GraphSearchHitList: StaticListSchema = [1, n9, _GSHL,
   0, [() => GraphSearchHit$,
     0]
 ];
-var GraphStatementList: StaticListSchema = [1, n8, _GSLr,
+var GraphStatementList: StaticListSchema = [1, n9, _GSLr,
   0, () => GraphStatement$
 ];
 var GraphUriList = 64 | 0;
-var OntologyClassSummaryList: StaticListSchema = [1, n8, _OCSL,
+var OntologyClassSummaryList: StaticListSchema = [1, n9, _OCSL,
   0, () => OntologyClassSummary$
 ];
 var OntologyDiffStringList = 64 | 0;
-var OntologyPropertySummaryList: StaticListSchema = [1, n8, _OPSL,
+var OntologyPropertySummaryList: StaticListSchema = [1, n9, _OPSL,
   0, () => OntologyPropertySummary$
 ];
-var OntologyRecordList: StaticListSchema = [1, n8, _ORL,
+var OntologyRecordList: StaticListSchema = [1, n9, _ORL,
   0, () => OntologyRecord$
 ];
+var PlatformGraphIriList = 64 | 0;
 var StringList = 64 | 0;
-var TripleExampleList: StaticListSchema = [1, n8, _TEL,
+var TripleExampleList: StaticListSchema = [1, n9, _TEL,
   0, () => TripleExample$
 ];
 var CompetencyQuestionList = 64 | 0;
-var ConceptMatchList: StaticListSchema = [1, n9, _CML,
+var ConceptMatchList: StaticListSchema = [1, n10, _CML,
   0, () => ConceptMatch$
 ];
 var DataSourceIdList = 64 | 0;
-var DatatypeRepairChangeList: StaticListSchema = [1, n9, _DRCL,
+var DatatypeRepairChangeList: StaticListSchema = [1, n10, _DRCL,
   0, () => DatatypeRepairChange$
 ];
-var DroppedTableList: StaticListSchema = [1, n9, _DTL,
+var DroppedTableList: StaticListSchema = [1, n10, _DTL,
   0, () => DroppedTable$
 ];
-var FoundationalOntologyList: StaticListSchema = [1, n9, _FOL,
+var FoundationalOntologyList: StaticListSchema = [1, n10, _FOL,
   0, () => FoundationalOntologySummary$
 ];
 var GroundingNovelTableList = 64 | 0;
 var GroundingOntologyIdList = 64 | 0;
-var InducedDatasourceList: StaticListSchema = [1, n9, _IDL,
+var InducedDatasourceList: StaticListSchema = [1, n10, _IDL,
   0, () => InducedDatasource$
 ];
-var InductionJobSummaryList: StaticListSchema = [1, n9, _IJSL,
+var InductionJobSummaryList: StaticListSchema = [1, n10, _IJSL,
   0, () => InductionJobSummary$
 ];
 var OntologyIdList = 64 | 0;
 var ProposalIdList = 64 | 0;
-var ProposalSummaryList: StaticListSchema = [1, n9, _PSL,
+var ProposalSummaryList: StaticListSchema = [1, n10, _PSL,
   0, () => ProposalSummary$
 ];
-var ProposalValidationFindingList: StaticListSchema = [1, n9, _PVFL,
+var ProposalValidationFindingList: StaticListSchema = [1, n10, _PVFL,
   0, () => ProposalValidationFinding$
 ];
 var ProposalValidationTierList = 64 | 0;
-var StringList_n9 = 64 | 0;
-var RoleSummaryList: StaticListSchema = [1, n10, _RSL,
+var StringList_n10 = 64 | 0;
+var RoleSummaryList: StaticListSchema = [1, n11, _RSL,
   0, () => RoleSummary$
 ];
 var ColumnMetadataList: StaticListSchema = [1, n3, _CMLo,
@@ -2547,7 +2646,7 @@ var FactOverrides = 128 | 0;
 var ColumnDenylist: StaticMapSchema = [2, n1, _CD,
   0, 0, 64 | 0
 ];
-var SupersededAnnotations: StaticMapSchema = [2, n8, _SA,
+var SupersededAnnotations: StaticMapSchema = [2, n9, _SA,
   0, 0, 64 | 0
 ];
 var GroundingOverrideMap = 128 | 0;
@@ -2581,6 +2680,9 @@ export var GetEntityEmbeddings$: StaticOperationSchema = [9, n6, _GEE,
 export var SearchEmbeddings$: StaticOperationSchema = [9, n6, _SE,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/embeddings/search", 200] }, () => SearchEmbeddingsInput$, () => EmbeddingListOutput$
 ];
+export var ResolveFactConflicts$: StaticOperationSchema = [9, n7, _RFCes,
+  { [_ht]: ["POST", "/namespaces/{namespaceId}/facts/conflicts/resolve", 200] }, () => ResolveFactConflictsInput$, () => FactConflictResolutionOutcome$
+];
 export var CreateGrant$: StaticOperationSchema = [9, n1, _CG,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/grants", 200] }, () => CreateGrantInput$, () => CreateGrantOutput$
 ];
@@ -2602,37 +2704,37 @@ export var ListPlatformGrants$: StaticOperationSchema = [9, n1, _LPG,
 export var ListPrincipalGrants$: StaticOperationSchema = [9, n1, _LPGi,
   { [_ht]: ["GET", "/principals/{principalId}/grants", 200] }, () => ListPrincipalGrantsInput$, () => ListPrincipalGrantsOutput$
 ];
-export var BulkDeleteMetrics$: StaticOperationSchema = [9, n7, _BDM,
+export var BulkDeleteMetrics$: StaticOperationSchema = [9, n8, _BDM,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/bulk-delete-metrics", 200] }, () => BulkDeleteMetricsInput$, () => BulkDeleteMetricsOutput$
 ];
-export var CreateMetric$: StaticOperationSchema = [9, n7, _CMr,
+export var CreateMetric$: StaticOperationSchema = [9, n8, _CMr,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/metrics", 201] }, () => CreateMetricInput$, () => CreateMetricOutput$
 ];
-export var DeleteMetric$: StaticOperationSchema = [9, n7, _DM,
+export var DeleteMetric$: StaticOperationSchema = [9, n8, _DM,
   { [_ht]: ["DELETE", "/namespaces/{namespaceId}/metrics/{name}", 204] }, () => DeleteMetricInput$, () => __Unit
 ];
-export var ExportOsi$: StaticOperationSchema = [9, n7, _EO,
+export var ExportOsi$: StaticOperationSchema = [9, n8, _EO,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/export-osi", 200] }, () => ExportOsiInput$, () => ExportOsiOutput$
 ];
-export var GetImportJob$: StaticOperationSchema = [9, n7, _GIJ,
+export var GetImportJob$: StaticOperationSchema = [9, n8, _GIJ,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/import-jobs/{jobId}", 200] }, () => GetImportJobInput$, () => ImportJobOutput$
 ];
-export var GetMetric$: StaticOperationSchema = [9, n7, _GM,
+export var GetMetric$: StaticOperationSchema = [9, n8, _GM,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/metrics/{name}", 200] }, () => GetMetricInput$, () => GetMetricOutput$
 ];
-export var GetOsiUploadUrl$: StaticOperationSchema = [9, n7, _GOUU,
+export var GetOsiUploadUrl$: StaticOperationSchema = [9, n8, _GOUU,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/import-osi/upload-url", 200] }, () => GetOsiUploadUrlInput$, () => GetOsiUploadUrlOutput$
 ];
-export var ImportOsi$: StaticOperationSchema = [9, n7, _IO,
+export var ImportOsi$: StaticOperationSchema = [9, n8, _IO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/import-osi", 200] }, () => ImportOsiInput$, () => ImportOsiOutput$
 ];
-export var ListMetrics$: StaticOperationSchema = [9, n7, _LM,
+export var ListMetrics$: StaticOperationSchema = [9, n8, _LM,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/metrics", 200] }, () => ListMetricsInput$, () => ListMetricsOutput$
 ];
-export var UpdateMetric$: StaticOperationSchema = [9, n7, _UM,
+export var UpdateMetric$: StaticOperationSchema = [9, n8, _UM,
   { [_ht]: ["PUT", "/namespaces/{namespaceId}/metrics/{name}", 200] }, () => UpdateMetricInput$, () => UpdateMetricOutput$
 ];
-export var ValidateMetric$: StaticOperationSchema = [9, n7, _VM,
+export var ValidateMetric$: StaticOperationSchema = [9, n8, _VM,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/metrics/validate", 200] }, () => ValidateMetricInput$, () => ValidateMetricOutput$
 ];
 export var CreateNamespace$: StaticOperationSchema = [9, n2, _CNr,
@@ -2653,136 +2755,139 @@ export var UpdateNamespace$: StaticOperationSchema = [9, n2, _UN,
 export var UpdateNamespaceStatus$: StaticOperationSchema = [9, n2, _UNS,
   { [_ht]: ["PATCH", "/namespaces/{namespaceId}/status", 200] }, () => UpdateNamespaceStatusInput$, () => UpdateNamespaceStatusOutput$
 ];
-export var DeleteOntology$: StaticOperationSchema = [9, n8, _DO,
+export var DeleteOntology$: StaticOperationSchema = [9, n9, _DO,
   { [_ht]: ["DELETE", "/namespaces/{namespaceId}/ontologies", 202] }, () => DeleteOntologyInput$, () => __Unit
 ];
-export var DownloadOntology$: StaticOperationSchema = [9, n8, _DOo,
+export var DownloadOntology$: StaticOperationSchema = [9, n9, _DOo,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontologies/{ontologyId}/download", 200] }, () => DownloadOntologyInput$, () => DownloadOntologyOutput$
 ];
-export var FetchOntology$: StaticOperationSchema = [9, n8, _FO,
+export var FetchOntology$: StaticOperationSchema = [9, n9, _FO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/fetch", 200] }, () => FetchOntologyInput$, () => FetchOntologyOutput$
 ];
-export var FindGraphPath$: StaticOperationSchema = [9, n8, _FGP,
+export var FindGraphPath$: StaticOperationSchema = [9, n9, _FGP,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/path", 200] }, () => FindGraphPathInput$, () => FindGraphPathOutput$
 ];
-export var GetCanvasManifest$: StaticOperationSchema = [9, n8, _GCM,
+export var GetCanvasManifest$: StaticOperationSchema = [9, n9, _GCM,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/canvas/manifest", 200] }, () => GetCanvasManifestInput$, () => GetCanvasManifestOutput$
 ];
-export var GetCanvasSubgraph$: StaticOperationSchema = [9, n8, _GCS,
+export var GetCanvasSubgraph$: StaticOperationSchema = [9, n9, _GCS,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/canvas", 200] }, () => GetCanvasSubgraphInput$, () => GetCanvasSubgraphOutput$
 ];
-export var GetGraphClass$: StaticOperationSchema = [9, n8, _GGC,
+export var GetGraphClass$: StaticOperationSchema = [9, n9, _GGC,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/class", 200] }, () => GetGraphClassInput$, () => GraphVertex$
 ];
-export var GetGraphDatatypeProperty$: StaticOperationSchema = [9, n8, _GGDP,
+export var GetGraphDatatypeProperty$: StaticOperationSchema = [9, n9, _GGDP,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/datatype-property", 200] }, () => GetGraphDatatypePropertyInput$, () => GraphVertex$
 ];
-export var GetGraphObjectProperty$: StaticOperationSchema = [9, n8, _GGOP,
+export var GetGraphObjectProperty$: StaticOperationSchema = [9, n9, _GGOP,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/object-property", 200] }, () => GetGraphObjectPropertyInput$, () => GraphVertex$
 ];
-export var GetIngestStatus$: StaticOperationSchema = [9, n8, _GIS,
+export var GetIngestStatus$: StaticOperationSchema = [9, n9, _GIS,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontologies/{ontologyId}/ingest-status/{jobId}", 200] }, () => GetIngestStatusInput$, () => GetIngestStatusOutput$
 ];
-export var GetOntology$: StaticOperationSchema = [9, n8, _GO,
+export var GetOntology$: StaticOperationSchema = [9, n9, _GO,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontologies/{ontologyId}", 200] }, () => GetOntologyInput$, () => GetOntologyOutput$
 ];
-export var GetOntologyDiff$: StaticOperationSchema = [9, n8, _GOD,
+export var GetOntologyDiff$: StaticOperationSchema = [9, n9, _GOD,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/diff", 200] }, () => GetOntologyDiffInput$, () => GetOntologyDiffOutput$
 ];
-export var GetOntologyOverview$: StaticOperationSchema = [9, n8, _GOOe,
+export var GetOntologyOverview$: StaticOperationSchema = [9, n9, _GOOe,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/ontology-overview", 200] }, () => GetOntologyOverviewInput$, () => OntologyOverview$
 ];
-export var GetOntologySnapshot$: StaticOperationSchema = [9, n8, _GOS,
+export var GetOntologySnapshot$: StaticOperationSchema = [9, n9, _GOS,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/snapshot", 200] }, () => GetOntologySnapshotInput$, () => GetOntologySnapshotOutput$
 ];
-export var GetOntologyUploadUrl$: StaticOperationSchema = [9, n8, _GOUUe,
+export var GetOntologyUploadUrl$: StaticOperationSchema = [9, n9, _GOUUe,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/upload-url", 200] }, () => GetOntologyUploadUrlInput$, () => GetOntologyUploadUrlOutput$
 ];
-export var GetReasoningStatus$: StaticOperationSchema = [9, n8, _GRS,
+export var GetReasoningStatus$: StaticOperationSchema = [9, n9, _GRS,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/reasoning", 200] }, () => GetReasoningStatusInput$, () => GetReasoningStatusOutput$
 ];
-export var GraphSearch$: StaticOperationSchema = [9, n8, _GSra,
+export var GraphSearch$: StaticOperationSchema = [9, n9, _GSra,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/search", 200] }, () => GraphSearchInput$, () => GraphSearchOutput$
 ];
-export var IngestOntologyFromS3$: StaticOperationSchema = [9, n8, _IOFS,
+export var IngestOntologyFromS3$: StaticOperationSchema = [9, n9, _IOFS,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/ingest-from-s3", 202] }, () => IngestOntologyFromS3Input$, () => IngestOntologyFromS3Output$
 ];
-export var ListOntologies$: StaticOperationSchema = [9, n8, _LO,
+export var ListOntologies$: StaticOperationSchema = [9, n9, _LO,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontologies", 200] }, () => ListOntologiesInput$, () => ListOntologiesOutput$
 ];
-export var ListStatements$: StaticOperationSchema = [9, n8, _LS,
+export var ListStatements$: StaticOperationSchema = [9, n9, _LS,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/statements", 200] }, () => ListStatementsInput$, () => ListStatementsOutput$
 ];
-export var RunValidation$: StaticOperationSchema = [9, n8, _RV,
+export var MaterializeReasoning$: StaticOperationSchema = [9, n9, _MR,
+  { [_ht]: ["POST", "/namespaces/{namespaceId}/graph/reasoning/materialize", 200] }, () => MaterializeReasoningInput$, () => MaterializeReasoningOutput$
+];
+export var RunValidation$: StaticOperationSchema = [9, n9, _RV,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/graph/validate", 200] }, () => RunValidationInput$, () => RunValidationOutput$
 ];
-export var UploadOntology$: StaticOperationSchema = [9, n8, _UO,
+export var UploadOntology$: StaticOperationSchema = [9, n9, _UO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/upload", 200] }, () => UploadOntologyInput$, () => UploadOntologyOutput$
 ];
-export var AcceptProposal$: StaticOperationSchema = [9, n9, _AP,
+export var AcceptProposal$: StaticOperationSchema = [9, n10, _AP,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/accept", 202] }, () => AcceptProposalInput$, () => AcceptProposalOutput$
 ];
-export var CancelProposal$: StaticOperationSchema = [9, n9, _CP,
+export var CancelProposal$: StaticOperationSchema = [9, n10, _CP,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/cancel", 200] }, () => CancelProposalInput$, () => CancelProposalOutput$
 ];
-export var CompileConstraints$: StaticOperationSchema = [9, n9, _CC,
+export var CompileConstraints$: StaticOperationSchema = [9, n10, _CC,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/compile-constraints", 200] }, () => CompileConstraintsInput$, () => CompileConstraintsOutput$
 ];
-export var GetInductionJob$: StaticOperationSchema = [9, n9, _GIJe,
+export var GetInductionJob$: StaticOperationSchema = [9, n10, _GIJe,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/induce/jobs/{jobId}", 200] }, () => GetInductionJobInput$, () => GetInductionJobOutput$
 ];
-export var GetInferConstraintsJob$: StaticOperationSchema = [9, n9, _GICJ,
+export var GetInferConstraintsJob$: StaticOperationSchema = [9, n10, _GICJ,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/proposals/{proposalId}/infer-constraints/jobs/{jobId}", 200] }, () => GetInferConstraintsJobInput$, () => GetInferConstraintsJobOutput$
 ];
-export var GetProposal$: StaticOperationSchema = [9, n9, _GPe,
+export var GetProposal$: StaticOperationSchema = [9, n10, _GPe,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/proposals/{proposalId}", 200] }, () => GetProposalInput$, () => GetProposalOutput$
 ];
-export var GetProposalUploadUrls$: StaticOperationSchema = [9, n9, _GPUU,
+export var GetProposalUploadUrls$: StaticOperationSchema = [9, n10, _GPUU,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/upload-url", 200] }, () => GetProposalUploadUrlsInput$, () => GetProposalUploadUrlsOutput$
 ];
-export var GetProposalValidationJob$: StaticOperationSchema = [9, n9, _GPVJ,
+export var GetProposalValidationJob$: StaticOperationSchema = [9, n10, _GPVJ,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/proposals/{proposalId}/validate/jobs/{jobId}", 200] }, () => GetProposalValidationJobInput$, () => GetProposalValidationJobOutput$
 ];
-export var InferConstraints$: StaticOperationSchema = [9, n9, _IC,
+export var InferConstraints$: StaticOperationSchema = [9, n10, _IC,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/infer-constraints", 202] }, () => InferConstraintsInput$, () => InferConstraintsOutput$
 ];
-export var ListFoundationalOntologies$: StaticOperationSchema = [9, n9, _LFO,
+export var ListFoundationalOntologies$: StaticOperationSchema = [9, n10, _LFO,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontology/foundational", 200] }, () => ListFoundationalOntologiesInput$, () => ListFoundationalOntologiesOutput$
 ];
-export var ListInducedDatasources$: StaticOperationSchema = [9, n9, _LID,
+export var ListInducedDatasources$: StaticOperationSchema = [9, n10, _LID,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/induce/datasources/induced", 200] }, () => ListInducedDatasourcesInput$, () => ListInducedDatasourcesOutput$
 ];
-export var ListInductionJobs$: StaticOperationSchema = [9, n9, _LIJ,
+export var ListInductionJobs$: StaticOperationSchema = [9, n10, _LIJ,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/induce/jobs", 200] }, () => ListInductionJobsInput$, () => ListInductionJobsOutput$
 ];
-export var ListProposals$: StaticOperationSchema = [9, n9, _LP,
+export var ListProposals$: StaticOperationSchema = [9, n10, _LP,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/proposals", 200] }, () => ListProposalsInput$, () => ListProposalsOutput$
 ];
-export var LoadFoundationalOntology$: StaticOperationSchema = [9, n9, _LFOo,
+export var LoadFoundationalOntology$: StaticOperationSchema = [9, n10, _LFOo,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontology/foundational/{key}/load", 202] }, () => LoadFoundationalOntologyInput$, () => LoadFoundationalOntologyOutput$
 ];
-export var RejectProposals$: StaticOperationSchema = [9, n9, _RP,
+export var RejectProposals$: StaticOperationSchema = [9, n10, _RP,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/reject", 200] }, () => RejectProposalsInput$, () => RejectProposalsOutput$
 ];
-export var RepairProposalDatatypes$: StaticOperationSchema = [9, n9, _RPD,
+export var RepairProposalDatatypes$: StaticOperationSchema = [9, n10, _RPD,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/repair-datatypes", 200] }, () => RepairProposalDatatypesInput$, () => RepairProposalDatatypesOutput$
 ];
-export var StartInduction$: StaticOperationSchema = [9, n9, _SI,
+export var StartInduction$: StaticOperationSchema = [9, n10, _SI,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/induce", 202] }, () => StartInductionInput$, () => StartInductionOutput$
 ];
-export var UpdateProposal$: StaticOperationSchema = [9, n9, _UP,
+export var UpdateProposal$: StaticOperationSchema = [9, n10, _UP,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/update", 200] }, () => UpdateProposalInput$, () => UpdateProposalOutput$
 ];
-export var ValidateProposal$: StaticOperationSchema = [9, n9, _VP,
+export var ValidateProposal$: StaticOperationSchema = [9, n10, _VP,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/proposals/{proposalId}/validate", 202] }, () => ValidateProposalInput$, () => ValidateProposalOutput$
 ];
-export var GetNamespaceRole$: StaticOperationSchema = [9, n10, _GNR,
+export var GetNamespaceRole$: StaticOperationSchema = [9, n11, _GNR,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/roles/{roleId}", 200] }, () => GetNamespaceRoleInput$, () => GetNamespaceRoleOutput$
 ];
-export var ListNamespaceRoles$: StaticOperationSchema = [9, n10, _LNR,
+export var ListNamespaceRoles$: StaticOperationSchema = [9, n11, _LNR,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/roles", 200] }, () => ListNamespaceRolesInput$, () => ListNamespaceRolesOutput$
 ];
-export var ListPlatformRoles$: StaticOperationSchema = [9, n10, _LPR,
+export var ListPlatformRoles$: StaticOperationSchema = [9, n11, _LPR,
   { [_ht]: ["GET", "/roles", 200] }, () => ListPlatformRolesInput$, () => ListPlatformRolesOutput$
 ];
 export var ApproveSource$: StaticOperationSchema = [9, n3, _AS,
@@ -2827,7 +2932,7 @@ export var PutSourceRescanSchedule$: StaticOperationSchema = [9, n3, _PSRS,
 export var RejectSource$: StaticOperationSchema = [9, n3, _RSej,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/sources/{sourceId}/reject", 202] }, () => RejectSourceInput$, () => RejectSourceOutput$
 ];
-export var RescanSource$: StaticOperationSchema = [9, n3, _RSes,
+export var RescanSource$: StaticOperationSchema = [9, n3, _RSesc,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/sources/{sourceId}/rescan", 200] }, () => RescanSourceInput$, () => RescanSourceOutput$
 ];
 export var ReviewSourceColumn$: StaticOperationSchema = [9, n3, _RSC,

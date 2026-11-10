@@ -7,6 +7,7 @@ import type {
   ExportFormat,
   ExtractionMode,
   FactCandidateStatus,
+  FactConflictAction,
   GlueExecutionEngine,
   GraphVertexKind,
   GroundingMode,
@@ -780,6 +781,285 @@ export interface SearchEmbeddingsInput {
    * @public
    */
   topK?: number | undefined;
+}
+
+/**
+ * One group of a batch keep. `status` is one of `would_keep` (dry run),
+ * `kept`, or `skipped`.
+ * @public
+ */
+export interface FactBatchKeepRow {
+  /**
+   * IRI of a subject, predicate or object in the namespace A-Box.
+   * @public
+   */
+  subject: string | undefined;
+
+  /**
+   * IRI of a subject, predicate or object in the namespace A-Box.
+   * @public
+   */
+  predicate: string | undefined;
+
+  /**
+   * One of `would_keep` (dry run), `kept`, or `skipped`.
+   * @public
+   */
+  status: string | undefined;
+
+  /**
+   * Facts retired by this row (0 for a skipped group).
+   * @public
+   */
+  retired?: number | undefined;
+
+  /**
+   * Why the group was skipped.
+   * @public
+   */
+  reason?: string | undefined;
+
+  /**
+   * Values the group had before the decision.
+   * @public
+   */
+  values?: string[] | undefined;
+}
+
+/**
+ * Result of `batch`: the scope that was applied and what it touched.
+ * @public
+ */
+export interface FactBatchKeepResult {
+  /**
+   * Identifier shared by every event this batch wrote.
+   * @public
+   */
+  batchId: string | undefined;
+
+  /**
+   * True when nothing was written (the default).
+   * @public
+   */
+  dryRun: boolean | undefined;
+
+  /**
+   * Value the rule keeps.
+   * @public
+   */
+  keep: string | undefined;
+
+  /**
+   * Pending groups inside the scope.
+   * @public
+   */
+  matched: number | undefined;
+
+  /**
+   * Groups kept (or that would be kept, on a dry run).
+   * @public
+   */
+  kept: number | undefined;
+
+  /**
+   * Groups where `keep` is not one of the values.
+   * @public
+   */
+  skipped: number | undefined;
+
+  /**
+   * Facts retired across the matched groups.
+   * @public
+   */
+  affectedFacts: number | undefined;
+
+  /**
+   * Scope the caller supplied; absent members did not narrow it.
+   * @public
+   */
+  subject?: string | undefined;
+
+  /**
+   * IRI of a subject, predicate or object in the namespace A-Box.
+   * @public
+   */
+  predicate?: string | undefined;
+
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  sourceDocumentId?: string | undefined;
+
+  /**
+   * Per-group outcome, in ledger order.
+   * @public
+   */
+  results?: FactBatchKeepRow[] | undefined;
+}
+
+/**
+ * Outcome of one adjudication. Only the members for the chosen `action` are
+ * populated: `keep` fills kept/retired, `keep_both` fills acceptedFactIds,
+ * `merge` fills mergedFactId/originalFactIds, `batch` fills batch.
+ * @public
+ */
+export interface FactConflictResolutionOutcome {
+  /**
+   * Adjudication applied to a conflict group. Wire values stay lowercase
+   * because the ledger and the console have used them since the first
+   * release; the model follows the wire rather than renaming it.
+   * @public
+   */
+  action: FactConflictAction | undefined;
+
+  /**
+   * Conflict group subject; absent on `batch` when the scope did not
+   * narrow by subject.
+   * @public
+   */
+  subject?: string | undefined;
+
+  /**
+   * Conflict group predicate; absent on `batch` when the scope did not
+   * narrow by predicate.
+   * @public
+   */
+  predicate?: string | undefined;
+
+  /**
+   * Value kept by `keep`.
+   * @public
+   */
+  kept?: string | undefined;
+
+  /**
+   * Assertion rows kept by `keep`.
+   * @public
+   */
+  keptFactIds?: string[] | undefined;
+
+  /**
+   * Assertion rows retired by `keep`.
+   * @public
+   */
+  retiredFactIds?: string[] | undefined;
+
+  /**
+   * Number of retired rows (`keep`).
+   * @public
+   */
+  retired?: number | undefined;
+
+  /**
+   * Values the group had before the decision.
+   * @public
+   */
+  values?: string[] | undefined;
+
+  /**
+   * Assertion rows accepted by `keep_both`.
+   * @public
+   */
+  acceptedFactIds?: string[] | undefined;
+
+  /**
+   * New assertion row written by `merge`.
+   * @public
+   */
+  mergedFactId?: string | undefined;
+
+  /**
+   * Rows `merge` retired, in ledger order.
+   * @public
+   */
+  originalFactIds?: string[] | undefined;
+
+  /**
+   * Batch outcome (`batch` only).
+   * @public
+   */
+  batch?: FactBatchKeepResult | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ResolveFactConflictsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Conflict group subject. Required unless `action` is `batch`.
+   * @public
+   */
+  subject?: string | undefined;
+
+  /**
+   * Conflict group predicate. Required unless `action` is `batch`.
+   * @public
+   */
+  predicate?: string | undefined;
+
+  /**
+   * Adjudication applied to a conflict group. Wire values stay lowercase
+   * because the ledger and the console have used them since the first
+   * release; the model follows the wire rather than renaming it.
+   * @public
+   */
+  action: FactConflictAction | undefined;
+
+  /**
+   * Value to keep (`batch` only; `keep` takes it from `keep` on the
+   * console path, which sends the chosen value here too).
+   * @public
+   */
+  keep?: string | undefined;
+
+  /**
+   * Value that replaces the conflicting ones (`merge`).
+   * @public
+   */
+  mergedObject?: string | undefined;
+
+  /**
+   * `iri` (default) or `literal`.
+   * @public
+   */
+  mergedObjectKind?: string | undefined;
+
+  /**
+   * Graph for the merged fact; defaults to the group's graph.
+   * @public
+   */
+  graph?: string | undefined;
+
+  /**
+   * Scope by source document (`batch`).
+   * @public
+   */
+  sourceDocumentId?: string | undefined;
+
+  /**
+   * Preview only (`batch`); defaults to true.
+   * @public
+   */
+  dryRun?: boolean | undefined;
+
+  /**
+   * Identity recorded on the audit event; defaults to `operator`.
+   * @public
+   */
+  actor?: string | undefined;
+
+  /**
+   * Why the decision was taken.
+   * @public
+   */
+  reason?: string | undefined;
 }
 
 /**
@@ -3746,6 +4026,110 @@ export interface QualityCount {
 }
 
 /**
+ * One stage of a materialization run. Only the members the stage produces
+ * are set: `rdfs`/`owl` report triples added, `shacl` reports the gate.
+ * @public
+ */
+export interface ReasoningStage {
+  /**
+   * Triples this stage added to the inferred graph.
+   * @public
+   */
+  triples?: number | undefined;
+
+  /**
+   * True when the SHACL gate ran and found no violations.
+   * @public
+   */
+  conforms?: boolean | undefined;
+
+  /**
+   * Violations found by the SHACL gate.
+   * @public
+   */
+  violations?: number | undefined;
+
+  /**
+   * Wall time for this stage.
+   * @public
+   */
+  ms?: number | undefined;
+}
+
+/**
+ * Stages of a materialization run, in execution order.
+ * @public
+ */
+export interface ReasoningStages {
+  /**
+   * RDFS closure (Jena `riot --rdfs`); skipped in `rdfs`-only mode.
+   * @public
+   */
+  rdfs?: ReasoningStage | undefined;
+
+  /**
+   * OWL EL materialization (ROBOT + ELK); absent in `rdfs`-only mode.
+   * @public
+   */
+  owl?: ReasoningStage | undefined;
+
+  /**
+   * SHACL gate; runs before any write, so a violation leaves the target
+   * graph untouched.
+   * @public
+   */
+  shacl?: ReasoningStage | undefined;
+}
+
+/**
+ * What the last materialization job left behind.
+ * @public
+ */
+export interface ReasoningJobSummary {
+  /**
+   * Row identifier in `platform.reasoning_job`.
+   * @public
+   */
+  jobId: string | undefined;
+
+  /**
+   * `queued`, `running`, `succeeded`, `skipped`, `failed` or `canceled`.
+   * @public
+   */
+  state: string | undefined;
+
+  /**
+   * Triples the run added.
+   * @public
+   */
+  inferred?: number | undefined;
+
+  /**
+   * Consistency verdict; false fails the run.
+   * @public
+   */
+  consistent?: boolean | undefined;
+
+  /**
+   * When the run finished (ISO-8601).
+   * @public
+   */
+  finishedAt?: string | undefined;
+
+  /**
+   * True when the run short-circuited because the inputs were unchanged.
+   * @public
+   */
+  skipped?: boolean | undefined;
+
+  /**
+   * Per-stage results, empty when nothing ran.
+   * @public
+   */
+  stages?: ReasoningStages | undefined;
+}
+
+/**
  * @public
  */
 export interface GetReasoningStatusOutput {
@@ -3784,6 +4168,19 @@ export interface GetReasoningStatusOutput {
    * @public
    */
   sampledAt: string | undefined;
+
+  /**
+   * Triples the recorded pointer holds; null until the first run.
+   * @public
+   */
+  inferredTriples?: number | undefined;
+
+  /**
+   * Last materialization job, with its per-stage results. Null before
+   * the first run.
+   * @public
+   */
+  lastJob?: ReasoningJobSummary | undefined;
 }
 
 /**
@@ -4249,6 +4646,115 @@ export interface ListStatementsOutput {
    * @public
    */
   truncated?: boolean | undefined;
+}
+
+/**
+ * @public
+ */
+export interface MaterializeReasoningInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * `EL` (default) or `OWL2EL`.
+   * @public
+   */
+  profile?: string | undefined;
+
+  /**
+   * Re-run even when the inputs are unchanged.
+   * @public
+   */
+  force?: boolean | undefined;
+
+  /**
+   * A-Box graphs to reason over. Every IRI must be a `urn:platform:`
+   * graph, so a namespace cannot read another namespace's graph. When
+   * omitted the deployment's configured A-Box graphs are used.
+   * @public
+   */
+  aboxGraphs?: string[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface MaterializeReasoningOutput {
+  /**
+   * Identifier of the row in `platform.reasoning_job`.
+   * @public
+   */
+  jobId: string | undefined;
+
+  /**
+   * `materialize` or `rdfs`.
+   * @public
+   */
+  mode: string | undefined;
+
+  /**
+   * Reasoning profile that was used.
+   * @public
+   */
+  profile: string | undefined;
+
+  /**
+   * Published ontology version the run read.
+   * @public
+   */
+  ontologyVersion: string | undefined;
+
+  /**
+   * Graph the run would replace (and did replace unless skipped).
+   * @public
+   */
+  targetGraph: string | undefined;
+
+  /**
+   * Triples this run added; 0 when skipped.
+   * @public
+   */
+  inferred: number | undefined;
+
+  /**
+   * True when the inputs were unchanged and nothing was written.
+   * @public
+   */
+  skipped: boolean | undefined;
+
+  /**
+   * Consistency verdict from the reasoner. False fails the job and
+   * leaves the target graph untouched.
+   * @public
+   */
+  consistent: boolean | undefined;
+
+  /**
+   * Hash of (T-Box, A-Box, profile, mode) used to decide `skipped`.
+   * @public
+   */
+  inputHash?: string | undefined;
+
+  /**
+   * Wall time of the run.
+   * @public
+   */
+  ms: number | undefined;
+
+  /**
+   * Per-stage results, in execution order.
+   * @public
+   */
+  stages: ReasoningStages | undefined;
+
+  /**
+   * Non-fatal notes, for example axioms the EL profile ignores.
+   * @public
+   */
+  warnings: string[] | undefined;
 }
 
 /**

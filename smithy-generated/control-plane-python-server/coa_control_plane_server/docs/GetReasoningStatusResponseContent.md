@@ -11,6 +11,8 @@ Name | Type | Description | Notes
 **detail** | **str** | Human-readable explanation of the state above. | [optional] 
 **source** | **str** | Where this status came from. | 
 **sampled_at** | **str** | When the status was sampled (ISO-8601). | 
+**inferred_triples** | **float** | Triples the recorded pointer holds; null until the first run. | [optional] 
+**last_job** | [**ReasoningJobSummary**](ReasoningJobSummary.md) |  | [optional] 
 
 ## Example
 

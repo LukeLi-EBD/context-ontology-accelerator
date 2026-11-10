@@ -19,6 +19,7 @@ use com.amazon.semanticcontext.documents#RejectFactCandidate
 use com.amazon.semanticcontext.documents#UploadDocument
 use com.amazon.semanticcontext.embeddings#GetEntityEmbeddings
 use com.amazon.semanticcontext.embeddings#SearchEmbeddings
+use com.amazon.semanticcontext.facts#ResolveFactConflicts
 use com.amazon.semanticcontext.grant#CreateGrant
 use com.amazon.semanticcontext.grant#CreatePlatformGrant
 use com.amazon.semanticcontext.grant#DeleteGrant
@@ -63,6 +64,7 @@ use com.amazon.semanticcontext.ontologygraph#GraphSearch
 use com.amazon.semanticcontext.ontologygraph#IngestOntologyFromS3
 use com.amazon.semanticcontext.ontologygraph#ListOntologies
 use com.amazon.semanticcontext.ontologygraph#ListStatements
+use com.amazon.semanticcontext.ontologygraph#MaterializeReasoning
 use com.amazon.semanticcontext.ontologygraph#RunValidation
 use com.amazon.semanticcontext.ontologygraph#UploadOntology
 use com.amazon.semanticcontext.ontologyinduction#AcceptProposal
@@ -196,6 +198,8 @@ service ControlPlaneService {
         ListFactCandidates
         ApproveFactCandidate
         RejectFactCandidate
+        // ── Fact-ledger adjudication (C group) ─────────────────────────
+        ResolveFactConflicts
         // ── Metric service ──────────────────────────────────────────────
         CreateMetric
         GetMetric
@@ -252,6 +256,7 @@ service ControlPlaneService {
         GetOntologySnapshot
         RunValidation
         GetReasoningStatus
+        MaterializeReasoning
         GetOntologyDiff
         // ── Entity embeddings ───────────────────────────────────────────
         GetEntityEmbeddings
