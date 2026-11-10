@@ -1776,6 +1776,7 @@ export const MESSAGES_JA = {
   "Datatype properties": "データ型プロパティ",
   "Object properties": "オブジェクトプロパティ",
   "Named graphs": "名前付きグラフ",
+  "Entity page": "エンティティページ",
   "Graph IRI": "グラフ IRI",
   "Named graph IRIs the ontologies in this namespace are stored in.":
     "この名前空間のオントロジーが格納されている名前付きグラフ IRI。",

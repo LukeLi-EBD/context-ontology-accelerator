@@ -2387,6 +2387,20 @@ export function GraphSearchPage() {
                       >
                         {t("Graph view")}
                       </Link>
+                      {" | "}
+                      {/* F143: a search hit (class or instance IRI) can always be
+                          opened as an entity — GetEntity accepts any IRI, so no
+                          guessing or faked landing is involved. */}
+                      <Link
+                        variant="primary"
+                        onFollow={() =>
+                          navigate(
+                            `/namespaces/${namespaceId}/ontology/entities/${encodeURIComponent(selectedVertex.uri)}`,
+                          )
+                        }
+                      >
+                        {t("Entity page")}
+                      </Link>
                     </Box>
                   </SpaceBetween>
                 </Header>

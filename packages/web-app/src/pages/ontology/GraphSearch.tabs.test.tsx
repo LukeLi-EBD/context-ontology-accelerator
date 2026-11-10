@@ -75,11 +75,12 @@ const OVERVIEW: OntologyOverviewResult = {
 const searchEntitiesPaged = vi.fn();
 const getOntologyOverview = vi.fn();
 const listOntologies = vi.fn();
+const getClass = vi.fn();
 
 vi.mock("../../services/ontology-engine", () => ({
   searchEntities: vi.fn(),
   searchEntitiesPaged: (...args: unknown[]) => searchEntitiesPaged(...args),
-  getClass: vi.fn(),
+  getClass: (...args: unknown[]) => getClass(...args),
   getObjectProperty: vi.fn(),
   getDatatypeProperty: vi.fn(),
   getOntologyOverview: (...args: unknown[]) => getOntologyOverview(...args),
@@ -155,6 +156,12 @@ describe("GraphSearchPage — Explorer tabs", () => {
     searchEntitiesPaged.mockResolvedValue(CLASS_PAGE);
     getOntologyOverview.mockResolvedValue(OVERVIEW);
     listOntologies.mockResolvedValue(ONTOLOGY_RECORDS);
+    getClass.mockResolvedValue({
+      uri: CLAIM,
+      labels: ["Claim"],
+      kind: "class",
+      graph_uris: ["http://ex.org/graph/o"],
+    });
   });
 
   it("defaults to the Classes tab when no ?tab= is given", async () => {
@@ -279,6 +286,18 @@ describe("GraphSearchPage — Explorer tabs", () => {
     expect(view.getByText("claim number")).toBeInTheDocument();
     expect(view.getByText("http://ex.org/o#hasParty")).toBeInTheDocument();
     expect(view.getByText("http://ex.org/o#claimNumber")).toBeInTheDocument();
+  });
+
+  it("offers an entity-page jump for a selected search result (F143)", async () => {
+    const view = renderPage();
+
+    // Row click opens the same detail panel the graph uses.
+    await waitFor(() => expect(view.getByText("Claim")).toBeInTheDocument());
+    await userEvent.click(view.getByText("Claim"));
+
+    await waitFor(() =>
+      expect(view.getByText("Entity page")).toBeInTheDocument(),
+    );
   });
 });
 
