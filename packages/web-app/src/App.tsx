@@ -44,6 +44,7 @@ import CandidatesPage from "./pages/CandidatesPage";
 import RetrievalPage from "./pages/RetrievalPage";
 import { IdentityPage } from "./pages/IdentityPage";
 import { SystemHealthPage } from "./pages/SystemHealthPage";
+import AnswerQualityPage from "./pages/AnswerQualityPage";
 import { MetricDetail } from "./pages/MetricDetail";
 import { MetricForm } from "./pages/MetricForm";
 import EntityPage from "./pages/ontology/EntityPage";
@@ -269,6 +270,11 @@ function AppShell() {
       section: t("Serve"),
       label: t("Playground"),
       href: "/playground",
+    },
+    {
+      section: t("Serve"),
+      label: "问答质量",
+      href: "/playground/quality",
     },
     {
       section: t("Serve"),
@@ -702,6 +708,7 @@ function AppShell() {
               <Route path="/system-health" element={<SystemHealthPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/playground" element={<Playground />} />
+              <Route path="/playground/quality" element={<AnswerQualityPage />} />
               <Route path="/mcp" element={<McpPage />} />
               <Route
                 path="/playground/trace/:sessionId/:requestId"

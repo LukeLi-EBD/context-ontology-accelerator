@@ -627,6 +627,8 @@ ROUTES: list[tuple[str, str]] = [
     # GetMetric (F100): the platform metric card now carries `fieldBindings`,
     # so the read has to be reachable locally instead of only inside the kernel.
     ("/metrics/{metricId}", KERNEL),
+    # GetAnswerQuality (F86–F89): golden-set rerun, read-only.
+    ("/answer/quality", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -950,6 +952,14 @@ def _kernel_translate(
 
     if template.endswith("/verify"):
         return "GET", "/ontology/verify", None
+
+    if template == "/answer/quality":
+        q = query or {}
+        params = {
+            key: q[key] for key in ("strategy", "limit", "caseId") if q.get(key)
+        }
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/answer/quality{suffix}", None
 
     if template == "/metrics/{metricId}":
         metric_id = path_params.get("metricId", "")
