@@ -31,6 +31,7 @@ def test_map_row_keeps_missing_fields_explicit() -> None:
     item = adapter.map_row(_ROW, "demo")
 
     assert item["PK"] == "demo#PROPOSAL#prop-1"
+    assert item["namespace"] is None  # PK prefix is an internal key, not data
     assert item["status"] == "accepted"  # platform "published"
     assert item["ontology_id"] == "ont-abc"
     assert item["updated_at"] == "2026-11-10T11:56:15+00:00"

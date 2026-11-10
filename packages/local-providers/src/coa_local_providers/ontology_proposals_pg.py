@@ -18,10 +18,11 @@ table and maps each row into the item shape the engine's routes already expect:
 
 Missing is missing. A platform row is a governance record, not an induction
 artifact: it has no namespace, no proposal type, no source type and no Turtle
-body. Those fields are left absent and named in ``missing_fields`` on every
-mapped item, rather than filled with invented values. ``ontology_id`` is read
-from ``platform.ontology_version.graph_iri`` (the same derivation V52 uses), and
-is listed as missing when that join finds no version.
+body. Those fields are left absent (``namespace`` is present but ``null``)
+and named in ``missing_fields`` on every mapped item, rather than filled with
+invented values. ``ontology_id`` is read from
+``platform.ontology_version.graph_iri`` (the same derivation V52 uses), and is
+listed as missing when that join finds no version.
 
 Configuration:
 
@@ -114,8 +115,9 @@ def map_row(row: dict[str, Any], namespace: str) -> dict[str, Any]:
     """Map one ``platform.ontology_proposal`` row to the engine item shape.
 
     ``namespace`` is only used to build the engine's ``PK``. A platform row has
-    no recorded namespace, so it is also listed in ``missing_fields`` — callers
-    must not read the PK as proof of ownership.
+    no recorded namespace, so the item's ``namespace`` field is ``None`` and the
+    field is named in ``missing_fields``: the PK prefix is an internal key, not
+    source data.
     """
     proposal_id = str(row["proposal_id"])
     created_at = _as_iso(row.get("created_at"))
@@ -132,7 +134,7 @@ def map_row(row: dict[str, Any], namespace: str) -> dict[str, Any]:
         "PK": f"{namespace}#PROPOSAL#{proposal_id}",
         "SK": "META",
         "proposal_id": proposal_id,
-        "namespace": namespace,
+        "namespace": None,
         "version_id": row.get("version_id"),
         "against_version": row.get("against_version"),
         "ontology_id": ontology_id,
