@@ -74,6 +74,7 @@ use com.amazon.semanticcontext.ontologygraph#DeleteOntology
 use com.amazon.semanticcontext.ontologygraph#DownloadOntology
 use com.amazon.semanticcontext.ontologygraph#FetchOntology
 use com.amazon.semanticcontext.ontologygraph#FindGraphPath
+use com.amazon.semanticcontext.ontologygraph#FindLinks
 use com.amazon.semanticcontext.ontologygraph#GetCanvasManifest
 use com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraph
 use com.amazon.semanticcontext.ontologygraph#GetGraphClass
@@ -127,6 +128,7 @@ use com.amazon.semanticcontext.ontologylifecycle#RollbackOntology
 use com.amazon.semanticcontext.ontologylifecycle#VerifyOntology
 use com.amazon.semanticcontext.platformmetric#GetMetricCard
 use com.amazon.semanticcontext.quality#GetAnswerQuality
+use com.amazon.semanticcontext.quality#ListAnswerQualityRuns
 use com.amazon.semanticcontext.role#GetNamespaceRole
 use com.amazon.semanticcontext.role#ListNamespaceRoles
 use com.amazon.semanticcontext.role#ListPlatformRoles
@@ -236,6 +238,7 @@ service ControlPlaneService {
         ListDocuments
         ListDocumentChunks
         ListIngestionRuns
+        ListAnswerQualityRuns
         // ── Fact candidates (extraction review) ─────────────────────────
         ListFactCandidates
         ApproveFactCandidate
@@ -292,6 +295,7 @@ service ControlPlaneService {
         GetCanvasManifest
         GetCanvasSubgraph
         FindGraphPath
+        FindLinks
         GetGraphClass
         GetGraphObjectProperty
         GetGraphDatatypeProperty
