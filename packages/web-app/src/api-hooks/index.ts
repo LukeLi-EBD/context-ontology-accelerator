@@ -43,6 +43,7 @@ export { useKeepRescanRemoval } from "./use-keep-rescan-removal";
 export { useUpdateSourceColumnMetadata } from "./use-update-source-column-metadata";
 export { useListMetrics, useImportOsi, useExportOsi } from "./use-metrics";
 export { useListDocuments } from "./use-list-documents";
+export { useListIngestionRuns } from "./use-list-ingestion-runs";
 export { useListDocumentChunks } from "./use-list-document-chunks";
 export { useListFactCandidates } from "./use-list-fact-candidates";
 export type { FactCandidateFilters } from "./use-list-fact-candidates";

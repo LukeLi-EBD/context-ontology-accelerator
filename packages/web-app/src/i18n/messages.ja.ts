@@ -2670,4 +2670,20 @@ export const MESSAGES_JA = {
   "No gaps found.": "欠落はありません。",
   Fix: "修正",
   "Nearby terms": "近い用語",
+  "Import batches": "取り込みバッチ",
+  "Batch root": "バッチのルート",
+  Started: "開始",
+  Finished: "終了",
+  Total: "合計",
+  Running: "実行中",
+  Interrupted: "中断",
+  Stale: "期限切れ",
+  "No import batches": "取り込みバッチはありません",
+  "No directory imports have been recorded in this namespace yet.":
+    "この名前空間にはまだディレクトリ取り込みが記録されていません。",
+  "Import batch counts refresh on each request.":
+    "取り込みバッチの件数はリクエストごとに更新されます。",
+  "Refresh import batches": "取り込みバッチを更新",
+  "Loading import batches": "取り込みバッチを読み込み中",
+  "Stale: {reason}": "期限切れ: {reason}",
 } as const;
