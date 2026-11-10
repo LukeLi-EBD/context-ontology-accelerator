@@ -85,6 +85,9 @@ export interface ListMetricsCommandOutput extends ListMetricsOutput, __MetadataB
  * //       ],
  * //       definedBy: "STRING_VALUE",
  * //       effectiveFrom: "STRING_VALUE",
+ * //       domain: "STRING_VALUE",
+ * //       evidenceBasis: "STRING_VALUE",
+ * //       publishable: true || false,
  * //     },
  * //   ],
  * // };

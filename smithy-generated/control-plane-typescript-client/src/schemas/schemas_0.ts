@@ -160,6 +160,7 @@ const _GSHO = "GetSystemHealthOutput";
 const _GSHe = "GetSystemHealth";
 const _GSI = "GraphSearchInput";
 const _GSL = "GrantSummaryList";
+const _GSLr = "GraphStatementList";
 const _GSO = "GraphSearchOutput";
 const _GSOI = "GetSourceOperationInput";
 const _GSOO = "GetSourceOperationOutput";
@@ -174,7 +175,8 @@ const _GSUU = "GetSourceUploadUrls";
 const _GSUUI = "GetSourceUploadUrlsInput";
 const _GSUUO = "GetSourceUploadUrlsOutput";
 const _GSe = "GetSource";
-const _GSr = "GraphSearch";
+const _GSr = "GraphStatement";
+const _GSra = "GraphSearch";
 const _GV = "GraphVertex";
 const _HC = "HealthCheck";
 const _HCO = "HealthCheckOutput";
@@ -248,15 +250,18 @@ const _LPO = "ListProposalsOutput";
 const _LPR = "ListPlatformRoles";
 const _LPRI = "ListPlatformRolesInput";
 const _LPRO = "ListPlatformRolesOutput";
-const _LS = "ListSources";
-const _LSI = "ListSourcesInput";
-const _LSO = "ListSourcesOutput";
+const _LS = "ListStatements";
+const _LSI = "ListStatementsInput";
+const _LSIi = "ListSourcesInput";
+const _LSO = "ListStatementsOutput";
+const _LSOi = "ListSourcesOutput";
 const _LSSJ = "ListSourceScanJobs";
 const _LSSJI = "ListSourceScanJobsInput";
 const _LSSJO = "ListSourceScanJobsOutput";
 const _LST = "ListSourceTables";
 const _LSTI = "ListSourceTablesInput";
 const _LSTO = "ListSourceTablesOutput";
+const _LSi = "ListSources";
 const _MAC = "MetricAiContext";
 const _MD = "MetricDefinition";
 const _MDL = "MetricDefinitionList";
@@ -503,11 +508,11 @@ const _dir = "direction";
 const _do = "domain";
 const _dt = "domain_tag";
 const _e = "error";
+const _eB = "evidenceBasis";
 const _eC = "embeddingCount";
 const _eCx = "extractionConfig";
 const _eE = "executionEngine";
 const _eF = "effectiveFrom";
-const _evb = "evidenceBasis";
 const _eI = "expiresIn";
 const _eIS = "expiresInSeconds";
 const _eIx = "externalId";
@@ -570,6 +575,7 @@ const _gTl = "glossaryTerms";
 const _gU = "graphUris";
 const _gUr = "graphUri";
 const _gr = "grants";
+const _gra = "graph";
 const _gu = "graph_uris";
 const _h = "hits";
 const _hE = "httpError";
@@ -596,7 +602,6 @@ const _jN = "jsonName";
 const _k = "kind";
 const _ke = "key";
 const _l = "label";
-const _pub = "publishable";
 const _lC = "llmCalls";
 const _lF = "llmFailures";
 const _lSA = "lastScanAt";
@@ -653,6 +658,7 @@ const _oTn = "ontologyTurtle";
 const _oU = "ontologyUrl";
 const _oUP = "ontologyUriPrefix";
 const _oUn = "ontologyUploaded";
+const _oV = "objectValue";
 const _ob = "object";
 const _of = "offset";
 const _oi = "ontology_id";
@@ -686,6 +692,7 @@ const _pri = "principal";
 const _pro = "progress";
 const _prop = "proposals";
 const _prov = "provenance";
+const _pu = "publishable";
 const _q = "q";
 const _qE = "queryEngine";
 const _r = "reason";
@@ -748,6 +755,7 @@ const _sr = "source_registry";
 const _st = "status";
 const _st_ = "shapes_turtle";
 const _st__ = "source_type";
+const _sta = "statements";
 const _sto = "store";
 const _str = "strategy";
 const _su = "subject";
@@ -791,6 +799,7 @@ const _tie = "tier";
 const _tier = "tiers";
 const _tim = "timezone";
 const _tk = "top_k";
+const _tr = "truncated";
 const _ty = "types";
 const _typ = "type";
 const _u = "unit";
@@ -1195,7 +1204,7 @@ export var MetricAiContext$: StaticStructureSchema = [3, n7, _MAC,
 ];
 export var MetricDefinition$: StaticStructureSchema = [3, n7, _MD,
   0,
-  [_na, _des, _ex, _dSI, _sT, _mIe, _nI, _l, _dTG, _u, _rT, _aC, _oC, _dB, _eF, _do, _evb, _pub],
+  [_na, _des, _ex, _dSI, _sT, _mIe, _nI, _l, _dTG, _u, _rT, _aC, _oC, _dB, _eF, _do, _eB, _pu],
   [0, 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0, 0, 0, 0, 0, 2], 5
 ];
 export var MetricDialect$: StaticStructureSchema = [3, n7, _MDe,
@@ -1403,6 +1412,11 @@ export var GraphSearchOutput$: StaticStructureSchema = [3, n8, _GSO,
   [_h, _tC],
   [[() => GraphSearchHitList, 0], [1, { [_jN]: _tc }]], 1
 ];
+export var GraphStatement$: StaticStructureSchema = [3, n8, _GSr,
+  0,
+  [_gra, _su, _pr, _ob],
+  [0, 0, 0, 0], 4
+];
 export var GraphVertex$: StaticStructureSchema = [3, n8, _GV,
   0,
   [_ur, _k, _nam, _ty, _lab, _com, _aL, _gU, _iM, _sup, _ed],
@@ -1437,6 +1451,16 @@ export var ListOntologiesOutput$: StaticStructureSchema = [3, n8, _LOO,
   0,
   [_ont, _nT],
   [() => OntologyRecordList, 0], 1
+];
+export var ListStatementsInput$: StaticStructureSchema = [3, n8, _LSI,
+  0,
+  [_nI, _su, _pr, _oV, _gra, _li, _of],
+  [[0, 1], [0, { [_hQ]: _su }], [0, { [_hQ]: _pr }], [0, { [_hQ]: _ob }], [0, { [_hQ]: _gra }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 1
+];
+export var ListStatementsOutput$: StaticStructureSchema = [3, n8, _LSO,
+  0,
+  [_sta, _tr],
+  [() => GraphStatementList, 2], 1
 ];
 export var OntologyClassSummary$: StaticStructureSchema = [3, n8, _OCS,
   0,
@@ -1938,12 +1962,12 @@ export var ListSourceScanJobsOutput$: StaticStructureSchema = [3, n3, _LSSJO,
   [_i, _nT],
   [() => ScanJobEntryList, 0], 1
 ];
-export var ListSourcesInput$: StaticStructureSchema = [3, n3, _LSI,
+export var ListSourcesInput$: StaticStructureSchema = [3, n3, _LSIi,
   0,
   [_nI, _sTo, _nT, _mR],
   [[0, 1], [0, { [_hQ]: _sTo }], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
 ];
-export var ListSourcesOutput$: StaticStructureSchema = [3, n3, _LSO,
+export var ListSourcesOutput$: StaticStructureSchema = [3, n3, _LSOi,
   0,
   [_i, _nT],
   [() => SourceSummaryList, 0], 1
@@ -2184,6 +2208,9 @@ var GraphSearchHitList: StaticListSchema = [1, n8, _GSHL,
   0, [() => GraphSearchHit$,
     0]
 ];
+var GraphStatementList: StaticListSchema = [1, n8, _GSLr,
+  0, () => GraphStatement$
+];
 var OntologyClassSummaryList: StaticListSchema = [1, n8, _OCSL,
   0, () => OntologyClassSummary$
 ];
@@ -2416,7 +2443,7 @@ export var GetOntologyOverview$: StaticOperationSchema = [9, n8, _GOOe,
 export var GetOntologyUploadUrl$: StaticOperationSchema = [9, n8, _GOUUe,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/upload-url", 200] }, () => GetOntologyUploadUrlInput$, () => GetOntologyUploadUrlOutput$
 ];
-export var GraphSearch$: StaticOperationSchema = [9, n8, _GSr,
+export var GraphSearch$: StaticOperationSchema = [9, n8, _GSra,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/search", 200] }, () => GraphSearchInput$, () => GraphSearchOutput$
 ];
 export var IngestOntologyFromS3$: StaticOperationSchema = [9, n8, _IOFS,
@@ -2424,6 +2451,9 @@ export var IngestOntologyFromS3$: StaticOperationSchema = [9, n8, _IOFS,
 ];
 export var ListOntologies$: StaticOperationSchema = [9, n8, _LO,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontologies", 200] }, () => ListOntologiesInput$, () => ListOntologiesOutput$
+];
+export var ListStatements$: StaticOperationSchema = [9, n8, _LS,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/statements", 200] }, () => ListStatementsInput$, () => ListStatementsOutput$
 ];
 export var UploadOntology$: StaticOperationSchema = [9, n8, _UO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/upload", 200] }, () => UploadOntologyInput$, () => UploadOntologyOutput$
@@ -2518,7 +2548,7 @@ export var GetSourceUploadUrls$: StaticOperationSchema = [9, n3, _GSUU,
 export var KeepRescanRemoval$: StaticOperationSchema = [9, n3, _KRR,
   { [_ht]: ["PUT", "/namespaces/{namespaceId}/sources/{sourceId}/tables/{tableId}/keep", 200] }, () => KeepRescanRemovalInput$, () => KeepRescanRemovalOutput$
 ];
-export var ListSources$: StaticOperationSchema = [9, n3, _LS,
+export var ListSources$: StaticOperationSchema = [9, n3, _LSi,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/sources", 200] }, () => ListSourcesInput$, () => ListSourcesOutput$
 ];
 export var ListSourceScanJobs$: StaticOperationSchema = [9, n3, _LSSJ,

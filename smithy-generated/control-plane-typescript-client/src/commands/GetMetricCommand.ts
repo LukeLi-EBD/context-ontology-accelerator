@@ -80,6 +80,9 @@ export interface GetMetricCommandOutput extends GetMetricOutput, __MetadataBeare
  * //     ],
  * //     definedBy: "STRING_VALUE",
  * //     effectiveFrom: "STRING_VALUE",
+ * //     domain: "STRING_VALUE",
+ * //     evidenceBasis: "STRING_VALUE",
+ * //     publishable: true || false,
  * //   },
  * // };
  *

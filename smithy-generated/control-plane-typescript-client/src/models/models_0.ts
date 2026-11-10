@@ -1476,19 +1476,22 @@ export interface MetricDefinition {
 
   /**
    * COA-private provenance: business domain. Absent means unknown.
+   * Not an OSI standard field; migrate when OSI standardises an equivalent.
    * @public
    */
   domain?: string | undefined;
 
   /**
    * COA-private provenance: evidence basis. Absent means unknown.
+   * Not an OSI standard field; migrate when OSI standardises an equivalent.
    * @public
    */
   evidenceBasis?: string | undefined;
 
   /**
-   * COA-private provenance: publishable. Absent means unknown; false is
-   * "not publishable", not a missing value.
+   * COA-private provenance: publishable. Absent means unknown; an explicit
+   * false is "not publishable", not a missing value.
+   * Not an OSI standard field; migrate when OSI standardises an equivalent.
    * @public
    */
   publishable?: boolean | undefined;
@@ -3468,6 +3471,102 @@ export interface ListOntologiesOutput {
    * @public
    */
   ontologies: OntologyRecord[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListStatementsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Restrict to one subject IRI.
+   * @public
+   */
+  subject?: string | undefined;
+
+  /**
+   * Restrict to one predicate IRI.
+   * @public
+   */
+  predicate?: string | undefined;
+
+  /**
+   * Restrict to one object: an IRI, or a literal's lexical form.
+   * @public
+   */
+  objectValue?: string | undefined;
+
+  /**
+   * Restrict to one named graph IRI in the namespace.
+   * @public
+   */
+  graph?: string | undefined;
+
+  /**
+   * Maximum number of statements to return (the page size).
+   * @public
+   */
+  limit?: number | undefined;
+
+  /**
+   * Number of leading statements to skip, for pagination.
+   * @public
+   */
+  offset?: number | undefined;
+}
+
+/**
+ * One RDF statement (triple) in a namespace's named graphs.
+ * @public
+ */
+export interface GraphStatement {
+  /**
+   * Named graph the statement lives in.
+   * @public
+   */
+  graph: string | undefined;
+
+  /**
+   * Subject IRI.
+   * @public
+   */
+  subject: string | undefined;
+
+  /**
+   * Predicate IRI.
+   * @public
+   */
+  predicate: string | undefined;
+
+  /**
+   * Object term: an IRI, or the lexical form of a literal.
+   * @public
+   */
+  object: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListStatementsOutput {
+  /**
+   * The page of matching statements, in the backend's named-graph
+   * index order (stable for a static graph, not a sorted order).
+   * @public
+   */
+  statements: GraphStatement[] | undefined;
+
+  /**
+   * True when the page was capped at ``limit`` and more statements
+   * exist beyond this window.
+   * @public
+   */
+  truncated?: boolean | undefined;
 }
 
 /**

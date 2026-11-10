@@ -66,6 +66,7 @@ export * from "./ListProposalsCommand";
 export * from "./ListSourceScanJobsCommand";
 export * from "./ListSourceTablesCommand";
 export * from "./ListSourcesCommand";
+export * from "./ListStatementsCommand";
 export * from "./LoadFoundationalOntologyCommand";
 export * from "./PutSourceEventRescanCommand";
 export * from "./PutSourceRescanScheduleCommand";

@@ -108,6 +108,9 @@ export interface CreateMetricCommandOutput extends CreateMetricOutput, __Metadat
  * //     ],
  * //     definedBy: "STRING_VALUE",
  * //     effectiveFrom: "STRING_VALUE",
+ * //     domain: "STRING_VALUE",
+ * //     evidenceBasis: "STRING_VALUE",
+ * //     publishable: true || false,
  * //   },
  * //   warnings: [ // ValidationWarningList
  * //     { // ValidationWarning

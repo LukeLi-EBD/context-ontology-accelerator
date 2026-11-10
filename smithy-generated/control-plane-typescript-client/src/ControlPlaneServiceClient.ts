@@ -210,6 +210,7 @@ import type {
 } from "./commands/ListSourceScanJobsCommand";
 import type { ListSourcesCommandInput, ListSourcesCommandOutput } from "./commands/ListSourcesCommand";
 import type { ListSourceTablesCommandInput, ListSourceTablesCommandOutput } from "./commands/ListSourceTablesCommand";
+import type { ListStatementsCommandInput, ListStatementsCommandOutput } from "./commands/ListStatementsCommand";
 import type {
   LoadFoundationalOntologyCommandInput,
   LoadFoundationalOntologyCommandOutput,
@@ -352,6 +353,7 @@ export type ServiceInputTypes =
   | ListSourceScanJobsCommandInput
   | ListSourceTablesCommandInput
   | ListSourcesCommandInput
+  | ListStatementsCommandInput
   | LoadFoundationalOntologyCommandInput
   | PutSourceEventRescanCommandInput
   | PutSourceRescanScheduleCommandInput
@@ -448,6 +450,7 @@ export type ServiceOutputTypes =
   | ListSourceScanJobsCommandOutput
   | ListSourceTablesCommandOutput
   | ListSourcesCommandOutput
+  | ListStatementsCommandOutput
   | LoadFoundationalOntologyCommandOutput
   | PutSourceEventRescanCommandOutput
   | PutSourceRescanScheduleCommandOutput

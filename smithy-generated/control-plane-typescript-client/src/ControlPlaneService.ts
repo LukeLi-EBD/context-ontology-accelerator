@@ -322,6 +322,11 @@ import {
   ListSourceTablesCommand,
 } from "./commands/ListSourceTablesCommand";
 import {
+  type ListStatementsCommandInput,
+  type ListStatementsCommandOutput,
+  ListStatementsCommand,
+} from "./commands/ListStatementsCommand";
+import {
   type LoadFoundationalOntologyCommandInput,
   type LoadFoundationalOntologyCommandOutput,
   LoadFoundationalOntologyCommand,
@@ -506,6 +511,7 @@ const commands = {
   GraphSearchCommand,
   IngestOntologyFromS3Command,
   ListOntologiesCommand,
+  ListStatementsCommand,
   UploadOntologyCommand,
   AcceptProposalCommand,
   CancelProposalCommand,
@@ -1371,6 +1377,23 @@ export interface ControlPlaneService {
     args: ListOntologiesCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ListOntologiesCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListStatementsCommand}
+   */
+  listStatements(
+    args: ListStatementsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListStatementsCommandOutput>;
+  listStatements(
+    args: ListStatementsCommandInput,
+    cb: (err: any, data?: ListStatementsCommandOutput) => void
+  ): void;
+  listStatements(
+    args: ListStatementsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListStatementsCommandOutput) => void
   ): void;
 
   /**
