@@ -29,6 +29,7 @@ import re
 import sys
 import tempfile
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, unquote, urlencode
@@ -531,6 +532,9 @@ ROUTES: list[tuple[str, str]] = [
     # deliberately not modelled (see 09 §4.16).
     ("/namespaces/{namespaceId}/query", DATA_LAYER),
     ("/namespaces/{namespaceId}/kb/search", DATA_LAYER),
+    # GraphTraverse (DataLayerService). Implemented in the data-layer handler
+    # from the start, but never routed locally, so it had never actually run.
+    ("/namespaces/{namespaceId}/graph/traverse", DATA_LAYER),
     ("/namespaces/{namespaceId}/metrics", METRICS),
     ("/namespaces/{namespaceId}/metrics/{name}", METRICS),
     ("/namespaces/{namespaceId}/metrics/validate", METRICS),
@@ -618,7 +622,11 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/facts/{factId}/events", KERNEL),
     # GetEntity (DataLayer read). Kept un-namespaced to match the contract
     # (09 §4.8: GET /entities/{iri}); the IRI itself carries the identity.
+    ("/entities/{entityId}/provenance", KERNEL),
     ("/entities/{entityId}", KERNEL),
+    # GetMetric (F100): the platform metric card now carries `fieldBindings`,
+    # so the read has to be reachable locally instead of only inside the kernel.
+    ("/metrics/{metricId}", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -943,6 +951,17 @@ def _kernel_translate(
     if template.endswith("/verify"):
         return "GET", "/ontology/verify", None
 
+    if template == "/metrics/{metricId}":
+        metric_id = path_params.get("metricId", "")
+        return "GET", f"/metrics/{quote(metric_id, safe='')}", None
+
+    if template == "/entities/{entityId}/provenance":
+        iri = path_params.get("entityId", "")
+        q = query or {}
+        params = {key: q[key] for key in ("limit",) if q.get(key)}
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/entities/{quote(iri, safe='')}/provenance{suffix}", None
+
     if template == "/entities/{entityId}":
         iri = path_params.get("entityId", "")
         q = query or {}
@@ -1167,6 +1186,136 @@ async def _kernel_proxy(
     return Response(content=content, status_code=status, media_type=ctype)
 
 
+_HEALTH_PROBE_TIMEOUT_S = 5.0
+
+
+def _short_error(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {exc}"[:200]
+
+
+async def _probe_http(client: Any, url: str) -> dict[str, Any]:
+    try:
+        resp = await client.get(url)
+    except Exception as exc:
+        return {"status": "error", "url": url, "detail": _short_error(exc)}
+    if resp.status_code >= 400:
+        return {"status": "error", "url": url, "detail": f"HTTP {resp.status_code}"}
+    return {"status": "ok", "url": url}
+
+
+async def _probe_sparql(client: Any, base: str) -> dict[str, Any]:
+    """Probe Oxigraph and count named graphs in the same round trip."""
+    query = "SELECT (COUNT(DISTINCT ?g) AS ?n) WHERE { GRAPH ?g { ?s ?p ?o } }"
+    try:
+        resp = await client.post(
+            f"{base}/query",
+            data={"query": query},
+            headers={"Accept": "application/sparql-results+json"},
+        )
+    except Exception as exc:
+        return {"status": "error", "url": base, "detail": _short_error(exc)}
+    if resp.status_code >= 400:
+        return {"status": "error", "url": base, "detail": f"HTTP {resp.status_code}"}
+    count: int | None = None
+    try:
+        bindings = resp.json()["results"]["bindings"]
+        count = int(bindings[0]["n"]["value"]) if bindings else 0
+    except (ValueError, KeyError, IndexError):
+        count = None
+    return {"status": "ok", "url": base, "namedGraphs": count}
+
+
+async def _local_system_health() -> dict[str, Any]:
+    """GetSystemHealth, answered from the local stack instead of AWS services.
+
+    Every component is probed live; a failing one keeps its error text so the
+    console can say *which* dependency is down rather than a bare "degraded".
+    """
+    import httpx
+
+    components: list[dict[str, Any]] = []
+    pointer: dict[str, Any] | None = None
+    named_graphs: int | None = None
+
+    runtime: Any = None
+    try:
+        runtime = _lifecycle_runtime()
+        runtime.metadata.query("SELECT 1")
+        components.append(
+            {
+                "name": "postgres",
+                "label": "PostgreSQL（元数据 / 事实账本 / 指标库）",
+                "status": "ok",
+            }
+        )
+    except Exception as exc:
+        components.append(
+            {
+                "name": "postgres",
+                "label": "PostgreSQL（元数据 / 事实账本 / 指标库）",
+                "status": "error",
+                "detail": _short_error(exc),
+            }
+        )
+
+    oxigraph = os.environ.get("COA_ONTOLOGY_OXIGRAPH_URL", "http://127.0.0.1:7878").rstrip("/")
+    async with httpx.AsyncClient(timeout=_HEALTH_PROBE_TIMEOUT_S) as client:
+        graph = await _probe_sparql(client, oxigraph)
+        named_graphs = graph.pop("namedGraphs", None)
+        components.append(
+            {
+                "name": "oxigraph",
+                "label": "Oxigraph（RDF 图存储）",
+                **graph,
+            }
+        )
+        components.append(
+            {
+                "name": "ontologyService",
+                "label": "本体服务（8101）",
+                **(await _probe_http(client, "http://127.0.0.1:8101/health")),
+            }
+        )
+        components.append(
+            {
+                "name": "contextManager",
+                "label": "上下文服务（8091）",
+                **(await _probe_http(client, "http://127.0.0.1:8091/ping")),
+            }
+        )
+
+    object_root = Path(
+        os.environ.get("COA_LOCAL_OBJECT_ROOT")
+        or (Path(tempfile.gettempdir()) / "coa-local-stack" / "objects")
+    )
+    components.append(
+        {
+            "name": "objectStore",
+            "label": "对象存储（本地文件）",
+            "status": "ok" if object_root.exists() else "error",
+            "detail": None if object_root.exists() else "对象根目录不存在",
+            "url": str(object_root),
+        }
+    )
+
+    if runtime is not None:
+        try:
+            from platform_core import healthboard
+
+            pointer = healthboard.pointer_status(runtime)
+        except Exception as exc:
+            pointer = {"ok": False, "status": "unreadable", "detail": _short_error(exc)}
+
+    status = "ok" if all(item["status"] == "ok" for item in components) else "degraded"
+    return {
+        "status": status,
+        "components": components,
+        "pointer": pointer,
+        "namedGraphs": named_graphs,
+        "checkedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def _make_app() -> Any:
     from urllib.parse import unquote
 
@@ -1246,6 +1395,11 @@ def _make_app() -> Any:
 
         if path == "/health":
             return _cors(JSONResponse({"status": "ok", "provider": "postgres"}), origin)
+
+        # GetSystemHealth is answered here, not forwarded: the AWS handler can
+        # only report DynamoDB/Neptune/OpenSearch, which this stack does not use.
+        if path == "/system-health" and request.method == "GET":
+            return _cors(JSONResponse(await _local_system_health()), origin)
 
         matched = _match(path)
         if matched is None:

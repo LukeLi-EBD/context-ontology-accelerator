@@ -20,6 +20,7 @@ import Header from "@cloudscape-design/components/header";
 import Input from "@cloudscape-design/components/input";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
+import Table from "@cloudscape-design/components/table";
 import type { StatusIndicatorProps } from "@cloudscape-design/components/status-indicator";
 
 import { useApiClient, useCurrentNamespace } from "@components";
@@ -40,6 +41,29 @@ interface SystemHealthResponse {
   dynamodb?: string;
   neptuneKg?: string;
   opensearch?: string;
+  /**
+   * Local stack answers GetSystemHealth with real probes (PG / Oxigraph /
+   * 8101 / 8091 / object store) instead of the AWS service names above.
+   */
+  components?: HealthComponent[];
+  pointer?: {
+    ok?: boolean;
+    status?: string;
+    versionId?: string | null;
+    semver?: string | null;
+    tripleCount?: number | null;
+    warning?: string;
+  } | null;
+  namedGraphs?: number | null;
+  checkedAt?: string;
+}
+
+interface HealthComponent {
+  name: string;
+  label?: string;
+  status: string;
+  detail?: string | null;
+  url?: string;
 }
 
 type ComponentStatus = "ok" | "degraded" | "error" | "loading" | string;
@@ -155,6 +179,9 @@ export function SystemHealthPage() {
       ? "error"
       : (health?.status ?? "error");
 
+  // Local stack reports probed components; AWS deployments report fixed names.
+  const localComponents = health?.components ?? [];
+
   return (
     <SpaceBetween size="l">
       <Header
@@ -198,6 +225,73 @@ export function SystemHealthPage() {
         </StatusIndicator>
       </Container>
 
+      {localComponents.length > 0 ? (
+        <>
+          <Header
+            variant="h2"
+            description="本地栈逐项探活：哪一项不可用会在详情列写明原因"
+          >
+            组件探活
+          </Header>
+
+          <Table<HealthComponent>
+            items={localComponents}
+            columnDefinitions={[
+              {
+                id: "label",
+                header: "组件",
+                cell: (item) => item.label ?? item.name,
+              },
+              {
+                id: "status",
+                header: "状态",
+                cell: (item) => (
+                  <StatusIndicator type={statusType(item.status)}>
+                    {statusLabel(item.status, t)}
+                  </StatusIndicator>
+                ),
+              },
+              {
+                id: "detail",
+                header: "详情",
+                cell: (item) => item.detail ?? item.url ?? "-",
+              },
+            ]}
+            empty={<Box textAlign="center">没有探活项</Box>}
+          />
+
+          <Container
+            header={
+              <Header variant="h2" description="tbox/current 指针与图规模">
+                本体状态
+              </Header>
+            }
+          >
+            <ColumnLayout columns={3}>
+              <div>
+                <Box variant="awsui-key-label">T-Box 版本</Box>
+                <Box>
+                  {health?.pointer?.semver ?? "—"}
+                  {health?.pointer?.status ? `（${health.pointer.status}）` : ""}
+                </Box>
+              </div>
+              <div>
+                <Box variant="awsui-key-label">命名图</Box>
+                <Box>{health?.namedGraphs ?? "—"}</Box>
+              </div>
+              <div>
+                <Box variant="awsui-key-label">检查时间</Box>
+                <Box>
+                  {health?.checkedAt
+                    ? new Date(health.checkedAt).toLocaleString(locale)
+                    : "—"}
+                </Box>
+              </div>
+            </ColumnLayout>
+          </Container>
+        </>
+      ) : (
+        <>
       <Header variant="h2">{t("Storage Backends")}</Header>
 
       <ColumnLayout columns={3}>
@@ -264,6 +358,8 @@ export function SystemHealthPage() {
           }
         />
       </ColumnLayout>
+        </>
+      )}
 
       <Header variant="h2">本体质量</Header>
 

@@ -3712,6 +3712,173 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         """B-03 read-only entity detail: classes, required props, neighbours, badge."""
         return entity_view.entity_detail(runtime, iri, limit=limit)
 
+    def _resolve_entity_iri(iri: str) -> tuple[str, list[str]]:
+        """Return the stored IRI form and the graphs that actually contain it.
+
+        The document pipeline keeps non-ASCII names percent-encoded inside the
+        IRI, while callers usually type the decoded form. Accept the variant
+        that exists; never rewrite when neither exists (the 404 then reports
+        the caller's IRI).
+        """
+        graphs = entity_view.graphs_for_iri(runtime, iri)
+        if graphs:
+            return iri, graphs
+        encoded = entity_view.encode_iri(iri)
+        if encoded != iri:
+            alternate = entity_view.graphs_for_iri(runtime, encoded)
+            if alternate:
+                return encoded, alternate
+        return iri, []
+
+    def _entity_ledger_rows(iri: str) -> list[dict[str, Any]]:
+        """Fact-ledger rows whose subject is this entity (read-only)."""
+        rows = runtime.facts.list(state="all", subject=iri, limit=50)
+        items: list[dict[str, Any]] = []
+        for item in rows.get("items") or []:
+            source = item.get("source") or {}
+            items.append(
+                {
+                    "factId": item.get("factId"),
+                    "predicate": item.get("predicate"),
+                    "object": item.get("object"),
+                    "state": item.get("state"),
+                    "sourceKind": source.get("kind"),
+                    "documentId": source.get("documentId"),
+                    "candidateId": source.get("candidateId"),
+                    "assertedAt": item.get("assertedAt"),
+                    "conflict": bool(item.get("conflict")),
+                }
+            )
+        return items
+
+    def _prov_rows(iri: str) -> list[dict[str, Any]]:
+        """PROV triples that mention this IRI (either direction)."""
+        query = (
+            "SELECT ?g ?s ?p ?o WHERE { "
+            f"GRAPH <{entity_view.PROV_GRAPH}> {{ "
+            f"{{ BIND(<{iri}> AS ?s) ?s ?p ?o }} UNION "
+            f"{{ BIND(<{iri}> AS ?o) ?s ?p ?o }} "
+            "} } LIMIT 100"
+        )
+        try:
+            result = runtime.graph.query(query)
+        except Exception:
+            return []
+        rows: list[dict[str, Any]] = []
+        for row in result.get("bindings") or []:
+            subject = entity_view._term(row, "s")
+            predicate = entity_view._term(row, "p")
+            obj = entity_view._term(row, "o")
+            if subject and predicate:
+                rows.append(
+                    {
+                        "activityId": subject,
+                        "relation": predicate,
+                        "object": obj,
+                        "graph": entity_view._term(row, "g"),
+                    }
+                )
+        return rows
+
+    # Registered before GET /entities/{iri:path}; the path converter is greedy
+    # across "/", so the more specific route must come first.
+    @app.get("/entities/{iri:path}/provenance")
+    def get_entity_provenance(
+        iri: str,
+        limit: int = Query(default=50, ge=1, le=200),
+    ) -> dict[str, Any]:
+        """GetEntityProvenance: per-statement evidence for one entity, read-only."""
+        from urllib.parse import quote
+
+        iri, graphs = _resolve_entity_iri(iri)
+        detail = entity_view.entity_detail(
+            runtime, iri, limit=limit, graphs=graphs or None
+        )
+        try:
+            facts = _entity_ledger_rows(iri)
+        except Exception:
+            facts = []
+        payload = _g4_provenance_fields(detail, iri, facts)
+        payload["statements"] = payload.get("fields") or []
+        payload["activities"] = _prov_rows(iri)
+        citations = [
+            {
+                "kind": source.get("kind"),
+                "ref": source.get("ref"),
+                "text": source.get("text"),
+                "url": source.get("resolveUrl"),
+            }
+            for source in detail.get("sources") or []
+        ]
+        for row in facts:
+            if not row.get("documentId"):
+                continue
+            citations.append(
+                {
+                    "kind": "fact",
+                    "ref": row.get("factId"),
+                    "documentId": row.get("documentId"),
+                    "url": "/facts/" + quote(str(row.get("factId")), safe=""),
+                }
+            )
+        payload["citations"] = citations
+        payload["namedGraphs"] = sorted(
+            {
+                str(edge["graph"])
+                for edge in (detail.get("neighbors") or {}).get("edges") or []
+                if edge.get("graph")
+            }
+        )
+        payload["provenance"] = {"count": len(facts), "items": facts}
+        return payload
+
+    @app.get("/entities/{iri:path}")
+    def get_entity(
+        iri: str,
+        limit: int = Query(default=50, ge=1, le=200),
+    ) -> dict[str, Any]:
+        """GetEntity (DataLayer read): one A-Box instance, read-only.
+
+        Same payload as the legacy UI BFF `/ui/api/entity`; the contract path is
+        the only entry the console uses. ``namedGraphs`` lists the named graphs
+        the returned statements came from, so the caller never has to guess
+        which graph the instance lives in.
+        """
+        iri, graphs = _resolve_entity_iri(iri)
+        detail = entity_view.entity_detail(
+            runtime,
+            iri,
+            limit=limit,
+            graphs=graphs or None,
+        )
+        edges = (detail.get("neighbors") or {}).get("edges") or []
+        detail["namedGraphs"] = sorted(
+            {str(edge["graph"]) for edge in edges if edge.get("graph")}
+        )
+        # The A-Box triple itself carries no seeAlso, so the document-level
+        # origin lives in the fact ledger (subject key). This is a summary;
+        # the full chain is GetEntityProvenance.
+        provenance: dict[str, Any] = {"count": 0, "items": []}
+        try:
+            items = _entity_ledger_rows(iri)
+            provenance = {"count": len(items), "items": items}
+        except Exception:
+            provenance = {"count": 0, "items": [], "unavailable": True}
+        badge = detail.get("evidenceBadge") or {}
+        if provenance["items"] and badge.get("state") == entity_view.NO_SOURCE:
+            with_doc = sum(1 for item in provenance["items"] if item.get("documentId"))
+            detail["evidenceBadge"] = {
+                "state": entity_view.EVIDENCED,
+                "label": entity_view.BADGE_LABELS[entity_view.EVIDENCED],
+                "basis": (
+                    f"事实账本 {len(provenance['items'])} 条，"
+                    f"其中 {with_doc} 条带来源文档"
+                ),
+                "judge": "fact-ledger",
+            }
+        detail["provenance"] = provenance
+        return detail
+
     @app.get("/ui/api/candidates")
     def ui_candidates(
         state: str | None = Query(default="pending"),
@@ -5763,7 +5930,11 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "readOnly": True,
         }
 
-    def _g4_provenance_fields(detail: dict[str, Any], iri: str) -> dict[str, Any]:
+    def _g4_provenance_fields(
+        detail: dict[str, Any],
+        iri: str,
+        facts: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         from urllib.parse import quote
 
         sources = list(detail.get("sources") or [])
@@ -5828,6 +5999,39 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                     basis = "字段值命中 PROV/sourceRef 证据文本"
                     has_source_ref = True
                     has_prov = source.get("kind") in ("unparsed", "doc", "fact", "obs", "obs-set")
+                    break
+            if state == "none":
+                # The A-Box triple has no seeAlso, so the ledger row that put
+                # it on the graph is the evidence: same predicate, same value.
+                for fact in facts or []:
+                    if str(fact.get("predicate") or "") != property_iri:
+                        continue
+                    object_value = (fact.get("object") or {}).get("value")
+                    if not object_value:
+                        continue
+                    if not any(
+                        isinstance(value, dict) and value.get("value") == object_value
+                        for value in values
+                    ):
+                        continue
+                    fact_id = str(fact.get("factId"))
+                    links.append(
+                        {
+                            "kind": "fact",
+                            "ref": fact_id,
+                            "url": "/facts/" + quote(fact_id, safe="") + "/events",
+                            "documentId": fact.get("documentId"),
+                        }
+                    )
+                    state = "evidenced"
+                    basis = (
+                        f"事实账本 {fact_id}"
+                        + ("（带来源文档）" if fact.get("documentId") else "（手工录入）")
+                    )
+                    if fact.get("conflict"):
+                        basis += "；该值存在冲突，待裁决"
+                    has_source_ref = True
+                    has_prov = True
                     break
             if state == "none" and local in bindings:
                 binding = bindings[local]

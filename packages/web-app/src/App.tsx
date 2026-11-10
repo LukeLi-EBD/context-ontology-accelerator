@@ -46,6 +46,7 @@ import { IdentityPage } from "./pages/IdentityPage";
 import { SystemHealthPage } from "./pages/SystemHealthPage";
 import { MetricDetail } from "./pages/MetricDetail";
 import { MetricForm } from "./pages/MetricForm";
+import EntityPage from "./pages/ontology/EntityPage";
 import { useUser } from "./auth";
 import {
   NamespaceProvider,
@@ -655,6 +656,10 @@ function AppShell() {
               <Route
                 path="/namespaces/:namespaceId/ontology/versions"
                 element={<OntologyVersionsPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/ontology/entities/:entityId"
+                element={<EntityPage />}
               />
               <Route
                 path="/namespaces/:namespaceId/governance"

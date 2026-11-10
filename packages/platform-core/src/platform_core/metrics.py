@@ -40,7 +40,7 @@ _COMPUTE_COLUMNS = _COLUMNS + (
 
 _DETAIL_COLUMNS = _COLUMNS + (
     ", definition, formula_text, denominator_text, observation_period, "
-    "granularity, provenance_label, unit"
+    "granularity, provenance_label, unit, definition_version"
 )
 
 _AGGREGATES = {"sum", "max", "min", "avg", "count", "count_distinct"}
@@ -148,6 +148,7 @@ def _card(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
                 "granularityText": row.get("granularity"),
                 "provenanceLabel": row.get("provenance_label"),
                 "unit": row.get("unit"),
+                "definitionVersion": row.get("definition_version"),
             }
         )
     return card
@@ -195,7 +196,39 @@ class MetricService:
                 provider_code=NOT_FOUND_CODE,
                 details={"metricId": metric_id},
             )
-        return _card(rows[0], detail=True)
+        row = rows[0]
+        card = _card(row, detail=True)
+        # Field bindings let the metric page answer "which entity/column does
+        # this metric bind to?" — the reverse of the entity page's lookup.
+        card["fieldBindings"] = self._field_bindings(
+            metric_id, row.get("definition_version")
+        )
+        return card
+
+    def _field_bindings(
+        self, metric_id: str, version: str | None
+    ) -> list[dict[str, Any]]:
+        if not version:
+            return []
+        rows = self._meta.query(
+            "SELECT role, fact_table, entity_column, value_expr, agg, filter_sql, "
+            "window_column, window_mode FROM platform.metric_field_binding "
+            "WHERE metric_id = %s AND definition_version = %s ORDER BY role",
+            (metric_id, version),
+        )
+        return [
+            {
+                "role": row.get("role"),
+                "factTable": row.get("fact_table"),
+                "entityColumn": row.get("entity_column"),
+                "valueExpr": row.get("value_expr"),
+                "agg": row.get("agg"),
+                "filterSql": row.get("filter_sql"),
+                "windowColumn": row.get("window_column"),
+                "windowMode": row.get("window_mode"),
+            }
+            for row in rows
+        ]
 
     def variants(self, metric_id: str) -> list[str]:
         rows = self._meta.query(

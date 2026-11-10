@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,6 +14,8 @@ import {
   SpaceBetween,
 } from "@cloudscape-design/components";
 import { useUser } from "@auth";
+import { useApiClient } from "@components";
+import { useListNamespaces } from "../api-hooks/use-list-namespaces";
 import { useToolsPanel } from "@components/ToolsPanelProvider";
 import { HomeHelpPanel } from "./HomeHelpPanel";
 import { ONBOARDING_ICON } from "@constants/drawer-icons";
@@ -108,6 +110,14 @@ const OntologyWatermark: React.FC = () => {
   );
 };
 
+/** Subset of GET /system-health the home overview card needs (F01/F02). */
+interface HomeOverview {
+  status?: string;
+  components?: Array<{ status: string }>;
+  pointer?: { semver?: string | null; status?: string } | null;
+  namedGraphs?: number | null;
+}
+
 /**
  * Context Ontology Accelerator landing / home page. This is the post-login destination (the OIDC
  * authenticate callback redirects to `/`). It welcomes the signed-in user and
@@ -120,6 +130,41 @@ export const HomePage: React.FC = () => {
   const { registerDrawer, unregisterDrawer } = useToolsPanel();
   const { t } = useAppI18n();
   const greetingName = user?.name || user?.email || "";
+  const namespaces = useListNamespaces();
+  const namespaceCount =
+    namespaces.data?.pages.reduce(
+      (total, page) => total + (page.namespaces?.length ?? 0),
+      0,
+    ) ?? 0;
+  // F03: an empty environment gets a next-step card instead of an empty page.
+  const emptyEnvironment = namespaces.isSuccess && namespaceCount === 0;
+
+  // F01/F02: version pointer + named-graph count, refreshable without leaving `/`.
+  const apiClient = useApiClient();
+  const [overview, setOverview] = useState<HomeOverview | null>(null);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true);
+    setOverviewError(null);
+    try {
+      setOverview(await apiClient.get<HomeOverview>("/system-health"));
+    } catch (e) {
+      setOverview(null);
+      setOverviewError(e instanceof Error ? e.message : "加载环境概览失败");
+    } finally {
+      setOverviewLoading(false);
+    }
+  }, [apiClient]);
+
+  useEffect(() => {
+    loadOverview();
+  }, [loadOverview]);
+
+  const healthyComponents =
+    overview?.components?.filter((c) => c.status === "ok").length ?? 0;
+  const totalComponents = overview?.components?.length ?? 0;
 
   useEffect(() => {
     registerDrawer({
@@ -203,6 +248,100 @@ export const HomePage: React.FC = () => {
         </div>
       }
     >
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description="版本指针、命名图计数、组件状态"
+            actions={
+              <Button
+                iconName="refresh"
+                onClick={loadOverview}
+                loading={overviewLoading}
+              >
+                刷新
+              </Button>
+            }
+          >
+            环境概览
+          </Header>
+        }
+      >
+        {overviewError ? (
+          <Box color="text-status-error">{overviewError}</Box>
+        ) : (
+          <ColumnLayout columns={3} variant="text-grid">
+            <div>
+              <Box variant="awsui-key-label">T-Box 版本</Box>
+              <Box>
+                {overview?.pointer?.semver ?? "—"}
+                {overview?.pointer?.status ? `（${overview.pointer.status}）` : ""}
+              </Box>
+            </div>
+            <div>
+              <Box variant="awsui-key-label">命名图</Box>
+              <Box>{overview?.namedGraphs ?? "—"}</Box>
+            </div>
+            <div>
+              <Box variant="awsui-key-label">组件</Box>
+              <Box>
+                {totalComponents > 0
+                  ? `${healthyComponents}/${totalComponents} 正常`
+                  : "—"}
+              </Box>
+            </div>
+          </ColumnLayout>
+        )}
+      </Container>
+
+      {emptyEnvironment && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description="当前没有任何命名空间，先按下面四步把一条数据走通。"
+            >
+              下一步
+            </Header>
+          }
+        >
+          <SpaceBetween size="l">
+            <ColumnLayout columns={4} variant="text-grid">
+              <SpaceBetween size="xs">
+                <Header variant="h3">1. 建命名空间</Header>
+                <Box variant="p" color="text-body-secondary">
+                  给这批数据一个隔离的名字，后面的本体和文档都挂在它下面。
+                </Box>
+              </SpaceBetween>
+              <SpaceBetween size="xs">
+                <Header variant="h3">2. 导入本体</Header>
+                <Box variant="p" color="text-body-secondary">
+                  上传 T-Box，先把类、属性、必填约束定下来。
+                </Box>
+              </SpaceBetween>
+              <SpaceBetween size="xs">
+                <Header variant="h3">3. 上传文档</Header>
+                <Box variant="p" color="text-body-secondary">
+                  从文档抽实体，得到可点开的 A-Box 实例。
+                </Box>
+              </SpaceBetween>
+              <SpaceBetween size="xs">
+                <Header variant="h3">4. 去问答台验证</Header>
+                <Box variant="p" color="text-body-secondary">
+                  问一句，看召回、引用和来源对不对得上。
+                </Box>
+              </SpaceBetween>
+            </ColumnLayout>
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button variant="primary" onClick={() => navigate("/namespaces/create")}>
+                建命名空间
+              </Button>
+              <Button onClick={() => navigate("/playground")}>先看问答台</Button>
+            </SpaceBetween>
+          </SpaceBetween>
+        </Container>
+      )}
+
       <Container header={<Header variant="h2">{t("How it works")}</Header>}>
         <ColumnLayout columns={3} variant="text-grid">
           <SpaceBetween size="xs">

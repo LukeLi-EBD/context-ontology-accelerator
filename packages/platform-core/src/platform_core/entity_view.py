@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from . import source_ref
 from .datagen_abox import SYNTHETIC_GRAPH
@@ -111,7 +111,18 @@ def _local_name(iri: str | None) -> str:
         return "—"
     for sep in ("#", "/", ":"):
         if sep in iri:
-            return iri.rsplit(sep, 1)[-1]
+            iri = iri.rsplit(sep, 1)[-1]
+            break
+    # Presentation only: A-Box ids minted by the document pipeline keep their
+    # Chinese names percent-encoded in the IRI itself. Showing "%E5%90%88..."
+    # helps nobody; the IRI field still carries the exact stored identity.
+    if "%" in iri:
+        try:
+            decoded = unquote(iri)
+        except Exception:
+            decoded = iri
+        if decoded != iri and decoded.isprintable():
+            return decoded
     return iri
 
 
@@ -390,13 +401,16 @@ def _related_metrics(runtime: Any, classes: list[dict[str, Any]]) -> dict[str, A
             "items": [],
             "matchBasis": [],
         }
+    # Drive from the metric definition, not from the binding table: a metric can
+    # match on grain alone and still have no field binding, and driving from
+    # bindings made every grain-only match unreachable.
     sql = (
-        "SELECT DISTINCT b.metric_id, b.role, b.fact_table, b.entity_column, "
+        "SELECT DISTINCT d.metric_id, b.role, b.fact_table, b.entity_column, "
         "d.name_zh, d.domain, d.grain, d.publishable "
-        "FROM platform.metric_field_binding b "
-        "LEFT JOIN platform.metric_definition d ON d.metric_id = b.metric_id "
+        "FROM platform.metric_definition d "
+        "LEFT JOIN platform.metric_field_binding b ON b.metric_id = d.metric_id "
         "WHERE b.entity_column = ANY(%s) OR d.grain = ANY(%s) "
-        "ORDER BY b.metric_id, b.role"
+        "ORDER BY d.metric_id, b.role"
     )
     rows = runtime.metadata.query(sql, [sorted(columns), sorted(grains)])
     items: dict[str, dict[str, Any]] = {}
@@ -420,13 +434,14 @@ def _related_metrics(runtime: Any, classes: list[dict[str, Any]]) -> dict[str, A
             item["matchBasis"].append(f"entity_column={row.get('entity_column')}")
         elif row.get("grain") in grains:
             item["matchBasis"].append(f"grain={row.get('grain')}")
-        item["bindings"].append(
-            {
-                "role": row.get("role"),
-                "factTable": row.get("fact_table"),
-                "entityColumn": row.get("entity_column"),
-            }
-        )
+        if row.get("role"):
+            item["bindings"].append(
+                {
+                    "role": row.get("role"),
+                    "factTable": row.get("fact_table"),
+                    "entityColumn": row.get("entity_column"),
+                }
+            )
     for item in items.values():
         item["matchBasis"] = sorted(set(item["matchBasis"]))
     return {
@@ -542,11 +557,49 @@ def _badge(
     }
 
 
-def entity_detail(runtime: Any, iri: str, limit: int = 50) -> dict[str, Any]:
+def graphs_for_iri(runtime: Any, iri: str) -> list[str]:
+    """Named graphs that actually contain the IRI (read-only probe).
+
+    A-Box data written by the document pipeline lives in
+    ``{NDB_GRAPH_URI_BASE}/{namespace}/...`` graphs, which are not part of
+    ``reasoning.abox_graphs`` (that list deliberately stays on the fact graph).
+    Asking the store where the IRI occurs keeps the read honest: no hard-coded
+    graph list and no scan of unrelated graphs. Returns ``[]`` when the IRI is
+    absent everywhere.
+    """
+    if not SAFE_IRI.match(iri or ""):
+        raise _err("E_ENTITY_BAD_IRI", "iri is not a safe absolute IRI", iri=iri)
+    found: list[str] = []
+    for query in (
+        f"SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{ <{iri}> ?p ?o }} }} LIMIT 50",
+        f"SELECT DISTINCT ?g WHERE {{ GRAPH ?g {{ ?s ?p <{iri}> }} }} LIMIT 50",
+    ):
+        try:
+            result = runtime.graph.query(query)
+        except Exception:
+            continue
+        for row in result.get("bindings") or []:
+            graph = _term(row, "g")
+            if graph and graph not in found:
+                found.append(graph)
+    return found
+
+
+def encode_iri(iri: str) -> str:
+    """Percent-encode non-ASCII characters the way the document pipeline stores them."""
+    return quote(iri, safe=":/#")
+
+
+def entity_detail(
+    runtime: Any,
+    iri: str,
+    limit: int = 50,
+    graphs: list[str] | None = None,
+) -> dict[str, Any]:
     if not SAFE_IRI.match(iri or ""):
         raise _err("E_ENTITY_BAD_IRI", "iri is not a safe absolute IRI", iri=iri)
 
-    graphs = _graphs(runtime)
+    graphs = list(graphs) if graphs is not None else _graphs(runtime)
     asserted: list[dict[str, Any]] = []
     if graphs:
         try:
