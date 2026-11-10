@@ -329,6 +329,79 @@ apply GetCanvasSubgraph @examples([
     }
 ])
 
+apply GetOntologySnapshot @examples([
+    {
+        title: "Read T-Box/A-Box coverage for a namespace"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" }
+        output: {
+            tbox: { classes: 156, objectProperties: 84, datatypeProperties: 45 }
+            abox: { instances: 18020, classesWithInstances: 4 }
+            coverage: { classCoverage: 0.0256, unlabeledClasses: 0 }
+            graphs: ["http://coa.amazon.com/onto/sales-crm", "urn:coa:abox:platform-synthetic"]
+            source: "SPARQL aggregation over the namespace named graphs"
+            sampledAt: "2026-11-10T09:00:00Z"
+        }
+    }
+])
+
+apply RunValidation @examples([
+    {
+        title: "Run the read-only quality checks"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" }
+        output: {
+            orphanInstances: { count: 0, detail: "instances typed by a declared class with no other edge" }
+            unlabeledClasses: { count: 0, detail: "declared classes missing rdfs:label and skos:prefLabel" }
+            shacl: { status: "skipped", detail: "no shapes configured (no-shapes)" }
+            inferenceFailures: { detail: "no reasoner wired up in this deployment" }
+            source: "SPARQL over the namespace named graphs; SHACL shapes from the configured shapes file"
+            sampledAt: "2026-11-10T09:00:00Z"
+        }
+    }
+])
+
+apply GetReasoningStatus @examples([
+    {
+        title: "No reasoner configured"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" }
+        output: {
+            available: false
+            failures: { detail: "inference jobs are not observable from this service" }
+            detail: "This deployment does not configure a reasoner; only asserted triples are served."
+            source: "ontology-engine capability check"
+            sampledAt: "2026-11-10T09:00:00Z"
+        }
+    }
+])
+
+apply GetOntologyDiff @examples([
+    {
+        title: "Diff a baseline graph against a newer one"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", fromGraph: "http://coa.amazon.com/onto/sales-crm-v1", toGraph: "http://coa.amazon.com/onto/sales-crm-v2", limit: 20 }
+        output: {
+            baselineGraph: "http://coa.amazon.com/onto/sales-crm-v1"
+            targetGraph: "http://coa.amazon.com/onto/sales-crm-v2"
+            counts: { addedTriples: 12, removedTriples: 3, addedClasses: 1, removedClasses: 0, addedProperties: 2, removedProperties: 1 }
+            addedClasses: ["http://example.com/onto#LoyaltyAccount"]
+            removedClasses: []
+            addedProperties: ["http://example.com/onto#loyaltyTier"]
+            removedProperties: ["http://example.com/onto#legacyCode"]
+            examples: {
+                addedTriples: [
+                    {
+                        subject: "http://example.com/onto#LoyaltyAccount"
+                        predicate: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                        object: "http://www.w3.org/2002/07/owl#Class"
+                    }
+                ]
+                removedTriples: []
+            }
+            truncated: false
+            source: "SPARQL MINUS over the two named graphs"
+            sampledAt: "2026-11-10T09:00:00Z"
+        }
+    }
+])
+
 apply FindGraphPath @examples([
     {
         title: "Find paths from a customer to a place"

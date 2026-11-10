@@ -54,6 +54,12 @@ export interface GetSystemHealthCommandOutput extends GetSystemHealthOutput, __M
  * //   dynamodb: "STRING_VALUE",
  * //   neptuneKg: "STRING_VALUE",
  * //   opensearch: "STRING_VALUE",
+ * //   schemaVersion: { // SystemSchemaVersion
+ * //     codeVersion: Number("int"), // required
+ * //     dbVersion: Number("int"),
+ * //     consistent: true || false,
+ * //     source: "STRING_VALUE", // required
+ * //   },
  * // };
  *
  * ```

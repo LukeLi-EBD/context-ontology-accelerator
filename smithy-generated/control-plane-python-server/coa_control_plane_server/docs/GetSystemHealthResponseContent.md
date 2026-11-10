@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 **dynamodb** | **str** | DynamoDB sources table status | [optional] 
 **neptune_kg** | **str** | Neptune KG (GraphRAG) status | [optional] 
 **opensearch** | **str** | OpenSearch Serverless collection status | [optional] 
+**schema_version** | [**SystemSchemaVersion**](SystemSchemaVersion.md) |  | [optional] 
 
 ## Example
 

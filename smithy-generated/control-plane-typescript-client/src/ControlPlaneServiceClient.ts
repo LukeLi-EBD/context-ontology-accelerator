@@ -130,10 +130,15 @@ import type { GetMetricCommandInput, GetMetricCommandOutput } from "./commands/G
 import type { GetNamespaceCommandInput, GetNamespaceCommandOutput } from "./commands/GetNamespaceCommand";
 import type { GetNamespaceRoleCommandInput, GetNamespaceRoleCommandOutput } from "./commands/GetNamespaceRoleCommand";
 import type { GetOntologyCommandInput, GetOntologyCommandOutput } from "./commands/GetOntologyCommand";
+import type { GetOntologyDiffCommandInput, GetOntologyDiffCommandOutput } from "./commands/GetOntologyDiffCommand";
 import type {
   GetOntologyOverviewCommandInput,
   GetOntologyOverviewCommandOutput,
 } from "./commands/GetOntologyOverviewCommand";
+import type {
+  GetOntologySnapshotCommandInput,
+  GetOntologySnapshotCommandOutput,
+} from "./commands/GetOntologySnapshotCommand";
 import type {
   GetOntologyUploadUrlCommandInput,
   GetOntologyUploadUrlCommandOutput,
@@ -148,6 +153,10 @@ import type {
   GetProposalValidationJobCommandInput,
   GetProposalValidationJobCommandOutput,
 } from "./commands/GetProposalValidationJobCommand";
+import type {
+  GetReasoningStatusCommandInput,
+  GetReasoningStatusCommandOutput,
+} from "./commands/GetReasoningStatusCommand";
 import type { GetSourceCommandInput, GetSourceCommandOutput } from "./commands/GetSourceCommand";
 import type { GetSourceScanJobCommandInput, GetSourceScanJobCommandOutput } from "./commands/GetSourceScanJobCommand";
 import type { GetSourceTableCommandInput, GetSourceTableCommandOutput } from "./commands/GetSourceTableCommand";
@@ -251,6 +260,7 @@ import type {
   ReviewSourceTableCommandInput,
   ReviewSourceTableCommandOutput,
 } from "./commands/ReviewSourceTableCommand";
+import type { RunValidationCommandInput, RunValidationCommandOutput } from "./commands/RunValidationCommand";
 import type { SearchEmbeddingsCommandInput, SearchEmbeddingsCommandOutput } from "./commands/SearchEmbeddingsCommand";
 import type { StartInductionCommandInput, StartInductionCommandOutput } from "./commands/StartInductionCommand";
 import type { UpdateMetricCommandInput, UpdateMetricCommandOutput } from "./commands/UpdateMetricCommand";
@@ -330,12 +340,15 @@ export type ServiceInputTypes =
   | GetNamespaceCommandInput
   | GetNamespaceRoleCommandInput
   | GetOntologyCommandInput
+  | GetOntologyDiffCommandInput
   | GetOntologyOverviewCommandInput
+  | GetOntologySnapshotCommandInput
   | GetOntologyUploadUrlCommandInput
   | GetOsiUploadUrlCommandInput
   | GetProposalCommandInput
   | GetProposalUploadUrlsCommandInput
   | GetProposalValidationJobCommandInput
+  | GetReasoningStatusCommandInput
   | GetSourceCommandInput
   | GetSourceScanJobCommandInput
   | GetSourceTableCommandInput
@@ -376,6 +389,7 @@ export type ServiceInputTypes =
   | RescanSourceCommandInput
   | ReviewSourceColumnCommandInput
   | ReviewSourceTableCommandInput
+  | RunValidationCommandInput
   | SearchEmbeddingsCommandInput
   | StartInductionCommandInput
   | UpdateMetricCommandInput
@@ -430,12 +444,15 @@ export type ServiceOutputTypes =
   | GetNamespaceCommandOutput
   | GetNamespaceRoleCommandOutput
   | GetOntologyCommandOutput
+  | GetOntologyDiffCommandOutput
   | GetOntologyOverviewCommandOutput
+  | GetOntologySnapshotCommandOutput
   | GetOntologyUploadUrlCommandOutput
   | GetOsiUploadUrlCommandOutput
   | GetProposalCommandOutput
   | GetProposalUploadUrlsCommandOutput
   | GetProposalValidationJobCommandOutput
+  | GetReasoningStatusCommandOutput
   | GetSourceCommandOutput
   | GetSourceScanJobCommandOutput
   | GetSourceTableCommandOutput
@@ -476,6 +493,7 @@ export type ServiceOutputTypes =
   | RescanSourceCommandOutput
   | ReviewSourceColumnCommandOutput
   | ReviewSourceTableCommandOutput
+  | RunValidationCommandOutput
   | SearchEmbeddingsCommandOutput
   | StartInductionCommandOutput
   | UpdateMetricCommandOutput

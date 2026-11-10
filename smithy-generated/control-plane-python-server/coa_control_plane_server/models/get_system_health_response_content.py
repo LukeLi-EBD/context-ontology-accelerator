@@ -20,6 +20,7 @@ import json
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 from typing import Any, ClassVar, Dict, List, Optional
 from coa_control_plane_server.models.ontology_induction_health import OntologyInductionHealth
+from coa_control_plane_server.models.system_schema_version import SystemSchemaVersion
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -32,7 +33,8 @@ class GetSystemHealthResponseContent(BaseModel):
     dynamodb: Optional[StrictStr] = Field(default=None, description="DynamoDB sources table status")
     neptune_kg: Optional[StrictStr] = Field(default=None, description="Neptune KG (GraphRAG) status", alias="neptuneKg")
     opensearch: Optional[StrictStr] = Field(default=None, description="OpenSearch Serverless collection status")
-    __properties: ClassVar[List[str]] = ["status", "ontologyInduction", "dynamodb", "neptuneKg", "opensearch"]
+    schema_version: Optional[SystemSchemaVersion] = Field(default=None, alias="schemaVersion")
+    __properties: ClassVar[List[str]] = ["status", "ontologyInduction", "dynamodb", "neptuneKg", "opensearch", "schemaVersion"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -76,6 +78,9 @@ class GetSystemHealthResponseContent(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of ontology_induction
         if self.ontology_induction:
             _dict['ontologyInduction'] = self.ontology_induction.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of schema_version
+        if self.schema_version:
+            _dict['schemaVersion'] = self.schema_version.to_dict()
         return _dict
 
     @classmethod
@@ -92,7 +97,8 @@ class GetSystemHealthResponseContent(BaseModel):
             "ontologyInduction": OntologyInductionHealth.from_dict(obj["ontologyInduction"]) if obj.get("ontologyInduction") is not None else None,
             "dynamodb": obj.get("dynamodb"),
             "neptuneKg": obj.get("neptuneKg"),
-            "opensearch": obj.get("opensearch")
+            "opensearch": obj.get("opensearch"),
+            "schemaVersion": SystemSchemaVersion.from_dict(obj["schemaVersion"]) if obj.get("schemaVersion") is not None else None
         })
         return _obj
 

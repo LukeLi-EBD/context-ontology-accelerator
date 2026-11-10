@@ -43,7 +43,12 @@ class TestGetSystemHealthResponseContent(unittest.TestCase):
                     description_llm = '', ),
                 dynamodb = '',
                 neptune_kg = '',
-                opensearch = ''
+                opensearch = '',
+                schema_version = coa_control_plane_server.models.system_schema_version.SystemSchemaVersion(
+                    code_version = 1.337, 
+                    db_version = 1.337, 
+                    consistent = True, 
+                    source = '', )
             )
         else:
             return GetSystemHealthResponseContent(

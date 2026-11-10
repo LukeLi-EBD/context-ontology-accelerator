@@ -170,10 +170,20 @@ import {
   GetOntologyCommand,
 } from "./commands/GetOntologyCommand";
 import {
+  type GetOntologyDiffCommandInput,
+  type GetOntologyDiffCommandOutput,
+  GetOntologyDiffCommand,
+} from "./commands/GetOntologyDiffCommand";
+import {
   type GetOntologyOverviewCommandInput,
   type GetOntologyOverviewCommandOutput,
   GetOntologyOverviewCommand,
 } from "./commands/GetOntologyOverviewCommand";
+import {
+  type GetOntologySnapshotCommandInput,
+  type GetOntologySnapshotCommandOutput,
+  GetOntologySnapshotCommand,
+} from "./commands/GetOntologySnapshotCommand";
 import {
   type GetOntologyUploadUrlCommandInput,
   type GetOntologyUploadUrlCommandOutput,
@@ -199,6 +209,11 @@ import {
   type GetProposalValidationJobCommandOutput,
   GetProposalValidationJobCommand,
 } from "./commands/GetProposalValidationJobCommand";
+import {
+  type GetReasoningStatusCommandInput,
+  type GetReasoningStatusCommandOutput,
+  GetReasoningStatusCommand,
+} from "./commands/GetReasoningStatusCommand";
 import { type GetSourceCommandInput, type GetSourceCommandOutput, GetSourceCommand } from "./commands/GetSourceCommand";
 import {
   type GetSourceScanJobCommandInput,
@@ -392,6 +407,11 @@ import {
   ReviewSourceTableCommand,
 } from "./commands/ReviewSourceTableCommand";
 import {
+  type RunValidationCommandInput,
+  type RunValidationCommandOutput,
+  RunValidationCommand,
+} from "./commands/RunValidationCommand";
+import {
   type SearchEmbeddingsCommandInput,
   type SearchEmbeddingsCommandOutput,
   SearchEmbeddingsCommand,
@@ -524,12 +544,16 @@ const commands = {
   GetGraphObjectPropertyCommand,
   GetIngestStatusCommand,
   GetOntologyCommand,
+  GetOntologyDiffCommand,
   GetOntologyOverviewCommand,
+  GetOntologySnapshotCommand,
   GetOntologyUploadUrlCommand,
+  GetReasoningStatusCommand,
   GraphSearchCommand,
   IngestOntologyFromS3Command,
   ListOntologiesCommand,
   ListStatementsCommand,
+  RunValidationCommand,
   UploadOntologyCommand,
   AcceptProposalCommand,
   CancelProposalCommand,
@@ -1364,6 +1388,23 @@ export interface ControlPlaneService {
   ): void;
 
   /**
+   * @see {@link GetOntologyDiffCommand}
+   */
+  getOntologyDiff(
+    args: GetOntologyDiffCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetOntologyDiffCommandOutput>;
+  getOntologyDiff(
+    args: GetOntologyDiffCommandInput,
+    cb: (err: any, data?: GetOntologyDiffCommandOutput) => void
+  ): void;
+  getOntologyDiff(
+    args: GetOntologyDiffCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetOntologyDiffCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link GetOntologyOverviewCommand}
    */
   getOntologyOverview(
@@ -1381,6 +1422,23 @@ export interface ControlPlaneService {
   ): void;
 
   /**
+   * @see {@link GetOntologySnapshotCommand}
+   */
+  getOntologySnapshot(
+    args: GetOntologySnapshotCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetOntologySnapshotCommandOutput>;
+  getOntologySnapshot(
+    args: GetOntologySnapshotCommandInput,
+    cb: (err: any, data?: GetOntologySnapshotCommandOutput) => void
+  ): void;
+  getOntologySnapshot(
+    args: GetOntologySnapshotCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetOntologySnapshotCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link GetOntologyUploadUrlCommand}
    */
   getOntologyUploadUrl(
@@ -1395,6 +1453,23 @@ export interface ControlPlaneService {
     args: GetOntologyUploadUrlCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: GetOntologyUploadUrlCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetReasoningStatusCommand}
+   */
+  getReasoningStatus(
+    args: GetReasoningStatusCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetReasoningStatusCommandOutput>;
+  getReasoningStatus(
+    args: GetReasoningStatusCommandInput,
+    cb: (err: any, data?: GetReasoningStatusCommandOutput) => void
+  ): void;
+  getReasoningStatus(
+    args: GetReasoningStatusCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetReasoningStatusCommandOutput) => void
   ): void;
 
   /**
@@ -1463,6 +1538,23 @@ export interface ControlPlaneService {
     args: ListStatementsCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ListStatementsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RunValidationCommand}
+   */
+  runValidation(
+    args: RunValidationCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RunValidationCommandOutput>;
+  runValidation(
+    args: RunValidationCommandInput,
+    cb: (err: any, data?: RunValidationCommandOutput) => void
+  ): void;
+  runValidation(
+    args: RunValidationCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RunValidationCommandOutput) => void
   ): void;
 
   /**

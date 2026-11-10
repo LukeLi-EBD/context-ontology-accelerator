@@ -150,12 +150,16 @@
         "com.amazon.semanticcontext.ontologygraph#GetGraphObjectProperty",
         "com.amazon.semanticcontext.ontologygraph#GetIngestStatus",
         "com.amazon.semanticcontext.ontologygraph#GetOntology",
+        "com.amazon.semanticcontext.ontologygraph#GetOntologyDiff",
         "com.amazon.semanticcontext.ontologygraph#GetOntologyOverview",
+        "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshot",
         "com.amazon.semanticcontext.ontologygraph#GetOntologyUploadUrl",
+        "com.amazon.semanticcontext.ontologygraph#GetReasoningStatus",
         "com.amazon.semanticcontext.ontologygraph#GraphSearch",
         "com.amazon.semanticcontext.ontologygraph#IngestOntologyFromS3",
         "com.amazon.semanticcontext.ontologygraph#ListOntologies",
         "com.amazon.semanticcontext.ontologygraph#ListStatements",
+        "com.amazon.semanticcontext.ontologygraph#RunValidation",
         "com.amazon.semanticcontext.ontologygraph#UploadOntology",
         "com.amazon.semanticcontext.ontologyinduction#AcceptProposal",
         "com.amazon.semanticcontext.ontologyinduction#CancelProposal",
@@ -388,15 +392,6 @@
         {
             "id": "HttpMethodSemantics.MissingIdempotentTrait",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#DeleteSource",
-            "message": "This operation uses the `DELETE` method in the `http` trait, but is not marked with the idempotent trait",
-            "filename": "/work/models/src/main/smithy/unified-sources.smithy",
-            "line": 1675,
-            "column": 1
-        },
-        {
-            "id": "HttpMethodSemantics.MissingIdempotentTrait",
-            "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#UpdateSourceMetadata",
             "message": "This operation uses the `PUT` method in the `http` trait, but is not marked with the idempotent trait",
             "filename": "/work/models/src/main/smithy/unified-sources.smithy",
@@ -404,13 +399,13 @@
             "column": 1
         },
         {
-            "id": "IdempotencyTokenIgnored",
-            "severity": "SUPPRESSED",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
-            "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
+            "id": "HttpMethodSemantics.MissingIdempotentTrait",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#DeleteSource",
+            "message": "This operation uses the `DELETE` method in the `http` trait, but is not marked with the idempotent trait",
             "filename": "/work/models/src/main/smithy/unified-sources.smithy",
-            "line": 1295,
-            "column": 5
+            "line": 1675,
+            "column": 1
         },
         {
             "id": "IdempotencyTokenIgnored",
@@ -431,13 +426,13 @@
             "column": 5
         },
         {
-            "id": "OperationNameAmbiguity",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#GetSourceOutput",
-            "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#GetSource, but that operation uses com.amazon.semanticcontext.unifiedsources#GetSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
+            "id": "IdempotencyTokenIgnored",
+            "severity": "SUPPRESSED",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
+            "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
             "filename": "/work/models/src/main/smithy/unified-sources.smithy",
-            "line": 1386,
-            "column": 1
+            "line": 1295,
+            "column": 5
         },
         {
             "id": "OperationNameAmbiguity",
@@ -446,6 +441,15 @@
             "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
             "filename": "/work/models/src/main/smithy/grant.smithy",
             "line": 98,
+            "column": 1
+        },
+        {
+            "id": "OperationNameAmbiguity",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#GetSourceOutput",
+            "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#GetSource, but that operation uses com.amazon.semanticcontext.unifiedsources#GetSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
+            "filename": "/work/models/src/main/smithy/unified-sources.smithy",
+            "line": 1386,
             "column": 1
         },
         {

@@ -54,12 +54,16 @@ use com.amazon.semanticcontext.ontologygraph#GetGraphDatatypeProperty
 use com.amazon.semanticcontext.ontologygraph#GetGraphObjectProperty
 use com.amazon.semanticcontext.ontologygraph#GetIngestStatus
 use com.amazon.semanticcontext.ontologygraph#GetOntology
+use com.amazon.semanticcontext.ontologygraph#GetOntologyDiff
 use com.amazon.semanticcontext.ontologygraph#GetOntologyOverview
+use com.amazon.semanticcontext.ontologygraph#GetOntologySnapshot
 use com.amazon.semanticcontext.ontologygraph#GetOntologyUploadUrl
+use com.amazon.semanticcontext.ontologygraph#GetReasoningStatus
 use com.amazon.semanticcontext.ontologygraph#GraphSearch
 use com.amazon.semanticcontext.ontologygraph#IngestOntologyFromS3
 use com.amazon.semanticcontext.ontologygraph#ListOntologies
 use com.amazon.semanticcontext.ontologygraph#ListStatements
+use com.amazon.semanticcontext.ontologygraph#RunValidation
 use com.amazon.semanticcontext.ontologygraph#UploadOntology
 use com.amazon.semanticcontext.ontologyinduction#AcceptProposal
 use com.amazon.semanticcontext.ontologyinduction#CancelProposal
@@ -244,6 +248,11 @@ service ControlPlaneService {
         GetGraphObjectProperty
         GetGraphDatatypeProperty
         GetOntologyOverview
+        // ── Health board (coverage, quality, diff) ──────────────────────
+        GetOntologySnapshot
+        RunValidation
+        GetReasoningStatus
+        GetOntologyDiff
         // ── Entity embeddings ───────────────────────────────────────────
         GetEntityEmbeddings
         SearchEmbeddings
@@ -287,7 +296,28 @@ operation GetSystemHealth {
 
         /// OpenSearch Serverless collection status
         opensearch: String
+
+        /// Code/database schema consistency (migration state); absent when the
+        /// deployment cannot read the schema version table.
+        schemaVersion: SystemSchemaVersion
     }
+}
+
+/// Compares the schema version this build expects with the one the database reports.
+structure SystemSchemaVersion {
+    /// Highest migration version this build ships.
+    @required
+    codeVersion: Integer
+
+    /// Highest applied migration version recorded by the database; null when unreadable.
+    dbVersion: Integer
+
+    /// True only when both versions are known and equal.
+    consistent: Boolean
+
+    /// Human-readable provenance for the two numbers.
+    @required
+    source: String
 }
 
 /// Health of the ontology-induction subsystem's dependencies: the graph store (Neptune Analytics),

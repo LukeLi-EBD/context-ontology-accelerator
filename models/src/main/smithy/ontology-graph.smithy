@@ -1043,6 +1043,332 @@ list GraphPathList {
     member: GraphPath
 }
 
+/// Read-only T-Box/A-Box coverage for the health board.
+///
+/// Counts are SPARQL aggregations over the namespace's named graphs: the
+/// T-Box is every ``owl:Class``/``owl:*Property`` declared in any of them,
+/// the A-Box is every distinct subject typed by one of those classes. Classes
+/// with zero instances are real gaps here, not hidden by a synthetic sample.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/snapshot", code: 200)
+operation GetOntologySnapshot {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+    }
+
+    output := {
+        /// Declared schema objects.
+        @required
+        tbox: OntologySnapshotTbox
+
+        /// Asserted data using that schema.
+        @required
+        abox: OntologySnapshotAbox
+
+        /// How much of the schema the data actually uses.
+        @required
+        coverage: OntologyCoverage
+
+        /// Named graphs in this namespace, so the diff form can offer real choices.
+        @required
+        graphs: GraphUriList
+
+        /// Human-readable provenance for the numbers above.
+        @required
+        source: String
+
+        /// When the aggregation ran (ISO-8601).
+        @required
+        sampledAt: String
+    }
+}
+
+/// Counts of declared schema objects (the T-Box).
+structure OntologySnapshotTbox {
+    /// Distinct ``owl:Class`` IRIs.
+    @required
+    classes: Integer
+
+    /// Distinct ``owl:ObjectProperty`` IRIs.
+    @required
+    objectProperties: Integer
+
+    /// Distinct ``owl:DatatypeProperty`` IRIs.
+    @required
+    datatypeProperties: Integer
+}
+
+/// Counts of asserted instances (the A-Box).
+structure OntologySnapshotAbox {
+    /// Distinct subjects typed by a class declared in this namespace.
+    @required
+    instances: Integer
+
+    /// Distinct declared classes that carry at least one instance.
+    @required
+    classesWithInstances: Integer
+}
+
+/// The share of declared classes that the data actually uses.
+structure OntologyCoverage {
+    /// ``classesWithInstances / tbox.classes`` in 0..1; 0 when no class is declared.
+    @required
+    classCoverage: Double
+
+    /// Declared classes without ``rdfs:label`` or ``skos:prefLabel``.
+    @required
+    unlabeledClasses: Integer
+}
+
+/// A list of named graph IRIs.
+list GraphUriList {
+    member: String
+}
+
+/// Run the read-only quality checks the health board reports.
+///
+/// Despite the verb, nothing is written: the operation measures orphan
+/// instances, unlabeled classes and SHACL conformance. Checks that cannot
+/// run (no shapes, no reasoner) report a null count with a ``detail`` —
+/// never a fabricated zero.
+@http(method: "POST", uri: "/namespaces/{namespaceId}/graph/validate", code: 200)
+operation RunValidation {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+    }
+
+    output := {
+        /// Instances with no properties beyond ``rdf:type``/``rdfs:label``
+        /// and no inbound references.
+        @required
+        orphanInstances: QualityCount
+
+        /// Declared classes without any label.
+        @required
+        unlabeledClasses: QualityCount
+
+        /// SHACL gate result, or an explicit "skipped" when no shapes exist.
+        @required
+        shacl: ShaclReport
+
+        /// Failed inference jobs; null when this service cannot observe them.
+        @required
+        inferenceFailures: QualityCount
+
+        /// Human-readable provenance for the checks above.
+        @required
+        source: String
+
+        /// When the checks ran (ISO-8601).
+        @required
+        sampledAt: String
+    }
+}
+
+/// A measured count that may be unavailable.
+structure QualityCount {
+    /// The measured count, or null when the check could not run.
+    count: Integer
+
+    /// How the count was measured, or why it is null.
+    detail: String
+}
+
+/// Outcome of the SHACL gate.
+structure ShaclReport {
+    /// One of ``ok``, ``violations``, ``skipped``, ``error``.
+    @required
+    status: String
+
+    /// Number of violations; null when the gate did not run.
+    violations: Integer
+
+    /// True only when the gate ran and produced no violations.
+    conforms: Boolean
+
+    /// Reason the gate was skipped or errored.
+    detail: String
+}
+
+/// Report whether an inference engine is wired up and how its last job went.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/reasoning", code: 200)
+operation GetReasoningStatus {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+    }
+
+    output := {
+        /// True only when this deployment has a reasoner configured.
+        @required
+        available: Boolean
+
+        /// Reasoner identifier (for example ``elk``); null when none is configured.
+        engine: String
+
+        /// Failed materialization jobs; null when not observable from here.
+        failures: QualityCount
+
+        /// Human-readable explanation of the state above.
+        detail: String
+
+        /// Where this status came from.
+        @required
+        source: String
+
+        /// When the status was sampled (ISO-8601).
+        @required
+        sampledAt: String
+    }
+}
+
+/// Compare two named graphs in the same namespace, read-only.
+///
+/// ``from`` is the baseline and ``to`` the target; added means present in
+/// ``to`` and absent from ``from``. Both IRIs must belong to this namespace,
+/// so an arbitrary graph cannot be read through the diff.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/diff", code: 200)
+operation GetOntologyDiff {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// Baseline named graph IRI, inside this namespace.
+        @required
+        @httpQuery("from")
+        @length(max: 2048)
+        fromGraph: String
+
+        /// Target named graph IRI, inside this namespace.
+        @required
+        @httpQuery("to")
+        @length(max: 2048)
+        toGraph: String
+
+        /// Maximum sample rows per side (1–200).
+        @httpQuery("limit")
+        @range(min: 1, max: 200)
+        limit: Integer
+    }
+
+    output := {
+        /// Baseline graph that was compared.
+        @required
+        baselineGraph: String
+
+        /// Target graph that was compared.
+        @required
+        targetGraph: String
+
+        /// Triple and schema deltas.
+        @required
+        counts: OntologyDiffCounts
+
+        /// Class IRIs only in the target (sample).
+        @required
+        addedClasses: OntologyDiffStringList
+
+        /// Class IRIs only in the baseline (sample).
+        @required
+        removedClasses: OntologyDiffStringList
+
+        /// Property IRIs only in the target (sample).
+        @required
+        addedProperties: OntologyDiffStringList
+
+        /// Property IRIs only in the baseline (sample).
+        @required
+        removedProperties: OntologyDiffStringList
+
+        /// Sample triples behind the counts.
+        @required
+        examples: OntologyDiffExamples
+
+        /// True when a sample list or example set was cut at ``limit``.
+        @required
+        truncated: Boolean
+
+        /// Human-readable provenance for the diff.
+        @required
+        source: String
+
+        /// When the diff ran (ISO-8601).
+        @required
+        sampledAt: String
+    }
+}
+
+/// Triple and schema delta counts.
+structure OntologyDiffCounts {
+    /// Triples present in the target and absent from the baseline.
+    @required
+    addedTriples: Integer
+
+    /// Triples present in the baseline and absent from the target.
+    @required
+    removedTriples: Integer
+
+    /// Classes added.
+    @required
+    addedClasses: Integer
+
+    /// Classes removed.
+    @required
+    removedClasses: Integer
+
+    /// Properties added (object or datatype).
+    @required
+    addedProperties: Integer
+
+    /// Properties removed.
+    @required
+    removedProperties: Integer
+}
+
+/// Sample triples for each side of the diff.
+structure OntologyDiffExamples {
+    /// Sample of added triples.
+    @required
+    addedTriples: TripleExampleList
+
+    /// Sample of removed triples.
+    @required
+    removedTriples: TripleExampleList
+}
+
+/// One sampled triple.
+structure TripleExample {
+    /// Subject IRI.
+    @required
+    subject: String
+
+    /// Predicate IRI.
+    @required
+    predicate: String
+
+    /// Object IRI or lexical literal form.
+    @required
+    object: String
+}
+
+/// A list of sampled triples.
+list TripleExampleList {
+    member: TripleExample
+}
+
+/// A list of IRIs or short strings.
+list OntologyDiffStringList {
+    member: String
+}
+
 /// Look up a class vertex by IRI.
 ///
 /// The IRI is passed as a query parameter (``?uri=…``) rather than a

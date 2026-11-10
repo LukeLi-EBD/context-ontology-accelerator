@@ -6413,6 +6413,295 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/graph/diff": {
+            "get": {
+                "description": "Compare two named graphs in the same namespace, read-only.\n\n``from`` is the baseline and ``to`` the target; added means present in\n``to`` and absent from ``from``. Both IRIs must belong to this namespace,\nso an arbitrary graph cannot be read through the diff.",
+                "operationId": "GetOntologyDiff",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyDiff_example1": {
+                                "summary": "Diff a baseline graph against a newer one",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Baseline named graph IRI, inside this namespace.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "description": "Baseline named graph IRI, inside this namespace."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyDiff_example1": {
+                                "summary": "Diff a baseline graph against a newer one",
+                                "description": "",
+                                "value": "http://coa.amazon.com/onto/sales-crm-v1"
+                            }
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Target named graph IRI, inside this namespace.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "description": "Target named graph IRI, inside this namespace."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyDiff_example1": {
+                                "summary": "Diff a baseline graph against a newer one",
+                                "description": "",
+                                "value": "http://coa.amazon.com/onto/sales-crm-v2"
+                            }
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Maximum sample rows per side (1–200).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 200,
+                            "minimum": 1,
+                            "description": "Maximum sample rows per side (1–200)."
+                        },
+                        "examples": {
+                            "GetOntologyDiff_example1": {
+                                "summary": "Diff a baseline graph against a newer one",
+                                "description": "",
+                                "value": 20
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetOntologyDiff 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetOntologyDiffResponseContent"
+                                },
+                                "examples": {
+                                    "GetOntologyDiff_example1": {
+                                        "summary": "Diff a baseline graph against a newer one",
+                                        "description": "",
+                                        "value": {
+                                            "baselineGraph": "http://coa.amazon.com/onto/sales-crm-v1",
+                                            "targetGraph": "http://coa.amazon.com/onto/sales-crm-v2",
+                                            "counts": {
+                                                "addedTriples": 12,
+                                                "removedTriples": 3,
+                                                "addedClasses": 1,
+                                                "removedClasses": 0,
+                                                "addedProperties": 2,
+                                                "removedProperties": 1
+                                            },
+                                            "addedClasses": [
+                                                "http://example.com/onto#LoyaltyAccount"
+                                            ],
+                                            "removedClasses": [],
+                                            "addedProperties": [
+                                                "http://example.com/onto#loyaltyTier"
+                                            ],
+                                            "removedProperties": [
+                                                "http://example.com/onto#legacyCode"
+                                            ],
+                                            "examples": {
+                                                "addedTriples": [
+                                                    {
+                                                        "subject": "http://example.com/onto#LoyaltyAccount",
+                                                        "predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+                                                        "object": "http://www.w3.org/2002/07/owl#Class"
+                                                    }
+                                                ],
+                                                "removedTriples": []
+                                            },
+                                            "truncated": false,
+                                            "source": "SPARQL MINUS over the two named graphs",
+                                            "sampledAt": "2026-11-10T09:00:00Z"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphDiff",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologyDiff_example1": {
+                                "summary": "Diff a baseline graph against a newer one",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/graph/object-property": {
             "get": {
                 "description": "Look up an object-property vertex by IRI (query param).",
@@ -7265,6 +7554,215 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/graph/reasoning": {
+            "get": {
+                "description": "Report whether an inference engine is wired up and how its last job went.",
+                "operationId": "GetReasoningStatus",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetReasoningStatus_example1": {
+                                "summary": "No reasoner configured",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetReasoningStatus 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetReasoningStatusResponseContent"
+                                },
+                                "examples": {
+                                    "GetReasoningStatus_example1": {
+                                        "summary": "No reasoner configured",
+                                        "description": "",
+                                        "value": {
+                                            "available": false,
+                                            "failures": {
+                                                "detail": "inference jobs are not observable from this service"
+                                            },
+                                            "detail": "This deployment does not configure a reasoner; only asserted triples are served.",
+                                            "source": "ontology-engine capability check",
+                                            "sampledAt": "2026-11-10T09:00:00Z"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphReasoning",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetReasoningStatus_example1": {
+                                "summary": "No reasoner configured",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/graph/search": {
             "get": {
                 "description": "Substring search over entity IRIs and labels in a namespace's graphs.",
@@ -7511,6 +8009,227 @@
                         "examples": {
                             "GraphSearch_example1": {
                                 "summary": "Search for class vertices matching a term",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/graph/snapshot": {
+            "get": {
+                "description": "Read-only T-Box/A-Box coverage for the health board.\n\nCounts are SPARQL aggregations over the namespace's named graphs: the\nT-Box is every ``owl:Class``/``owl:*Property`` declared in any of them,\nthe A-Box is every distinct subject typed by one of those classes. Classes\nwith zero instances are real gaps here, not hidden by a synthetic sample.",
+                "operationId": "GetOntologySnapshot",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologySnapshot_example1": {
+                                "summary": "Read T-Box/A-Box coverage for a namespace",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetOntologySnapshot 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetOntologySnapshotResponseContent"
+                                },
+                                "examples": {
+                                    "GetOntologySnapshot_example1": {
+                                        "summary": "Read T-Box/A-Box coverage for a namespace",
+                                        "description": "",
+                                        "value": {
+                                            "tbox": {
+                                                "classes": 156,
+                                                "objectProperties": 84,
+                                                "datatypeProperties": 45
+                                            },
+                                            "abox": {
+                                                "instances": 18020,
+                                                "classesWithInstances": 4
+                                            },
+                                            "coverage": {
+                                                "classCoverage": 0.0256,
+                                                "unlabeledClasses": 0
+                                            },
+                                            "graphs": [
+                                                "http://coa.amazon.com/onto/sales-crm",
+                                                "urn:coa:abox:platform-synthetic"
+                                            ],
+                                            "source": "SPARQL aggregation over the namespace named graphs",
+                                            "sampledAt": "2026-11-10T09:00:00Z"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphSnapshot",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetOntologySnapshot_example1": {
+                                "summary": "Read T-Box/A-Box coverage for a namespace",
                                 "description": "",
                                 "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
                             }
@@ -7865,6 +8584,225 @@
                     },
                     "type": "mock",
                     "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/graph/validate": {
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphValidate",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RunValidation_example1": {
+                                "summary": "Run the read-only quality checks",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'POST'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            },
+            "post": {
+                "description": "Run the read-only quality checks the health board reports.\n\nDespite the verb, nothing is written: the operation measures orphan\ninstances, unlabeled classes and SHACL conformance. Checks that cannot\nrun (no shapes, no reasoner) report a null count with a ``detail`` —\nnever a fabricated zero.",
+                "operationId": "RunValidation",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RunValidation_example1": {
+                                "summary": "Run the read-only quality checks",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RunValidation 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RunValidationResponseContent"
+                                },
+                                "examples": {
+                                    "RunValidation_example1": {
+                                        "summary": "Run the read-only quality checks",
+                                        "description": "",
+                                        "value": {
+                                            "orphanInstances": {
+                                                "count": 0,
+                                                "detail": "instances typed by a declared class with no other edge"
+                                            },
+                                            "unlabeledClasses": {
+                                                "count": 0,
+                                                "detail": "declared classes missing rdfs:label and skos:prefLabel"
+                                            },
+                                            "shacl": {
+                                                "status": "skipped",
+                                                "detail": "no shapes configured (no-shapes)"
+                                            },
+                                            "inferenceFailures": {
+                                                "detail": "no reasoner wired up in this deployment"
+                                            },
+                                            "source": "SPARQL over the namespace named graphs; SHACL shapes from the configured shapes file",
+                                            "sampledAt": "2026-11-10T09:00:00Z"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -27699,6 +28637,78 @@
                     "role"
                 ]
             },
+            "GetOntologyDiffResponseContent": {
+                "type": "object",
+                "properties": {
+                    "baselineGraph": {
+                        "type": "string",
+                        "description": "Baseline graph that was compared."
+                    },
+                    "targetGraph": {
+                        "type": "string",
+                        "description": "Target graph that was compared."
+                    },
+                    "counts": {
+                        "$ref": "#/components/schemas/OntologyDiffCounts"
+                    },
+                    "addedClasses": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Class IRIs only in the target (sample)."
+                    },
+                    "removedClasses": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Class IRIs only in the baseline (sample)."
+                    },
+                    "addedProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Property IRIs only in the target (sample)."
+                    },
+                    "removedProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Property IRIs only in the baseline (sample)."
+                    },
+                    "examples": {
+                        "$ref": "#/components/schemas/OntologyDiffExamples"
+                    },
+                    "truncated": {
+                        "type": "boolean",
+                        "description": "True when a sample list or example set was cut at ``limit``."
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Human-readable provenance for the diff."
+                    },
+                    "sampledAt": {
+                        "type": "string",
+                        "description": "When the diff ran (ISO-8601)."
+                    }
+                },
+                "required": [
+                    "addedClasses",
+                    "addedProperties",
+                    "baselineGraph",
+                    "counts",
+                    "examples",
+                    "removedClasses",
+                    "removedProperties",
+                    "sampledAt",
+                    "source",
+                    "targetGraph",
+                    "truncated"
+                ]
+            },
             "GetOntologyOverviewResponseContent": {
                 "type": "object",
                 "description": "Everything persisted in one ontology's named graph, grouped for display.\nRead from the graph store (not the registry), so it reflects the triples\nthat actually landed in the knowledge graph.",
@@ -27763,6 +28773,43 @@
                 },
                 "required": [
                     "ontology"
+                ]
+            },
+            "GetOntologySnapshotResponseContent": {
+                "type": "object",
+                "properties": {
+                    "tbox": {
+                        "$ref": "#/components/schemas/OntologySnapshotTbox"
+                    },
+                    "abox": {
+                        "$ref": "#/components/schemas/OntologySnapshotAbox"
+                    },
+                    "coverage": {
+                        "$ref": "#/components/schemas/OntologyCoverage"
+                    },
+                    "graphs": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Named graphs in this namespace, so the diff form can offer real choices."
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Human-readable provenance for the numbers above."
+                    },
+                    "sampledAt": {
+                        "type": "string",
+                        "description": "When the aggregation ran (ISO-8601)."
+                    }
+                },
+                "required": [
+                    "abox",
+                    "coverage",
+                    "graphs",
+                    "sampledAt",
+                    "source",
+                    "tbox"
                 ]
             },
             "GetOntologyUploadUrlRequestContent": {
@@ -27977,6 +29024,39 @@
                     "jobId",
                     "proposalId",
                     "status"
+                ]
+            },
+            "GetReasoningStatusResponseContent": {
+                "type": "object",
+                "properties": {
+                    "available": {
+                        "type": "boolean",
+                        "description": "True only when this deployment has a reasoner configured."
+                    },
+                    "engine": {
+                        "type": "string",
+                        "description": "Reasoner identifier (for example ``elk``); null when none is configured."
+                    },
+                    "failures": {
+                        "$ref": "#/components/schemas/QualityCount"
+                    },
+                    "detail": {
+                        "type": "string",
+                        "description": "Human-readable explanation of the state above."
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Where this status came from."
+                    },
+                    "sampledAt": {
+                        "type": "string",
+                        "description": "When the status was sampled (ISO-8601)."
+                    }
+                },
+                "required": [
+                    "available",
+                    "sampledAt",
+                    "source"
                 ]
             },
             "GetSourceOutput": {
@@ -28247,6 +29327,9 @@
                     "opensearch": {
                         "type": "string",
                         "description": "OpenSearch Serverless collection status"
+                    },
+                    "schemaVersion": {
+                        "$ref": "#/components/schemas/SystemSchemaVersion"
                     }
                 },
                 "required": [
@@ -29988,6 +31071,87 @@
                     "uri"
                 ]
             },
+            "OntologyCoverage": {
+                "type": "object",
+                "description": "The share of declared classes that the data actually uses.",
+                "properties": {
+                    "classCoverage": {
+                        "type": "number",
+                        "description": "``classesWithInstances / tbox.classes`` in 0..1; 0 when no class is declared.",
+                        "format": "double"
+                    },
+                    "unlabeledClasses": {
+                        "type": "number",
+                        "description": "Declared classes without ``rdfs:label`` or ``skos:prefLabel``."
+                    }
+                },
+                "required": [
+                    "classCoverage",
+                    "unlabeledClasses"
+                ]
+            },
+            "OntologyDiffCounts": {
+                "type": "object",
+                "description": "Triple and schema delta counts.",
+                "properties": {
+                    "addedTriples": {
+                        "type": "number",
+                        "description": "Triples present in the target and absent from the baseline."
+                    },
+                    "removedTriples": {
+                        "type": "number",
+                        "description": "Triples present in the baseline and absent from the target."
+                    },
+                    "addedClasses": {
+                        "type": "number",
+                        "description": "Classes added."
+                    },
+                    "removedClasses": {
+                        "type": "number",
+                        "description": "Classes removed."
+                    },
+                    "addedProperties": {
+                        "type": "number",
+                        "description": "Properties added (object or datatype)."
+                    },
+                    "removedProperties": {
+                        "type": "number",
+                        "description": "Properties removed."
+                    }
+                },
+                "required": [
+                    "addedClasses",
+                    "addedProperties",
+                    "addedTriples",
+                    "removedClasses",
+                    "removedProperties",
+                    "removedTriples"
+                ]
+            },
+            "OntologyDiffExamples": {
+                "type": "object",
+                "description": "Sample triples for each side of the diff.",
+                "properties": {
+                    "addedTriples": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TripleExample"
+                        },
+                        "description": "Sample of added triples."
+                    },
+                    "removedTriples": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/TripleExample"
+                        },
+                        "description": "Sample of removed triples."
+                    }
+                },
+                "required": [
+                    "addedTriples",
+                    "removedTriples"
+                ]
+            },
             "OntologyFileFormat": {
                 "type": "string",
                 "description": "Serialization format of an ontology file, as accepted by\nIngestOntologyFromS3. Several spellings name the same format.",
@@ -30128,6 +31292,47 @@
                 "required": [
                     "ontologyId",
                     "uri"
+                ]
+            },
+            "OntologySnapshotAbox": {
+                "type": "object",
+                "description": "Counts of asserted instances (the A-Box).",
+                "properties": {
+                    "instances": {
+                        "type": "number",
+                        "description": "Distinct subjects typed by a class declared in this namespace."
+                    },
+                    "classesWithInstances": {
+                        "type": "number",
+                        "description": "Distinct declared classes that carry at least one instance."
+                    }
+                },
+                "required": [
+                    "classesWithInstances",
+                    "instances"
+                ]
+            },
+            "OntologySnapshotTbox": {
+                "type": "object",
+                "description": "Counts of declared schema objects (the T-Box).",
+                "properties": {
+                    "classes": {
+                        "type": "number",
+                        "description": "Distinct ``owl:Class`` IRIs."
+                    },
+                    "objectProperties": {
+                        "type": "number",
+                        "description": "Distinct ``owl:ObjectProperty`` IRIs."
+                    },
+                    "datatypeProperties": {
+                        "type": "number",
+                        "description": "Distinct ``owl:DatatypeProperty`` IRIs."
+                    }
+                },
+                "required": [
+                    "classes",
+                    "datatypeProperties",
+                    "objectProperties"
                 ]
             },
             "OntologyType": {
@@ -30521,6 +31726,20 @@
                     "rescanSchedule",
                     "sourceId"
                 ]
+            },
+            "QualityCount": {
+                "type": "object",
+                "description": "A measured count that may be unavailable.",
+                "properties": {
+                    "count": {
+                        "type": "number",
+                        "description": "The measured count, or null when the check could not run."
+                    },
+                    "detail": {
+                        "type": "string",
+                        "description": "How the count was measured, or why it is null."
+                    }
+                }
             },
             "QueryEngine": {
                 "type": "string",
@@ -30954,6 +32173,39 @@
                     "scope"
                 ]
             },
+            "RunValidationResponseContent": {
+                "type": "object",
+                "properties": {
+                    "orphanInstances": {
+                        "$ref": "#/components/schemas/QualityCount"
+                    },
+                    "unlabeledClasses": {
+                        "$ref": "#/components/schemas/QualityCount"
+                    },
+                    "shacl": {
+                        "$ref": "#/components/schemas/ShaclReport"
+                    },
+                    "inferenceFailures": {
+                        "$ref": "#/components/schemas/QualityCount"
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Human-readable provenance for the checks above."
+                    },
+                    "sampledAt": {
+                        "type": "string",
+                        "description": "When the checks ran (ISO-8601)."
+                    }
+                },
+                "required": [
+                    "inferenceFailures",
+                    "orphanInstances",
+                    "sampledAt",
+                    "shacl",
+                    "source",
+                    "unlabeledClasses"
+                ]
+            },
             "ScanJobEntry": {
                 "type": "object",
                 "description": "One row in a source's scan history.",
@@ -31104,6 +32356,31 @@
                 },
                 "required": [
                     "message"
+                ]
+            },
+            "ShaclReport": {
+                "type": "object",
+                "description": "Outcome of the SHACL gate.",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": "One of ``ok``, ``violations``, ``skipped``, ``error``."
+                    },
+                    "violations": {
+                        "type": "number",
+                        "description": "Number of violations; null when the gate did not run."
+                    },
+                    "conforms": {
+                        "type": "boolean",
+                        "description": "True only when the gate ran and produced no violations."
+                    },
+                    "detail": {
+                        "type": "string",
+                        "description": "Reason the gate was skipped or errored."
+                    }
+                },
+                "required": [
+                    "status"
                 ]
             },
             "SourceScanJobStatus": {
@@ -31397,6 +32674,32 @@
                 },
                 "description": "Retired annotation literals keyed by kind (``comments`` / ``definitions`` /\n``altLabels`` / ``glossaryTerms`` / ``tags``). See ``GraphVertex.superseded``."
             },
+            "SystemSchemaVersion": {
+                "type": "object",
+                "description": "Compares the schema version this build expects with the one the database reports.",
+                "properties": {
+                    "codeVersion": {
+                        "type": "number",
+                        "description": "Highest migration version this build ships."
+                    },
+                    "dbVersion": {
+                        "type": "number",
+                        "description": "Highest applied migration version recorded by the database; null when unreadable."
+                    },
+                    "consistent": {
+                        "type": "boolean",
+                        "description": "True only when both versions are known and equal."
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Human-readable provenance for the two numbers."
+                    }
+                },
+                "required": [
+                    "codeVersion",
+                    "source"
+                ]
+            },
             "TableSummary": {
                 "type": "object",
                 "description": "A summary record for a source table in list/get responses: identifiers,\ndatabase, column and approved-column counts, review status, and enrichment\nsource.",
@@ -31486,6 +32789,29 @@
                     "MONTH",
                     "QUARTER",
                     "YEAR"
+                ]
+            },
+            "TripleExample": {
+                "type": "object",
+                "description": "One sampled triple.",
+                "properties": {
+                    "subject": {
+                        "type": "string",
+                        "description": "Subject IRI."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "description": "Predicate IRI."
+                    },
+                    "object": {
+                        "type": "string",
+                        "description": "Object IRI or lexical literal form."
+                    }
+                },
+                "required": [
+                    "object",
+                    "predicate",
+                    "subject"
                 ]
             },
             "UpdateMetricRequestContent": {

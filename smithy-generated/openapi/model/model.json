@@ -1756,10 +1756,19 @@
                     "target": "com.amazon.semanticcontext.ontologygraph#GetOntology"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GetOntologyDiff"
+                },
+                {
                     "target": "com.amazon.semanticcontext.ontologygraph#GetOntologyOverview"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshot"
+                },
+                {
                     "target": "com.amazon.semanticcontext.ontologygraph#GetOntologyUploadUrl"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GetReasoningStatus"
                 },
                 {
                     "target": "com.amazon.semanticcontext.ontologygraph#GraphSearch"
@@ -1772,6 +1781,9 @@
                 },
                 {
                     "target": "com.amazon.semanticcontext.ontologygraph#ListStatements"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.ontologygraph#RunValidation"
                 },
                 {
                     "target": "com.amazon.semanticcontext.ontologygraph#UploadOntology"
@@ -2011,6 +2023,12 @@
                     "traits": {
                         "smithy.api#documentation": "OpenSearch Serverless collection status"
                     }
+                },
+                "schemaVersion": {
+                    "target": "com.amazon.semanticcontext#SystemSchemaVersion",
+                    "traits": {
+                        "smithy.api#documentation": "Code/database schema consistency (migration state); absent when the\ndeployment cannot read the schema version table."
+                    }
                 }
             },
             "traits": {
@@ -2089,6 +2107,40 @@
             },
             "traits": {
                 "smithy.api#documentation": "Health of the ontology-induction subsystem's dependencies: the graph store (Neptune Analytics),\nvector store (OpenSearch), Bedrock embeddings backend, and description LLM (Bedrock Converse)."
+            }
+        },
+        "com.amazon.semanticcontext#SystemSchemaVersion": {
+            "type": "structure",
+            "members": {
+                "codeVersion": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Highest migration version this build ships.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "dbVersion": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Highest applied migration version recorded by the database; null when unreadable."
+                    }
+                },
+                "consistent": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True only when both versions are known and equal."
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable provenance for the two numbers.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Compares the schema version this build expects with the one the database reports."
             }
         },
         "com.amazon.semanticcontext.common#AccessDeniedError": {
@@ -10137,6 +10189,203 @@
                 "smithy.api#readonly": {}
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#GetOntologyDiff": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetOntologyDiffInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetOntologyDiffOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Compare two named graphs in the same namespace, read-only.\n\n``from`` is the baseline and ``to`` the target; added means present in\n``to`` and absent from ``from``. Both IRIs must belong to this namespace,\nso an arbitrary graph cannot be read through the diff.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Diff a baseline graph against a newer one",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "fromGraph": "http://coa.amazon.com/onto/sales-crm-v1",
+                            "toGraph": "http://coa.amazon.com/onto/sales-crm-v2",
+                            "limit": 20
+                        },
+                        "output": {
+                            "baselineGraph": "http://coa.amazon.com/onto/sales-crm-v1",
+                            "targetGraph": "http://coa.amazon.com/onto/sales-crm-v2",
+                            "counts": {
+                                "addedTriples": 12,
+                                "removedTriples": 3,
+                                "addedClasses": 1,
+                                "removedClasses": 0,
+                                "addedProperties": 2,
+                                "removedProperties": 1
+                            },
+                            "addedClasses": [
+                                "http://example.com/onto#LoyaltyAccount"
+                            ],
+                            "removedClasses": [],
+                            "addedProperties": [
+                                "http://example.com/onto#loyaltyTier"
+                            ],
+                            "removedProperties": [
+                                "http://example.com/onto#legacyCode"
+                            ],
+                            "examples": {
+                                "addedTriples": [
+                                    {
+                                        "subject": "http://example.com/onto#LoyaltyAccount",
+                                        "predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+                                        "object": "http://www.w3.org/2002/07/owl#Class"
+                                    }
+                                ],
+                                "removedTriples": []
+                            },
+                            "truncated": false,
+                            "source": "SPARQL MINUS over the two named graphs",
+                            "sampledAt": "2026-11-10T09:00:00Z"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/graph/diff",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetOntologyDiffInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "fromGraph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Baseline named graph IRI, inside this namespace.",
+                        "smithy.api#httpQuery": "from",
+                        "smithy.api#length": {
+                            "max": 2048
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "toGraph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Target named graph IRI, inside this namespace.",
+                        "smithy.api#httpQuery": "to",
+                        "smithy.api#length": {
+                            "max": 2048
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum sample rows per side (1–200).",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 200
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetOntologyDiffOutput": {
+            "type": "structure",
+            "members": {
+                "baselineGraph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Baseline graph that was compared.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "targetGraph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Target graph that was compared.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "counts": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyDiffCounts",
+                    "traits": {
+                        "smithy.api#documentation": "Triple and schema deltas.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "addedClasses": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyDiffStringList",
+                    "traits": {
+                        "smithy.api#documentation": "Class IRIs only in the target (sample).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "removedClasses": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyDiffStringList",
+                    "traits": {
+                        "smithy.api#documentation": "Class IRIs only in the baseline (sample).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "addedProperties": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyDiffStringList",
+                    "traits": {
+                        "smithy.api#documentation": "Property IRIs only in the target (sample).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "removedProperties": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyDiffStringList",
+                    "traits": {
+                        "smithy.api#documentation": "Property IRIs only in the baseline (sample).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "examples": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyDiffExamples",
+                    "traits": {
+                        "smithy.api#documentation": "Sample triples behind the counts.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "truncated": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when a sample list or example set was cut at ``limit``.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable provenance for the diff.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sampledAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the diff ran (ISO-8601).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#GetOntologyInput": {
             "type": "structure",
             "members": {
@@ -10292,6 +10541,118 @@
                 "smithy.api#input": {}
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshot": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshotInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshotOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Read-only T-Box/A-Box coverage for the health board.\n\nCounts are SPARQL aggregations over the namespace's named graphs: the\nT-Box is every ``owl:Class``/``owl:*Property`` declared in any of them,\nthe A-Box is every distinct subject typed by one of those classes. Classes\nwith zero instances are real gaps here, not hidden by a synthetic sample.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Read T-Box/A-Box coverage for a namespace",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                        },
+                        "output": {
+                            "tbox": {
+                                "classes": 156,
+                                "objectProperties": 84,
+                                "datatypeProperties": 45
+                            },
+                            "abox": {
+                                "instances": 18020,
+                                "classesWithInstances": 4
+                            },
+                            "coverage": {
+                                "classCoverage": 0.0256,
+                                "unlabeledClasses": 0
+                            },
+                            "graphs": [
+                                "http://coa.amazon.com/onto/sales-crm",
+                                "urn:coa:abox:platform-synthetic"
+                            ],
+                            "source": "SPARQL aggregation over the namespace named graphs",
+                            "sampledAt": "2026-11-10T09:00:00Z"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/graph/snapshot",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshotInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetOntologySnapshotOutput": {
+            "type": "structure",
+            "members": {
+                "tbox": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologySnapshotTbox",
+                    "traits": {
+                        "smithy.api#documentation": "Declared schema objects.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "abox": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologySnapshotAbox",
+                    "traits": {
+                        "smithy.api#documentation": "Asserted data using that schema.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "coverage": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#OntologyCoverage",
+                    "traits": {
+                        "smithy.api#documentation": "How much of the schema the data actually uses.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "graphs": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GraphUriList",
+                    "traits": {
+                        "smithy.api#documentation": "Named graphs in this namespace, so the diff form can offer real choices.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable provenance for the numbers above.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sampledAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the aggregation ran (ISO-8601).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#GetOntologyUploadUrl": {
             "type": "operation",
             "input": {
@@ -10396,6 +10757,103 @@
                     "target": "smithy.api#String",
                     "traits": {
                         "smithy.api#documentation": "Identifier assigned to the ontology.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetReasoningStatus": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetReasoningStatusInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetReasoningStatusOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Report whether an inference engine is wired up and how its last job went.",
+                "smithy.api#examples": [
+                    {
+                        "title": "No reasoner configured",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                        },
+                        "output": {
+                            "available": false,
+                            "failures": {
+                                "detail": "inference jobs are not observable from this service"
+                            },
+                            "detail": "This deployment does not configure a reasoner; only asserted triples are served.",
+                            "source": "ontology-engine capability check",
+                            "sampledAt": "2026-11-10T09:00:00Z"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/graph/reasoning",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetReasoningStatusInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetReasoningStatusOutput": {
+            "type": "structure",
+            "members": {
+                "available": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True only when this deployment has a reasoner configured.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "engine": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Reasoner identifier (for example ``elk``); null when none is configured."
+                    }
+                },
+                "failures": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#QualityCount",
+                    "traits": {
+                        "smithy.api#documentation": "Failed materialization jobs; null when not observable from here."
+                    }
+                },
+                "detail": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable explanation of the state above."
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Where this status came from.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sampledAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the status was sampled (ISO-8601).",
                         "smithy.api#required": {}
                     }
                 }
@@ -10722,6 +11180,15 @@
             "type": "list",
             "member": {
                 "target": "com.amazon.semanticcontext.ontologygraph#GraphStatement"
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GraphUriList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            },
+            "traits": {
+                "smithy.api#documentation": "A list of named graph IRIs."
             }
         },
         "com.amazon.semanticcontext.ontologygraph#GraphVertex": {
@@ -11442,6 +11909,109 @@
                 "target": "com.amazon.semanticcontext.ontologygraph#OntologyClassSummary"
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#OntologyCoverage": {
+            "type": "structure",
+            "members": {
+                "classCoverage": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#documentation": "``classesWithInstances / tbox.classes`` in 0..1; 0 when no class is declared.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "unlabeledClasses": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Declared classes without ``rdfs:label`` or ``skos:prefLabel``.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The share of declared classes that the data actually uses."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#OntologyDiffCounts": {
+            "type": "structure",
+            "members": {
+                "addedTriples": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Triples present in the target and absent from the baseline.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "removedTriples": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Triples present in the baseline and absent from the target.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "addedClasses": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Classes added.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "removedClasses": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Classes removed.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "addedProperties": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Properties added (object or datatype).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "removedProperties": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Properties removed.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Triple and schema delta counts."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#OntologyDiffExamples": {
+            "type": "structure",
+            "members": {
+                "addedTriples": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#TripleExampleList",
+                    "traits": {
+                        "smithy.api#documentation": "Sample of added triples.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "removedTriples": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#TripleExampleList",
+                    "traits": {
+                        "smithy.api#documentation": "Sample of removed triples.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Sample triples for each side of the diff."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#OntologyDiffStringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            },
+            "traits": {
+                "smithy.api#documentation": "A list of IRIs or short strings."
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#OntologyFileFormat": {
             "type": "enum",
             "members": {
@@ -11727,6 +12297,57 @@
                 "target": "com.amazon.semanticcontext.ontologygraph#OntologyRecord"
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#OntologySnapshotAbox": {
+            "type": "structure",
+            "members": {
+                "instances": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct subjects typed by a class declared in this namespace.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "classesWithInstances": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct declared classes that carry at least one instance.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Counts of asserted instances (the A-Box)."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#OntologySnapshotTbox": {
+            "type": "structure",
+            "members": {
+                "classes": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct ``owl:Class`` IRIs.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "objectProperties": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct ``owl:ObjectProperty`` IRIs.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "datatypeProperties": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Distinct ``owl:DatatypeProperty`` IRIs.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Counts of declared schema objects (the T-Box)."
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#OntologyType": {
             "type": "enum",
             "members": {
@@ -11774,6 +12395,168 @@
                 "smithy.api#pattern": "^(?!/)(?!(?:.*/)?\\.\\.(?:/|$))[^\\\\]+$"
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#QualityCount": {
+            "type": "structure",
+            "members": {
+                "count": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "The measured count, or null when the check could not run."
+                    }
+                },
+                "detail": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "How the count was measured, or why it is null."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A measured count that may be unavailable."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#RunValidation": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#RunValidationInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#RunValidationOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Run the read-only quality checks the health board reports.\n\nDespite the verb, nothing is written: the operation measures orphan\ninstances, unlabeled classes and SHACL conformance. Checks that cannot\nrun (no shapes, no reasoner) report a null count with a ``detail`` —\nnever a fabricated zero.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Run the read-only quality checks",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                        },
+                        "output": {
+                            "orphanInstances": {
+                                "count": 0,
+                                "detail": "instances typed by a declared class with no other edge"
+                            },
+                            "unlabeledClasses": {
+                                "count": 0,
+                                "detail": "declared classes missing rdfs:label and skos:prefLabel"
+                            },
+                            "shacl": {
+                                "status": "skipped",
+                                "detail": "no shapes configured (no-shapes)"
+                            },
+                            "inferenceFailures": {
+                                "detail": "no reasoner wired up in this deployment"
+                            },
+                            "source": "SPARQL over the namespace named graphs; SHACL shapes from the configured shapes file",
+                            "sampledAt": "2026-11-10T09:00:00Z"
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "POST",
+                    "uri": "/namespaces/{namespaceId}/graph/validate",
+                    "code": 200
+                }
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#RunValidationInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#RunValidationOutput": {
+            "type": "structure",
+            "members": {
+                "orphanInstances": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#QualityCount",
+                    "traits": {
+                        "smithy.api#documentation": "Instances with no properties beyond ``rdf:type``/``rdfs:label``\nand no inbound references.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "unlabeledClasses": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#QualityCount",
+                    "traits": {
+                        "smithy.api#documentation": "Declared classes without any label.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "shacl": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ShaclReport",
+                    "traits": {
+                        "smithy.api#documentation": "SHACL gate result, or an explicit \"skipped\" when no shapes exist.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "inferenceFailures": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#QualityCount",
+                    "traits": {
+                        "smithy.api#documentation": "Failed inference jobs; null when this service cannot observe them.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Human-readable provenance for the checks above.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "sampledAt": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "When the checks ran (ISO-8601).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ShaclReport": {
+            "type": "structure",
+            "members": {
+                "status": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "One of ``ok``, ``violations``, ``skipped``, ``error``.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "violations": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of violations; null when the gate did not run."
+                    }
+                },
+                "conforms": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True only when the gate ran and produced no violations."
+                    }
+                },
+                "detail": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Reason the gate was skipped or errored."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Outcome of the SHACL gate."
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#StringList": {
             "type": "list",
             "member": {
@@ -11790,6 +12573,44 @@
             },
             "traits": {
                 "smithy.api#documentation": "Retired annotation literals keyed by kind (``comments`` / ``definitions`` /\n``altLabels`` / ``glossaryTerms`` / ``tags``). See ``GraphVertex.superseded``."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#TripleExample": {
+            "type": "structure",
+            "members": {
+                "subject": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Subject IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "predicate": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Predicate IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "object": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Object IRI or lexical literal form.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One sampled triple."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#TripleExampleList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologygraph#TripleExample"
+            },
+            "traits": {
+                "smithy.api#documentation": "A list of sampled triples."
             }
         },
         "com.amazon.semanticcontext.ontologygraph#UploadOntology": {

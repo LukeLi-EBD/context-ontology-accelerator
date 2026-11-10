@@ -147,10 +147,16 @@ const _GNRI = "GetNamespaceRoleInput";
 const _GNRO = "GetNamespaceRoleOutput";
 const _GNe = "GetNamespace";
 const _GO = "GetOntology";
+const _GOD = "GetOntologyDiff";
+const _GODI = "GetOntologyDiffInput";
+const _GODO = "GetOntologyDiffOutput";
 const _GOI = "GetOntologyInput";
 const _GOO = "GetOntologyOutput";
 const _GOOI = "GetOntologyOverviewInput";
 const _GOOe = "GetOntologyOverview";
+const _GOS = "GetOntologySnapshot";
+const _GOSI = "GetOntologySnapshotInput";
+const _GOSO = "GetOntologySnapshotOutput";
 const _GOUU = "GetOsiUploadUrl";
 const _GOUUI = "GetOsiUploadUrlInput";
 const _GOUUIe = "GetOntologyUploadUrlInput";
@@ -169,6 +175,9 @@ const _GPVJI = "GetProposalValidationJobInput";
 const _GPVJO = "GetProposalValidationJobOutput";
 const _GPe = "GetProposal";
 const _GPr = "GraphPath";
+const _GRS = "GetReasoningStatus";
+const _GRSI = "GetReasoningStatusInput";
+const _GRSO = "GetReasoningStatusOutput";
 const _GS = "GrantSummary";
 const _GSH = "GraphSearchHit";
 const _GSHL = "GraphSearchHitList";
@@ -289,8 +298,11 @@ const _ND = "NamespaceDetail";
 const _NFE = "NotFoundError";
 const _NS = "NamespaceSummary";
 const _NSL = "NamespaceSummaryList";
+const _OC = "OntologyCoverage";
 const _OCS = "OntologyClassSummary";
 const _OCSL = "OntologyClassSummaryList";
+const _ODC = "OntologyDiffCounts";
+const _ODE = "OntologyDiffExamples";
 const _OE = "OwnerEmail";
 const _OIH = "OntologyInductionHealth";
 const _OO = "OntologyOverview";
@@ -298,6 +310,8 @@ const _OPS = "OntologyPropertySummary";
 const _OPSL = "OntologyPropertySummaryList";
 const _OR = "OntologyRecord";
 const _ORL = "OntologyRecordList";
+const _OSA = "OntologySnapshotAbox";
+const _OST = "OntologySnapshotTbox";
 const _PGS = "PlatformGrantSummary";
 const _PGSL = "PlatformGrantSummaryList";
 const _PI = "PrincipalId";
@@ -318,6 +332,7 @@ const _PU = "PresignedUrl";
 const _PVF = "ProposalValidationFinding";
 const _PVFL = "ProposalValidationFindingList";
 const _PVR = "ProposalValidationReport";
+const _QC = "QualityCount";
 const _RCC = "RescanColumnChange";
 const _RCCL = "RescanColumnChangeList";
 const _RD = "RoleDetail";
@@ -348,6 +363,9 @@ const _RSe = "RescanSchedule";
 const _RSej = "RejectSource";
 const _RSes = "RescanSource";
 const _RTD = "RescanTableDiff";
+const _RV = "RunValidation";
+const _RVI = "RunValidationInput";
+const _RVO = "RunValidationOutput";
 const _SA = "SupersededAnnotations";
 const _SC = "SparqlConfiguration";
 const _SE = "SearchEmbeddings";
@@ -357,9 +375,13 @@ const _SII = "StartInductionInput";
 const _SIO = "StartInductionOutput";
 const _SJE = "ScanJobEntry";
 const _SJEL = "ScanJobEntryList";
+const _SR = "ShaclReport";
 const _SS = "SourceSummary";
 const _SSL = "SourceSummaryList";
+const _SSV = "SystemSchemaVersion";
 const _SUE = "ServiceUnavailableError";
+const _TE = "TripleExample";
+const _TEL = "TripleExampleList";
 const _TMO = "TechnicalMetadataOutput";
 const _TS = "TableSummary";
 const _TSL = "TableSummaryList";
@@ -408,19 +430,25 @@ const _VW = "ValidationWarning";
 const _VWL = "ValidationWarningList";
 const _a = "actor";
 const _aC = "aiContext";
+const _aCd = "addedClasses";
 const _aCx = "axiomCount";
 const _aDCN = "athenaDataCatalogName";
 const _aE = "acceptError";
 const _aL = "altLabels";
 const _aM = "allowedMetrics";
 const _aMu = "authMode";
+const _aP = "addedProperties";
+const _aT = "addedTriples";
 const _aTE = "appendedToExisting";
 const _aWN = "athenaWorkgroupName";
+const _ab = "abox";
 const _ad = "added";
 const _al = "alt_labels";
 const _at = "at";
+const _av = "available";
 const _b = "body";
 const _bE = "bedrockEmbeddings";
+const _bG = "baselineGraph";
 const _bM = "businessMetadata";
 const _bMA = "bedrockModelArn";
 const _bO = "bridgeOptions";
@@ -434,6 +462,7 @@ const _cB = "contentBase64";
 const _cC = "chunkCount";
 const _cCC = "customConnectorConfiguration";
 const _cCl = "classCount";
+const _cCla = "classCoverage";
 const _cCo = "columnCount";
 const _cD = "columnDenylist";
 const _cDOR = "confirmDiscardOpenReview";
@@ -462,20 +491,27 @@ const _cT = "contentType";
 const _cTl = "clientToken";
 const _cTo = "confidenceThreshold";
 const _cU = "constraintsUrl";
+const _cV = "codeVersion";
+const _cWI = "classesWithInstances";
 const _ca = "created_at";
 const _can = "canonical";
 const _cap = "capabilities";
 const _cc = "constraint_config";
 const _ch = "changes";
 const _cl = "classes";
-const _co = "confidence";
+const _co = "consistent";
 const _cod = "code";
 const _col = "column";
 const _colu = "columns";
 const _com = "comments";
 const _comm = "comment";
-const _con = "content";
+const _con = "confidence";
 const _conc = "concurrency";
+const _conf = "conforms";
+const _cont = "content";
+const _cou = "counts";
+const _coun = "count";
+const _cov = "coverage";
 const _ct = "custom_turtle";
 const _d = "dynamodb";
 const _dA = "deleteAll";
@@ -510,14 +546,16 @@ const _dTe = "definedTables";
 const _dTo = "domainTags";
 const _dTr = "droppedTables";
 const _dU = "downloadUrl";
-const _dV = "distinctValues";
+const _dV = "dbVersion";
+const _dVi = "distinctValues";
 const _dZPI = "dataZoneProjectId";
 const _da = "datasources";
 const _dat = "database";
 const _de = "deleted";
 const _dec = "decision";
 const _des = "description";
-const _det = "details";
+const _det = "detail";
+const _deta = "details";
 const _di = "dimensions";
 const _dia = "dialect";
 const _dial = "dialects";
@@ -562,6 +600,7 @@ const _ex = "expression";
 const _exa = "examples";
 const _f = "filename";
 const _fE = "filesErrored";
+const _fG = "fromGraph";
 const _fI = "factId";
 const _fK = "foreignKeys";
 const _fLE = "firstLlmError";
@@ -570,6 +609,7 @@ const _fS = "filesSkipped";
 const _fT = "failedTables";
 const _fTi = "filesTotal";
 const _fW = "filterWarnings";
+const _fa = "failures";
 const _fi = "filter";
 const _fie = "field";
 const _fiel = "fields";
@@ -577,6 +617,7 @@ const _fil = "files";
 const _fin = "findings";
 const _fo = "format";
 const _fou = "found";
+const _fr = "from";
 const _g = "grant";
 const _gA = "grantedAt";
 const _gAr = "graphArn";
@@ -595,6 +636,7 @@ const _gU = "graphUris";
 const _gUr = "graphUri";
 const _gr = "grants";
 const _gra = "graph";
+const _grap = "graphs";
 const _gu = "graph_uris";
 const _h = "hops";
 const _hE = "httpError";
@@ -606,6 +648,7 @@ const _ht = "http";
 const _i = "items";
 const _iBI = "isBuiltIn";
 const _iEC = "inferEntityClassifications";
+const _iF = "inferenceFailures";
 const _iM = "isMapped";
 const _iOI = "inducedOntologyId";
 const _iPK = "isPartitionKey";
@@ -615,6 +658,7 @@ const _id = "id";
 const _im = "is_mapped";
 const _in = "instructions";
 const _inc = "include";
+const _ins = "instances";
 const _j = "jobs";
 const _jC = "jdbcConfiguration";
 const _jI = "jobId";
@@ -681,6 +725,7 @@ const _o = "opensearch";
 const _oC = "ontologyConcepts";
 const _oI = "ontologyInduction";
 const _oIn = "ontologyId";
+const _oIr = "orphanInstances";
 const _oP = "objectProperties";
 const _oPU = "ontologyPutUrl";
 const _oT = "ontologyType";
@@ -732,15 +777,18 @@ const _rB = "replacedBoilerplate";
 const _rBM = "replacedByModel";
 const _rBMS = "replacedByModelSubjects";
 const _rBR = "replacedByRule";
-const _rC = "repairedCount";
+const _rC = "removedClasses";
+const _rCe = "repairedCount";
 const _rD = "rescanDiff";
 const _rI = "revisionId";
 const _rIo = "roleId";
 const _rMT = "rerankMaxTokens";
+const _rP = "removedProperties";
 const _rPU = "r2rmlPutUrl";
 const _rS = "reviewStatus";
 const _rSe = "rescanSchedule";
 const _rT = "returnType";
+const _rTe = "removedTriples";
 const _rTr = "r2rmlTurtle";
 const _rU = "r2rmlUrl";
 const _rUr = "r2rmlUploaded";
@@ -753,8 +801,9 @@ const _rep = "report";
 const _ro = "role";
 const _rol = "roles";
 const _s = "smithy.ts.sdk.synthetic.com.amazon.semanticcontext";
-const _sA = "startedAt";
+const _sA = "sampledAt";
 const _sAk = "skippedAssets";
+const _sAt = "startedAt";
 const _sBA = "sourceBucketArn";
 const _sC = "sourceCount";
 const _sCO = "subClassOf";
@@ -776,10 +825,12 @@ const _sTI = "sourceTableIdentity";
 const _sTc = "scanType";
 const _sTo = "sourceType";
 const _sU = "sourceUrl";
+const _sV = "schemaVersion";
 const _sa = "sample";
 const _sc = "scope";
 const _se = "server";
 const _sev = "severity";
+const _sh = "shacl";
 const _si = "similarity";
 const _so = "source";
 const _sr = "source_registry";
@@ -809,6 +860,8 @@ const _tEF = "tableExcludeFilter";
 const _tF = "tableFilter";
 const _tFa = "tablesFailed";
 const _tFab = "tableFields";
+const _tG = "toGraph";
+const _tGa = "targetGraph";
 const _tI = "tableId";
 const _tK = "topK";
 const _tL = "tableLinks";
@@ -826,18 +879,21 @@ const _tWE = "tablesWithEvidence";
 const _tWEa = "tablesWithoutEvidence";
 const _ta = "target";
 const _tag = "tags";
+const _tb = "tbox";
 const _tc = "total_count";
 const _ti = "title";
 const _tie = "tier";
 const _tier = "tiers";
 const _tim = "timezone";
 const _tk = "top_k";
+const _to = "to";
 const _tr = "truncated";
 const _ty = "types";
 const _typ = "type";
 const _u = "unit";
 const _uA = "updatedAt";
 const _uBI = "useBatchInference";
+const _uC = "unlabeledClasses";
 const _uI = "uploadId";
 const _uRI = "uploadRevisionId";
 const _uU = "uploadUrl";
@@ -849,6 +905,7 @@ const _vHR = "vkgHealthReason";
 const _vS = "vectorStore";
 const _va = "validator";
 const _ve = "vector";
+const _vi = "violations";
 const _w = "warnings";
 const _wH = "workspaceHostname";
 const _wa = "warehouse";
@@ -942,8 +999,8 @@ var OwnerEmail: StaticSimpleSchema = [0, n2, _OE, 8, 0];
 var ExternalId: StaticSimpleSchema = [0, n3, _EI, 8, 0];
 export var GetSystemHealthOutput$: StaticStructureSchema = [3, n4, _GSHO,
   0,
-  [_st, _oI, _d, _nK, _o],
-  [0, () => OntologyInductionHealth$, 0, 0, 0], 1
+  [_st, _oI, _d, _nK, _o, _sV],
+  [0, () => OntologyInductionHealth$, 0, 0, 0, () => SystemSchemaVersion$], 1
 ];
 export var HealthCheckOutput$: StaticStructureSchema = [3, n4, _HCO,
   0,
@@ -954,6 +1011,11 @@ export var OntologyInductionHealth$: StaticStructureSchema = [3, n4, _OIH,
   0,
   [_gS, _vS, _bE, _dL],
   [0, 0, 0, 0]
+];
+export var SystemSchemaVersion$: StaticStructureSchema = [3, n4, _SSV,
+  0,
+  [_cV, _so, _dV, _co],
+  [1, 0, 1, 2], 2
 ];
 export var ApproveFactCandidateInput$: StaticStructureSchema = [3, n5, _AFCI,
   0,
@@ -977,7 +1039,7 @@ export var DocumentSummary$: StaticStructureSchema = [3, n5, _DS,
 ];
 export var FactCandidate$: StaticStructureSchema = [3, n5, _FC,
   0,
-  [_cI, _su, _pr, _ob, _co, _st, _dI, _cIh, _ev],
+  [_cI, _su, _pr, _ob, _con, _st, _dI, _cIh, _ev],
   [0, 0, 0, 0, 1, 0, 0, 0, 0], 6
 ];
 export var ListDocumentChunksInput$: StaticStructureSchema = [3, n5, _LDCI,
@@ -1177,7 +1239,7 @@ export var ExportOsiInput$: StaticStructureSchema = [3, n7, _EOI,
 ];
 export var ExportOsiOutput$: StaticStructureSchema = [3, n7, _EOO,
   0,
-  [_con, _dU, _eI],
+  [_cont, _dU, _eI],
   [0, [() => PresignedUrl, 0], 1]
 ];
 export var GetImportJobInput$: StaticStructureSchema = [3, n7, _GIJI,
@@ -1212,7 +1274,7 @@ export var ImportJobOutput$: StaticStructureSchema = [3, n7, _IJO,
 ];
 export var ImportOsiInput$: StaticStructureSchema = [3, n7, _IOI,
   0,
-  [_nI, _con, _sK, _cTl],
+  [_nI, _cont, _sK, _cTl],
   [[0, 1], 0, 0, [0, 4]], 1
 ];
 export var ImportOsiOutput$: StaticStructureSchema = [3, n7, _IOO,
@@ -1440,6 +1502,16 @@ export var GetIngestStatusOutput$: StaticStructureSchema = [3, n8, _GISO,
   [_re],
   [() => IngestJob$], 1
 ];
+export var GetOntologyDiffInput$: StaticStructureSchema = [3, n8, _GODI,
+  0,
+  [_nI, _fG, _tG, _li],
+  [[0, 1], [0, { [_hQ]: _fr }], [0, { [_hQ]: _to }], [1, { [_hQ]: _li }]], 3
+];
+export var GetOntologyDiffOutput$: StaticStructureSchema = [3, n8, _GODO,
+  0,
+  [_bG, _tGa, _cou, _aCd, _rC, _aP, _rP, _exa, _tr, _so, _sA],
+  [0, 0, () => OntologyDiffCounts$, 64 | 0, 64 | 0, 64 | 0, 64 | 0, () => OntologyDiffExamples$, 2, 0, 0], 11
+];
 export var GetOntologyInput$: StaticStructureSchema = [3, n8, _GOI,
   0,
   [_nI, _oIn],
@@ -1455,6 +1527,16 @@ export var GetOntologyOverviewInput$: StaticStructureSchema = [3, n8, _GOOI,
   [_nI, _oIn, _li, _of, _sa],
   [[0, 1], [0, { [_hQ]: _oi }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }], [2, { [_hQ]: _sa }]], 2
 ];
+export var GetOntologySnapshotInput$: StaticStructureSchema = [3, n8, _GOSI,
+  0,
+  [_nI],
+  [[0, 1]], 1
+];
+export var GetOntologySnapshotOutput$: StaticStructureSchema = [3, n8, _GOSO,
+  0,
+  [_tb, _ab, _cov, _grap, _so, _sA],
+  [() => OntologySnapshotTbox$, () => OntologySnapshotAbox$, () => OntologyCoverage$, 64 | 0, 0, 0], 6
+];
 export var GetOntologyUploadUrlInput$: StaticStructureSchema = [3, n8, _GOUUIe,
   0,
   [_nI, _f, _cT, _oIn, _ti],
@@ -1464,6 +1546,16 @@ export var GetOntologyUploadUrlOutput$: StaticStructureSchema = [3, n8, _GOUUOe,
   0,
   [_uU, _sK, _oIn],
   [[() => PresignedUrl, 0], 0, 0], 3
+];
+export var GetReasoningStatusInput$: StaticStructureSchema = [3, n8, _GRSI,
+  0,
+  [_nI],
+  [[0, 1]], 1
+];
+export var GetReasoningStatusOutput$: StaticStructureSchema = [3, n8, _GRSO,
+  0,
+  [_av, _so, _sA, _eng, _fa, _det],
+  [2, 0, 0, 0, () => QualityCount$, 0], 3
 ];
 export var GraphEdge$: StaticStructureSchema = [3, n8, _GE,
   0,
@@ -1550,6 +1642,21 @@ export var OntologyClassSummary$: StaticStructureSchema = [3, n8, _OCS,
   [_ur, _l, _comm, _gT, _mTa, _sCO],
   [0, 0, 0, 0, 0, 64 | 0], 1
 ];
+export var OntologyCoverage$: StaticStructureSchema = [3, n8, _OC,
+  0,
+  [_cCla, _uC],
+  [1, 1], 2
+];
+export var OntologyDiffCounts$: StaticStructureSchema = [3, n8, _ODC,
+  0,
+  [_aT, _rTe, _aCd, _rC, _aP, _rP],
+  [1, 1, 1, 1, 1, 1], 6
+];
+export var OntologyDiffExamples$: StaticStructureSchema = [3, n8, _ODE,
+  0,
+  [_aT, _rTe],
+  [() => TripleExampleList, () => TripleExampleList], 2
+];
 export var OntologyOverview$: StaticStructureSchema = [3, n8, _OO,
   0,
   [_oIn, _nam, _gUr, _cl, _oP, _dP, _tCo, _tOP, _tDP],
@@ -1564,6 +1671,41 @@ export var OntologyRecord$: StaticStructureSchema = [3, n8, _OR,
   0,
   [_oIn, _ur, _ti, _des, _oT, _pS, _st, _dE, _fo, _dTo, _cCl, _pC, _aCx, _eCm, _gUr, _cA, _uA],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 64 | 0, 1, 1, 1, 1, 0, 0, 0], 2
+];
+export var OntologySnapshotAbox$: StaticStructureSchema = [3, n8, _OSA,
+  0,
+  [_ins, _cWI],
+  [1, 1], 2
+];
+export var OntologySnapshotTbox$: StaticStructureSchema = [3, n8, _OST,
+  0,
+  [_cl, _oP, _dP],
+  [1, 1, 1], 3
+];
+export var QualityCount$: StaticStructureSchema = [3, n8, _QC,
+  0,
+  [_coun, _det],
+  [1, 0]
+];
+export var RunValidationInput$: StaticStructureSchema = [3, n8, _RVI,
+  0,
+  [_nI],
+  [[0, 1]], 1
+];
+export var RunValidationOutput$: StaticStructureSchema = [3, n8, _RVO,
+  0,
+  [_oIr, _uC, _sh, _iF, _so, _sA],
+  [() => QualityCount$, () => QualityCount$, () => ShaclReport$, () => QualityCount$, 0, 0], 6
+];
+export var ShaclReport$: StaticStructureSchema = [3, n8, _SR,
+  0,
+  [_st, _vi, _conf, _det],
+  [0, 1, 2, 0], 1
+];
+export var TripleExample$: StaticStructureSchema = [3, n8, _TE,
+  0,
+  [_su, _pr, _ob],
+  [0, 0, 0], 3
 ];
 export var UploadOntologyInput$: StaticStructureSchema = [3, n8, _UOI,
   0,
@@ -1772,7 +1914,7 @@ export var ProposalSummary$: StaticStructureSchema = [3, n9, _PS,
 ];
 export var ProposalValidationFinding$: StaticStructureSchema = [3, n9, _PVF,
   0,
-  [_va, _tie, _sev, _cod, _m, _su, _det],
+  [_va, _tie, _sev, _cod, _m, _su, _deta],
   [0, 0, 0, 0, 0, 0, 15], 5
 ];
 export var ProposalValidationReport$: StaticStructureSchema = [3, n9, _PVR,
@@ -1797,7 +1939,7 @@ export var RepairProposalDatatypesInput$: StaticStructureSchema = [3, n9, _RPDI,
 ];
 export var RepairProposalDatatypesOutput$: StaticStructureSchema = [3, n9, _RPDO,
   0,
-  [_pIr, _rC, _ch, _dRr],
+  [_pIr, _rCe, _ch, _dRr],
   [0, 1, () => DatatypeRepairChangeList, 2], 3
 ];
 export var StartInductionInput$: StaticStructureSchema = [3, n9, _SII,
@@ -1882,12 +2024,12 @@ export var ApproveSourceOutput$: StaticStructureSchema = [3, n3, _ASO,
 ];
 export var BusinessMetadataOutput$: StaticStructureSchema = [3, n3, _BMO,
   0,
-  [_des, _sy, _gTl, _tag, _eSn, _rS, _co],
+  [_des, _sy, _gTl, _tag, _eSn, _rS, _con],
   [0, 64 | 0, 64 | 0, 64 | 0, 0, 0, 1]
 ];
 export var ColumnMetadata$: StaticStructureSchema = [3, n3, _CMo,
   0,
-  [_na, _dTa, _nu, _iPK, _des, _bM, _dV, _pD],
+  [_na, _dTa, _nu, _iPK, _des, _bM, _dVi, _pD],
   [0, 0, 2, 2, 0, () => BusinessMetadataOutput$, [() => DistinctValueList, 0], 2], 2
 ];
 export var CreateDatabaseSourceInput$: StaticStructureSchema = [3, n3, _CDSI,
@@ -1967,7 +2109,7 @@ export var ForeignKeyInput$: StaticStructureSchema = [3, n3, _FKI,
 ];
 export var ForeignKeyOutput$: StaticStructureSchema = [3, n3, _FKO,
   0,
-  [_col, _tT, _tCar, _so, _co, _rS, _tDI, _prov],
+  [_col, _tT, _tCar, _so, _con, _rS, _tDI, _prov],
   [0, 0, 0, 0, 1, 0, 0, 0]
 ];
 export var GetSourceOperationInput$: StaticStructureSchema = [3, n3, _GSOI,
@@ -1992,7 +2134,7 @@ export var GetSourceScanJobInput$: StaticStructureSchema = [3, n3, _GSSJI,
 ];
 export var GetSourceScanJobOutput$: StaticStructureSchema = [3, n3, _GSSJO,
   0,
-  [_jI, _sI, _st, _sA, _tDa, _tP, _tTa, _tAab, _tRa, _tM, _cAo, _eM, _tFa, _fT, _fW],
+  [_jI, _sI, _st, _sAt, _tDa, _tP, _tTa, _tAab, _tRa, _tM, _cAo, _eM, _tFa, _fT, _fW],
   [0, 0, 0, 4, 1, 1, 1, 1, 1, 1, 4, 0, 1, 64 | 0, 64 | 0], 4
 ];
 export var GetSourceTableInput$: StaticStructureSchema = [3, n3, _GSTI,
@@ -2082,7 +2224,7 @@ export var PrimaryKeyInput$: StaticStructureSchema = [3, n3, _PKI,
 ];
 export var PrimaryKeyOutput$: StaticStructureSchema = [3, n3, _PKO,
   0,
-  [_colu, _so, _co],
+  [_colu, _so, _con],
   [64 | 0, 0, 1]
 ];
 export var PutSourceEventRescanInput$: StaticStructureSchema = [3, n3, _PSERI,
@@ -2304,9 +2446,11 @@ var GraphSearchHitList: StaticListSchema = [1, n8, _GSHL,
 var GraphStatementList: StaticListSchema = [1, n8, _GSLr,
   0, () => GraphStatement$
 ];
+var GraphUriList = 64 | 0;
 var OntologyClassSummaryList: StaticListSchema = [1, n8, _OCSL,
   0, () => OntologyClassSummary$
 ];
+var OntologyDiffStringList = 64 | 0;
 var OntologyPropertySummaryList: StaticListSchema = [1, n8, _OPSL,
   0, () => OntologyPropertySummary$
 ];
@@ -2314,6 +2458,9 @@ var OntologyRecordList: StaticListSchema = [1, n8, _ORL,
   0, () => OntologyRecord$
 ];
 var StringList = 64 | 0;
+var TripleExampleList: StaticListSchema = [1, n8, _TEL,
+  0, () => TripleExample$
+];
 var CompetencyQuestionList = 64 | 0;
 var ConceptMatchList: StaticListSchema = [1, n9, _CML,
   0, () => ConceptMatch$
@@ -2539,11 +2686,20 @@ export var GetIngestStatus$: StaticOperationSchema = [9, n8, _GIS,
 export var GetOntology$: StaticOperationSchema = [9, n8, _GO,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ontologies/{ontologyId}", 200] }, () => GetOntologyInput$, () => GetOntologyOutput$
 ];
+export var GetOntologyDiff$: StaticOperationSchema = [9, n8, _GOD,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/diff", 200] }, () => GetOntologyDiffInput$, () => GetOntologyDiffOutput$
+];
 export var GetOntologyOverview$: StaticOperationSchema = [9, n8, _GOOe,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/ontology-overview", 200] }, () => GetOntologyOverviewInput$, () => OntologyOverview$
 ];
+export var GetOntologySnapshot$: StaticOperationSchema = [9, n8, _GOS,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/snapshot", 200] }, () => GetOntologySnapshotInput$, () => GetOntologySnapshotOutput$
+];
 export var GetOntologyUploadUrl$: StaticOperationSchema = [9, n8, _GOUUe,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/upload-url", 200] }, () => GetOntologyUploadUrlInput$, () => GetOntologyUploadUrlOutput$
+];
+export var GetReasoningStatus$: StaticOperationSchema = [9, n8, _GRS,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/reasoning", 200] }, () => GetReasoningStatusInput$, () => GetReasoningStatusOutput$
 ];
 export var GraphSearch$: StaticOperationSchema = [9, n8, _GSra,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/search", 200] }, () => GraphSearchInput$, () => GraphSearchOutput$
@@ -2556,6 +2712,9 @@ export var ListOntologies$: StaticOperationSchema = [9, n8, _LO,
 ];
 export var ListStatements$: StaticOperationSchema = [9, n8, _LS,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/statements", 200] }, () => ListStatementsInput$, () => ListStatementsOutput$
+];
+export var RunValidation$: StaticOperationSchema = [9, n8, _RV,
+  { [_ht]: ["POST", "/namespaces/{namespaceId}/graph/validate", 200] }, () => RunValidationInput$, () => RunValidationOutput$
 ];
 export var UploadOntology$: StaticOperationSchema = [9, n8, _UO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/upload", 200] }, () => UploadOntologyInput$, () => UploadOntologyOutput$

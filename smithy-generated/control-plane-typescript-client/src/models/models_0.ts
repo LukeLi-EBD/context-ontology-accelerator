@@ -78,6 +78,36 @@ export interface OntologyInductionHealth {
 }
 
 /**
+ * Compares the schema version this build expects with the one the database reports.
+ * @public
+ */
+export interface SystemSchemaVersion {
+  /**
+   * Highest migration version this build ships.
+   * @public
+   */
+  codeVersion: number | undefined;
+
+  /**
+   * Highest applied migration version recorded by the database; null when unreadable.
+   * @public
+   */
+  dbVersion?: number | undefined;
+
+  /**
+   * True only when both versions are known and equal.
+   * @public
+   */
+  consistent?: boolean | undefined;
+
+  /**
+   * Human-readable provenance for the two numbers.
+   * @public
+   */
+  source: string | undefined;
+}
+
+/**
  * @public
  */
 export interface GetSystemHealthOutput {
@@ -110,6 +140,13 @@ export interface GetSystemHealthOutput {
    * @public
    */
   opensearch?: string | undefined;
+
+  /**
+   * Code/database schema consistency (migration state); absent when the
+   * deployment cannot read the schema version table.
+   * @public
+   */
+  schemaVersion?: SystemSchemaVersion | undefined;
 }
 
 /**
@@ -3141,6 +3178,190 @@ export interface GetOntologyOutput {
 /**
  * @public
  */
+export interface GetOntologyDiffInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Baseline named graph IRI, inside this namespace.
+   * @public
+   */
+  fromGraph: string | undefined;
+
+  /**
+   * Target named graph IRI, inside this namespace.
+   * @public
+   */
+  toGraph: string | undefined;
+
+  /**
+   * Maximum sample rows per side (1–200).
+   * @public
+   */
+  limit?: number | undefined;
+}
+
+/**
+ * Triple and schema delta counts.
+ * @public
+ */
+export interface OntologyDiffCounts {
+  /**
+   * Triples present in the target and absent from the baseline.
+   * @public
+   */
+  addedTriples: number | undefined;
+
+  /**
+   * Triples present in the baseline and absent from the target.
+   * @public
+   */
+  removedTriples: number | undefined;
+
+  /**
+   * Classes added.
+   * @public
+   */
+  addedClasses: number | undefined;
+
+  /**
+   * Classes removed.
+   * @public
+   */
+  removedClasses: number | undefined;
+
+  /**
+   * Properties added (object or datatype).
+   * @public
+   */
+  addedProperties: number | undefined;
+
+  /**
+   * Properties removed.
+   * @public
+   */
+  removedProperties: number | undefined;
+}
+
+/**
+ * One sampled triple.
+ * @public
+ */
+export interface TripleExample {
+  /**
+   * Subject IRI.
+   * @public
+   */
+  subject: string | undefined;
+
+  /**
+   * Predicate IRI.
+   * @public
+   */
+  predicate: string | undefined;
+
+  /**
+   * Object IRI or lexical literal form.
+   * @public
+   */
+  object: string | undefined;
+}
+
+/**
+ * Sample triples for each side of the diff.
+ * @public
+ */
+export interface OntologyDiffExamples {
+  /**
+   * Sample of added triples.
+   * @public
+   */
+  addedTriples: TripleExample[] | undefined;
+
+  /**
+   * Sample of removed triples.
+   * @public
+   */
+  removedTriples: TripleExample[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetOntologyDiffOutput {
+  /**
+   * Baseline graph that was compared.
+   * @public
+   */
+  baselineGraph: string | undefined;
+
+  /**
+   * Target graph that was compared.
+   * @public
+   */
+  targetGraph: string | undefined;
+
+  /**
+   * Triple and schema deltas.
+   * @public
+   */
+  counts: OntologyDiffCounts | undefined;
+
+  /**
+   * Class IRIs only in the target (sample).
+   * @public
+   */
+  addedClasses: string[] | undefined;
+
+  /**
+   * Class IRIs only in the baseline (sample).
+   * @public
+   */
+  removedClasses: string[] | undefined;
+
+  /**
+   * Property IRIs only in the target (sample).
+   * @public
+   */
+  addedProperties: string[] | undefined;
+
+  /**
+   * Property IRIs only in the baseline (sample).
+   * @public
+   */
+  removedProperties: string[] | undefined;
+
+  /**
+   * Sample triples behind the counts.
+   * @public
+   */
+  examples: OntologyDiffExamples | undefined;
+
+  /**
+   * True when a sample list or example set was cut at ``limit``.
+   * @public
+   */
+  truncated: boolean | undefined;
+
+  /**
+   * Human-readable provenance for the diff.
+   * @public
+   */
+  source: string | undefined;
+
+  /**
+   * When the diff ran (ISO-8601).
+   * @public
+   */
+  sampledAt: string | undefined;
+}
+
+/**
+ * @public
+ */
 export interface GetOntologyOverviewInput {
   /**
    * UUID v4 identifier.
@@ -3326,6 +3547,118 @@ export interface OntologyOverview {
 /**
  * @public
  */
+export interface GetOntologySnapshotInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+}
+
+/**
+ * Counts of asserted instances (the A-Box).
+ * @public
+ */
+export interface OntologySnapshotAbox {
+  /**
+   * Distinct subjects typed by a class declared in this namespace.
+   * @public
+   */
+  instances: number | undefined;
+
+  /**
+   * Distinct declared classes that carry at least one instance.
+   * @public
+   */
+  classesWithInstances: number | undefined;
+}
+
+/**
+ * The share of declared classes that the data actually uses.
+ * @public
+ */
+export interface OntologyCoverage {
+  /**
+   * ``classesWithInstances / tbox.classes`` in 0..1; 0 when no class is declared.
+   * @public
+   */
+  classCoverage: number | undefined;
+
+  /**
+   * Declared classes without ``rdfs:label`` or ``skos:prefLabel``.
+   * @public
+   */
+  unlabeledClasses: number | undefined;
+}
+
+/**
+ * Counts of declared schema objects (the T-Box).
+ * @public
+ */
+export interface OntologySnapshotTbox {
+  /**
+   * Distinct ``owl:Class`` IRIs.
+   * @public
+   */
+  classes: number | undefined;
+
+  /**
+   * Distinct ``owl:ObjectProperty`` IRIs.
+   * @public
+   */
+  objectProperties: number | undefined;
+
+  /**
+   * Distinct ``owl:DatatypeProperty`` IRIs.
+   * @public
+   */
+  datatypeProperties: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetOntologySnapshotOutput {
+  /**
+   * Declared schema objects.
+   * @public
+   */
+  tbox: OntologySnapshotTbox | undefined;
+
+  /**
+   * Asserted data using that schema.
+   * @public
+   */
+  abox: OntologySnapshotAbox | undefined;
+
+  /**
+   * How much of the schema the data actually uses.
+   * @public
+   */
+  coverage: OntologyCoverage | undefined;
+
+  /**
+   * Named graphs in this namespace, so the diff form can offer real choices.
+   * @public
+   */
+  graphs: string[] | undefined;
+
+  /**
+   * Human-readable provenance for the numbers above.
+   * @public
+   */
+  source: string | undefined;
+
+  /**
+   * When the aggregation ran (ISO-8601).
+   * @public
+   */
+  sampledAt: string | undefined;
+}
+
+/**
+ * @public
+ */
 export interface GetOntologyUploadUrlInput {
   /**
    * UUID v4 identifier.
@@ -3381,6 +3714,76 @@ export interface GetOntologyUploadUrlOutput {
    * @public
    */
   ontologyId: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetReasoningStatusInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+}
+
+/**
+ * A measured count that may be unavailable.
+ * @public
+ */
+export interface QualityCount {
+  /**
+   * The measured count, or null when the check could not run.
+   * @public
+   */
+  count?: number | undefined;
+
+  /**
+   * How the count was measured, or why it is null.
+   * @public
+   */
+  detail?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetReasoningStatusOutput {
+  /**
+   * True only when this deployment has a reasoner configured.
+   * @public
+   */
+  available: boolean | undefined;
+
+  /**
+   * Reasoner identifier (for example ``elk``); null when none is configured.
+   * @public
+   */
+  engine?: string | undefined;
+
+  /**
+   * Failed materialization jobs; null when not observable from here.
+   * @public
+   */
+  failures?: QualityCount | undefined;
+
+  /**
+   * Human-readable explanation of the state above.
+   * @public
+   */
+  detail?: string | undefined;
+
+  /**
+   * Where this status came from.
+   * @public
+   */
+  source: string | undefined;
+
+  /**
+   * When the status was sampled (ISO-8601).
+   * @public
+   */
+  sampledAt: string | undefined;
 }
 
 /**
@@ -3846,6 +4249,89 @@ export interface ListStatementsOutput {
    * @public
    */
   truncated?: boolean | undefined;
+}
+
+/**
+ * @public
+ */
+export interface RunValidationInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+}
+
+/**
+ * Outcome of the SHACL gate.
+ * @public
+ */
+export interface ShaclReport {
+  /**
+   * One of ``ok``, ``violations``, ``skipped``, ``error``.
+   * @public
+   */
+  status: string | undefined;
+
+  /**
+   * Number of violations; null when the gate did not run.
+   * @public
+   */
+  violations?: number | undefined;
+
+  /**
+   * True only when the gate ran and produced no violations.
+   * @public
+   */
+  conforms?: boolean | undefined;
+
+  /**
+   * Reason the gate was skipped or errored.
+   * @public
+   */
+  detail?: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface RunValidationOutput {
+  /**
+   * Instances with no properties beyond ``rdf:type``/``rdfs:label``
+   * and no inbound references.
+   * @public
+   */
+  orphanInstances: QualityCount | undefined;
+
+  /**
+   * Declared classes without any label.
+   * @public
+   */
+  unlabeledClasses: QualityCount | undefined;
+
+  /**
+   * SHACL gate result, or an explicit "skipped" when no shapes exist.
+   * @public
+   */
+  shacl: ShaclReport | undefined;
+
+  /**
+   * Failed inference jobs; null when this service cannot observe them.
+   * @public
+   */
+  inferenceFailures: QualityCount | undefined;
+
+  /**
+   * Human-readable provenance for the checks above.
+   * @public
+   */
+  source: string | undefined;
+
+  /**
+   * When the checks ran (ISO-8601).
+   * @public
+   */
+  sampledAt: string | undefined;
 }
 
 /**
