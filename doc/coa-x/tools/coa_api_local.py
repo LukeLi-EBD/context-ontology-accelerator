@@ -1524,6 +1524,90 @@ def _install_dictionary_introspector() -> None:
     print("[api] dictionary refresh -> local source metadata (information_schema)")
 
 
+def _install_document_index() -> None:
+    """Index ingested documents into the store KBSearch actually reads.
+
+    An upload lands in the local document store (``coa-local-documents`` /
+    ``coa-local-document-chunks``) plus ontology vectors.  Serve answers
+    KBSearch and Ask from ``platform.document`` / ``platform.document_chunk`` /
+    ``platform.chunk_embedding`` in the platform database, which until now only
+    the bootstrap seed filled.  AWS fills it in its ingestion/index step; the
+    local bridge skipped that step, so uploaded documents could never be found
+    by KB search.  After every successful ingest, mirror the parsed chunks and
+    run the real ``index_document`` so both stores describe the same document.
+    """
+    from coa_sources.documents import local_worker
+    from coa_sources.documents import store as document_store
+
+    original = local_worker.ingest
+
+    def mirror(namespace_id: str, document_id: str) -> None:
+        document = document_store.get_document(namespace_id, document_id) or {}
+        chunks = document_store.list_chunk_items(namespace_id, document_id)
+        if not chunks:
+            return
+        runtime = _lifecycle_runtime()
+        with runtime.metadata.tx() as tx:
+            tx.execute(
+                """
+                INSERT INTO platform.document (
+                    document_id, sha256, bucket, object_key, filename, mime_type,
+                    size_bytes, status, page_count, char_count, chunk_count,
+                    parser, parser_version, metadata
+                ) VALUES (%s,%s,%s,%s,%s,%s,%s,'parsed',%s,%s,%s,'local-md','1',%s::jsonb)
+                ON CONFLICT (document_id) DO UPDATE SET
+                    status = 'parsed',
+                    chunk_count = EXCLUDED.chunk_count,
+                    char_count = EXCLUDED.char_count
+                """,
+                (
+                    document_id,
+                    document.get("contentHash") or document_id,
+                    document.get("s3Bucket") or "local",
+                    document.get("s3Key") or document_id,
+                    document.get("filename") or f"{document_id}.txt",
+                    document.get("contentType") or "text/plain",
+                    int(document.get("sizeBytes") or 0),
+                    1,
+                    sum(len(chunk.get("text") or "") for chunk in chunks),
+                    len(chunks),
+                    json.dumps({"namespaceId": namespace_id}),
+                ),
+            )
+            for chunk in chunks:
+                text = chunk.get("text") or ""
+                tx.execute(
+                    """
+                    INSERT INTO platform.document_chunk (
+                        chunk_id, document_id, seq, page_from, page_to,
+                        char_start, char_end, text, token_estimate
+                    ) VALUES (%s,%s,%s,1,1,%s,%s,%s,%s)
+                    ON CONFLICT (chunk_id) DO NOTHING
+                    """,
+                    (
+                        chunk["chunkId"],
+                        document_id,
+                        int(chunk.get("seq") or 0),
+                        int(chunk.get("charStart") or 0),
+                        int(chunk.get("charEnd") or 0),
+                        text,
+                        max(1, len(text) // 4),
+                    ),
+                )
+        runtime.search.index_document(document_id)
+        print(f"[api] serve index: {document_id} ({len(chunks)} chunks)")
+
+    def ingest_and_index(**fields: Any) -> None:
+        original(**fields)
+        try:
+            mirror(fields["namespace_id"], fields["document_id"])
+        except Exception as exc:  # the ingest itself already succeeded
+            print(f"[api] serve index failed for {fields.get('document_id')}: {exc}")
+
+    local_worker.ingest = ingest_and_index
+    print("[api] document ingest -> serve index (document/chunk/chunk_embedding)")
+
+
 def _kernel_translate(
     template: str, path_params: dict[str, str], method: str, body: bytes,
     query: dict[str, str] | None = None, actor: str = "operator",
@@ -2586,6 +2670,7 @@ def main() -> None:
     _install_local_idempotency()
     _install_fact_ledger()
     _install_dictionary_introspector()
+    _install_document_index()
 
     from coa_common.logging import setup_logging
 
