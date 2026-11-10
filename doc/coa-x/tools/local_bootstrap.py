@@ -2,7 +2,7 @@
 
 Subcommands are the three prerequisites the chain needs before it can answer:
 
-    migrate    run platform-core's real migrations against the local PG
+    migrate    run the platform schema migrations (coa_control_plane.platform_db)
     seed       insert two real FS-LDM chunks and their BGE vectors, then search
     ontology   load doc/_fsldm into the local Oxigraph graph Tier-2 reads
     check      re-assert every prerequisite without changing anything
@@ -29,14 +29,17 @@ import uuid
 from pathlib import Path
 
 # Resolve the repository root from this file, never hard-code the main tree:
-# a worktree must migrate with its own ``platform_core`` (its own migration
-# registry), otherwise the branch's V48 is never applied and the run silently
-# reuses main's version.
+# a worktree must migrate with its own migration chain. The chain itself moved
+# from platform-core to ``coa_control_plane.platform_db`` (R1), and importing
+# that package pulls coa_control_plane's own imports, so add the workspace src
+# roots the same way coa_api_local.py does.
 REPO = str(Path(__file__).resolve().parents[3])
-for _rel in ("packages/platform-core/src", "libs/common/src"):
-    _path = str(Path(REPO) / _rel)
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
+_WORKSPACE_SRC = sorted(
+    [*(Path(REPO) / "packages").glob("*/src"), *(Path(REPO) / "libs").glob("*/src")]
+) + [Path(REPO) / "smithy-generated/control-plane-python-server"]
+for _path in reversed(_WORKSPACE_SRC):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
 
 MODEL = "BAAI/bge-m3"
 DIMENSIONS = 1024

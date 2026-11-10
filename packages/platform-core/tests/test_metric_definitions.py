@@ -80,13 +80,13 @@ class MetricDefinitionV5Test(unittest.TestCase):
         cls.runtime.metadata.migrate()
         cls.meta = cls.runtime.metadata
         cls.metrics = cls.runtime.metrics
-        cls.sql = files("platform_core").joinpath(f"sql/{SQL_NAME}").read_text(
+        cls.sql = files("coa_control_plane.platform_db").joinpath(f"migrations/{SQL_NAME}").read_text(
             encoding="utf-8"
         )
-        cls.sql_v22 = files("platform_core").joinpath(f"sql/{SQL_NAME_V22}").read_text(
+        cls.sql_v22 = files("coa_control_plane.platform_db").joinpath(f"migrations/{SQL_NAME_V22}").read_text(
             encoding="utf-8"
         )
-        cls.sql_v30 = files("platform_core").joinpath(f"sql/{SQL_NAME_V30}").read_text(
+        cls.sql_v30 = files("coa_control_plane.platform_db").joinpath(f"migrations/{SQL_NAME_V30}").read_text(
             encoding="utf-8"
         )
 

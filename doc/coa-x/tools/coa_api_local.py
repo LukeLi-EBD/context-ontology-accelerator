@@ -796,7 +796,9 @@ def _assert_schema_version(metadata: Any, *, where: str) -> None:
     job.  Without this check a stale database starts fine and fails on the
     first write to a new table/column, so compare at start-up instead.
     """
-    from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+    # The version gate moved with the migration chain (R1): platform-core no
+    # longer owns the constant, so read it from the COA package.
+    from coa_control_plane.platform_db import SUPPORTED_SCHEMA_VERSION
 
     row = metadata.query("SELECT to_regclass('platform.schema_version') AS reg")
     actual = 0
@@ -1794,7 +1796,7 @@ async def _local_system_health() -> dict[str, Any]:
     schema_version: dict[str, Any] | None = None
     if runtime is not None:
         try:
-            from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+            from coa_control_plane.platform_db import SUPPORTED_SCHEMA_VERSION
 
             rows = runtime.metadata.query(
                 "SELECT COALESCE(MAX(version), 0) AS v FROM platform.schema_version"
