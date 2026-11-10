@@ -32,7 +32,6 @@ and still requires ``NDB_ENDPOINT`` from the deployment.
 
 from __future__ import annotations
 
-import json
 import os
 from typing import Any
 from urllib.parse import quote
@@ -45,6 +44,9 @@ _PROVIDERS = ("oxigraph", "neptune")
 # The response is still HTTP 200 and the JSON is truncated mid-stream, so it has
 # to be recognised before the body is parsed.
 _CANCELLED_NOTICE = "The SPARQL operation has been cancelled"
+_CANCELLED_BYTES = _CANCELLED_NOTICE.encode()
+# A few bytes for a trailing newline; the body itself may be megabytes of rows.
+_CANCELLED_WINDOW = len(_CANCELLED_BYTES) + 8
 
 
 def _provider() -> str:
@@ -77,6 +79,25 @@ def _fail(op: str, r: httpx.Response) -> None:
     raise RuntimeError(f"oxigraph {op} failed ({r.status_code}): {snippet}")
 
 
+def _cancelled(r: httpx.Response) -> bool:
+    """Whether Oxigraph cancelled this operation at its server-side deadline.
+
+    The response is HTTP 200 with the partial payload followed by the notice, so
+    every operation that writes or parses a body has to ask this first: a caller
+    that only looks at the status code would report a cancelled request as a
+    success.
+    """
+    return r.content[-_CANCELLED_WINDOW:].rstrip().endswith(_CANCELLED_BYTES)
+
+
+def _raise_cancelled() -> None:
+    from coa_ontology.stores.base import GraphQueryCancelled
+
+    raise GraphQueryCancelled(
+        "oxigraph cancelled the operation at its server-side deadline; it is no longer running"
+    )
+
+
 def sparql_query(query: str) -> dict[str, Any]:
     """SPARQL SELECT/ASK → SPARQL 1.1 JSON results (same shape Neptune returns)."""
     url = f"{_base_url()}/query"
@@ -91,16 +112,12 @@ def sparql_query(query: str) -> dict[str, Any]:
     )
     if r.status_code >= 400:
         _fail("query", r)
-    try:
-        return r.json()
-    except json.JSONDecodeError:
-        if _CANCELLED_NOTICE in r.text:
-            from coa_ontology.stores.base import GraphQueryCancelled
-
-            raise GraphQueryCancelled(
-                f"oxigraph cancelled the query at its {_timeout()}s server limit; it is no longer running"
-            ) from None
-        raise
+    if _cancelled(r):
+        # Before parsing, not only when parsing fails: a body cut after the last
+        # complete row can still be valid JSON, and partial rows must never look
+        # like a complete answer.
+        _raise_cancelled()
+    return r.json()
 
 
 def sparql_update(update: str) -> None:
@@ -113,6 +130,10 @@ def sparql_update(update: str) -> None:
     )
     if r.status_code >= 400:
         _fail("update", r)
+    if _cancelled(r):
+        # A cancelled update is a partial write, not a success; survivorship of
+        # the container is not evidence that the whole update applied.
+        _raise_cancelled()
 
 
 def gsp_post_turtle(graph_uri: str, turtle: str) -> dict[str, Any]:

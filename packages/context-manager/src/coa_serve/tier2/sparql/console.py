@@ -211,15 +211,16 @@ class OxigraphBackend:
             raise _ProviderTimedOut(f"provider timed out: {type(exc).__name__}") from exc
         except httpx.HTTPError as exc:
             raise _ProviderUnavailable(f"provider unreachable: {type(exc).__name__}") from exc
+        # Oxigraph's own ``--timeout-s`` deadline ends the response as a
+        # truncated 200 whose tail says the operation was cancelled. The query
+        # is already stopped there, so this is a timeout (504), not an
+        # unavailable provider (502) — and it is checked before parsing, because
+        # a body cut after the last complete row can still be valid JSON.
+        if body[-len(_CANCELLED_NOTICE) - 8 :].rstrip().endswith(_CANCELLED_NOTICE.encode()):
+            raise _ProviderTimedOut("the graph provider cancelled the query at its server limit")
         try:
             parsed = json.loads(body)
         except ValueError as exc:
-            # Oxigraph's own ``--timeout-s`` deadline ends the response as a
-            # truncated 200 whose tail says the operation was cancelled. The
-            # query is already stopped there, so this is a timeout (504), not an
-            # unavailable provider (502).
-            if _CANCELLED_NOTICE.encode() in body:
-                raise _ProviderTimedOut("the graph provider cancelled the query at its server limit") from exc
             raise _ProviderUnavailable("provider returned a body that is not SPARQL JSON") from exc
         if not isinstance(parsed, dict):
             raise _ProviderUnavailable("provider returned a JSON value that is not an object")
