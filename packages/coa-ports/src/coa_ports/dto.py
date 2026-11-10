@@ -92,6 +92,7 @@ class ContextAction(StrEnum):
     TRANSLATE = "translate"
     KB_SEARCH = "kbSearch"
     GRAPH_TRAVERSE = "graphTraverse"
+    RUN_SPARQL = "runSparql"
     ANSWER = "answer"
 
 

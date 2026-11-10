@@ -21,6 +21,7 @@ import TreeView from "@cloudscape-design/components/tree-view";
 import { PendingReviewBanner } from "@components/ontology/PendingReviewBanner";
 import { InductedSourcesView } from "./explorer/InductedSourcesView";
 import { OntologyInventoryView } from "./explorer/OntologyInventoryView";
+import { SparqlConsoleView } from "./explorer/SparqlConsoleView";
 import { StatementBrowserView } from "./explorer/StatementBrowserView";
 import {
   buildClassTree,
@@ -821,6 +822,7 @@ const EXPLORER_TABS = new Set([
   "ontologies",
   "sources",
   "statements",
+  "sparql",
 ]);
 
 export function GraphSearchPage() {
@@ -2659,6 +2661,11 @@ export function GraphSearchPage() {
                 namespace={namespaceId}
               />
             ),
+          },
+          {
+            id: "sparql",
+            label: t("SPARQL"),
+            content: <SparqlConsoleView namespace={namespaceId} />,
           },
         ]}
       />

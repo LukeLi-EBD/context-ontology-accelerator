@@ -74,6 +74,7 @@ from .tier2.ontop.sparql_example_loader import FewShotExampleLoader
 from .tier2.ontop.strategy import OntopStrategy
 from .tier2.ontop.vkg_translator import VKGTranslator
 from .tier2.skip.aoss_provenance import AossProvenanceEvaluator
+from .tier2.sparql.console import SparqlConsole, SparqlConsoleError, build_console_from_env
 from .tier2.sparql.nl_to_sparql import NativeNLtoSPARQL
 from .tier2.sparql.strategy import SparqlStrategy
 from .tier2.sql_firewall import SQLFirewall
@@ -114,6 +115,8 @@ _session_metadata: Any | None = None
 _sources_registry: SourcesRegistry | None = None
 _nl_to_sparql: NLtoSPARQL | None = None
 _sparql_client_cache: SparqlClientCache | None = None
+_sparql_console: SparqlConsole | None = None
+_sparql_console_lock = asyncio.Lock()
 _init_lock = asyncio.Lock()
 
 # Hard upper bound on the per-request transport budget: max(10, min(env, 300)).
@@ -804,6 +807,54 @@ def _parse_graph_traverse_options(options: Any) -> tuple[str, int, int]:
     return start_uri, max_depth, max_results
 
 
+async def _get_sparql_console() -> SparqlConsole:
+    """Build the console once; a missing/unsupported backend stays an explicit 503."""
+    global _sparql_console
+    if _sparql_console is None:
+        async with _sparql_console_lock:
+            if _sparql_console is None:
+                console = build_console_from_env()
+                if console is None:
+                    raise SparqlConsoleError(
+                        503,
+                        "E_SPARQL_BACKEND_NOT_CONFIGURED",
+                        "COA_PROVIDER_GRAPH is not set; the SPARQL console has no graph backend",
+                    )
+                _sparql_console = console
+    return _sparql_console
+
+
+async def _handle_run_sparql(payload: dict, request_id: str) -> dict:
+    """The SPARQL console (F72–F74): one SELECT/ASK against the namespace's graphs."""
+    namespace = str(payload.get("namespace") or "")
+    options = payload.get("options") if isinstance(payload.get("options"), dict) else {}
+    sparql = str(options.get("sparql") or "")
+    if not namespace:
+        return _error(400, "namespace required", request_id)
+    try:
+        console = await _get_sparql_console()
+        result = await console.run(namespace, sparql)
+    except SparqlConsoleError as exc:
+        logger.info(
+            "sparql_console_response",
+            request_id=request_id,
+            namespace=namespace,
+            status=exc.status,
+            code=exc.code,
+        )
+        return exc.to_dict()
+    except Exception:  # never collapse a console failure into an opaque 500
+        logger.exception("sparql_console_failed", request_id=request_id, namespace=namespace)
+        return {
+            "statusCode": 500,
+            "error": "E_SPARQL_INTERNAL",
+            "message": "The SPARQL console failed unexpectedly",
+        }
+    body = {"statusCode": 200, "namespaceId": namespace, "requestId": request_id}
+    body.update(result.to_dict())
+    return body
+
+
 async def _handle_graph_traverse(payload: dict, request_id: str) -> dict:
     """Graph traversal in Neptune — returns entities and relationships."""
     namespace = payload.get("namespace", "")
@@ -1408,6 +1459,9 @@ async def invoke(payload: dict, context=None):
             return
         if action == "graphTraverse":
             yield await _handle_graph_traverse(payload, request_id)
+            return
+        if action == "runSparql":
+            yield await _handle_run_sparql(payload, request_id)
             return
     except ServeError as e:
         yield e.to_dict(request_id)

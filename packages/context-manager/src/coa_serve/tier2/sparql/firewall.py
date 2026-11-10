@@ -96,15 +96,21 @@ class FirewallRule(StrEnum):
     FEDERATED = "F5_federated"
     WORK_BOUND = "F6_work_bound"
     GRANT = "F7_grant"
+    STATEMENT = "F8_statement_form"
 
 
 class UnsafeSPARQLError(ValueError):
     """The query was rejected; nothing may be executed."""
 
-    def __init__(self, rule: FirewallRule, message: str):
-        """Record the violated rule alongside the message."""
+    def __init__(self, rule: FirewallRule, message: str, *, code: str | None = None):
+        """Record the violated rule alongside the message.
+
+        ``code`` is the API-level error code (``E_SPARQL_*``) when the rejection has a
+        more specific public name than ``rule``; it is never used for decisions.
+        """
         super().__init__(message)
         self.rule = rule
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -397,6 +403,27 @@ def _is_the_graph(term: Any, named_graph: str) -> bool:
     return isinstance(term, URIRef) and str(term) == named_graph
 
 
+_GRAPH_VAR_RE = re.compile(r"[?$]\w+")
+
+
+def _graph_ref_is_scoped(text: str, end: int, allowed: set[str]) -> bool:
+    """Whether the ``GRAPH`` keyword ending at ``end`` names an allowed IRI or a variable."""
+    at = end
+    while at < len(text) and text[at].isspace():
+        at += 1
+    if at >= len(text):
+        return False
+    if text[at] == "<":
+        match = _IRIREF_RE.match(text, at)
+        return match is not None and match.group()[1:-1] in allowed
+    return _GRAPH_VAR_RE.match(text, at) is not None
+
+
+def mentions_keyword(sparql: str, word: str) -> bool:
+    """Whether ``word`` appears as a keyword, not inside a literal, IRI, comment or name."""
+    return bool(_keyword_re(word).search(_blank_names(_mask(sparql))))
+
+
 class SPARQLFirewall:
     """Applies F1–F5 to a generated SPARQL query and returns the text to execute."""
 
@@ -409,9 +436,11 @@ class SPARQLFirewall:
         sparql: str,
         *,
         named_graph: str | None = None,
+        named_graphs: tuple[str, ...] | None = None,
         max_results: int | None = None,
         query_timeout_ms: int | None = None,
         denied_predicates: frozenset[str] = frozenset(),
+        allowed_forms: frozenset[QueryForm] | None = None,
     ) -> SafeQuery:
         """Gate one query.
 
@@ -419,12 +448,18 @@ class SPARQLFirewall:
             sparql: The generated query.
             named_graph: The source's ``configuration.dataNamedGraph``, or ``None``
                 when its A-Box is the endpoint's default graph.
+            named_graphs: A namespace's graphs. When given, the query is confined to
+                their union as the default graph and to each of them as a named graph;
+                ``GRAPH ?var`` is admitted and an explicit ``GRAPH <iri>`` must name
+                one of them. Mutually exclusive with ``named_graph``.
             max_results: Caller's requested row cap; never raises the default cap.
             query_timeout_ms: The server-side timeout the query must carry (F6), for an
                 engine that takes one; ``None`` sends none.
             denied_predicates: Predicate IRIs the caller's grant denies on this source
                 (exact strings). With any, F7 refuses a query that names one or that
                 could read an unnamed predicate (a variable predicate, a negated set).
+            allowed_forms: Query forms this caller admits. With any, every other form is
+                refused as F8 even though the grammar could parse it.
 
         Returns:
             The query to execute, scoped and bounded.
@@ -432,9 +467,37 @@ class SPARQLFirewall:
         Raises:
             UnsafeSPARQLError: Any rule failed; nothing may be executed.
         """
+        if named_graph is not None and named_graphs is not None:
+            raise ValueError("named_graph and named_graphs are mutually exclusive")
         if named_graph is not None and not NAMED_GRAPH_IRI_RE.fullmatch(named_graph):
             # Validated at registration too; re-checked at the point of interpolation.
-            raise UnsafeSPARQLError(FirewallRule.GRAPH_SCOPE, "Source named graph is not a safe IRI")
+            raise UnsafeSPARQLError(
+                FirewallRule.GRAPH_SCOPE,
+                "Source named graph is not a safe IRI",
+                code="E_SPARQL_GRAPH_FORBIDDEN",
+            )
+        graphs: tuple[str, ...] | None = None
+        if named_graphs is not None:
+            kept: list[str] = []
+            for graph in named_graphs:
+                if not isinstance(graph, str) or not NAMED_GRAPH_IRI_RE.fullmatch(graph):
+                    raise UnsafeSPARQLError(
+                        FirewallRule.GRAPH_SCOPE,
+                        "Namespace graph is not a safe IRI",
+                        code="E_SPARQL_GRAPH_FORBIDDEN",
+                    )
+                if graph not in kept:
+                    kept.append(graph)
+            if not kept:
+                raise UnsafeSPARQLError(
+                    FirewallRule.GRAPH_SCOPE,
+                    "The namespace has no graphs to scope the query to",
+                    code="E_SPARQL_SCOPE_EMPTY",
+                )
+            graphs = tuple(kept)
+        elif named_graph is not None:
+            graphs = (named_graph,)
+        multi = named_graphs is not None
         cap = self._cap(max_results)
 
         text = (sparql or "").strip().rstrip(";").rstrip()
@@ -443,31 +506,43 @@ class SPARQLFirewall:
         algebra = self._parse(text)  # F1 / F4: the text as submitted must parse completely
         text = self._uncommented(text, algebra)  # F4: comment boundaries are the parser's
         form = QueryForm(algebra.name)
+        if allowed_forms is not None and form not in allowed_forms:
+            raise UnsafeSPARQLError(
+                FirewallRule.STATEMENT,
+                f"{form.name} is not allowed here; use SELECT or ASK",
+                code="E_SPARQL_STATEMENT_NOT_ALLOWED",
+            )
         if _names_a_hint(text, algebra):
             raise UnsafeSPARQLError(FirewallRule.WORK_BOUND, "Engine query hints are not allowed")
         _refuse_escapes_outside_literals(text)  # F4: names must be compared as the engine reads them
         _refuse_relative_iris(text)  # F4: so must IRIs
         _refuse_repeated_prefix_labels(text)  # F4: and prefixed names
-        self._check_patterns(text, algebra, named_graph, submitted=True)  # F5, F2, F4
+        self._check_patterns(text, algebra, graphs, multi=multi, submitted=True)  # F5, F2, F4
         if form == QueryForm.DESCRIBE:
             raise UnsafeSPARQLError(
                 FirewallRule.RESULT_BOUND, "DESCRIBE is not allowed: a LIMIT cannot bound the triples it returns"
             )
 
-        if named_graph is not None:
-            text = self._scope_to_graph(text, form, named_graph)
+        if graphs is not None:
+            # A single source graph keeps the old entry point (and its fail-closed tests);
+            # a namespace dataset takes the multi-graph rewrite.
+            text = (
+                self._scope_to_graphs(text, form, graphs)
+                if multi
+                else self._scope_to_graph(text, form, graphs[0])
+            )
         limit: int | None = None
         # ASK returns one boolean: no solution sequence to bound.
         if form != QueryForm.ASK:
             text, limit = self._bound(text, algebra, cap)  # F3
 
-        self._verify(text, form, named_graph, limit, algebra)  # F4: every rule again, on the text executed
+        self._verify(text, form, graphs, limit, algebra, multi=multi)  # F4: every rule again, on the text executed
         if denied_predicates:
             _check_denied_predicates(algebra, denied_predicates)  # F7, on the algebra
             # and on the parse tree, which keeps the patterns rdflib's translation can lose
             _check_denied_predicates(_expanded_tree(_tree_of(text)), denied_predicates)
         if query_timeout_ms is not None:
-            text = self._with_timeout(text, form, named_graph, limit, query_timeout_ms)  # F6
+            text = self._with_timeout(text, form, graphs, limit, query_timeout_ms, multi=multi)  # F6
         variables = tuple(str(v) for v in _field(algebra, "PV") or []) if form == QueryForm.SELECT else ()
         return SafeQuery(sparql=text, form=form, limit=limit, variables=variables)
 
@@ -491,20 +566,32 @@ class SPARQLFirewall:
 
     @classmethod
     def _check_patterns(
-        cls, text: str, algebra: CompValue, named_graph: str | None, *, submitted: bool = False
+        cls,
+        text: str,
+        algebra: CompValue,
+        graphs: tuple[str, ...] | None,
+        *,
+        multi: bool = False,
+        submitted: bool = False,
     ) -> None:
         """F5, F2 and F4 over the algebra, the parse tree and the text; any one view refuses.
 
         ``submitted``: the caller's text, which may carry no dataset clause (the rewrite adds the only one).
         """
+        if isinstance(graphs, str):  # callers written against the single-graph helper
+            graphs = (graphs,)
         walked = list(_walk(algebra))
         tree = list(_walk(_tree_of(text)))
         masked = _blank_names(_mask(text))
         # F5 first, so a SERVICE is always reported as F5, even in a query F2 would also reject.
         cls._check_no_federation([*walked, *tree], masked)
         if submitted and _field(algebra, "datasetClause"):
-            raise UnsafeSPARQLError(FirewallRule.GRAPH_SCOPE, "FROM / FROM NAMED is not allowed")
-        cls._check_graph_blocks([*walked, *tree], text, masked, named_graph)
+            raise UnsafeSPARQLError(
+                FirewallRule.GRAPH_SCOPE,
+                "FROM / FROM NAMED is not allowed",
+                code="E_SPARQL_DATASET_FORBIDDEN",
+            )
+        cls._check_graph_blocks([*walked, *tree], text, masked, graphs, multi)
         cls._check_views_agree(walked, tree, masked)
 
     @staticmethod
@@ -513,21 +600,44 @@ class SPARQLFirewall:
             raise UnsafeSPARQLError(FirewallRule.FEDERATED, "SERVICE (federated query) is not allowed")
 
     @staticmethod
-    def _check_graph_blocks(nodes: list[CompValue], text: str, masked: str, named_graph: str | None) -> None:
+    def _check_graph_blocks(
+        nodes: list[CompValue],
+        text: str,
+        masked: str,
+        graphs: tuple[str, ...] | None,
+        multi: bool = False,
+    ) -> None:
         # Inside EXISTS / NOT EXISTS rdflib keeps the parse-tree GraphGraphPattern, not the algebra Graph.
         terms = [_field(node, "term") for node in nodes if node.name in ("Graph", "GraphGraphPattern")]
         keywords = list(_GRAPH_RE.finditer(masked))
-        if named_graph is None:
+        if graphs is None:
             if terms or keywords:
                 raise UnsafeSPARQLError(
                     FirewallRule.GRAPH_SCOPE, "GRAPH is not allowed: this source reads its default graph"
                 )
             return
+        if multi:
+            allowed = set(graphs)
+            # A variable graph reads one of the injected named graphs; an explicit one must be in the set.
+            if not all(
+                (isinstance(term, URIRef) and str(term) in allowed) or isinstance(term, Variable) for term in terms
+            ) or not all(_graph_ref_is_scoped(text, m.end(), allowed) for m in keywords):
+                raise UnsafeSPARQLError(
+                    FirewallRule.GRAPH_SCOPE,
+                    "GRAPH may only name this namespace's graphs",
+                    code="E_SPARQL_GRAPH_FORBIDDEN",
+                )
+            return
+        named_graph = graphs[0]
         named_iri = re.compile(rf"\s*<{re.escape(named_graph)}>")
         if not all(_is_the_graph(term, named_graph) for term in terms) or not all(
             named_iri.match(text, m.end()) for m in keywords
         ):
-            raise UnsafeSPARQLError(FirewallRule.GRAPH_SCOPE, "GRAPH may only name this source's graph")
+            raise UnsafeSPARQLError(
+                FirewallRule.GRAPH_SCOPE,
+                "GRAPH may only name this source's graph",
+                code="E_SPARQL_GRAPH_FORBIDDEN",
+            )
 
     @staticmethod
     def _check_views_agree(walked: list[CompValue], tree: list[CompValue], masked: str) -> None:
@@ -541,7 +651,16 @@ class SPARQLFirewall:
 
     @staticmethod
     def _scope_to_graph(text: str, form: QueryForm, named_graph: str) -> str:
-        """Insert ``FROM <g> FROM NAMED <g>`` where the grammar puts the dataset clause.
+        """Scope to one source graph; the single-graph entry point."""
+        return SPARQLFirewall._scope_to_graphs(text, form, (named_graph,))
+
+    @staticmethod
+    def _scope_to_graphs(text: str, form: QueryForm, graphs: tuple[str, ...]) -> str:
+        """Insert the dataset clause where the grammar puts it.
+
+        One source graph yields ``FROM <g> FROM NAMED <g>``; a namespace's graphs yield
+        ``FROM <g1> FROM <g2> ... FROM NAMED <g1> ...`` so the default graph is their
+        union and each stays addressable by ``GRAPH ?g``.
 
         That is after the form's head (and, for CONSTRUCT, its template) and before
         the WHERE clause. DESCRIBE, the one form whose WHERE clause is optional, is
@@ -564,12 +683,21 @@ class SPARQLFirewall:
         if not candidates:
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "WHERE clause not found")
         at = min(candidates)
-        clause = f"FROM <{named_graph}> FROM NAMED <{named_graph}>"
+        clause = " ".join(
+            [f"FROM <{graph}>" for graph in graphs] + [f"FROM NAMED <{graph}>" for graph in graphs]
+        )
         return f"{text[:at].rstrip()}\n{clause}\n{text[at:].lstrip()}".rstrip()
 
     @classmethod
     def _with_timeout(
-        cls, text: str, form: QueryForm, named_graph: str | None, limit: int | None, timeout_ms: int
+        cls,
+        text: str,
+        form: QueryForm,
+        graphs: tuple[str, ...] | None,
+        limit: int | None,
+        timeout_ms: int,
+        *,
+        multi: bool = False,
     ) -> str:
         """Open the WHERE group with the timeout hint, then check that only the hint was added."""
         masked = _mask(text)
@@ -592,8 +720,8 @@ class SPARQLFirewall:
         algebra = _algebra_of(hinted)
         if algebra is None or algebra.name != form.value:
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Query with the timeout does not parse")
-        cls._check_patterns(hinted, algebra, named_graph)
-        cls._check_scope(algebra, named_graph)
+        cls._check_patterns(hinted, algebra, graphs, multi=multi)
+        cls._check_scope(algebra, graphs)
         cls._check_bound(algebra, limit)
         if _parser_reads_a_comment(hinted):
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Query with the timeout has a comment")
@@ -633,9 +761,18 @@ class SPARQLFirewall:
 
     @classmethod
     def _verify(
-        cls, text: str, form: QueryForm, named_graph: str | None, limit: int | None, checked: CompValue | None = None
+        cls,
+        text: str,
+        form: QueryForm,
+        graphs: tuple[str, ...] | str | None,
+        limit: int | None = None,
+        checked: CompValue | None = None,
+        *,
+        multi: bool = False,
     ) -> None:
         """F4 on the final text, the one executed: every rule again, and the checked query plus only the rewrites."""
+        if isinstance(graphs, str):  # callers written against the single-graph helper
+            graphs = (graphs,)
         algebra = _algebra_of(text)
         if algebra is None:
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Rewritten query does not parse")
@@ -643,8 +780,8 @@ class SPARQLFirewall:
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Rewritten query changed form")
         _refuse_escapes_outside_literals(text)
         _refuse_relative_iris(text)
-        cls._check_patterns(text, algebra, named_graph)  # F5, F2, F4
-        cls._check_scope(algebra, named_graph)
+        cls._check_patterns(text, algebra, graphs, multi=multi)  # F5, F2, F4
+        cls._check_scope(algebra, graphs)
         cls._check_bound(algebra, limit)  # F3
         if checked is not None and _core(algebra) != _core(checked):
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Rewritten query differs from the checked query")
@@ -652,12 +789,14 @@ class SPARQLFirewall:
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Rewritten query has a comment")
 
     @staticmethod
-    def _check_scope(algebra: CompValue, named_graph: str | None) -> None:
+    def _check_scope(algebra: CompValue, graphs: tuple[str, ...] | str | None) -> None:
+        if isinstance(graphs, str):
+            graphs = (graphs,)
         dataset = set()
         for clause in _field(algebra, "datasetClause") or []:
             kind = "default" if _field(clause, "default") is not None else "named"
             dataset.add((kind, str(_field(clause, kind))))
-        expected = {("default", named_graph), ("named", named_graph)} if named_graph is not None else set()
+        expected = {(kind, graph) for graph in graphs or () for kind in ("default", "named")}
         if dataset != expected:
             raise UnsafeSPARQLError(FirewallRule.FAIL_CLOSED, "Rewritten query is not scoped as intended")
 
