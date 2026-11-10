@@ -24,8 +24,8 @@ graph (7878). Ontologies live in their own named graph under
 Usage:
     python coa_ontology_local.py                    # serve on 127.0.0.1:8101
     python coa_ontology_local.py --seed --namespace <uuid>
-                                                    # (re)load fsldm-merged.ttl
-                                                    # and write its registry row
+                                                    # (re)load merged + terms + metrics
+                                                    # folios and write the registry row
 
 The seed is read-only from the engine's point of view: it writes the TTL into
 one named graph and one registry row. Induction/ingest (write path) is out of
@@ -58,13 +58,87 @@ for _p in reversed(_PACKAGES):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-TTL_PATH = REPO / "doc/_fsldm/fsldm-merged.ttl"
+_FSLDM = REPO / "doc/_fsldm"
 
-# Exact counts of doc/_fsldm/fsldm-merged.ttl (rdflib, 2026-11-09).
-EXPECTED_TRIPLES = 2675
-EXPECTED_CLASSES = 156
-EXPECTED_OBJECT_PROPERTIES = 84
-EXPECTED_DATATYPE_PROPERTIES = 45
+# The T-Box is three folios, not one file. A total-only assertion (2675) passed
+# while two folios were silently missing, so each folio is pinned on its own:
+# triple count plus the predicates that make it useful. Missing or drifted
+# folio aborts the seed before anything is written.
+FOLIOS: tuple[dict, ...] = (
+    {
+        "name": "merged",
+        "path": _FSLDM / "fsldm-merged.ttl",
+        "triples": 2675,
+        "assert": {
+            "classes": ("?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class>", 156),
+            "objectProperties": (
+                "?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty>",
+                84,
+            ),
+            "datatypeProperties": (
+                "?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty>",
+                45,
+            ),
+            "altLabels": ("?s <http://www.w3.org/2004/02/skos/core#altLabel> ?o", 146),
+        },
+    },
+    {
+        "name": "terms",
+        "path": _FSLDM / "fsldm-terms.ttl",
+        "triples": 285,
+        "assert": {
+            "termEntries": (
+                "?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/fsldm/terms#TermEntry>",
+                18,
+            ),
+            "termLabels": ("?s <https://w3id.org/fsldm/terms#label> ?o", 18),
+            "termForClass": ("?s <https://w3id.org/fsldm/terms#forClass> ?o", 18),
+            "termStatus": ("?s <https://w3id.org/fsldm/terms#status> ?o", 18),
+            "termGuardRegex": ("?s <https://w3id.org/fsldm/terms#guardRegex> ?o", 3),
+            "altLabelSubjects": ("?s <http://www.w3.org/2004/02/skos/core#altLabel> ?o", 15),
+        },
+    },
+    {
+        "name": "metrics",
+        "path": _FSLDM / "fsldm-metrics.ttl",
+        "triples": 664,
+        "assert": {
+            "metricConcepts": (
+                "?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "
+                "<http://www.w3.org/2004/02/skos/core#Concept> ; "
+                "<http://www.w3.org/2004/02/skos/core#inScheme> "
+                "<https://w3id.org/fsldm/terms#MetricScheme>",
+                85,
+            ),
+            "metricNotations": (
+                "?s <http://www.w3.org/2004/02/skos/core#notation> ?o ; "
+                "<http://www.w3.org/2004/02/skos/core#inScheme> "
+                "<https://w3id.org/fsldm/terms#MetricScheme>",
+                85,
+            ),
+            "metricDefinitions": (
+                "?s <http://www.w3.org/2004/02/skos/core#definition> ?o ; "
+                "<http://www.w3.org/2004/02/skos/core#inScheme> "
+                "<https://w3id.org/fsldm/terms#MetricScheme>",
+                85,
+            ),
+        },
+    },
+)
+
+# Union read-back: covers cross-folio totals that no single file can prove.
+EXPECTED_UNION = {
+    "triples": 3624,
+    "termTriples": ("?s <https://w3id.org/fsldm/terms#label> ?o", 18),
+    "metricConcepts": (
+        "?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> "
+        "<http://www.w3.org/2004/02/skos/core#Concept> ; "
+        "<http://www.w3.org/2004/02/skos/core#inScheme> "
+        "<https://w3id.org/fsldm/terms#MetricScheme>",
+        85,
+    ),
+    "altLabels": ("?s <http://www.w3.org/2004/02/skos/core#altLabel> ?o", 217),
+}
 
 
 def _configure_environment() -> None:
@@ -127,62 +201,101 @@ def _sparql_count(graph_uri: str, pattern: str) -> int:
     return int(body["results"]["bindings"][0]["n"]["value"])
 
 
+def _assert_folio(folio: dict) -> None:
+    """Parse one folio and pin its triple count plus its key predicates."""
+    from rdflib import Graph
+
+    path: Path = folio["path"]
+    if not path.is_file():
+        raise SystemExit(f"FATAL: folio missing: {path.name} ({path})")
+    g = Graph()
+    g.parse(str(path), format="turtle")
+    actual = {"triples": len(g)}
+    for key, (pattern, _expected) in folio["assert"].items():
+        actual[key] = _count_pattern(g, pattern)
+    expected = {"triples": folio["triples"], **{k: v[1] for k, v in folio["assert"].items()}}
+    if actual != expected:
+        raise SystemExit(
+            f"FATAL: folio {folio['name']} ({path.name}) does not match the pinned counts: "
+            f"{actual} != {expected}"
+        )
+
+
+def _count_pattern(g, pattern: str) -> int:
+    """Count subjects matching a fixed `?s <pred> ?o [; <pred> ?o]` pattern.
+
+    Patterns come from FOLIOS constants, never from user input.
+    """
+    import re
+
+    from rdflib import URIRef
+
+    m = re.match(r"^(\?[a-z]+)\s+(.+)$", pattern.strip())
+    if not m:
+        raise SystemExit(f"FATAL: bad folio pattern: {pattern}")
+    predicates: list[tuple[URIRef, URIRef | None]] = []
+    for part in [p.strip() for p in m.group(2).split(" ; ")]:
+        pm = re.match(r"^(<[^>]+>)\s+(<[^>]+>|\?[a-z]+)$", part)
+        if not pm:
+            raise SystemExit(f"FATAL: bad folio pattern: {pattern}")
+        predicate = URIRef(pm.group(1)[1:-1])
+        obj = pm.group(2)
+        target = None if obj.startswith("?") else URIRef(obj[1:-1])
+        predicates.append((predicate, target))
+    matched = 0
+    for subject in set(g.subjects()):
+        if all(next(g.triples((subject, pred, target)), None) is not None for pred, target in predicates):
+            matched += 1
+    return matched
+
+
 def seed(namespace: str) -> dict:
-    """Load the merged FSLDM TTL into its own named graph, then register it."""
+    """Load all FSLDM folios into one named graph, then register the version."""
     from rdflib import OWL, RDF, Graph
 
     from coa_local_providers.ontology_oxigraph import replace_graph_turtle
     from coa_local_providers.ontology_registry_pg import put_ontology_registry
     from coa_ontology.stores import neptune_db_graph as ndb
 
-    if not TTL_PATH.is_file():
-        raise SystemExit(f"FATAL: TTL not found: {TTL_PATH}")
+    merged = Graph()
+    for folio in FOLIOS:
+        _assert_folio(folio)
+        merged.parse(str(folio["path"]), format="turtle")
 
-    g = Graph()
-    g.parse(str(TTL_PATH), format="turtle")
-    triples = len(g)
-    classes = sum(1 for _ in g.triples((None, RDF.type, OWL.Class)))
-    object_properties = sum(1 for _ in g.triples((None, RDF.type, OWL.ObjectProperty)))
-    datatype_properties = sum(1 for _ in g.triples((None, RDF.type, OWL.DatatypeProperty)))
-    ontology_id = next((str(s) for s in g.subjects(RDF.type, OWL.Ontology)), None)
+    ontology_id = next((str(s) for s in merged.subjects(RDF.type, OWL.Ontology)), None)
     if not ontology_id:
-        raise SystemExit("FATAL: fsldm-merged.ttl has no owl:Ontology subject")
-
-    actual = {
-        "triples": triples,
-        "classes": classes,
-        "object_properties": object_properties,
-        "datatype_properties": datatype_properties,
-    }
-    expected = {
-        "triples": EXPECTED_TRIPLES,
-        "classes": EXPECTED_CLASSES,
-        "object_properties": EXPECTED_OBJECT_PROPERTIES,
-        "datatype_properties": EXPECTED_DATATYPE_PROPERTIES,
-    }
-    if actual != expected:
-        raise SystemExit(f"FATAL: fsldm-merged.ttl does not match the pinned counts: {actual} != {expected}")
+        raise SystemExit("FATAL: FSLDM folios have no owl:Ontology subject")
 
     graph_uri = ndb._ontology_graph_uri(ontology_id, namespace)
-    replace_graph_turtle(graph_uri, TTL_PATH.read_text(encoding="utf-8"))
+    replace_graph_turtle(graph_uri, merged.serialize(format="turtle"))
 
     stored = {
         "triples": _sparql_count(graph_uri, "?s ?p ?o"),
-        "classes": _sparql_count(graph_uri, "?c a owl:Class"),
-        "object_properties": _sparql_count(graph_uri, "?p a owl:ObjectProperty"),
-        "datatype_properties": _sparql_count(graph_uri, "?p a owl:DatatypeProperty"),
+        "classes": _sparql_count(graph_uri, "?s a <http://www.w3.org/2002/07/owl#Class>"),
+        "object_properties": _sparql_count(graph_uri, "?s a <http://www.w3.org/2002/07/owl#ObjectProperty>"),
+        "datatype_properties": _sparql_count(graph_uri, "?s a <http://www.w3.org/2002/07/owl#DatatypeProperty>"),
     }
-    if stored != expected:
-        raise SystemExit(f"FATAL: graph store read-back does not match the TTL: {stored} != {expected}")
+    if stored["triples"] != EXPECTED_UNION["triples"]:
+        raise SystemExit(
+            f"FATAL: graph store read-back has {stored['triples']} triples, "
+            f"expected {EXPECTED_UNION['triples']} (a folio was dropped)"
+        )
+    for key, spec in EXPECTED_UNION.items():
+        if key == "triples":
+            continue
+        pattern, count = spec
+        got = _sparql_count(graph_uri, pattern)
+        if got != count:
+            raise SystemExit(f"FATAL: union check {key} read back {got}, expected {count}")
 
     row = put_ontology_registry(
         namespace,
         ontology_id,
         {
             "uri": ontology_id,
-            "title": "FSLDM merged ontology (15 modules)",
+            "title": "FSLDM merged ontology + terms/metrics folios",
             "description": (
-                "FS-LDM 合并本体：15 个 owl:Ontology 模块、2675 三元组，"
+                "FS-LDM 本体三分册合并：merged(2675) + terms(285) + metrics(664) = 3624 三元组，"
                 "本地由单个命名图承载（读取链路）。"
             ),
             "ontology_type": "foundational",
@@ -237,7 +350,7 @@ def serve() -> None:
 def main(argv: list[str] | None = None) -> None:
     _configure_environment()
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--seed", action="store_true", help="load fsldm-merged.ttl into its named graph")
+    parser.add_argument("--seed", action="store_true", help="load all FSLDM folios into its named graph")
     parser.add_argument("--namespace", default="", help="namespace UUID (required with --seed)")
     args = parser.parse_args(argv)
 
