@@ -275,6 +275,52 @@ export async function reviewOntologyProposal(
   );
 }
 
+/** One gate in a publish dry-run; `ok` is the server's verdict, not ours. */
+export interface PublishGate {
+  ok?: boolean;
+  [detail: string]: unknown;
+}
+
+/** A publish dry-run blocker: gate + provider code, as the kernel emits them. */
+export interface PublishBlocker {
+  gate: string;
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * PublishOntology answer. `dryRun` fills the gate view
+ * (`wouldPublish`/`gates`/`blockers`); a real publish fills the version view.
+ */
+export interface PublishResult {
+  ok?: boolean;
+  dryRun?: boolean;
+  versionId?: string;
+  versionStatus?: string;
+  currentVersionId?: string;
+  publishExisting?: boolean;
+  wouldPublish?: boolean;
+  changed?: boolean;
+  publishedVersion?: string;
+  semver?: string;
+  graph?: string;
+  tripleCount?: number;
+  previousVersionId?: string;
+  publishedBy?: string;
+  publishedAt?: string;
+  unchanged?: boolean;
+  idempotent?: boolean;
+  mode?: string;
+  governed?: boolean;
+  implicit?: boolean;
+  breaking?: boolean;
+  acknowledgeBreaking?: boolean;
+  impact?: Record<string, unknown>;
+  gates?: Record<string, PublishGate>;
+  blockers?: PublishBlocker[];
+}
+
 export async function publishOntologyVersion(
   client: ApiClient,
   namespace: string,
@@ -284,20 +330,60 @@ export async function publishOntologyVersion(
     proposalId?: string;
     expectedVersionId?: string;
     acknowledgeBreaking?: boolean;
+    /** F112/F114: re-activate an already registered version (omit when false). */
+    publishExisting?: boolean;
+    /** F113: run the gates and return the plan without publishing. */
+    planOnly?: boolean;
     actor?: string;
     reason?: string;
   },
-): Promise<{ ok?: boolean; publishedVersion?: string; semver?: string; graph?: string }> {
-  return client.post(`${root(namespace, ontologyId)}/publish`, input);
+): Promise<PublishResult> {
+  return client.post<PublishResult>(`${root(namespace, ontologyId)}/publish`, input);
+}
+
+export type RollbackMode = "POINTER_ONLY" | "NEW_VERSION";
+
+/**
+ * RollbackOntology answer. The dry-run/plan answer carries
+ * `target`/`replacedVersion`/`targetTriples`/`wouldChangePointer`; a real
+ * rollback carries `publishedVersion` (and, for NEW_VERSION, `rollbackOf`).
+ */
+export interface RollbackResult {
+  ok?: boolean;
+  mode?: RollbackMode;
+  target?: OntologyVersion;
+  replacedVersion?: OntologyVersion | null;
+  targetVersionId?: string;
+  targetTriples?: number;
+  replacedVersionId?: string;
+  publishedVersion?: string;
+  rollbackOf?: string;
+  semver?: string;
+  graph?: string;
+  contentHash?: string;
+  wouldChangePointer?: boolean;
+  unchanged?: boolean;
+  rolledBackAt?: string;
+  rolledBackBy?: string;
+  blockers?: PublishBlocker[];
 }
 
 export async function rollbackOntology(
   client: ApiClient,
   namespace: string,
   ontologyId: string,
-  input: { targetVersionId: string; planOnly?: boolean; actor?: string; reason?: string },
-): Promise<{ ok?: boolean; publishedVersion?: string; replacedVersionId?: string }> {
-  return client.post(`${root(namespace, ontologyId)}/rollback`, input);
+  input: {
+    targetVersionId: string;
+    /** F115: return the plan only; nothing is written. */
+    planOnly?: boolean;
+    /** F117: copy the target into a new version, then move the pointer. */
+    newVersion?: boolean;
+    expectedVersionId?: string;
+    actor?: string;
+    reason?: string;
+  },
+): Promise<RollbackResult> {
+  return client.post<RollbackResult>(`${root(namespace, ontologyId)}/rollback`, input);
 }
 
 /** ListOntologyEvents: the hash-chained audit log, optionally per version/action. */

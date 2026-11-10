@@ -46,6 +46,9 @@ import {
   type OntologyProposalDetail,
   type OntologyVersion,
   type OntologyVersionDetail,
+  type PublishBlocker,
+  type PublishResult,
+  type RollbackResult,
 } from "../../services/ontology-lifecycle";
 
 const SAMPLE_TTL = `@prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -121,9 +124,30 @@ export function OntologyVersionsPage() {
   } | null>(null);
   const [ackBreaking, setAckBreaking] = useState(false);
   const [publishReason, setPublishReason] = useState("");
+  // F112/F114: re-activate an existing (superseded) version. Off by default;
+  // while off the field is not sent at all, so the server keeps its original
+  // semantics instead of receiving a hard-coded `false`.
+  const [publishExisting, setPublishExisting] = useState(false);
   const [events, setEvents] = useState<OntologyEvent[]>([]);
   const [eventsBusy, setEventsBusy] = useState(false);
   const [auditVersionId, setAuditVersionId] = useState<string | null>(null);
+  // F113: the dry-run gate report. `null` means the panel is closed; a report
+  // with `wouldPublish=false` stays open so the blockers stay readable.
+  const [publishPlan, setPublishPlan] = useState<{
+    version: OntologyVersion;
+    result: PublishResult;
+  } | null>(null);
+  // F115: a read-only rollback preview (nothing is written).
+  const [rollbackPreview, setRollbackPreview] = useState<{
+    version: OntologyVersion;
+    result: RollbackResult;
+  } | null>(null);
+  // F117: the new-version rollback is a write; it opens a confirm panel and
+  // the checkbox starts unchecked on purpose.
+  const [newVersionTarget, setNewVersionTarget] = useState<OntologyVersion | null>(null);
+  const [newVersionAck, setNewVersionAck] = useState(false);
+  const [newVersionReason, setNewVersionReason] = useState("");
+  const [newVersionResult, setNewVersionResult] = useState<RollbackResult | null>(null);
 
   useBreadcrumbTrail(
     namespaceId
@@ -254,27 +278,31 @@ export function OntologyVersionsPage() {
     });
 
   const publish = (version: OntologyVersion) =>
-    run(`publish-${version.id}`, "④ 发布", async () => {
+    run(`publish-${version.id}`, publishExisting ? "④ 发布既有版本（publishExisting）" : "④ 发布", async () => {
       const operator = requireActor();
       const approved = proposals.find(
         (p) => p.versionId === version.id && p.status === "approved",
       );
-      if (!approved) {
+      // Plain publish needs an approved proposal; re-activating an existing
+      // version does not, and attaching a non-approved proposal would make the
+      // kernel refuse it.
+      if (!publishExisting && !approved) {
         throw new Error("该版本还没有已通过的提案，先执行 ②③");
       }
       try {
         const res = await publishOntologyVersion(api, namespaceId!, appliedOntologyId, {
           versionId: version.id,
-          proposalId: approved.proposalId,
+          ...(approved ? { proposalId: approved.proposalId } : {}),
           expectedVersionId: pointer,
           actor: operator,
-          reason: "UI publish",
+          reason: publishExisting ? "UI publish existing version" : "UI publish",
+          ...(publishExisting ? { publishExisting: true } : {}),
         });
         setGate(null);
         setAckBreaking(false);
         setPublishReason("");
         await loadEvents(version.id);
-        return `publishedVersion=${res.publishedVersion} semver=${res.semver}`;
+        return `publishedVersion=${res.publishedVersion} semver=${res.semver} mode=${res.mode ?? "-"}`;
       } catch (err) {
         // The bridge wraps platform errors as {"error":{"providerCode":...}},
         // so ApiError.code may be UNKNOWN_ERROR. The 409 plus the provider code
@@ -295,7 +323,7 @@ export function OntologyVersionsPage() {
               api,
               namespaceId!,
               appliedOntologyId,
-              approved.proposalId,
+              approved?.proposalId ?? "",
             );
           } catch {
             // The gate still has to open: the 409 is authoritative even if the
@@ -303,7 +331,7 @@ export function OntologyVersionsPage() {
           }
           setGate({
             version,
-            proposalId: approved.proposalId,
+            proposalId: approved?.proposalId ?? "",
             diff: loaded?.diff ?? { breaking: true },
           });
           setAckBreaking(false);
@@ -339,12 +367,13 @@ export function OntologyVersionsPage() {
         acknowledgeBreaking: ackBreaking,
         actor: operator,
         reason: publishReason.trim() || "UI publish (breaking acknowledged)",
+        ...(publishExisting ? { publishExisting: true } : {}),
       });
       setGate(null);
       setAckBreaking(false);
       setPublishReason("");
       await loadEvents(target.version.id);
-      return `publishedVersion=${res.publishedVersion} semver=${res.semver} acknowledgeBreaking=${ackBreaking}`;
+      return `publishedVersion=${res.publishedVersion} semver=${res.semver} mode=${res.mode ?? "-"} acknowledgeBreaking=${ackBreaking}`;
     });
   };
 
@@ -352,11 +381,77 @@ export function OntologyVersionsPage() {
     run(`rollback-${version.id}`, "⑤ 回滚", async () => {
       const res = await rollbackOntology(api, namespaceId!, appliedOntologyId, {
         targetVersionId: version.id,
+        newVersion: false,
         actor: requireActor(),
         reason: "UI rollback",
       });
       return `publishedVersion=${res.publishedVersion} replaced=${res.replacedVersionId}`;
     });
+
+  // F113: run publish's gates without publishing. No `acknowledgeBreaking` is
+  // sent on purpose — the report must show the breaking blocker, not hide it.
+  const preflight = (version: OntologyVersion) =>
+    run(`dryrun-${version.id}`, "④a 发布预检（dry-run）", async () => {
+      const approved = proposals.find(
+        (p) => p.versionId === version.id && p.status === "approved",
+      );
+      const res = await publishOntologyVersion(api, namespaceId!, appliedOntologyId, {
+        versionId: version.id,
+        proposalId: approved?.proposalId,
+        planOnly: true,
+        ...(publishExisting ? { publishExisting: true } : {}),
+      });
+      setPublishPlan({ version, result: res });
+      const blockers = (res.blockers ?? []).map((b) => `${b.gate}:${b.code}`);
+      return (
+        `dryRun=${String(res.dryRun)} wouldPublish=${String(res.wouldPublish)} ` +
+        `publishExisting=${String(res.publishExisting ?? false)} ` +
+        `gates=${Object.keys(res.gates ?? {}).length} ` +
+        `blockers=${blockers.length > 0 ? blockers.join(",") : "无"}`
+      );
+    });
+
+  // F115: read-only rollback preview; nothing is written.
+  const previewRollback = (version: OntologyVersion) =>
+    run(`preview-${version.id}`, "⑤a 回滚预览（planOnly）", async () => {
+      const res = await rollbackOntology(api, namespaceId!, appliedOntologyId, {
+        targetVersionId: version.id,
+        planOnly: true,
+        newVersion: false,
+      });
+      setRollbackPreview({ version, result: res });
+      return (
+        `target=${res.target?.id ?? version.id} triples=${res.targetTriples ?? "?"} ` +
+        `replaced=${res.replacedVersion?.id ?? "(none)"} ` +
+        `wouldChangePointer=${String(res.wouldChangePointer)}`
+      );
+    });
+
+  // F117: copy the target into a new version and move the pointer. A write, so
+  // it needs the actor and an explicit confirmation.
+  const confirmNewVersionRollback = () => {
+    if (!newVersionTarget) return;
+    if (!newVersionAck) {
+      setError("必须显式确认：回滚并新建版本会新增一个 published 版本并移动指针");
+      return;
+    }
+    const target = newVersionTarget;
+    void run(`rollback-new-${target.id}`, "⑤b 回滚并新建版本", async () => {
+      const operator = requireActor();
+      const res = await rollbackOntology(api, namespaceId!, appliedOntologyId, {
+        targetVersionId: target.id,
+        newVersion: true,
+        actor: operator,
+        reason: newVersionReason.trim() || `UI rollback new version of ${target.id}`,
+      });
+      setNewVersionTarget(null);
+      setNewVersionAck(false);
+      setNewVersionReason("");
+      setNewVersionResult(res);
+      await loadEvents(res.publishedVersion ?? target.id);
+      return `publishedVersion=${res.publishedVersion} rollbackOf=${res.rollbackOf} semver=${res.semver}`;
+    });
+  };
 
   const openProposal = useCallback(
     async (proposal: OntologyProposal) => {
@@ -451,6 +546,17 @@ export function OntologyVersionsPage() {
       setDetailBusy(null);
     }
   }, [api, namespaceId, appliedOntologyId, detail, record]);
+
+  // F113: flatten the server's gate map into table rows. `ok` defaults to
+  // false when the provider omits it, so a malformed gate never reads as pass.
+  const gateRows = Object.entries(publishPlan?.result.gates ?? {}).map(
+    ([gateName, gateDetail]) => ({
+      gate: gateName,
+      ok: gateDetail.ok === true,
+      detail: JSON.stringify(gateDetail),
+    }),
+  );
+  const publishBlockers: PublishBlocker[] = publishPlan?.result.blockers ?? [];
 
   const iriList = (title: string, values?: string[]) => (
     <Box>
@@ -568,6 +674,33 @@ export function OntologyVersionsPage() {
         </SpaceBetween>
       </Container>
 
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description="F112 / F114：把已存在（superseded）的版本重新激活为当前版本"
+          >
+            发布选项
+          </Header>
+        }
+      >
+        <SpaceBetween size="s">
+          <Checkbox
+            checked={publishExisting}
+            onChange={({ detail }) => setPublishExisting(detail.checked)}
+            description="勾上后 ④ 发布与 ④a 预检都会带 publishExisting=true（服务端 mode=activate_existing）；不勾则不发送该字段，走原发布语义。"
+          >
+            发布既有版本（publishExisting）
+          </Checkbox>
+          {publishExisting && (
+            <Alert type="info">
+              已勾选 publishExisting：下表只有 superseded 版本可发布，内容不变、只移动版本指针。该勾选同时作用于
+              ④a dry-run，结果里的 publishExisting 会回显 true。
+            </Alert>
+          )}
+        </SpaceBetween>
+      </Container>
+
       <Table
         header={
           <Header
@@ -610,6 +743,39 @@ export function OntologyVersionsPage() {
             ),
           },
           {
+            id: "gates",
+            header: "闸门 / 回滚",
+            cell: (v: OntologyVersion) => (
+              <SpaceBetween direction="vertical" size="xs">
+                <Button
+                  loading={busy === `dryrun-${v.id}`}
+                  onClick={() => void preflight(v)}
+                >
+                  ④a dry-run 闸门
+                </Button>
+                <Button
+                  disabled={v.id === pointer}
+                  loading={busy === `preview-${v.id}`}
+                  onClick={() => void previewRollback(v)}
+                >
+                  ⑤a 回滚预览
+                </Button>
+                <Button
+                  disabled={v.id === pointer}
+                  loading={busy === `rollback-new-${v.id}`}
+                  onClick={() => {
+                    setNewVersionResult(null);
+                    setNewVersionTarget(v);
+                    setNewVersionAck(false);
+                    setNewVersionReason("");
+                  }}
+                >
+                  ⑤b 回滚并新建版本
+                </Button>
+              </SpaceBetween>
+            ),
+          },
+          {
             id: "actions",
             header: "操作",
             cell: (v: OntologyVersion) => (
@@ -622,11 +788,11 @@ export function OntologyVersionsPage() {
                   ② 发起提案
                 </Button>
                 <Button
-                  disabled={v.status !== "approved"}
+                  disabled={publishExisting ? v.status !== "superseded" : v.status !== "approved"}
                   loading={busy === `publish-${v.id}`}
                   onClick={() => void publish(v)}
                 >
-                  ④ 发布
+                  {publishExisting ? "④ 发布既有版本" : "④ 发布"}
                 </Button>
                 <Button
                   disabled={v.id === pointer}
@@ -824,6 +990,260 @@ export function OntologyVersionsPage() {
               actor 为空时不能提交；勾选本身不会触发发布，必须再点「确认并发布」。
             </Box>
           </SpaceBetween>
+        </Container>
+      )}
+
+      {publishPlan && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description={`versionId=${publishPlan.result.versionId ?? publishPlan.version.id}（dry-run 不写版本、事件与指针）`}
+              actions={<Button onClick={() => setPublishPlan(null)}>关闭</Button>}
+            >
+              ④a 发布预检（dry-run gates，F113）
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            <KeyValuePairs
+              columns={3}
+              items={[
+                {
+                  label: "wouldPublish",
+                  value: (
+                    <StatusIndicator
+                      type={publishPlan.result.wouldPublish ? "success" : "error"}
+                    >
+                      {String(publishPlan.result.wouldPublish ?? false)}
+                    </StatusIndicator>
+                  ),
+                },
+                {
+                  label: "versionStatus",
+                  value: publishPlan.result.versionStatus ?? publishPlan.version.status,
+                },
+                {
+                  label: "currentVersionId",
+                  value: publishPlan.result.currentVersionId ?? "-",
+                },
+                {
+                  label: "governed",
+                  value: String(publishPlan.result.governed ?? false),
+                },
+                {
+                  label: "implicit",
+                  value: String(publishPlan.result.implicit ?? false),
+                },
+                {
+                  label: "breaking",
+                  value: String(publishPlan.result.breaking ?? false),
+                },
+                {
+                  label: "publishExisting",
+                  value: String(publishPlan.result.publishExisting ?? false),
+                },
+              ]}
+            />
+            {publishPlan.result.breaking && (
+              <Alert type="warning" header="预检未带 acknowledgeBreaking">
+                dry-run 不会替用户确认破坏性变更；真实的发布请求仍会被 409 E_ONTOLOGY_BREAKING
+                拦住，必须在 ④ 发布确认里显式勾选。
+              </Alert>
+            )}
+            <Table
+              header={<Header variant="h3" counter={`(${gateRows.length})`}>闸门</Header>}
+              items={gateRows}
+              columnDefinitions={[
+                {
+                  id: "gate",
+                  header: "gate",
+                  cell: (row: { gate: string; ok: boolean; detail: string }) => row.gate,
+                },
+                {
+                  id: "ok",
+                  header: "ok",
+                  cell: (row: { gate: string; ok: boolean; detail: string }) => (
+                    <StatusIndicator type={row.ok ? "success" : "error"}>
+                      {String(row.ok)}
+                    </StatusIndicator>
+                  ),
+                },
+                {
+                  id: "detail",
+                  header: "明细",
+                  cell: (row: { gate: string; ok: boolean; detail: string }) => (
+                    <Box variant="code">{row.detail}</Box>
+                  ),
+                },
+              ]}
+              empty={
+                <Box textAlign="center" color="inherit">
+                  服务端没有返回闸门。
+                </Box>
+              }
+            />
+            <Table
+              header={
+                <Header variant="h3" counter={`(${publishBlockers.length})`}>
+                  阻断项
+                </Header>
+              }
+              items={publishBlockers}
+              columnDefinitions={[
+                { id: "gate", header: "gate", cell: (row: PublishBlocker) => row.gate },
+                {
+                  id: "code",
+                  header: "code",
+                  cell: (row: PublishBlocker) => <Box variant="code">{row.code}</Box>,
+                },
+                { id: "message", header: "message", cell: (row: PublishBlocker) => row.message },
+              ]}
+              empty={
+                <Box textAlign="center" color="inherit">
+                  没有阻断项。
+                </Box>
+              }
+            />
+          </SpaceBetween>
+        </Container>
+      )}
+
+      {rollbackPreview && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description={`targetVersionId=${rollbackPreview.result.target?.id ?? rollbackPreview.version.id}（planOnly，不写库）`}
+              actions={<Button onClick={() => setRollbackPreview(null)}>关闭</Button>}
+            >
+              ⑤a 回滚预览（F115）
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            <KeyValuePairs
+              columns={3}
+              items={[
+                {
+                  label: "目标版本 semver",
+                  value: rollbackPreview.result.target?.semver ?? rollbackPreview.version.semver,
+                },
+                {
+                  label: "目标状态",
+                  value: rollbackPreview.result.target?.status ?? rollbackPreview.version.status,
+                },
+                {
+                  label: "目标三元组",
+                  value: String(rollbackPreview.result.targetTriples ?? "-"),
+                },
+                {
+                  label: "将被替换的版本",
+                  value: rollbackPreview.result.replacedVersion?.id ?? "(无)",
+                },
+                {
+                  label: "被替换 semver",
+                  value: rollbackPreview.result.replacedVersion?.semver ?? "-",
+                },
+                {
+                  label: "指针是否变化",
+                  value: String(rollbackPreview.result.wouldChangePointer ?? "-"),
+                },
+              ]}
+            />
+            {rollbackPreview.result.wouldChangePointer === false && (
+              <Alert type="info" header="指针不会变化">
+                目标已经是当前发布版本；本次预览没有写入任何内容。
+              </Alert>
+            )}
+            <Box color="text-status-inactive">
+              预览只读；真正执行可选「⑤ 回滚」（只切指针）或「⑤b 回滚并新建版本」。
+            </Box>
+          </SpaceBetween>
+        </Container>
+      )}
+
+      {newVersionTarget && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description={`targetVersionId=${newVersionTarget.id} semver=${newVersionTarget.semver}`}
+            >
+              ⑤b 回滚并新建版本（F117）
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            <Alert type="warning" header="这是写操作">
+              会复制目标版本内容生成一个新版本（状态 published）并把图指针移过去，
+              当前发布版本转为 superseded。确认框不会默认勾选。
+            </Alert>
+            <Checkbox
+              checked={newVersionAck}
+              onChange={({ detail: change }) => setNewVersionAck(change.checked)}
+            >
+              我确认要新建版本并移动指针（不会自动勾选）
+            </Checkbox>
+            <FormField label="回滚原因（可选）" description="写入审计 reason">
+              <Input
+                value={newVersionReason}
+                onChange={({ detail: change }) => setNewVersionReason(change.value)}
+                placeholder="例如：回退到 0.6.0 的内容"
+              />
+            </FormField>
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                variant="primary"
+                disabled={!newVersionAck}
+                loading={busy === `rollback-new-${newVersionTarget.id}`}
+                onClick={confirmNewVersionRollback}
+              >
+                确认回滚并新建版本
+              </Button>
+              <Button
+                onClick={() => {
+                  setNewVersionTarget(null);
+                  setNewVersionAck(false);
+                  setNewVersionReason("");
+                }}
+              >
+                取消
+              </Button>
+            </SpaceBetween>
+            <Box color="text-status-inactive">actor 为空时提交会被拒绝。</Box>
+          </SpaceBetween>
+        </Container>
+      )}
+
+      {newVersionResult && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              actions={<Button onClick={() => setNewVersionResult(null)}>关闭</Button>}
+            >
+              ⑤b 新建版本结果
+            </Header>
+          }
+        >
+          <KeyValuePairs
+            columns={3}
+            items={[
+              {
+                label: "新版本 publishedVersion",
+                value: newVersionResult.publishedVersion ?? "-",
+              },
+              { label: "rollbackOf", value: newVersionResult.rollbackOf ?? "-" },
+              { label: "semver", value: newVersionResult.semver ?? "-" },
+              {
+                label: "被替换的版本",
+                value: newVersionResult.replacedVersionId ?? "-",
+              },
+              { label: "contentHash", value: newVersionResult.contentHash ?? "-" },
+              { label: "图", value: newVersionResult.graph ?? "-" },
+            ]}
+          />
         </Container>
       )}
 
