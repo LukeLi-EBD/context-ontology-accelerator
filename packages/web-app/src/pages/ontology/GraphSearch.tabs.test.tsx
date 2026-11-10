@@ -221,13 +221,14 @@ describe("GraphSearchPage — Explorer tabs", () => {
     expect(view.queryByTestId("inducted-sources")).toBeNull();
   });
 
-  it("always renders all three tabs, whichever one is active", async () => {
+  it("always renders all four tabs, whichever one is active", async () => {
     const view = renderPage("?tab=sources");
     await waitFor(() => expect(activeTabLabel(view)).toBe("Inducted sources"));
     expect(view.getAllByRole("tab").map((t) => t.textContent?.trim())).toEqual([
       "Classes",
       "Ontologies",
       "Inducted sources",
+      "Statements",
     ]);
     // The page header is tab-independent.
     expect(screen.getByText("Explorer")).toBeInTheDocument();
