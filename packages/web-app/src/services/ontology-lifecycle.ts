@@ -170,6 +170,23 @@ function root(namespace: string, ontologyId: string): string {
   return `/namespaces/${encodeURIComponent(namespace)}/ontologies/${encodeURIComponent(ontologyId)}`;
 }
 
+/**
+ * Fallback ontology id for the version-scoped read path (P0 read fix).
+ *
+ * D-T5-2: the kernel lifecycle routes currently ignore `ontologyId`, so this is
+ * only a placeholder. Once the bridge/kernel filter by the real ontology id,
+ * this constant MUST be replaced with a real namespace → ontologyId mapping or
+ * the version-scoped proposal reads will silently return nothing.
+ */
+export const DEFAULT_KERNEL_ONTOLOGY_ID = "fsldm-local";
+
+/** `?ontologyId=` when the route carries one, else the placeholder above. */
+export function kernelOntologyIdFromSearch(search: string): string {
+  return (
+    new URLSearchParams(search).get("ontologyId") || DEFAULT_KERNEL_ONTOLOGY_ID
+  );
+}
+
 export async function listOntologyVersions(
   client: ApiClient,
   namespace: string,
@@ -246,6 +263,49 @@ export async function getOntologyProposal(
   return client.get<OntologyProposalDetail>(
     `${root(namespace, ontologyId)}/proposals/${encodeURIComponent(proposalId)}`,
   );
+}
+
+/** One row of the version-scoped proposal list, shaped for the Proposals table. */
+export interface KernelProposalRow {
+  proposal_id: string;
+  version_id: string;
+  status: string;
+  change_summary?: string;
+  created_at?: string;
+}
+
+/**
+ * List the kernel's version-scoped proposals as Proposals-table rows.
+ *
+ * This is the P0 read path: the flat engine proposal routes are backed by
+ * DynamoDB, while the kernel writes proposals to Postgres. The lifecycle route
+ * reads the latter, so the page can show those proposals without waiting for a
+ * data migration. Fields the kernel does not carry (source_type, metadata) are
+ * left out rather than invented.
+ */
+export async function listKernelProposalsForDisplay(
+  client: ApiClient,
+  namespace: string,
+  ontologyId: string,
+): Promise<KernelProposalRow[]> {
+  const list = await listOntologyProposals(client, namespace, ontologyId);
+  return (list.items ?? []).map((p) => ({
+    proposal_id: p.proposalId,
+    version_id: p.versionId,
+    status: p.status,
+    change_summary: p.changeSummary,
+    created_at: p.createdAt,
+  }));
+}
+
+/** GetOntologyProposal in the shape of the version-scoped read path (P0). */
+export async function getKernelProposalDetailForDisplay(
+  client: ApiClient,
+  namespace: string,
+  ontologyId: string,
+  proposalId: string,
+): Promise<OntologyProposalDetail> {
+  return getOntologyProposal(client, namespace, ontologyId, proposalId);
 }
 
 export async function proposeOntologyVersion(

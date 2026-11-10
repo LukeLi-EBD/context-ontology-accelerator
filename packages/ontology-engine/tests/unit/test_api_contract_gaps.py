@@ -217,6 +217,18 @@ def test_list_proposals_without_filters_is_unchanged(proposals_page: Any) -> Non
     assert proposals_page.call_args.kwargs["status"] is None
 
 
+def test_list_proposals_store_failure_is_503_not_empty() -> None:
+    """An unreadable store must fail closed — never ``200 {"proposals": []}`` (D-T5-5)."""
+    with patch.object(
+        proposals.dynamo_store,
+        "list_proposals_newest_page",
+        side_effect=RuntimeError("table unreachable"),
+    ):
+        resp = client.get("/ontology/proposals/", params={"namespace": "ns"})
+    assert resp.status_code == 503
+    assert resp.json() == {"detail": "Proposals are temporarily unavailable; retry."}
+
+
 @pytest.fixture()
 def jobs_page() -> Any:
     with patch.object(induce_catalog.dynamo_store, "list_jobs_page", return_value=([], None)) as page:

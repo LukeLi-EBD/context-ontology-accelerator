@@ -76,6 +76,12 @@ class TestResolveFactConflictsResponseContent(unittest.TestCase):
                             reason = '', 
                             values = [
                                 '0'
+                                ], 
+                            kept_fact_ids = [
+                                '0'
+                                ], 
+                            retired_fact_ids = [
+                                '0'
                                 ], )
                         ], )
             )

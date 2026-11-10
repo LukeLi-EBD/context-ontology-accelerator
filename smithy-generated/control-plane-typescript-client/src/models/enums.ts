@@ -53,6 +53,121 @@ export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus
  * @public
  * @enum
  */
+export const FactObjectKind = {
+  /**
+   * Object is an IRI.
+   */
+  iri: "iri",
+  /**
+   * Object is a literal value.
+   */
+  literal: "literal",
+} as const;
+/**
+ * @public
+ */
+export type FactObjectKind = (typeof FactObjectKind)[keyof typeof FactObjectKind];
+
+/**
+ * @public
+ * @enum
+ */
+export const FactSourceKind = {
+  /**
+   * Extracted from a document.
+   */
+  document: "document",
+  /**
+   * Entered by an operator.
+   */
+  manual: "manual",
+  /**
+   * Written by a merge adjudication.
+   */
+  merge: "merge",
+  /**
+   * Loaded from a table.
+   */
+  table: "table",
+} as const;
+/**
+ * @public
+ */
+export type FactSourceKind = (typeof FactSourceKind)[keyof typeof FactSourceKind];
+
+/**
+ * @public
+ * @enum
+ */
+export const FactState = {
+  /**
+   * The row currently backs the A-Box graph.
+   */
+  active: "active",
+  /**
+   * The row was withdrawn; the assertion is no longer asserted.
+   */
+  retracted: "retracted",
+  /**
+   * A newer merged row replaced this one.
+   */
+  superseded: "superseded",
+} as const;
+/**
+ * @public
+ */
+export type FactState = (typeof FactState)[keyof typeof FactState];
+
+/**
+ * @public
+ * @enum
+ */
+export const FactEventFormat = {
+  /**
+   * Full event payload, including the stored JSON document.
+   */
+  full: "full",
+  /**
+   * Event header only: no payload document.
+   */
+  summary: "summary",
+} as const;
+/**
+ * @public
+ */
+export type FactEventFormat = (typeof FactEventFormat)[keyof typeof FactEventFormat];
+
+/**
+ * @public
+ * @enum
+ */
+export const FactStateFilter = {
+  /**
+   * Only active rows.
+   */
+  active: "active",
+  /**
+   * Rows in any state (the default).
+   */
+  all: "all",
+  /**
+   * Only retracted rows.
+   */
+  retracted: "retracted",
+  /**
+   * Only superseded rows.
+   */
+  superseded: "superseded",
+} as const;
+/**
+ * @public
+ */
+export type FactStateFilter = (typeof FactStateFilter)[keyof typeof FactStateFilter];
+
+/**
+ * @public
+ * @enum
+ */
 export const FactConflictAction = {
   /**
    * Apply one `keep` rule to every pending group inside the scope.
@@ -98,6 +213,48 @@ export const PrincipalType = {
  * @public
  */
 export type PrincipalType = (typeof PrincipalType)[keyof typeof PrincipalType];
+
+/**
+ * @public
+ * @enum
+ */
+export const IngestionRunKind = {
+  /**
+   * Directory imports recorded in platform.import_batch.
+   */
+  BATCH: "BATCH",
+} as const;
+/**
+ * @public
+ */
+export type IngestionRunKind = (typeof IngestionRunKind)[keyof typeof IngestionRunKind];
+
+/**
+ * @public
+ * @enum
+ */
+export const IngestionRunStatus = {
+  /**
+   * Every discovered item was processed (indexed or failed).
+   */
+  COMPLETED: "COMPLETED",
+  /**
+   * The run was stopped before finishing and can be resumed.
+   */
+  INTERRUPTED: "INTERRUPTED",
+  /**
+   * Import is currently writing items.
+   */
+  RUNNING: "RUNNING",
+  /**
+   * The run's lease expired and a recovery pass marked it stale.
+   */
+  STALE: "STALE",
+} as const;
+/**
+ * @public
+ */
+export type IngestionRunStatus = (typeof IngestionRunStatus)[keyof typeof IngestionRunStatus];
 
 /**
  * @public
@@ -282,6 +439,29 @@ export const VkgHealthStatus = {
  * @public
  */
 export type VkgHealthStatus = (typeof VkgHealthStatus)[keyof typeof VkgHealthStatus];
+
+/**
+ * @public
+ * @enum
+ */
+export const LinkDirection = {
+  /**
+   * Follow edges in both directions.
+   */
+  BOTH: "both",
+  /**
+   * Follow object -> subject edges into the seed IRI.
+   */
+  INCOMING: "incoming",
+  /**
+   * Follow subject -> object edges out of the seed IRI.
+   */
+  OUTGOING: "outgoing",
+} as const;
+/**
+ * @public
+ */
+export type LinkDirection = (typeof LinkDirection)[keyof typeof LinkDirection];
 
 /**
  * @public
@@ -777,6 +957,278 @@ export const InductionStrategy = {
  * @public
  */
 export type InductionStrategy = (typeof InductionStrategy)[keyof typeof InductionStrategy];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyExportFormat = {
+  /**
+   * N-Quads (`.nq`).
+   */
+  nquads: "nquads",
+  /**
+   * Turtle (`.ttl`).
+   */
+  turtle: "turtle",
+} as const;
+/**
+ * @public
+ */
+export type OntologyExportFormat = (typeof OntologyExportFormat)[keyof typeof OntologyExportFormat];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyImpactChange = {
+  /**
+   * The class or property exists only in the target version.
+   */
+  added: "added",
+  /**
+   * The class or property exists in both; its triples changed.
+   */
+  modified: "modified",
+  /**
+   * The class or property exists only in the baseline.
+   */
+  removed: "removed",
+} as const;
+/**
+ * @public
+ */
+export type OntologyImpactChange = (typeof OntologyImpactChange)[keyof typeof OntologyImpactChange];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyProposalStatus = {
+  /**
+   * Approved; publish may proceed.
+   */
+  approved: "approved",
+  /**
+   * Submitted and waiting for review.
+   */
+  proposed: "proposed",
+  /**
+   * The proposal's version was published.
+   */
+  published: "published",
+  /**
+   * Review rejected the proposal. The proposal row itself only stores
+   * proposed/approved/published; rejection is reported here on the review
+   * response while the version row carries `rejected`.
+   */
+  rejected: "rejected",
+  /**
+   * Under review.
+   */
+  review: "review",
+} as const;
+/**
+ * @public
+ */
+export type OntologyProposalStatus = (typeof OntologyProposalStatus)[keyof typeof OntologyProposalStatus];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyVersionStatus = {
+  /**
+   * The proposal (and the version) is approved for publish.
+   */
+  approved: "approved",
+  /**
+   * Archived read-only baseline; cannot be published or rolled back to.
+   */
+  deprecated: "deprecated",
+  /**
+   * Imported, not yet proposed.
+   */
+  draft: "draft",
+  /**
+   * A proposal was submitted and waits for review.
+   */
+  proposed: "proposed",
+  /**
+   * The version backs the `tbox/current` pointer.
+   */
+  published: "published",
+  /**
+   * Review rejected the proposal.
+   */
+  rejected: "rejected",
+  /**
+   * The proposal is being reviewed.
+   */
+  review: "review",
+  /**
+   * A newer version replaced it at the pointer.
+   */
+  superseded: "superseded",
+} as const;
+/**
+ * @public
+ */
+export type OntologyVersionStatus = (typeof OntologyVersionStatus)[keyof typeof OntologyVersionStatus];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyImportFormat = {
+  /**
+   * N-Triples.
+   */
+  nt: "nt",
+  /**
+   * Turtle.
+   */
+  turtle: "turtle",
+} as const;
+/**
+ * @public
+ */
+export type OntologyImportFormat = (typeof OntologyImportFormat)[keyof typeof OntologyImportFormat];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyProposalDecision = {
+  /**
+   * Approve the proposal and move the version to `approved`.
+   */
+  APPROVE: "APPROVE",
+  /**
+   * Reject the proposal and mark the version `rejected`.
+   */
+  REJECT: "REJECT",
+} as const;
+/**
+ * @public
+ */
+export type OntologyProposalDecision = (typeof OntologyProposalDecision)[keyof typeof OntologyProposalDecision];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyRollbackMode = {
+  /**
+   * Copy the target version into a new version, then move the pointer.
+   */
+  NEW_VERSION: "NEW_VERSION",
+  /**
+   * Move the `tbox/current` pointer back to an existing version.
+   */
+  POINTER_ONLY: "POINTER_ONLY",
+} as const;
+/**
+ * @public
+ */
+export type OntologyRollbackMode = (typeof OntologyRollbackMode)[keyof typeof OntologyRollbackMode];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyValidationSeverity = {
+  /**
+   * Blocking finding; any `error` makes the report fail.
+   */
+  error: "error",
+  /**
+   * Informational, flagged for review.
+   */
+  info: "info",
+  /**
+   * Non-blocking scoring warning.
+   */
+  warning: "warning",
+} as const;
+/**
+ * @public
+ */
+export type OntologyValidationSeverity = (typeof OntologyValidationSeverity)[keyof typeof OntologyValidationSeverity];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyValidationTier = {
+  /**
+   * Blocking checks: SHACL conformance, fatal structural errors.
+   */
+  tier1_blocking: "tier1_blocking",
+  /**
+   * Scoring checks: OntoQA-style structural metrics.
+   */
+  tier2_scoring: "tier2_scoring",
+  /**
+   * Review checks: findings surfaced for a human, not blocking.
+   */
+  tier3_review: "tier3_review",
+} as const;
+/**
+ * @public
+ */
+export type OntologyValidationTier = (typeof OntologyValidationTier)[keyof typeof OntologyValidationTier];
+
+/**
+ * @public
+ * @enum
+ */
+export const OntologyValidationJobStatus = {
+  /**
+   * All requested tiers finished; `report` is present.
+   */
+  completed: "completed",
+  /**
+   * The job aborted; `error` carries the reason and there is no report.
+   */
+  failed: "failed",
+  /**
+   * Accepted and queued; no work has started.
+   */
+  pending: "pending",
+  /**
+   * The worker is running the requested tiers.
+   */
+  running: "running",
+} as const;
+/**
+ * @public
+ */
+export type OntologyValidationJobStatus =
+  (typeof OntologyValidationJobStatus)[keyof typeof OntologyValidationJobStatus];
+
+/**
+ * @public
+ * @enum
+ */
+export const AnswerQualityStrategy = {
+  /**
+   * Hybrid lexical + vector retrieval.
+   */
+  hybrid: "hybrid",
+  /**
+   * Lexical retrieval only.
+   */
+  lexical: "lexical",
+  /**
+   * Vector (embedding) retrieval only.
+   */
+  vector: "vector",
+} as const;
+/**
+ * @public
+ */
+export type AnswerQualityStrategy = (typeof AnswerQualityStrategy)[keyof typeof AnswerQualityStrategy];
 
 /**
  * @public

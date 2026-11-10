@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import { useNamespace } from "@api-hooks/use-namespace";
 import Alert from "@cloudscape-design/components/alert";
@@ -40,6 +40,11 @@ import {
   type ProposalValidationJob,
 } from "../../../services/ontology-engine";
 import { ApiError, useApiClient } from "@components/ApiClientProvider";
+import {
+  getKernelProposalDetailForDisplay,
+  kernelOntologyIdFromSearch,
+  type OntologyProposalDetail,
+} from "../../../services/ontology-lifecycle";
 import {
   OntologyGraphFlow,
   type GraphAttribute,
@@ -577,6 +582,122 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
+/**
+ * Read-only detail for a proposal served only by the kernel's version-scoped
+ * lifecycle route (P0 read fix). The engine's flat route 404s for these, so
+ * every write control (save / cancel / validate / upload / accept) is absent
+ * from this tree — not merely disabled — and there is no submit path to reach.
+ */
+function KernelProposalDetailView({
+  detail,
+  proposalId,
+  onBack,
+  onRefresh,
+}: {
+  detail: OntologyProposalDetail;
+  proposalId: string;
+  onBack: () => void;
+  onRefresh: () => void;
+}) {
+  const { t } = useAppI18n();
+  const { proposal, version, versionStatus, diff } = detail;
+  const summary = diff?.summary;
+  return (
+    <SpaceBetween size="m">
+      <Header
+        variant="h1"
+        actions={
+          <SpaceBetween direction="horizontal" size="xs">
+            <Button onClick={onBack}>{t("Back")}</Button>
+            <Button iconName="refresh" onClick={onRefresh}>
+              {t("Refresh")}
+            </Button>
+          </SpaceBetween>
+        }
+      >
+        {t("Proposal {id}…", { id: proposalId.slice(0, 8) })}
+      </Header>
+      <Alert type="info">
+        This proposal belongs to the ontology version lifecycle and is read-only
+        here. Approve and publish it from version management.
+      </Alert>
+      <Container header={<Header variant="h2">Proposal details</Header>}>
+        <SpaceBetween size="m">
+          <KeyValuePairs
+            columns={3}
+            items={[
+              { label: "proposalId", value: proposal.proposalId },
+              { label: "versionId", value: proposal.versionId },
+              {
+                label: "Version",
+                value: version?.semver ?? "—",
+              },
+              {
+                label: "Version status",
+                value: versionStatus ?? "—",
+              },
+              { label: "Proposal status", value: proposal.status },
+              {
+                label: "Breaking change",
+                value: diff?.breaking ? "Yes" : "No",
+              },
+              {
+                label: "Compared with",
+                value: diff?.from ?? "(first version)",
+              },
+              {
+                label: "Created",
+                value: proposal.createdAt ?? "—",
+              },
+              {
+                label: "Change summary",
+                value: proposal.changeSummary ?? "—",
+              },
+            ]}
+          />
+          <KeyValuePairs
+            columns={3}
+            items={[
+              {
+                label: "Added triples",
+                value: String(summary?.addedTriples ?? "—"),
+              },
+              {
+                label: "Removed triples",
+                value: String(summary?.removedTriples ?? "—"),
+              },
+              {
+                label: "Added / removed classes",
+                value: `${summary?.addedClasses?.length ?? 0} / ${
+                  summary?.removedClasses?.length ?? 0
+                }`,
+              },
+              {
+                label: "Added / removed properties",
+                value: `${summary?.addedProperties?.length ?? 0} / ${
+                  summary?.removedProperties?.length ?? 0
+                }`,
+              },
+            ]}
+          />
+          {(diff?.breakingItems ?? []).length > 0 && (
+            <Box>
+              <Box variant="awsui-key-label">Breaking items</Box>
+              <SpaceBetween size="xxs">
+                {(diff?.breakingItems ?? []).map((item) => (
+                  <Box key={`${item.kind}:${item.iri}`} variant="code">
+                    {item.kind} {item.iri}
+                  </Box>
+                ))}
+              </SpaceBetween>
+            </Box>
+          )}
+        </SpaceBetween>
+      </Container>
+    </SpaceBetween>
+  );
+}
+
 export function ProposalDetailPage() {
   const { t } = useAppI18n();
   const { namespaceId, proposalId } = useParams<{
@@ -586,6 +707,7 @@ export function ProposalDetailPage() {
   const navigate = useNavigate();
   const apiClient = useApiClient();
   const { current: currentNamespace } = useCurrentNamespace();
+  const location = useLocation();
 
   const { name: nsName } = useNamespace(namespaceId);
   useBreadcrumbTrail([
@@ -600,6 +722,11 @@ export function ProposalDetailPage() {
   ]);
 
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  // Set only when the flat engine route 404s and the version-scoped lifecycle
+  // route returns the proposal (P0 read fix). Non-null switches the page to the
+  // read-only view below.
+  const [kernelProposal, setKernelProposal] =
+    useState<OntologyProposalDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Save failures are recoverable editing errors. Keep them separate from the
@@ -686,6 +813,7 @@ export function ProposalDetailPage() {
     if (!proposalId || !namespaceId) return;
     setError(null);
     setSaveError(null);
+    setKernelProposal(null);
     setLoading(true);
     getProposal(apiClient, namespaceId, proposalId)
       .then(async (p) => {
@@ -749,9 +877,36 @@ export function ProposalDetailPage() {
         setPendingGroundingOverrides({});
         setEditingEntity(null);
       })
-      .catch((e: Error) => setError(e.message))
+      .catch(async (e: unknown) => {
+        // The flat engine route reads DynamoDB; a version-scoped proposal lives
+        // in the kernel's Postgres and only answers on the lifecycle route.
+        // Fall back ONLY on 404. A 500, a timeout or a malformed body must
+        // surface exactly as it is — re-routing it would hide the real failure.
+        if (!(e instanceof ApiError) || e.status !== 404) {
+          setError(e instanceof Error ? e.message : String(e));
+          return;
+        }
+        try {
+          setKernelProposal(
+            await getKernelProposalDetailForDisplay(
+              apiClient,
+              namespaceId,
+              kernelOntologyIdFromSearch(location.search),
+              proposalId,
+            ),
+          );
+        } catch (kernelError: unknown) {
+          // Both routes failed. Report the fallback's own error so a genuinely
+          // missing id still lands on "not found" instead of an empty page.
+          setError(
+            kernelError instanceof Error
+              ? kernelError.message
+              : String(kernelError),
+          );
+        }
+      })
       .finally(() => setLoading(false));
-  }, [apiClient, proposalId, namespaceId]);
+  }, [apiClient, proposalId, namespaceId, location.search]);
 
   useEffect(() => {
     refresh();
@@ -1213,6 +1368,15 @@ export function ProposalDetailPage() {
       >
         {error}
       </Alert>
+    );
+  if (kernelProposal)
+    return (
+      <KernelProposalDetailView
+        detail={kernelProposal}
+        proposalId={proposalId ?? ""}
+        onBack={() => navigate(`/namespaces/${namespaceId}/ontology`)}
+        onRefresh={refresh}
+      />
     );
   if (!proposal) return null;
 

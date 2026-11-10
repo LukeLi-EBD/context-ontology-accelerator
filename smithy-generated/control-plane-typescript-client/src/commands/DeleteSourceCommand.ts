@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { DeleteSourceInput, DeleteSourceOutput } from "../models/models_0";
+import type { DeleteSourceInput, DeleteSourceOutput } from "../models/models_1";
 import { DeleteSource$ } from "../schemas/schemas_0";
 
 /**

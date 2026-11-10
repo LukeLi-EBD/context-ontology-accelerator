@@ -120,8 +120,7 @@ export const MESSAGES_JA = {
   "Local mode · non-streaming": "ローカルモード・非ストリーミング",
   "No sample prompts are published for this namespace.":
     "この名前空間にはサンプル質問が公開されていません。",
-  "Could not load sample prompts.":
-    "サンプル質問を読み込めませんでした。",
+  "Could not load sample prompts.": "サンプル質問を読み込めませんでした。",
   Tree: "ツリー",
   "Class tree": "クラスのツリー",
   "No namespace selected. Choose one from the top navigation.":
@@ -1292,6 +1291,14 @@ export const MESSAGES_JA = {
   "{count} classes": "{count} クラス",
   "{count} table": "{count} テーブル",
   "No proposals yet.": "提案はまだありません。",
+  "Could not load proposals": "提案を読み込めませんでした",
+  "Some proposal sources are unavailable": "一部の提案ソースを利用できません",
+  "Proposals could not be read; this is not the same as having no proposals.":
+    "提案を読み取れませんでした。これは「提案がない」ことと同じではありません。",
+  "Only the sources that responded are shown; the rest could not be read.":
+    "応答したソースのみ表示しています。残りは読み取れませんでした。",
+  "Induction proposals": "インダクション提案",
+  "Version proposals": "バージョン提案",
   "Failed to load graph": "グラフを読み込めませんでした",
   "Search failed": "検索に失敗しました",
   "Failed to load {name}": "{name} を読み込めませんでした",
@@ -1779,7 +1786,7 @@ export const MESSAGES_JA = {
   "Named graphs": "名前付きグラフ",
   "Entity page": "エンティティページ",
   "Ontology tree": "オントロジーツリー",
-  "Provenance": "出所",
+  Provenance: "出所",
   "Evidenced {count}": "根拠あり {count}",
   "Inferred {count}": "推論 {count}",
   "None {count}": "根拠なし {count}",
@@ -2676,8 +2683,7 @@ export const MESSAGES_JA = {
   "Run one SPARQL SELECT or ASK against this namespace's graphs. FROM, SERVICE and LOAD are refused; results stop at 5,000 rows or 10 seconds.":
     "この名前空間のグラフに対して SPARQL の SELECT または ASK を 1 件実行します。FROM、SERVICE、LOAD は拒否され、結果は 5,000 行または 10 秒で打ち切られます。",
   "Running query…": "クエリを実行しています…",
-  "Ctrl+Enter also runs the query.":
-    "Ctrl+Enter でもクエリを実行できます。",
+  "Ctrl+Enter also runs the query.": "Ctrl+Enter でもクエリを実行できます。",
   "Only the graphs of this namespace are readable. The T-Box and inferred graphs are out of scope in this version.":
     "読み取り可能なのはこの名前空間のグラフだけです。このバージョンでは T-Box と推論グラフは対象外です。",
   "Query rejected": "クエリが拒否されました",
@@ -2687,10 +2693,9 @@ export const MESSAGES_JA = {
   "Provider message": "プロバイダーメッセージ",
   Message: "メッセージ",
   "ASK answer": "ASK の回答",
-  "true": "true",
-  "false": "false",
-  "Namespace graphs in scope: {count}":
-    "対象の名前空間グラフ: {count} 件",
+  true: "true",
+  false: "false",
+  "Namespace graphs in scope: {count}": "対象の名前空間グラフ: {count} 件",
   "Executed in {ms} ms": "{ms} ミリ秒で実行",
   Rows: "行数",
   "Result truncated": "結果が切り捨てられました",

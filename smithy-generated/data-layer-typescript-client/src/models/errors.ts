@@ -71,6 +71,26 @@ export class ValidationError extends __BaseException {
 }
 
 /**
+ * Returned with HTTP 404 when the requested resource does not exist.
+ * @public
+ */
+export class NotFoundError extends __BaseException {
+  readonly name = "NotFoundError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<NotFoundError, __BaseException>) {
+    super({
+      name: "NotFoundError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+/**
  * Returned with HTTP 403 when the caller lacks permission to perform the requested operation.
  * @public
  */
@@ -87,6 +107,34 @@ export class AccessDeniedError extends __BaseException {
       ...opts,
     });
     Object.setPrototypeOf(this, AccessDeniedError.prototype);
+  }
+}
+
+/**
+ * Returned with HTTP 429 when the caller exceeds the request rate limit;
+ * `retryAfterSeconds` indicates how long to wait before retrying.
+ * @public
+ */
+export class RateLimitExceededError extends __BaseException {
+  readonly name = "RateLimitExceededError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * Number of seconds to wait before retrying the request.
+   * @public
+   */
+  retryAfterSeconds?: number | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<RateLimitExceededError, __BaseException>) {
+    super({
+      name: "RateLimitExceededError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, RateLimitExceededError.prototype);
+    this.retryAfterSeconds = opts.retryAfterSeconds;
   }
 }
 
@@ -143,34 +191,6 @@ export class OntologyNotPublishedError extends __BaseException {
     });
     Object.setPrototypeOf(this, OntologyNotPublishedError.prototype);
     this.namespaceId = opts.namespaceId;
-  }
-}
-
-/**
- * Returned with HTTP 429 when the caller exceeds the request rate limit;
- * `retryAfterSeconds` indicates how long to wait before retrying.
- * @public
- */
-export class RateLimitExceededError extends __BaseException {
-  readonly name = "RateLimitExceededError" as const;
-  readonly $fault = "client" as const;
-  /**
-   * Number of seconds to wait before retrying the request.
-   * @public
-   */
-  retryAfterSeconds?: number | undefined;
-
-  /**
-   * @internal
-   */
-  constructor(opts: __ExceptionOptionType<RateLimitExceededError, __BaseException>) {
-    super({
-      name: "RateLimitExceededError",
-      $fault: "client",
-      ...opts,
-    });
-    Object.setPrototypeOf(this, RateLimitExceededError.prototype);
-    this.retryAfterSeconds = opts.retryAfterSeconds;
   }
 }
 
@@ -274,5 +294,196 @@ export class VKGExecutionError extends __BaseException {
       ...opts,
     });
     Object.setPrototypeOf(this, VKGExecutionError.prototype);
+  }
+}
+
+/**
+ * The statement was refused before execution: syntax, form, dataset clause,
+ * federation, `LOAD`, length, or a graph outside the namespace.
+ * @public
+ */
+export class SparqlBadRequestError extends __BaseException {
+  readonly name = "SparqlBadRequestError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * Stable machine code, e.g. `E_SPARQL_SYNTAX` or `E_SPARQL_FEDERATED`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * The provider's own code when the refusal came from the provider.
+   * @public
+   */
+  providerCode?: string | undefined;
+
+  /**
+   * The provider's own message, truncated for display.
+   * @public
+   */
+  providerMessage?: string | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<SparqlBadRequestError, __BaseException>) {
+    super({
+      name: "SparqlBadRequestError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, SparqlBadRequestError.prototype);
+    this.code = opts.code;
+    this.providerCode = opts.providerCode;
+    this.providerMessage = opts.providerMessage;
+  }
+}
+
+/**
+ * The provider could not execute the statement.
+ * @public
+ */
+export class SparqlProviderError extends __BaseException {
+  readonly name = "SparqlProviderError" as const;
+  readonly $fault = "server" as const;
+  /**
+   * Stable machine code: `E_SPARQL_PROVIDER_ERROR` or `E_SPARQL_PROVIDER_REJECTED`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * The provider's own code, e.g. `HTTP_400`.
+   * @public
+   */
+  providerCode?: string | undefined;
+
+  /**
+   * The provider's own message, truncated for display.
+   * @public
+   */
+  providerMessage?: string | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<SparqlProviderError, __BaseException>) {
+    super({
+      name: "SparqlProviderError",
+      $fault: "server",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, SparqlProviderError.prototype);
+    this.code = opts.code;
+    this.providerCode = opts.providerCode;
+    this.providerMessage = opts.providerMessage;
+  }
+}
+
+/**
+ * The caller exceeded the console quota.
+ * @public
+ */
+export class SparqlQuotaExceededError extends __BaseException {
+  readonly name = "SparqlQuotaExceededError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * Stable machine code: `E_SPARQL_QUOTA_EXCEEDED`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<SparqlQuotaExceededError, __BaseException>) {
+    super({
+      name: "SparqlQuotaExceededError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, SparqlQuotaExceededError.prototype);
+    this.code = opts.code;
+  }
+}
+
+/**
+ * The result exceeded the 4 MiB response cap.
+ * @public
+ */
+export class SparqlResultTooLargeError extends __BaseException {
+  readonly name = "SparqlResultTooLargeError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * Stable machine code: `E_SPARQL_RESULT_TOO_LARGE`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<SparqlResultTooLargeError, __BaseException>) {
+    super({
+      name: "SparqlResultTooLargeError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, SparqlResultTooLargeError.prototype);
+    this.code = opts.code;
+  }
+}
+
+/**
+ * The namespace needs more graphs than the console admits.
+ * @public
+ */
+export class SparqlScopeTooLargeError extends __BaseException {
+  readonly name = "SparqlScopeTooLargeError" as const;
+  readonly $fault = "server" as const;
+  /**
+   * Stable machine code: `E_SPARQL_SCOPE_TOO_LARGE` or `E_SPARQL_SCOPE_EMPTY`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<SparqlScopeTooLargeError, __BaseException>) {
+    super({
+      name: "SparqlScopeTooLargeError",
+      $fault: "server",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, SparqlScopeTooLargeError.prototype);
+    this.code = opts.code;
+  }
+}
+
+/**
+ * The statement exceeded the 10 second limit.
+ * @public
+ */
+export class SparqlTimeoutError extends __BaseException {
+  readonly name = "SparqlTimeoutError" as const;
+  readonly $fault = "server" as const;
+  /**
+   * Stable machine code: `E_SPARQL_TIMEOUT`.
+   * @public
+   */
+  code: string | undefined;
+
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<SparqlTimeoutError, __BaseException>) {
+    super({
+      name: "SparqlTimeoutError",
+      $fault: "server",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, SparqlTimeoutError.prototype);
+    this.code = opts.code;
   }
 }

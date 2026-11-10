@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { RepairProposalDatatypesInput, RepairProposalDatatypesOutput } from "../models/models_0";
+import type { RepairProposalDatatypesInput, RepairProposalDatatypesOutput } from "../models/models_1";
 import { RepairProposalDatatypes$ } from "../schemas/schemas_0";
 
 /**

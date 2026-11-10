@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { UpdateSourceMetadataInput, UpdateSourceMetadataOutput } from "../models/models_0";
+import type { UpdateSourceMetadataInput, UpdateSourceMetadataOutput } from "../models/models_1";
 import { UpdateSourceMetadata$ } from "../schemas/schemas_0";
 
 /**

@@ -33,7 +33,9 @@ class FactBatchKeepRow(BaseModel):
     retired: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Facts retired by this row (0 for a skipped group).")
     reason: Optional[StrictStr] = Field(default=None, description="Why the group was skipped.")
     values: Optional[List[Annotated[str, Field(min_length=1, strict=True, max_length=2048)]]] = Field(default=None, description="Values the group had before the decision.")
-    __properties: ClassVar[List[str]] = ["subject", "predicate", "status", "retired", "reason", "values"]
+    kept_fact_ids: Optional[List[Annotated[str, Field(min_length=1, strict=True, max_length=64)]]] = Field(default=None, description="Assertion rows kept by a `kept` row; absent on a dry run.", alias="keptFactIds")
+    retired_fact_ids: Optional[List[Annotated[str, Field(min_length=1, strict=True, max_length=64)]]] = Field(default=None, description="Assertion rows retired by a `kept` row; absent on a dry run.", alias="retiredFactIds")
+    __properties: ClassVar[List[str]] = ["subject", "predicate", "status", "retired", "reason", "values", "keptFactIds", "retiredFactIds"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -91,7 +93,9 @@ class FactBatchKeepRow(BaseModel):
             "status": obj.get("status"),
             "retired": obj.get("retired"),
             "reason": obj.get("reason"),
-            "values": obj.get("values")
+            "values": obj.get("values"),
+            "keptFactIds": obj.get("keptFactIds"),
+            "retiredFactIds": obj.get("retiredFactIds")
         })
         return _obj
 

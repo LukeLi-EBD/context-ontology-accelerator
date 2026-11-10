@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { LoadFoundationalOntologyInput, LoadFoundationalOntologyOutput } from "../models/models_0";
+import type { LoadFoundationalOntologyInput, LoadFoundationalOntologyOutput } from "../models/models_1";
 import { LoadFoundationalOntology$ } from "../schemas/schemas_0";
 
 /**

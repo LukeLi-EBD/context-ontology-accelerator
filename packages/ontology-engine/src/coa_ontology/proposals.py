@@ -1067,15 +1067,30 @@ def list_proposals(
         start_key = decode_next_token(next_token, scope=scope)
     except InvalidNextToken as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    items, next_key = dynamo_store.list_proposals_newest_page(
-        namespace=namespace,
-        ontology_id=ontology_id or legacy_ontology_id,
-        status=status,
-        proposal_type=type,
-        source_type=source_type,
-        limit=max_results or legacy_limit or LIST_PROPOSALS_DEFAULT_MAX_RESULTS,
-        after=start_key,
-    )
+    try:
+        items, next_key = dynamo_store.list_proposals_newest_page(
+            namespace=namespace,
+            ontology_id=ontology_id or legacy_ontology_id,
+            status=status,
+            proposal_type=type,
+            source_type=source_type,
+            limit=max_results or legacy_limit or LIST_PROPOSALS_DEFAULT_MAX_RESULTS,
+            after=start_key,
+        )
+    except Exception:
+        # Fail closed: an unreadable store must never look like an empty result.
+        # ``200 {"proposals": []}`` cannot be told apart from "this namespace has
+        # no proposals", which is exactly how the read-path split was mistaken
+        # for "the platform has no proposals" (D-T5-5). Same 503 convention as
+        # the induction-jobs listing in induce_catalog.py.
+        _log.exception(
+            "list_proposals_scan_failed namespace=%s ontology_id=%s status=%s source_type=%s",
+            namespace,
+            ontology_id or legacy_ontology_id,
+            status,
+            source_type,
+        )
+        raise HTTPException(status_code=503, detail="Proposals are temporarily unavailable; retry.") from None
     # Defensive: the Turtle artifacts live in S3, but never let an inline copy
     # bloat the list view.
     for item in items:
