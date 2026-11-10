@@ -678,11 +678,15 @@ class Importer:
             "retryFailed": retry_failed,
             "namespaceId": str(namespace),
         }
-        batch_id = _get_or_create_batch(self._runtime, root, options, namespace)
         # Simple mutual exclusion convention (no scheduler): any CPU-heavy job
         # (import / reindex / benchmark) takes `platform:heavy` first, so two
         # heavy jobs never compete for the host or the local embedding service.
         # `docker builder prune` and full-disk scans must wait for this lock too.
+        #
+        # The batch row is written only after the heavy lock is held. Creating it
+        # first left a `running` batch behind every time a call was rejected with
+        # E_HEAVY_BUSY: no process was running, and each retry bumped updated_at,
+        # so a stale detector would never fire. Rejected calls now write nothing.
         with self._runtime.metadata.advisory_lock("platform:heavy", blocking=False) as heavy:
             if not heavy:
                 raise PortError(
@@ -691,6 +695,9 @@ class Importer:
                     provider="platform",
                     provider_code="E_HEAVY_BUSY",
                 )
+            # The context manager releases the lock in `finally`, so a failure
+            # while creating the batch cannot strand it either.
+            batch_id = _get_or_create_batch(self._runtime, root, options, namespace)
             with self._runtime.metadata.advisory_lock(
                 f"platform:import:{batch_id}", blocking=False
             ) as acquired:
