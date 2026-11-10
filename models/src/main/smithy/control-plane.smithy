@@ -33,6 +33,7 @@ use com.amazon.semanticcontext.grant#DeletePlatformGrant
 use com.amazon.semanticcontext.grant#ListNamespaceGrants
 use com.amazon.semanticcontext.grant#ListPlatformGrants
 use com.amazon.semanticcontext.grant#ListPrincipalGrants
+use com.amazon.semanticcontext.ingestion#ListIngestionRuns
 use com.amazon.semanticcontext.metric#BulkDeleteMetrics
 use com.amazon.semanticcontext.metric#CreateMetric
 use com.amazon.semanticcontext.metric#DeleteMetric
@@ -200,6 +201,7 @@ service ControlPlaneService {
         UploadDocument
         ListDocuments
         ListDocumentChunks
+        ListIngestionRuns
         // ── Fact candidates (extraction review) ─────────────────────────
         ListFactCandidates
         ApproveFactCandidate
