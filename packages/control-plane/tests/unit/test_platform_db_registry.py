@@ -19,7 +19,7 @@ from coa_control_plane.platform_db import (
 
 
 def test_head_matches_version_gate() -> None:
-    assert MIGRATIONS[-1][0] == SUPPORTED_SCHEMA_VERSION == 51
+    assert MIGRATIONS[-1][0] == SUPPORTED_SCHEMA_VERSION == 52
 
 
 def test_registered_versions_are_ordered_unique_and_exclude_retired() -> None:
