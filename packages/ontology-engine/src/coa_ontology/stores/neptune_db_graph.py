@@ -1820,6 +1820,19 @@ class NeptuneDBGraphStore(GraphStore):
             node["label"] = labels.get(uri)
             node["kind"] = kinds_by_uri.get(uri) or "resource"
 
+        # A page's rows only carry the kinds/labels of subjects they happened to
+        # include. Resolve the rest in one batch so a filtered page does not
+        # label every object it touches as an anonymous ``resource``.
+        details = self._node_details(scope, list(nodes))
+        for uri, node in nodes.items():
+            detail = details.get(uri)
+            if not detail:
+                continue
+            if not node["label"]:
+                node["label"] = detail["label"]
+            if node["kind"] == "resource" and detail["kind"] != "resource":
+                node["kind"] = detail["kind"]
+
         result = {
             "nodes": list(nodes.values()),
             "edges": edges,
@@ -1990,8 +2003,8 @@ class NeptuneDBGraphStore(GraphStore):
             )
         return {"paths": rendered, "truncated": capped}
 
-    def _path_nodes(self, namespace: str, uris: list[str]) -> dict[str, dict]:
-        """Labels and kinds for the nodes on a path, in one round trip."""
+    def _node_details(self, namespace: str, uris: list[str]) -> dict[str, dict]:
+        """Labels and kinds for a batch of nodes, in one round trip."""
         result = {uri: {"uri": uri, "label": None, "kind": None} for uri in uris}
         if not uris:
             return result
@@ -2020,6 +2033,10 @@ class NeptuneDBGraphStore(GraphStore):
         for entry in result.values():
             entry["kind"] = entry["kind"] or "resource"
         return result
+
+    def _path_nodes(self, namespace: str, uris: list[str]) -> dict[str, dict]:
+        """Labels and kinds for the nodes on a path, in one round trip."""
+        return self._node_details(namespace, uris)
 
     def mapped_class_backends(self, class_uris: Iterable[str], namespace: str | None = None) -> dict[str, str]:
         """Which backend answers each of ``class_uris`` already, across every graph of the namespace.
