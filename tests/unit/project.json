@@ -1,0 +1,22 @@
+{
+  "name": "unit-guards",
+  "root": "tests/unit",
+  "projectType": "library",
+  "implicitDependencies": ["*"],
+  "targets": {
+    "test": {
+      "dependsOn": [],
+      "cache": true,
+      "command": "uv run pytest tests/unit/test_unit_marker_coverage.py -q",
+      "inputs": [
+        "{workspaceRoot}/tests/unit/**/*.py",
+        "{workspaceRoot}/tests/unit/**/project.json",
+        "{workspaceRoot}/packages/**/*.py",
+        "{workspaceRoot}/packages/**/project.json",
+        "{workspaceRoot}/libs/**/*.py",
+        "{workspaceRoot}/libs/**/project.json",
+        "{workspaceRoot}/pyproject.toml"
+      ]
+    }
+  }
+}

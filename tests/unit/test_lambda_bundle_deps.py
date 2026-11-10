@@ -128,6 +128,8 @@ BUNDLES = (
         src_roots={
             "coa_control_plane": _REPO_ROOT / "packages" / "control-plane" / "src",
             "coa_common": _COMMON,
+            "coa_runtime": _REPO_ROOT / "packages" / "coa-runtime" / "src",
+            "coa_ports": _REPO_ROOT / "packages" / "coa-ports" / "src",
         },
         declared_in=_STACKS / "namespace-stack.ts",
         declares="packages/control-plane/requirements.txt",
@@ -211,7 +213,7 @@ def _reachable_third_party(bundle: Bundle) -> dict[str, str]:
             if top in bundle.src_roots:
                 queue.extend(_executed_paths(bundle, module))
             elif top not in sys.stdlib_module_names:
-                third_party.setdefault(top, str(path.relative_to(_REPO_ROOT)))
+                third_party.setdefault(top, path.relative_to(_REPO_ROOT).as_posix())
     return third_party
 
 

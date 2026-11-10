@@ -39,8 +39,7 @@ class TestProtocolConformance:
         client: LLMClient = BedrockLLMClient()
         assert isinstance(client, LLMClient)
 
-    @patch("coa_serve.clients.source_db.boto3")
-    def test_source_db_is_query_executor(self, mock_boto3):
+    def test_source_db_is_query_executor(self):
         from coa_serve.clients.source_db import SourceDBQueryExecutor
 
         client: QueryExecutor = SourceDBQueryExecutor(data_sources_table="test-table")

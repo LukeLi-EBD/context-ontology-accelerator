@@ -51,6 +51,12 @@ export const Paths = {
   /** packages/control-plane/src — flattened module root for Lambda. */
   controlPlaneSrc: fromRoot("packages/control-plane/src"),
 
+  /** packages/coa-runtime/src — composition root imported by Lambda handlers. */
+  coaRuntimeSrc: fromRoot("packages/coa-runtime/src"),
+
+  /** packages/coa-ports/src — port contracts imported by coa-runtime. */
+  coaPortsSrc: fromRoot("packages/coa-ports/src"),
+
   /** Authorization seed data directory (coa_authorization lives in libs/common). */
   authorizationSeed: fromRoot("libs/common/src/coa_authorization/seed"),
 

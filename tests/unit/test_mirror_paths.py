@@ -165,9 +165,9 @@ def test_the_ci_check_sees_every_spelling_of_a_ci_path(source: str) -> None:
 
 def test_the_mirror_checks_scan_nested_and_library_unit_tests() -> None:
     """`/packages/` and `/libs/` ship wholesale, so every `tests/unit/` file under them is mirrored, nested ones too."""
-    scanned = {str(path.relative_to(_REPO_ROOT)) for path in _mirrored_unit_test_files()}
+    scanned = {path.relative_to(_REPO_ROOT).as_posix() for path in _mirrored_unit_test_files()}
     expected = {
-        str(path.relative_to(_REPO_ROOT))
+        path.relative_to(_REPO_ROOT).as_posix()
         for pattern in ("packages/*/tests/unit/**/*.py", "libs/*/tests/unit/**/*.py")
         for path in _REPO_ROOT.glob(pattern)
     }

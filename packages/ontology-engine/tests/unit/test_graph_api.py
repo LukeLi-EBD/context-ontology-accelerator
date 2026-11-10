@@ -15,6 +15,7 @@ from coa_ontology.main import app
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
+pytestmark = pytest.mark.unit
 
 OWL_CLASS = "http://www.w3.org/2002/07/owl#Class"
 OWL_OBJECT_PROPERTY = "http://www.w3.org/2002/07/owl#ObjectProperty"

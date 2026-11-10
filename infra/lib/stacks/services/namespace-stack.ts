@@ -652,6 +652,8 @@ export class NamespaceStack extends SCLStack {
         Paths.controlPlaneSrc,
         Paths.commonLib,
         Paths.smithyGeneratedControlPlanePythonServer,
+        Paths.coaRuntimeSrc,
+        Paths.coaPortsSrc,
       ],
       requirementsFile: fromRoot(
         "packages/control-plane/requirements.lock.txt",

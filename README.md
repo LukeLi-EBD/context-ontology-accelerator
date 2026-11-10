@@ -49,7 +49,7 @@ make test       # run unit tests
 
 ```
 coa/
-├── platform/                 # 本项目主体：单机本体平台
+├── packages/platform-core/    # 本项目主体：单机本体平台
 │   ├── src/platform_core/    # API、本体/指标/问答/推理实现与迁移 SQL（sql/V1–V42）
 │   ├── web/                  # 浏览、问答、看板前端
 │   ├── tests/                # 全量 unittest 套件（2026-11-07 基线 456 例 OK / 3 skip）
@@ -60,7 +60,7 @@ coa/
 └── 上游 AWS COA 框架（保留，不参与本平台单机运行）
     ├── models/ smithy-generated/   # Smithy API 模型与生成物
     ├── infra/                      # AWS CDK 基础设施
-    ├── packages/                   # control-plane、data-layer、ontology-engine、metric-service、vkg、mcp-server…
+    ├── packages/                   # control-plane、data-layer、ontology-engine、metric-service、vkg、mcp-server…（platform-core 见上）
     └── libs/ connectors/ coa-skills/ external-docs/ scripts/ tests/
 ```
 
