@@ -1335,3 +1335,39 @@ export interface TranslateSPARQLOutput {
    */
   ontologyVersion?: string | undefined;
 }
+
+/**
+ * @public
+ */
+export interface DownloadDocumentInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Document whose bytes to download.
+   * @public
+   */
+  documentId: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface DownloadDocumentOutput {
+  /**
+   * Exact stored bytes; empty (0 bytes) when the document was uploaded
+   * with empty content.
+   * @public
+   */
+  content?: Uint8Array | undefined;
+
+  /**
+   * SHA-256 of `content`, lowercase hex. Equals the `contentHash`
+   * returned by `UploadDocument` for the same stored bytes.
+   * @public
+   */
+  contentSha256: string | undefined;
+}

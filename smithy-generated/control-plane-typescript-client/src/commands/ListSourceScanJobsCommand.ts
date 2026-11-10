@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { ListSourceScanJobsInput, ListSourceScanJobsOutput } from "../models/models_0";
+import type { ListSourceScanJobsInput, ListSourceScanJobsOutput } from "../models/models_1";
 import { ListSourceScanJobs$ } from "../schemas/schemas_0";
 
 /**

@@ -68,6 +68,15 @@ import type {
   ApproveFactCandidateCommandOutput,
 } from "./commands/ApproveFactCandidateCommand";
 import type { ApproveSourceCommandInput, ApproveSourceCommandOutput } from "./commands/ApproveSourceCommand";
+import type { AssertFactCommandInput, AssertFactCommandOutput } from "./commands/AssertFactCommand";
+import type {
+  BatchKeepFactConflictsCommandInput,
+  BatchKeepFactConflictsCommandOutput,
+} from "./commands/BatchKeepFactConflictsCommand";
+import type {
+  BrowseOntologyTreeCommandInput,
+  BrowseOntologyTreeCommandOutput,
+} from "./commands/BrowseOntologyTreeCommand";
 import type {
   BulkDeleteMetricsCommandInput,
   BulkDeleteMetricsCommandOutput,
@@ -94,10 +103,24 @@ import type {
   DeletePlatformGrantCommandOutput,
 } from "./commands/DeletePlatformGrantCommand";
 import type { DeleteSourceCommandInput, DeleteSourceCommandOutput } from "./commands/DeleteSourceCommand";
+import type {
+  DiffOntologyVersionsCommandInput,
+  DiffOntologyVersionsCommandOutput,
+} from "./commands/DiffOntologyVersionsCommand";
 import type { DownloadOntologyCommandInput, DownloadOntologyCommandOutput } from "./commands/DownloadOntologyCommand";
+import type {
+  ExportOntologyBundleCommandInput,
+  ExportOntologyBundleCommandOutput,
+} from "./commands/ExportOntologyBundleCommand";
+import type {
+  ExportOntologyVersionCommandInput,
+  ExportOntologyVersionCommandOutput,
+} from "./commands/ExportOntologyVersionCommand";
 import type { ExportOsiCommandInput, ExportOsiCommandOutput } from "./commands/ExportOsiCommand";
 import type { FetchOntologyCommandInput, FetchOntologyCommandOutput } from "./commands/FetchOntologyCommand";
 import type { FindGraphPathCommandInput, FindGraphPathCommandOutput } from "./commands/FindGraphPathCommand";
+import type { FindLinksCommandInput, FindLinksCommandOutput } from "./commands/FindLinksCommand";
+import type { GetAnswerQualityCommandInput, GetAnswerQualityCommandOutput } from "./commands/GetAnswerQualityCommand";
 import type {
   GetCanvasManifestCommandInput,
   GetCanvasManifestCommandOutput,
@@ -115,10 +138,16 @@ import type {
   GetDictionaryViewCommandInput,
   GetDictionaryViewCommandOutput,
 } from "./commands/GetDictionaryViewCommand";
+import type { GetEntityCommandInput, GetEntityCommandOutput } from "./commands/GetEntityCommand";
 import type {
   GetEntityEmbeddingsCommandInput,
   GetEntityEmbeddingsCommandOutput,
 } from "./commands/GetEntityEmbeddingsCommand";
+import type {
+  GetEntityProvenanceCommandInput,
+  GetEntityProvenanceCommandOutput,
+} from "./commands/GetEntityProvenanceCommand";
+import type { GetFactCommandInput, GetFactCommandOutput } from "./commands/GetFactCommand";
 import type { GetGraphClassCommandInput, GetGraphClassCommandOutput } from "./commands/GetGraphClassCommand";
 import type {
   GetGraphDatatypePropertyCommandInput,
@@ -135,6 +164,7 @@ import type {
   GetInferConstraintsJobCommandOutput,
 } from "./commands/GetInferConstraintsJobCommand";
 import type { GetIngestStatusCommandInput, GetIngestStatusCommandOutput } from "./commands/GetIngestStatusCommand";
+import type { GetMetricCardCommandInput, GetMetricCardCommandOutput } from "./commands/GetMetricCardCommand";
 import type { GetMetricCommandInput, GetMetricCommandOutput } from "./commands/GetMetricCommand";
 import type { GetMetricFamilyCommandInput, GetMetricFamilyCommandOutput } from "./commands/GetMetricFamilyCommand";
 import type {
@@ -157,6 +187,14 @@ import type {
   GetOntologyUploadUrlCommandInput,
   GetOntologyUploadUrlCommandOutput,
 } from "./commands/GetOntologyUploadUrlCommand";
+import type {
+  GetOntologyVersionCommandInput,
+  GetOntologyVersionCommandOutput,
+} from "./commands/GetOntologyVersionCommand";
+import type {
+  GetOntologyVersionProposalCommandInput,
+  GetOntologyVersionProposalCommandOutput,
+} from "./commands/GetOntologyVersionProposalCommand";
 import type { GetOsiUploadUrlCommandInput, GetOsiUploadUrlCommandOutput } from "./commands/GetOsiUploadUrlCommand";
 import type { GetProposalCommandInput, GetProposalCommandOutput } from "./commands/GetProposalCommand";
 import type {
@@ -181,6 +219,8 @@ import type {
 import type { GetSystemHealthCommandInput, GetSystemHealthCommandOutput } from "./commands/GetSystemHealthCommand";
 import type { GraphSearchCommandInput, GraphSearchCommandOutput } from "./commands/GraphSearchCommand";
 import type { HealthCheckCommandInput, HealthCheckCommandOutput } from "./commands/HealthCheckCommand";
+import type { ImportBundleCommandInput, ImportBundleCommandOutput } from "./commands/ImportBundleCommand";
+import type { ImportOntologyCommandInput, ImportOntologyCommandOutput } from "./commands/ImportOntologyCommand";
 import type { ImportOsiCommandInput, ImportOsiCommandOutput } from "./commands/ImportOsiCommand";
 import type { InferConstraintsCommandInput, InferConstraintsCommandOutput } from "./commands/InferConstraintsCommand";
 import type {
@@ -188,9 +228,17 @@ import type {
   IngestOntologyFromS3CommandOutput,
 } from "./commands/IngestOntologyFromS3Command";
 import type {
+  InspectOntologyBundleCommandInput,
+  InspectOntologyBundleCommandOutput,
+} from "./commands/InspectOntologyBundleCommand";
+import type {
   KeepRescanRemovalCommandInput,
   KeepRescanRemovalCommandOutput,
 } from "./commands/KeepRescanRemovalCommand";
+import type {
+  ListAnswerQualityRunsCommandInput,
+  ListAnswerQualityRunsCommandOutput,
+} from "./commands/ListAnswerQualityRunsCommand";
 import type { ListDictionariesCommandInput, ListDictionariesCommandOutput } from "./commands/ListDictionariesCommand";
 import type {
   ListDocumentChunksCommandInput,
@@ -201,6 +249,12 @@ import type {
   ListFactCandidatesCommandInput,
   ListFactCandidatesCommandOutput,
 } from "./commands/ListFactCandidatesCommand";
+import type {
+  ListFactConflictsCommandInput,
+  ListFactConflictsCommandOutput,
+} from "./commands/ListFactConflictsCommand";
+import type { ListFactEventsCommandInput, ListFactEventsCommandOutput } from "./commands/ListFactEventsCommand";
+import type { ListFactsCommandInput, ListFactsCommandOutput } from "./commands/ListFactsCommand";
 import type {
   ListFoundationalOntologiesCommandInput,
   ListFoundationalOntologiesCommandOutput,
@@ -228,6 +282,22 @@ import type {
 } from "./commands/ListNamespaceRolesCommand";
 import type { ListNamespacesCommandInput, ListNamespacesCommandOutput } from "./commands/ListNamespacesCommand";
 import type { ListOntologiesCommandInput, ListOntologiesCommandOutput } from "./commands/ListOntologiesCommand";
+import type {
+  ListOntologyEventsCommandInput,
+  ListOntologyEventsCommandOutput,
+} from "./commands/ListOntologyEventsCommand";
+import type {
+  ListOntologyInstancesCommandInput,
+  ListOntologyInstancesCommandOutput,
+} from "./commands/ListOntologyInstancesCommand";
+import type {
+  ListOntologyProposalsCommandInput,
+  ListOntologyProposalsCommandOutput,
+} from "./commands/ListOntologyProposalsCommand";
+import type {
+  ListOntologyVersionsCommandInput,
+  ListOntologyVersionsCommandOutput,
+} from "./commands/ListOntologyVersionsCommand";
 import type {
   ListPlatformGrantsCommandInput,
   ListPlatformGrantsCommandOutput,
@@ -258,6 +328,11 @@ import type {
   MaterializeReasoningCommandOutput,
 } from "./commands/MaterializeReasoningCommand";
 import type {
+  ProposeOntologyVersionCommandInput,
+  ProposeOntologyVersionCommandOutput,
+} from "./commands/ProposeOntologyVersionCommand";
+import type { PublishOntologyCommandInput, PublishOntologyCommandOutput } from "./commands/PublishOntologyCommand";
+import type {
   PutSourceEventRescanCommandInput,
   PutSourceEventRescanCommandOutput,
 } from "./commands/PutSourceEventRescanCommand";
@@ -284,6 +359,13 @@ import type {
   ResolveFactConflictsCommandInput,
   ResolveFactConflictsCommandOutput,
 } from "./commands/ResolveFactConflictsCommand";
+import type { RestoreFactCommandInput, RestoreFactCommandOutput } from "./commands/RestoreFactCommand";
+import type { RetractFactCommandInput, RetractFactCommandOutput } from "./commands/RetractFactCommand";
+import type { RetractFactsCommandInput, RetractFactsCommandOutput } from "./commands/RetractFactsCommand";
+import type {
+  ReviewOntologyProposalCommandInput,
+  ReviewOntologyProposalCommandOutput,
+} from "./commands/ReviewOntologyProposalCommand";
 import type {
   ReviewSourceColumnCommandInput,
   ReviewSourceColumnCommandOutput,
@@ -292,9 +374,14 @@ import type {
   ReviewSourceTableCommandInput,
   ReviewSourceTableCommandOutput,
 } from "./commands/ReviewSourceTableCommand";
+import type { RollbackOntologyCommandInput, RollbackOntologyCommandOutput } from "./commands/RollbackOntologyCommand";
 import type { RunValidationCommandInput, RunValidationCommandOutput } from "./commands/RunValidationCommand";
 import type { SearchEmbeddingsCommandInput, SearchEmbeddingsCommandOutput } from "./commands/SearchEmbeddingsCommand";
 import type { StartInductionCommandInput, StartInductionCommandOutput } from "./commands/StartInductionCommand";
+import type {
+  UndoFactConflictResolutionCommandInput,
+  UndoFactConflictResolutionCommandOutput,
+} from "./commands/UndoFactConflictResolutionCommand";
 import type { UpdateMetricCommandInput, UpdateMetricCommandOutput } from "./commands/UpdateMetricCommand";
 import type { UpdateNamespaceCommandInput, UpdateNamespaceCommandOutput } from "./commands/UpdateNamespaceCommand";
 import type {
@@ -322,6 +409,7 @@ import type { UploadDocumentCommandInput, UploadDocumentCommandOutput } from "./
 import type { UploadOntologyCommandInput, UploadOntologyCommandOutput } from "./commands/UploadOntologyCommand";
 import type { ValidateMetricCommandInput, ValidateMetricCommandOutput } from "./commands/ValidateMetricCommand";
 import type { ValidateProposalCommandInput, ValidateProposalCommandOutput } from "./commands/ValidateProposalCommand";
+import type { VerifyOntologyCommandInput, VerifyOntologyCommandOutput } from "./commands/VerifyOntologyCommand";
 import {
   type ClientInputEndpointParameters,
   type ClientResolvedEndpointParameters,
@@ -340,6 +428,9 @@ export type ServiceInputTypes =
   | AcceptProposalCommandInput
   | ApproveFactCandidateCommandInput
   | ApproveSourceCommandInput
+  | AssertFactCommandInput
+  | BatchKeepFactConflictsCommandInput
+  | BrowseOntologyTreeCommandInput
   | BulkDeleteMetricsCommandInput
   | CancelProposalCommandInput
   | CompileConstraintsCommandInput
@@ -354,16 +445,24 @@ export type ServiceInputTypes =
   | DeleteOntologyCommandInput
   | DeletePlatformGrantCommandInput
   | DeleteSourceCommandInput
+  | DiffOntologyVersionsCommandInput
   | DownloadOntologyCommandInput
+  | ExportOntologyBundleCommandInput
+  | ExportOntologyVersionCommandInput
   | ExportOsiCommandInput
   | FetchOntologyCommandInput
   | FindGraphPathCommandInput
+  | FindLinksCommandInput
+  | GetAnswerQualityCommandInput
   | GetCanvasManifestCommandInput
   | GetCanvasSubgraphCommandInput
   | GetDictionaryCommandInput
   | GetDictionaryCommentCoverageCommandInput
   | GetDictionaryViewCommandInput
+  | GetEntityCommandInput
   | GetEntityEmbeddingsCommandInput
+  | GetEntityProvenanceCommandInput
+  | GetFactCommandInput
   | GetGraphClassCommandInput
   | GetGraphDatatypePropertyCommandInput
   | GetGraphObjectPropertyCommandInput
@@ -371,6 +470,7 @@ export type ServiceInputTypes =
   | GetInductionJobCommandInput
   | GetInferConstraintsJobCommandInput
   | GetIngestStatusCommandInput
+  | GetMetricCardCommandInput
   | GetMetricCommandInput
   | GetMetricFamilyCommandInput
   | GetMetricReportManifestCommandInput
@@ -381,6 +481,8 @@ export type ServiceInputTypes =
   | GetOntologyOverviewCommandInput
   | GetOntologySnapshotCommandInput
   | GetOntologyUploadUrlCommandInput
+  | GetOntologyVersionCommandInput
+  | GetOntologyVersionProposalCommandInput
   | GetOsiUploadUrlCommandInput
   | GetProposalCommandInput
   | GetProposalUploadUrlsCommandInput
@@ -393,14 +495,21 @@ export type ServiceInputTypes =
   | GetSystemHealthCommandInput
   | GraphSearchCommandInput
   | HealthCheckCommandInput
+  | ImportBundleCommandInput
+  | ImportOntologyCommandInput
   | ImportOsiCommandInput
   | InferConstraintsCommandInput
   | IngestOntologyFromS3CommandInput
+  | InspectOntologyBundleCommandInput
   | KeepRescanRemovalCommandInput
+  | ListAnswerQualityRunsCommandInput
   | ListDictionariesCommandInput
   | ListDocumentChunksCommandInput
   | ListDocumentsCommandInput
   | ListFactCandidatesCommandInput
+  | ListFactConflictsCommandInput
+  | ListFactEventsCommandInput
+  | ListFactsCommandInput
   | ListFoundationalOntologiesCommandInput
   | ListInducedDatasourcesCommandInput
   | ListInductionJobsCommandInput
@@ -410,6 +519,10 @@ export type ServiceInputTypes =
   | ListNamespaceRolesCommandInput
   | ListNamespacesCommandInput
   | ListOntologiesCommandInput
+  | ListOntologyEventsCommandInput
+  | ListOntologyInstancesCommandInput
+  | ListOntologyProposalsCommandInput
+  | ListOntologyVersionsCommandInput
   | ListPlatformGrantsCommandInput
   | ListPlatformRolesCommandInput
   | ListPrincipalGrantsCommandInput
@@ -421,6 +534,8 @@ export type ServiceInputTypes =
   | ListTermsCommandInput
   | LoadFoundationalOntologyCommandInput
   | MaterializeReasoningCommandInput
+  | ProposeOntologyVersionCommandInput
+  | PublishOntologyCommandInput
   | PutSourceEventRescanCommandInput
   | PutSourceRescanScheduleCommandInput
   | RefreshDictionariesCommandInput
@@ -430,11 +545,17 @@ export type ServiceInputTypes =
   | RepairProposalDatatypesCommandInput
   | RescanSourceCommandInput
   | ResolveFactConflictsCommandInput
+  | RestoreFactCommandInput
+  | RetractFactCommandInput
+  | RetractFactsCommandInput
+  | ReviewOntologyProposalCommandInput
   | ReviewSourceColumnCommandInput
   | ReviewSourceTableCommandInput
+  | RollbackOntologyCommandInput
   | RunValidationCommandInput
   | SearchEmbeddingsCommandInput
   | StartInductionCommandInput
+  | UndoFactConflictResolutionCommandInput
   | UpdateMetricCommandInput
   | UpdateNamespaceCommandInput
   | UpdateNamespaceStatusCommandInput
@@ -446,7 +567,8 @@ export type ServiceInputTypes =
   | UploadDocumentCommandInput
   | UploadOntologyCommandInput
   | ValidateMetricCommandInput
-  | ValidateProposalCommandInput;
+  | ValidateProposalCommandInput
+  | VerifyOntologyCommandInput;
 
 /**
  * @public
@@ -455,6 +577,9 @@ export type ServiceOutputTypes =
   | AcceptProposalCommandOutput
   | ApproveFactCandidateCommandOutput
   | ApproveSourceCommandOutput
+  | AssertFactCommandOutput
+  | BatchKeepFactConflictsCommandOutput
+  | BrowseOntologyTreeCommandOutput
   | BulkDeleteMetricsCommandOutput
   | CancelProposalCommandOutput
   | CompileConstraintsCommandOutput
@@ -469,16 +594,24 @@ export type ServiceOutputTypes =
   | DeleteOntologyCommandOutput
   | DeletePlatformGrantCommandOutput
   | DeleteSourceCommandOutput
+  | DiffOntologyVersionsCommandOutput
   | DownloadOntologyCommandOutput
+  | ExportOntologyBundleCommandOutput
+  | ExportOntologyVersionCommandOutput
   | ExportOsiCommandOutput
   | FetchOntologyCommandOutput
   | FindGraphPathCommandOutput
+  | FindLinksCommandOutput
+  | GetAnswerQualityCommandOutput
   | GetCanvasManifestCommandOutput
   | GetCanvasSubgraphCommandOutput
   | GetDictionaryCommandOutput
   | GetDictionaryCommentCoverageCommandOutput
   | GetDictionaryViewCommandOutput
+  | GetEntityCommandOutput
   | GetEntityEmbeddingsCommandOutput
+  | GetEntityProvenanceCommandOutput
+  | GetFactCommandOutput
   | GetGraphClassCommandOutput
   | GetGraphDatatypePropertyCommandOutput
   | GetGraphObjectPropertyCommandOutput
@@ -486,6 +619,7 @@ export type ServiceOutputTypes =
   | GetInductionJobCommandOutput
   | GetInferConstraintsJobCommandOutput
   | GetIngestStatusCommandOutput
+  | GetMetricCardCommandOutput
   | GetMetricCommandOutput
   | GetMetricFamilyCommandOutput
   | GetMetricReportManifestCommandOutput
@@ -496,6 +630,8 @@ export type ServiceOutputTypes =
   | GetOntologyOverviewCommandOutput
   | GetOntologySnapshotCommandOutput
   | GetOntologyUploadUrlCommandOutput
+  | GetOntologyVersionCommandOutput
+  | GetOntologyVersionProposalCommandOutput
   | GetOsiUploadUrlCommandOutput
   | GetProposalCommandOutput
   | GetProposalUploadUrlsCommandOutput
@@ -508,14 +644,21 @@ export type ServiceOutputTypes =
   | GetSystemHealthCommandOutput
   | GraphSearchCommandOutput
   | HealthCheckCommandOutput
+  | ImportBundleCommandOutput
+  | ImportOntologyCommandOutput
   | ImportOsiCommandOutput
   | InferConstraintsCommandOutput
   | IngestOntologyFromS3CommandOutput
+  | InspectOntologyBundleCommandOutput
   | KeepRescanRemovalCommandOutput
+  | ListAnswerQualityRunsCommandOutput
   | ListDictionariesCommandOutput
   | ListDocumentChunksCommandOutput
   | ListDocumentsCommandOutput
   | ListFactCandidatesCommandOutput
+  | ListFactConflictsCommandOutput
+  | ListFactEventsCommandOutput
+  | ListFactsCommandOutput
   | ListFoundationalOntologiesCommandOutput
   | ListInducedDatasourcesCommandOutput
   | ListInductionJobsCommandOutput
@@ -525,6 +668,10 @@ export type ServiceOutputTypes =
   | ListNamespaceRolesCommandOutput
   | ListNamespacesCommandOutput
   | ListOntologiesCommandOutput
+  | ListOntologyEventsCommandOutput
+  | ListOntologyInstancesCommandOutput
+  | ListOntologyProposalsCommandOutput
+  | ListOntologyVersionsCommandOutput
   | ListPlatformGrantsCommandOutput
   | ListPlatformRolesCommandOutput
   | ListPrincipalGrantsCommandOutput
@@ -536,6 +683,8 @@ export type ServiceOutputTypes =
   | ListTermsCommandOutput
   | LoadFoundationalOntologyCommandOutput
   | MaterializeReasoningCommandOutput
+  | ProposeOntologyVersionCommandOutput
+  | PublishOntologyCommandOutput
   | PutSourceEventRescanCommandOutput
   | PutSourceRescanScheduleCommandOutput
   | RefreshDictionariesCommandOutput
@@ -545,11 +694,17 @@ export type ServiceOutputTypes =
   | RepairProposalDatatypesCommandOutput
   | RescanSourceCommandOutput
   | ResolveFactConflictsCommandOutput
+  | RestoreFactCommandOutput
+  | RetractFactCommandOutput
+  | RetractFactsCommandOutput
+  | ReviewOntologyProposalCommandOutput
   | ReviewSourceColumnCommandOutput
   | ReviewSourceTableCommandOutput
+  | RollbackOntologyCommandOutput
   | RunValidationCommandOutput
   | SearchEmbeddingsCommandOutput
   | StartInductionCommandOutput
+  | UndoFactConflictResolutionCommandOutput
   | UpdateMetricCommandOutput
   | UpdateNamespaceCommandOutput
   | UpdateNamespaceStatusCommandOutput
@@ -561,7 +716,8 @@ export type ServiceOutputTypes =
   | UploadDocumentCommandOutput
   | UploadOntologyCommandOutput
   | ValidateMetricCommandOutput
-  | ValidateProposalCommandOutput;
+  | ValidateProposalCommandOutput
+  | VerifyOntologyCommandOutput;
 
 /**
  * @public

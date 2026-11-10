@@ -341,6 +341,150 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/documents/{documentId}/content": {
+            "get": {
+                "description": "Download the stored bytes of one document.\n\nThe body is the exact byte sequence stored at upload — no normalisation and\nno re-serialisation — so a client can verify it against\n`UploadDocument.contentHash` with a plain digest comparison.\n\n`X-Content-Sha256` repeats that digest for the returned bytes. A document\nstored with zero bytes answers 200 with an empty body and the SHA-256 of the\nempty string; only an unknown document answers `NotFoundError`.",
+                "operationId": "DownloadDocument",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "DownloadDocument_example1": {
+                                "summary": "Download the bytes of a stored document",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "documentId",
+                        "in": "path",
+                        "description": "Document whose bytes to download.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Document whose bytes to download."
+                        },
+                        "required": true,
+                        "examples": {
+                            "DownloadDocument_example1": {
+                                "summary": "Download the bytes of a stored document",
+                                "description": "",
+                                "value": "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "DownloadDocument 200 response",
+                        "headers": {
+                            "X-Content-Sha256": {
+                                "description": "SHA-256 of `content`, lowercase hex. Equals the `contentHash`\nreturned by `UploadDocument` for the same stored bytes.",
+                                "schema": {
+                                    "type": "string",
+                                    "description": "SHA-256 of `content`, lowercase hex. Equals the `contentHash`\nreturned by `UploadDocument` for the same stored bytes."
+                                },
+                                "required": true,
+                                "examples": {
+                                    "DownloadDocument_example1": {
+                                        "summary": "Download the bytes of a stored document",
+                                        "description": "",
+                                        "value": "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8b2e1e5c1c0e5b8"
+                                    }
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DownloadDocumentOutputPayload"
+                                },
+                                "examples": {
+                                    "DownloadDocument_example1": {
+                                        "summary": "Download the bytes of a stored document",
+                                        "description": "",
+                                        "value": "SGVsbG8sIHdvcmxkIQ=="
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/namespaces/{namespaceId}/graph/traverse": {
             "post": {
                 "description": "Traverse the knowledge graph outward from a starting entity URI, following\nrelationships up to a maximum depth in the requested direction.",
@@ -1721,6 +1865,11 @@
                     "="
                 ]
             },
+            "DownloadDocumentOutputPayload": {
+                "type": "string",
+                "description": "Exact stored bytes; empty (0 bytes) when the document was uploaded\nwith empty content.",
+                "format": "byte"
+            },
             "Entity": {
                 "type": "object",
                 "description": "An entity (graph node) with its IRI, human-readable label, optional type, and\narbitrary properties.",
@@ -2131,6 +2280,19 @@
                     "tier": {
                         "type": "number",
                         "description": "Pinned tier that produced no result (1 = metric match, 2 = structured query)."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "NotFoundErrorResponseContent": {
+                "type": "object",
+                "description": "Returned with HTTP 404 when the requested resource does not exist.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of what was not found."
                     }
                 },
                 "required": [

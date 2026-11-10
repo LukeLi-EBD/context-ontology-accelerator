@@ -18,6 +18,21 @@ import {
   ApproveSourceCommand,
 } from "./commands/ApproveSourceCommand";
 import {
+  type AssertFactCommandInput,
+  type AssertFactCommandOutput,
+  AssertFactCommand,
+} from "./commands/AssertFactCommand";
+import {
+  type BatchKeepFactConflictsCommandInput,
+  type BatchKeepFactConflictsCommandOutput,
+  BatchKeepFactConflictsCommand,
+} from "./commands/BatchKeepFactConflictsCommand";
+import {
+  type BrowseOntologyTreeCommandInput,
+  type BrowseOntologyTreeCommandOutput,
+  BrowseOntologyTreeCommand,
+} from "./commands/BrowseOntologyTreeCommand";
+import {
   type BulkDeleteMetricsCommandInput,
   type BulkDeleteMetricsCommandOutput,
   BulkDeleteMetricsCommand,
@@ -88,10 +103,25 @@ import {
   DeleteSourceCommand,
 } from "./commands/DeleteSourceCommand";
 import {
+  type DiffOntologyVersionsCommandInput,
+  type DiffOntologyVersionsCommandOutput,
+  DiffOntologyVersionsCommand,
+} from "./commands/DiffOntologyVersionsCommand";
+import {
   type DownloadOntologyCommandInput,
   type DownloadOntologyCommandOutput,
   DownloadOntologyCommand,
 } from "./commands/DownloadOntologyCommand";
+import {
+  type ExportOntologyBundleCommandInput,
+  type ExportOntologyBundleCommandOutput,
+  ExportOntologyBundleCommand,
+} from "./commands/ExportOntologyBundleCommand";
+import {
+  type ExportOntologyVersionCommandInput,
+  type ExportOntologyVersionCommandOutput,
+  ExportOntologyVersionCommand,
+} from "./commands/ExportOntologyVersionCommand";
 import { type ExportOsiCommandInput, type ExportOsiCommandOutput, ExportOsiCommand } from "./commands/ExportOsiCommand";
 import {
   type FetchOntologyCommandInput,
@@ -103,6 +133,12 @@ import {
   type FindGraphPathCommandOutput,
   FindGraphPathCommand,
 } from "./commands/FindGraphPathCommand";
+import { type FindLinksCommandInput, type FindLinksCommandOutput, FindLinksCommand } from "./commands/FindLinksCommand";
+import {
+  type GetAnswerQualityCommandInput,
+  type GetAnswerQualityCommandOutput,
+  GetAnswerQualityCommand,
+} from "./commands/GetAnswerQualityCommand";
 import {
   type GetCanvasManifestCommandInput,
   type GetCanvasManifestCommandOutput,
@@ -128,11 +164,18 @@ import {
   type GetDictionaryViewCommandOutput,
   GetDictionaryViewCommand,
 } from "./commands/GetDictionaryViewCommand";
+import { type GetEntityCommandInput, type GetEntityCommandOutput, GetEntityCommand } from "./commands/GetEntityCommand";
 import {
   type GetEntityEmbeddingsCommandInput,
   type GetEntityEmbeddingsCommandOutput,
   GetEntityEmbeddingsCommand,
 } from "./commands/GetEntityEmbeddingsCommand";
+import {
+  type GetEntityProvenanceCommandInput,
+  type GetEntityProvenanceCommandOutput,
+  GetEntityProvenanceCommand,
+} from "./commands/GetEntityProvenanceCommand";
+import { type GetFactCommandInput, type GetFactCommandOutput, GetFactCommand } from "./commands/GetFactCommand";
 import {
   type GetGraphClassCommandInput,
   type GetGraphClassCommandOutput,
@@ -168,6 +211,11 @@ import {
   type GetIngestStatusCommandOutput,
   GetIngestStatusCommand,
 } from "./commands/GetIngestStatusCommand";
+import {
+  type GetMetricCardCommandInput,
+  type GetMetricCardCommandOutput,
+  GetMetricCardCommand,
+} from "./commands/GetMetricCardCommand";
 import { type GetMetricCommandInput, type GetMetricCommandOutput, GetMetricCommand } from "./commands/GetMetricCommand";
 import {
   type GetMetricFamilyCommandInput,
@@ -214,6 +262,16 @@ import {
   type GetOntologyUploadUrlCommandOutput,
   GetOntologyUploadUrlCommand,
 } from "./commands/GetOntologyUploadUrlCommand";
+import {
+  type GetOntologyVersionCommandInput,
+  type GetOntologyVersionCommandOutput,
+  GetOntologyVersionCommand,
+} from "./commands/GetOntologyVersionCommand";
+import {
+  type GetOntologyVersionProposalCommandInput,
+  type GetOntologyVersionProposalCommandOutput,
+  GetOntologyVersionProposalCommand,
+} from "./commands/GetOntologyVersionProposalCommand";
 import {
   type GetOsiUploadUrlCommandInput,
   type GetOsiUploadUrlCommandOutput,
@@ -270,6 +328,16 @@ import {
   type HealthCheckCommandOutput,
   HealthCheckCommand,
 } from "./commands/HealthCheckCommand";
+import {
+  type ImportBundleCommandInput,
+  type ImportBundleCommandOutput,
+  ImportBundleCommand,
+} from "./commands/ImportBundleCommand";
+import {
+  type ImportOntologyCommandInput,
+  type ImportOntologyCommandOutput,
+  ImportOntologyCommand,
+} from "./commands/ImportOntologyCommand";
 import { type ImportOsiCommandInput, type ImportOsiCommandOutput, ImportOsiCommand } from "./commands/ImportOsiCommand";
 import {
   type InferConstraintsCommandInput,
@@ -282,10 +350,20 @@ import {
   IngestOntologyFromS3Command,
 } from "./commands/IngestOntologyFromS3Command";
 import {
+  type InspectOntologyBundleCommandInput,
+  type InspectOntologyBundleCommandOutput,
+  InspectOntologyBundleCommand,
+} from "./commands/InspectOntologyBundleCommand";
+import {
   type KeepRescanRemovalCommandInput,
   type KeepRescanRemovalCommandOutput,
   KeepRescanRemovalCommand,
 } from "./commands/KeepRescanRemovalCommand";
+import {
+  type ListAnswerQualityRunsCommandInput,
+  type ListAnswerQualityRunsCommandOutput,
+  ListAnswerQualityRunsCommand,
+} from "./commands/ListAnswerQualityRunsCommand";
 import {
   type ListDictionariesCommandInput,
   type ListDictionariesCommandOutput,
@@ -306,6 +384,17 @@ import {
   type ListFactCandidatesCommandOutput,
   ListFactCandidatesCommand,
 } from "./commands/ListFactCandidatesCommand";
+import {
+  type ListFactConflictsCommandInput,
+  type ListFactConflictsCommandOutput,
+  ListFactConflictsCommand,
+} from "./commands/ListFactConflictsCommand";
+import {
+  type ListFactEventsCommandInput,
+  type ListFactEventsCommandOutput,
+  ListFactEventsCommand,
+} from "./commands/ListFactEventsCommand";
+import { type ListFactsCommandInput, type ListFactsCommandOutput, ListFactsCommand } from "./commands/ListFactsCommand";
 import {
   type ListFoundationalOntologiesCommandInput,
   type ListFoundationalOntologiesCommandOutput,
@@ -351,6 +440,26 @@ import {
   type ListOntologiesCommandOutput,
   ListOntologiesCommand,
 } from "./commands/ListOntologiesCommand";
+import {
+  type ListOntologyEventsCommandInput,
+  type ListOntologyEventsCommandOutput,
+  ListOntologyEventsCommand,
+} from "./commands/ListOntologyEventsCommand";
+import {
+  type ListOntologyInstancesCommandInput,
+  type ListOntologyInstancesCommandOutput,
+  ListOntologyInstancesCommand,
+} from "./commands/ListOntologyInstancesCommand";
+import {
+  type ListOntologyProposalsCommandInput,
+  type ListOntologyProposalsCommandOutput,
+  ListOntologyProposalsCommand,
+} from "./commands/ListOntologyProposalsCommand";
+import {
+  type ListOntologyVersionsCommandInput,
+  type ListOntologyVersionsCommandOutput,
+  ListOntologyVersionsCommand,
+} from "./commands/ListOntologyVersionsCommand";
 import {
   type ListPlatformGrantsCommandInput,
   type ListPlatformGrantsCommandOutput,
@@ -403,6 +512,16 @@ import {
   MaterializeReasoningCommand,
 } from "./commands/MaterializeReasoningCommand";
 import {
+  type ProposeOntologyVersionCommandInput,
+  type ProposeOntologyVersionCommandOutput,
+  ProposeOntologyVersionCommand,
+} from "./commands/ProposeOntologyVersionCommand";
+import {
+  type PublishOntologyCommandInput,
+  type PublishOntologyCommandOutput,
+  PublishOntologyCommand,
+} from "./commands/PublishOntologyCommand";
+import {
   type PutSourceEventRescanCommandInput,
   type PutSourceEventRescanCommandOutput,
   PutSourceEventRescanCommand,
@@ -448,6 +567,26 @@ import {
   ResolveFactConflictsCommand,
 } from "./commands/ResolveFactConflictsCommand";
 import {
+  type RestoreFactCommandInput,
+  type RestoreFactCommandOutput,
+  RestoreFactCommand,
+} from "./commands/RestoreFactCommand";
+import {
+  type RetractFactCommandInput,
+  type RetractFactCommandOutput,
+  RetractFactCommand,
+} from "./commands/RetractFactCommand";
+import {
+  type RetractFactsCommandInput,
+  type RetractFactsCommandOutput,
+  RetractFactsCommand,
+} from "./commands/RetractFactsCommand";
+import {
+  type ReviewOntologyProposalCommandInput,
+  type ReviewOntologyProposalCommandOutput,
+  ReviewOntologyProposalCommand,
+} from "./commands/ReviewOntologyProposalCommand";
+import {
   type ReviewSourceColumnCommandInput,
   type ReviewSourceColumnCommandOutput,
   ReviewSourceColumnCommand,
@@ -457,6 +596,11 @@ import {
   type ReviewSourceTableCommandOutput,
   ReviewSourceTableCommand,
 } from "./commands/ReviewSourceTableCommand";
+import {
+  type RollbackOntologyCommandInput,
+  type RollbackOntologyCommandOutput,
+  RollbackOntologyCommand,
+} from "./commands/RollbackOntologyCommand";
 import {
   type RunValidationCommandInput,
   type RunValidationCommandOutput,
@@ -472,6 +616,11 @@ import {
   type StartInductionCommandOutput,
   StartInductionCommand,
 } from "./commands/StartInductionCommand";
+import {
+  type UndoFactConflictResolutionCommandInput,
+  type UndoFactConflictResolutionCommandOutput,
+  UndoFactConflictResolutionCommand,
+} from "./commands/UndoFactConflictResolutionCommand";
 import {
   type UpdateMetricCommandInput,
   type UpdateMetricCommandOutput,
@@ -532,6 +681,11 @@ import {
   type ValidateProposalCommandOutput,
   ValidateProposalCommand,
 } from "./commands/ValidateProposalCommand";
+import {
+  type VerifyOntologyCommandInput,
+  type VerifyOntologyCommandOutput,
+  VerifyOntologyCommand,
+} from "./commands/VerifyOntologyCommand";
 import { ControlPlaneServiceClient } from "./ControlPlaneServiceClient";
 import { paginateListDocumentChunks } from "./pagination/ListDocumentChunksPaginator";
 import { paginateListDocuments } from "./pagination/ListDocumentsPaginator";
@@ -553,6 +707,8 @@ import { paginateListSourceTables } from "./pagination/ListSourceTablesPaginator
 const commands = {
   GetSystemHealthCommand,
   HealthCheckCommand,
+  BrowseOntologyTreeCommand,
+  ListOntologyInstancesCommand,
   GetDictionaryCommand,
   GetDictionaryCommentCoverageCommand,
   GetDictionaryViewCommand,
@@ -567,7 +723,19 @@ const commands = {
   UploadDocumentCommand,
   GetEntityEmbeddingsCommand,
   SearchEmbeddingsCommand,
+  GetEntityCommand,
+  GetEntityProvenanceCommand,
+  AssertFactCommand,
+  BatchKeepFactConflictsCommand,
+  GetFactCommand,
+  ListFactConflictsCommand,
+  ListFactEventsCommand,
+  ListFactsCommand,
   ResolveFactConflictsCommand,
+  RestoreFactCommand,
+  RetractFactCommand,
+  RetractFactsCommand,
+  UndoFactConflictResolutionCommand,
   CreateGrantCommand,
   CreatePlatformGrantCommand,
   DeleteGrantCommand,
@@ -595,10 +763,14 @@ const commands = {
   ListNamespacesCommand,
   UpdateNamespaceCommand,
   UpdateNamespaceStatusCommand,
+  ExportOntologyBundleCommand,
+  ImportBundleCommand,
+  InspectOntologyBundleCommand,
   DeleteOntologyCommand,
   DownloadOntologyCommand,
   FetchOntologyCommand,
   FindGraphPathCommand,
+  FindLinksCommand,
   GetCanvasManifestCommand,
   GetCanvasSubgraphCommand,
   GetGraphClassCommand,
@@ -637,6 +809,22 @@ const commands = {
   StartInductionCommand,
   UpdateProposalCommand,
   ValidateProposalCommand,
+  DiffOntologyVersionsCommand,
+  ExportOntologyVersionCommand,
+  GetOntologyVersionCommand,
+  GetOntologyVersionProposalCommand,
+  ImportOntologyCommand,
+  ListOntologyEventsCommand,
+  ListOntologyProposalsCommand,
+  ListOntologyVersionsCommand,
+  ProposeOntologyVersionCommand,
+  PublishOntologyCommand,
+  ReviewOntologyProposalCommand,
+  RollbackOntologyCommand,
+  VerifyOntologyCommand,
+  GetMetricCardCommand,
+  GetAnswerQualityCommand,
+  ListAnswerQualityRunsCommand,
   GetNamespaceRoleCommand,
   ListNamespaceRolesCommand,
   ListPlatformRolesCommand,
@@ -716,6 +904,41 @@ export interface ControlPlaneService {
     args: HealthCheckCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: HealthCheckCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link BrowseOntologyTreeCommand}
+   */
+  browseOntologyTree(): Promise<BrowseOntologyTreeCommandOutput>;
+  browseOntologyTree(
+    args: BrowseOntologyTreeCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<BrowseOntologyTreeCommandOutput>;
+  browseOntologyTree(
+    args: BrowseOntologyTreeCommandInput,
+    cb: (err: any, data?: BrowseOntologyTreeCommandOutput) => void
+  ): void;
+  browseOntologyTree(
+    args: BrowseOntologyTreeCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: BrowseOntologyTreeCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListOntologyInstancesCommand}
+   */
+  listOntologyInstances(
+    args: ListOntologyInstancesCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListOntologyInstancesCommandOutput>;
+  listOntologyInstances(
+    args: ListOntologyInstancesCommandInput,
+    cb: (err: any, data?: ListOntologyInstancesCommandOutput) => void
+  ): void;
+  listOntologyInstances(
+    args: ListOntologyInstancesCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListOntologyInstancesCommandOutput) => void
   ): void;
 
   /**
@@ -957,6 +1180,142 @@ export interface ControlPlaneService {
   ): void;
 
   /**
+   * @see {@link GetEntityCommand}
+   */
+  getEntity(
+    args: GetEntityCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetEntityCommandOutput>;
+  getEntity(
+    args: GetEntityCommandInput,
+    cb: (err: any, data?: GetEntityCommandOutput) => void
+  ): void;
+  getEntity(
+    args: GetEntityCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetEntityCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetEntityProvenanceCommand}
+   */
+  getEntityProvenance(
+    args: GetEntityProvenanceCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetEntityProvenanceCommandOutput>;
+  getEntityProvenance(
+    args: GetEntityProvenanceCommandInput,
+    cb: (err: any, data?: GetEntityProvenanceCommandOutput) => void
+  ): void;
+  getEntityProvenance(
+    args: GetEntityProvenanceCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetEntityProvenanceCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link AssertFactCommand}
+   */
+  assertFact(
+    args: AssertFactCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<AssertFactCommandOutput>;
+  assertFact(
+    args: AssertFactCommandInput,
+    cb: (err: any, data?: AssertFactCommandOutput) => void
+  ): void;
+  assertFact(
+    args: AssertFactCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: AssertFactCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link BatchKeepFactConflictsCommand}
+   */
+  batchKeepFactConflicts(
+    args: BatchKeepFactConflictsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<BatchKeepFactConflictsCommandOutput>;
+  batchKeepFactConflicts(
+    args: BatchKeepFactConflictsCommandInput,
+    cb: (err: any, data?: BatchKeepFactConflictsCommandOutput) => void
+  ): void;
+  batchKeepFactConflicts(
+    args: BatchKeepFactConflictsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: BatchKeepFactConflictsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetFactCommand}
+   */
+  getFact(
+    args: GetFactCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetFactCommandOutput>;
+  getFact(
+    args: GetFactCommandInput,
+    cb: (err: any, data?: GetFactCommandOutput) => void
+  ): void;
+  getFact(
+    args: GetFactCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetFactCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListFactConflictsCommand}
+   */
+  listFactConflicts(
+    args: ListFactConflictsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListFactConflictsCommandOutput>;
+  listFactConflicts(
+    args: ListFactConflictsCommandInput,
+    cb: (err: any, data?: ListFactConflictsCommandOutput) => void
+  ): void;
+  listFactConflicts(
+    args: ListFactConflictsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListFactConflictsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListFactEventsCommand}
+   */
+  listFactEvents(
+    args: ListFactEventsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListFactEventsCommandOutput>;
+  listFactEvents(
+    args: ListFactEventsCommandInput,
+    cb: (err: any, data?: ListFactEventsCommandOutput) => void
+  ): void;
+  listFactEvents(
+    args: ListFactEventsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListFactEventsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListFactsCommand}
+   */
+  listFacts(
+    args: ListFactsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListFactsCommandOutput>;
+  listFacts(
+    args: ListFactsCommandInput,
+    cb: (err: any, data?: ListFactsCommandOutput) => void
+  ): void;
+  listFacts(
+    args: ListFactsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListFactsCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link ResolveFactConflictsCommand}
    */
   resolveFactConflicts(
@@ -971,6 +1330,74 @@ export interface ControlPlaneService {
     args: ResolveFactConflictsCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ResolveFactConflictsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RestoreFactCommand}
+   */
+  restoreFact(
+    args: RestoreFactCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RestoreFactCommandOutput>;
+  restoreFact(
+    args: RestoreFactCommandInput,
+    cb: (err: any, data?: RestoreFactCommandOutput) => void
+  ): void;
+  restoreFact(
+    args: RestoreFactCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RestoreFactCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RetractFactCommand}
+   */
+  retractFact(
+    args: RetractFactCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RetractFactCommandOutput>;
+  retractFact(
+    args: RetractFactCommandInput,
+    cb: (err: any, data?: RetractFactCommandOutput) => void
+  ): void;
+  retractFact(
+    args: RetractFactCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RetractFactCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RetractFactsCommand}
+   */
+  retractFacts(
+    args: RetractFactsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RetractFactsCommandOutput>;
+  retractFacts(
+    args: RetractFactsCommandInput,
+    cb: (err: any, data?: RetractFactsCommandOutput) => void
+  ): void;
+  retractFacts(
+    args: RetractFactsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RetractFactsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link UndoFactConflictResolutionCommand}
+   */
+  undoFactConflictResolution(
+    args: UndoFactConflictResolutionCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<UndoFactConflictResolutionCommandOutput>;
+  undoFactConflictResolution(
+    args: UndoFactConflictResolutionCommandInput,
+    cb: (err: any, data?: UndoFactConflictResolutionCommandOutput) => void
+  ): void;
+  undoFactConflictResolution(
+    args: UndoFactConflictResolutionCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: UndoFactConflictResolutionCommandOutput) => void
   ): void;
 
   /**
@@ -1435,6 +1862,57 @@ export interface ControlPlaneService {
   ): void;
 
   /**
+   * @see {@link ExportOntologyBundleCommand}
+   */
+  exportOntologyBundle(
+    args: ExportOntologyBundleCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ExportOntologyBundleCommandOutput>;
+  exportOntologyBundle(
+    args: ExportOntologyBundleCommandInput,
+    cb: (err: any, data?: ExportOntologyBundleCommandOutput) => void
+  ): void;
+  exportOntologyBundle(
+    args: ExportOntologyBundleCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ExportOntologyBundleCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ImportBundleCommand}
+   */
+  importBundle(
+    args: ImportBundleCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ImportBundleCommandOutput>;
+  importBundle(
+    args: ImportBundleCommandInput,
+    cb: (err: any, data?: ImportBundleCommandOutput) => void
+  ): void;
+  importBundle(
+    args: ImportBundleCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ImportBundleCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link InspectOntologyBundleCommand}
+   */
+  inspectOntologyBundle(
+    args: InspectOntologyBundleCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<InspectOntologyBundleCommandOutput>;
+  inspectOntologyBundle(
+    args: InspectOntologyBundleCommandInput,
+    cb: (err: any, data?: InspectOntologyBundleCommandOutput) => void
+  ): void;
+  inspectOntologyBundle(
+    args: InspectOntologyBundleCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: InspectOntologyBundleCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link DeleteOntologyCommand}
    */
   deleteOntology(
@@ -1500,6 +1978,23 @@ export interface ControlPlaneService {
     args: FindGraphPathCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: FindGraphPathCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link FindLinksCommand}
+   */
+  findLinks(
+    args: FindLinksCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<FindLinksCommandOutput>;
+  findLinks(
+    args: FindLinksCommandInput,
+    cb: (err: any, data?: FindLinksCommandOutput) => void
+  ): void;
+  findLinks(
+    args: FindLinksCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: FindLinksCommandOutput) => void
   ): void;
 
   /**
@@ -2146,6 +2641,279 @@ export interface ControlPlaneService {
     args: ValidateProposalCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ValidateProposalCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link DiffOntologyVersionsCommand}
+   */
+  diffOntologyVersions(
+    args: DiffOntologyVersionsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<DiffOntologyVersionsCommandOutput>;
+  diffOntologyVersions(
+    args: DiffOntologyVersionsCommandInput,
+    cb: (err: any, data?: DiffOntologyVersionsCommandOutput) => void
+  ): void;
+  diffOntologyVersions(
+    args: DiffOntologyVersionsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: DiffOntologyVersionsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ExportOntologyVersionCommand}
+   */
+  exportOntologyVersion(
+    args: ExportOntologyVersionCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ExportOntologyVersionCommandOutput>;
+  exportOntologyVersion(
+    args: ExportOntologyVersionCommandInput,
+    cb: (err: any, data?: ExportOntologyVersionCommandOutput) => void
+  ): void;
+  exportOntologyVersion(
+    args: ExportOntologyVersionCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ExportOntologyVersionCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetOntologyVersionCommand}
+   */
+  getOntologyVersion(
+    args: GetOntologyVersionCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetOntologyVersionCommandOutput>;
+  getOntologyVersion(
+    args: GetOntologyVersionCommandInput,
+    cb: (err: any, data?: GetOntologyVersionCommandOutput) => void
+  ): void;
+  getOntologyVersion(
+    args: GetOntologyVersionCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetOntologyVersionCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetOntologyVersionProposalCommand}
+   */
+  getOntologyVersionProposal(
+    args: GetOntologyVersionProposalCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetOntologyVersionProposalCommandOutput>;
+  getOntologyVersionProposal(
+    args: GetOntologyVersionProposalCommandInput,
+    cb: (err: any, data?: GetOntologyVersionProposalCommandOutput) => void
+  ): void;
+  getOntologyVersionProposal(
+    args: GetOntologyVersionProposalCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetOntologyVersionProposalCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ImportOntologyCommand}
+   */
+  importOntology(
+    args: ImportOntologyCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ImportOntologyCommandOutput>;
+  importOntology(
+    args: ImportOntologyCommandInput,
+    cb: (err: any, data?: ImportOntologyCommandOutput) => void
+  ): void;
+  importOntology(
+    args: ImportOntologyCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ImportOntologyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListOntologyEventsCommand}
+   */
+  listOntologyEvents(
+    args: ListOntologyEventsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListOntologyEventsCommandOutput>;
+  listOntologyEvents(
+    args: ListOntologyEventsCommandInput,
+    cb: (err: any, data?: ListOntologyEventsCommandOutput) => void
+  ): void;
+  listOntologyEvents(
+    args: ListOntologyEventsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListOntologyEventsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListOntologyProposalsCommand}
+   */
+  listOntologyProposals(
+    args: ListOntologyProposalsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListOntologyProposalsCommandOutput>;
+  listOntologyProposals(
+    args: ListOntologyProposalsCommandInput,
+    cb: (err: any, data?: ListOntologyProposalsCommandOutput) => void
+  ): void;
+  listOntologyProposals(
+    args: ListOntologyProposalsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListOntologyProposalsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListOntologyVersionsCommand}
+   */
+  listOntologyVersions(
+    args: ListOntologyVersionsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListOntologyVersionsCommandOutput>;
+  listOntologyVersions(
+    args: ListOntologyVersionsCommandInput,
+    cb: (err: any, data?: ListOntologyVersionsCommandOutput) => void
+  ): void;
+  listOntologyVersions(
+    args: ListOntologyVersionsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListOntologyVersionsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ProposeOntologyVersionCommand}
+   */
+  proposeOntologyVersion(
+    args: ProposeOntologyVersionCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ProposeOntologyVersionCommandOutput>;
+  proposeOntologyVersion(
+    args: ProposeOntologyVersionCommandInput,
+    cb: (err: any, data?: ProposeOntologyVersionCommandOutput) => void
+  ): void;
+  proposeOntologyVersion(
+    args: ProposeOntologyVersionCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ProposeOntologyVersionCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link PublishOntologyCommand}
+   */
+  publishOntology(
+    args: PublishOntologyCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<PublishOntologyCommandOutput>;
+  publishOntology(
+    args: PublishOntologyCommandInput,
+    cb: (err: any, data?: PublishOntologyCommandOutput) => void
+  ): void;
+  publishOntology(
+    args: PublishOntologyCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: PublishOntologyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ReviewOntologyProposalCommand}
+   */
+  reviewOntologyProposal(
+    args: ReviewOntologyProposalCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ReviewOntologyProposalCommandOutput>;
+  reviewOntologyProposal(
+    args: ReviewOntologyProposalCommandInput,
+    cb: (err: any, data?: ReviewOntologyProposalCommandOutput) => void
+  ): void;
+  reviewOntologyProposal(
+    args: ReviewOntologyProposalCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ReviewOntologyProposalCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RollbackOntologyCommand}
+   */
+  rollbackOntology(
+    args: RollbackOntologyCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RollbackOntologyCommandOutput>;
+  rollbackOntology(
+    args: RollbackOntologyCommandInput,
+    cb: (err: any, data?: RollbackOntologyCommandOutput) => void
+  ): void;
+  rollbackOntology(
+    args: RollbackOntologyCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RollbackOntologyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link VerifyOntologyCommand}
+   */
+  verifyOntology(
+    args: VerifyOntologyCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<VerifyOntologyCommandOutput>;
+  verifyOntology(
+    args: VerifyOntologyCommandInput,
+    cb: (err: any, data?: VerifyOntologyCommandOutput) => void
+  ): void;
+  verifyOntology(
+    args: VerifyOntologyCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: VerifyOntologyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetMetricCardCommand}
+   */
+  getMetricCard(
+    args: GetMetricCardCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetMetricCardCommandOutput>;
+  getMetricCard(
+    args: GetMetricCardCommandInput,
+    cb: (err: any, data?: GetMetricCardCommandOutput) => void
+  ): void;
+  getMetricCard(
+    args: GetMetricCardCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetMetricCardCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetAnswerQualityCommand}
+   */
+  getAnswerQuality(
+    args: GetAnswerQualityCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetAnswerQualityCommandOutput>;
+  getAnswerQuality(
+    args: GetAnswerQualityCommandInput,
+    cb: (err: any, data?: GetAnswerQualityCommandOutput) => void
+  ): void;
+  getAnswerQuality(
+    args: GetAnswerQualityCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetAnswerQualityCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListAnswerQualityRunsCommand}
+   */
+  listAnswerQualityRuns(): Promise<ListAnswerQualityRunsCommandOutput>;
+  listAnswerQualityRuns(
+    args: ListAnswerQualityRunsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListAnswerQualityRunsCommandOutput>;
+  listAnswerQualityRuns(
+    args: ListAnswerQualityRunsCommandInput,
+    cb: (err: any, data?: ListAnswerQualityRunsCommandOutput) => void
+  ): void;
+  listAnswerQualityRuns(
+    args: ListAnswerQualityRunsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListAnswerQualityRunsCommandOutput) => void
   ): void;
 
   /**

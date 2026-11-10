@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { CreateSourceOperationInput, CreateSourceOperationOutput } from "../models/models_0";
+import type { CreateSourceOperationInput, CreateSourceOperationOutput } from "../models/models_1";
 import { CreateSource$ } from "../schemas/schemas_0";
 
 /**

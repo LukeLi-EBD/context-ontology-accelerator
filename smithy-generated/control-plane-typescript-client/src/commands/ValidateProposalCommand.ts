@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { ValidateProposalInput, ValidateProposalOutput } from "../models/models_0";
+import type { ValidateProposalInput, ValidateProposalOutput } from "../models/models_1";
 import { ValidateProposal$ } from "../schemas/schemas_0";
 
 /**

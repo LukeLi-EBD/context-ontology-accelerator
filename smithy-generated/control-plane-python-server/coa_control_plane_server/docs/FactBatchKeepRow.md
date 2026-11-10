@@ -12,6 +12,8 @@ Name | Type | Description | Notes
 **retired** | **float** | Facts retired by this row (0 for a skipped group). | [optional] 
 **reason** | **str** | Why the group was skipped. | [optional] 
 **values** | **List[str]** | Values the group had before the decision. | [optional] 
+**kept_fact_ids** | **List[str]** | Assertion rows kept by a &#x60;kept&#x60; row; absent on a dry run. | [optional] 
+**retired_fact_ids** | **List[str]** | Assertion rows retired by a &#x60;kept&#x60; row; absent on a dry run. | [optional] 
 
 ## Example
 

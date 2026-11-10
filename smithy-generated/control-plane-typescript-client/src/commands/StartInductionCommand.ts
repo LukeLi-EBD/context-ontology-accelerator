@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { StartInductionInput, StartInductionOutput } from "../models/models_0";
+import type { StartInductionInput, StartInductionOutput } from "../models/models_1";
 import { StartInduction$ } from "../schemas/schemas_0";
 
 /**

@@ -102,6 +102,8 @@
     "operationShapeIds": [
         "com.amazon.semanticcontext#GetSystemHealth",
         "com.amazon.semanticcontext#HealthCheck",
+        "com.amazon.semanticcontext.browse#BrowseOntologyTree",
+        "com.amazon.semanticcontext.browse#ListOntologyInstances",
         "com.amazon.semanticcontext.datalayer#CheckAnswerable",
         "com.amazon.semanticcontext.datalayer#DescribeSchema",
         "com.amazon.semanticcontext.datalayer#GraphTraverse",
@@ -116,6 +118,7 @@
         "com.amazon.semanticcontext.dictionary#ListTerms",
         "com.amazon.semanticcontext.dictionary#RefreshDictionaries",
         "com.amazon.semanticcontext.documents#ApproveFactCandidate",
+        "com.amazon.semanticcontext.documents#DownloadDocument",
         "com.amazon.semanticcontext.documents#ListDocumentChunks",
         "com.amazon.semanticcontext.documents#ListDocuments",
         "com.amazon.semanticcontext.documents#ListFactCandidates",
@@ -123,7 +126,19 @@
         "com.amazon.semanticcontext.documents#UploadDocument",
         "com.amazon.semanticcontext.embeddings#GetEntityEmbeddings",
         "com.amazon.semanticcontext.embeddings#SearchEmbeddings",
+        "com.amazon.semanticcontext.entity#GetEntity",
+        "com.amazon.semanticcontext.entity#GetEntityProvenance",
+        "com.amazon.semanticcontext.facts#AssertFact",
+        "com.amazon.semanticcontext.facts#BatchKeepFactConflicts",
+        "com.amazon.semanticcontext.facts#GetFact",
+        "com.amazon.semanticcontext.facts#ListFactConflicts",
+        "com.amazon.semanticcontext.facts#ListFactEvents",
+        "com.amazon.semanticcontext.facts#ListFacts",
         "com.amazon.semanticcontext.facts#ResolveFactConflicts",
+        "com.amazon.semanticcontext.facts#RestoreFact",
+        "com.amazon.semanticcontext.facts#RetractFact",
+        "com.amazon.semanticcontext.facts#RetractFacts",
+        "com.amazon.semanticcontext.facts#UndoFactConflictResolution",
         "com.amazon.semanticcontext.grant#CreateGrant",
         "com.amazon.semanticcontext.grant#CreatePlatformGrant",
         "com.amazon.semanticcontext.grant#DeleteGrant",
@@ -151,10 +166,14 @@
         "com.amazon.semanticcontext.namespace#ListNamespaces",
         "com.amazon.semanticcontext.namespace#UpdateNamespace",
         "com.amazon.semanticcontext.namespace#UpdateNamespaceStatus",
+        "com.amazon.semanticcontext.ontologybundle#ExportOntologyBundle",
+        "com.amazon.semanticcontext.ontologybundle#ImportBundle",
+        "com.amazon.semanticcontext.ontologybundle#InspectOntologyBundle",
         "com.amazon.semanticcontext.ontologygraph#DeleteOntology",
         "com.amazon.semanticcontext.ontologygraph#DownloadOntology",
         "com.amazon.semanticcontext.ontologygraph#FetchOntology",
         "com.amazon.semanticcontext.ontologygraph#FindGraphPath",
+        "com.amazon.semanticcontext.ontologygraph#FindLinks",
         "com.amazon.semanticcontext.ontologygraph#GetCanvasManifest",
         "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraph",
         "com.amazon.semanticcontext.ontologygraph#GetGraphClass",
@@ -193,6 +212,22 @@
         "com.amazon.semanticcontext.ontologyinduction#StartInduction",
         "com.amazon.semanticcontext.ontologyinduction#UpdateProposal",
         "com.amazon.semanticcontext.ontologyinduction#ValidateProposal",
+        "com.amazon.semanticcontext.ontologylifecycle#DiffOntologyVersions",
+        "com.amazon.semanticcontext.ontologylifecycle#ExportOntologyVersion",
+        "com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersion",
+        "com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersionProposal",
+        "com.amazon.semanticcontext.ontologylifecycle#ImportOntology",
+        "com.amazon.semanticcontext.ontologylifecycle#ListOntologyEvents",
+        "com.amazon.semanticcontext.ontologylifecycle#ListOntologyProposals",
+        "com.amazon.semanticcontext.ontologylifecycle#ListOntologyVersions",
+        "com.amazon.semanticcontext.ontologylifecycle#ProposeOntologyVersion",
+        "com.amazon.semanticcontext.ontologylifecycle#PublishOntology",
+        "com.amazon.semanticcontext.ontologylifecycle#ReviewOntologyProposal",
+        "com.amazon.semanticcontext.ontologylifecycle#RollbackOntology",
+        "com.amazon.semanticcontext.ontologylifecycle#VerifyOntology",
+        "com.amazon.semanticcontext.platformmetric#GetMetricCard",
+        "com.amazon.semanticcontext.quality#GetAnswerQuality",
+        "com.amazon.semanticcontext.quality#ListAnswerQualityRuns",
         "com.amazon.semanticcontext.role#GetNamespaceRole",
         "com.amazon.semanticcontext.role#ListNamespaceRoles",
         "com.amazon.semanticcontext.role#ListPlatformRoles",
@@ -368,6 +403,7 @@
         "smithy.api#http",
         "smithy.api#httpBearerAuth",
         "smithy.api#httpError",
+        "smithy.api#httpHeader",
         "smithy.api#httpLabel",
         "smithy.api#httpPayload",
         "smithy.api#httpQuery",
@@ -394,6 +430,7 @@
         "smithy.api#sensitive",
         "smithy.api#suppress",
         "smithy.api#tags",
+        "smithy.api#timestampFormat",
         "smithy.api#title",
         "smithy.api#trait",
         "smithy.api#traitValidators",
@@ -402,6 +439,114 @@
         "smithy.api#unstable"
     ],
     "validationEvents": [
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$active",
+            "message": "The name `active` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 33,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$retracted",
+            "message": "The name `retracted` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 36,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$superseded",
+            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 39,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$all",
+            "message": "The name `all` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 42,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$added",
+            "message": "The name `added` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 496,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$removed",
+            "message": "The name `removed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 499,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$modified",
+            "message": "The name `modified` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 502,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$lexical",
+            "message": "The name `lexical` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/answer-quality.smithy",
+            "line": 19,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$vector",
+            "message": "The name `vector` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/answer-quality.smithy",
+            "line": 22,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$hybrid",
+            "message": "The name `hybrid` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/answer-quality.smithy",
+            "line": 25,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactEventFormat$full",
+            "message": "The name `full` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 48,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactEventFormat$summary",
+            "message": "The name `summary` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 51,
+            "column": 5
+        },
         {
             "id": "EnumShape",
             "severity": "WARNING",
@@ -439,6 +584,258 @@
             "column": 5
         },
         {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$draft",
+            "message": "The name `draft` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 31,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$proposed",
+            "message": "The name `proposed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 34,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$review",
+            "message": "The name `review` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 37,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$approved",
+            "message": "The name `approved` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 40,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$published",
+            "message": "The name `published` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 43,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$superseded",
+            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 46,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$rejected",
+            "message": "The name `rejected` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 49,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$deprecated",
+            "message": "The name `deprecated` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 52,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImportFormat$turtle",
+            "message": "The name `turtle` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 105,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImportFormat$nt",
+            "message": "The name `nt` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 108,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactObjectKind$iri",
+            "message": "The name `iri` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 57,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactObjectKind$literal",
+            "message": "The name `literal` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 60,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactState$active",
+            "message": "The name `active` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 21,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactState$retracted",
+            "message": "The name `retracted` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 24,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactState$superseded",
+            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 27,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$document",
+            "message": "The name `document` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 66,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$table",
+            "message": "The name `table` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 69,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$manual",
+            "message": "The name `manual` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 72,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$merge",
+            "message": "The name `merge` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 75,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$proposed",
+            "message": "The name `proposed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 58,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$review",
+            "message": "The name `review` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 61,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$approved",
+            "message": "The name `approved` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 64,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$published",
+            "message": "The name `published` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 67,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$rejected",
+            "message": "The name `rejected` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 72,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyExportFormat$turtle",
+            "message": "The name `turtle` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 96,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyExportFormat$nquads",
+            "message": "The name `nquads` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/repo/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 99,
+            "column": 5
+        },
+        {
+            "id": "ExamplesTrait.UnknownMember.com.amazon.semanticcontext.facts#RestoreFactInput.reason",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#RestoreFact",
+            "message": "Example input of `Restore a retracted fact`: Member `reason` does not exist in `com.amazon.semanticcontext.facts#RestoreFactInput`",
+            "filename": "/repo/models/src/main/smithy/fact-ledger.smithy",
+            "line": 965,
+            "column": 16
+        },
+        {
+            "id": "HttpMethodSemantics.MissingIdempotentTrait",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#UpdateSourceMetadata",
+            "message": "This operation uses the `PUT` method in the `http` trait, but is not marked with the idempotent trait",
+            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
+            "line": 1736,
+            "column": 1
+        },
+        {
             "id": "HttpMethodSemantics.UnnecessaryReadonlyTrait",
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.datalayer#RunSparql",
@@ -453,17 +850,17 @@
             "shapeId": "com.amazon.semanticcontext.unifiedsources#DeleteSource",
             "message": "This operation uses the `DELETE` method in the `http` trait, but is not marked with the idempotent trait",
             "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 1675,
+            "line": 1672,
             "column": 1
         },
         {
-            "id": "HttpMethodSemantics.MissingIdempotentTrait",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#UpdateSourceMetadata",
-            "message": "This operation uses the `PUT` method in the `http` trait, but is not marked with the idempotent trait",
+            "id": "IdempotencyTokenIgnored",
+            "severity": "SUPPRESSED",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
+            "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
             "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 1739,
-            "column": 1
+            "line": 1292,
+            "column": 5
         },
         {
             "id": "IdempotencyTokenIgnored",
@@ -472,15 +869,6 @@
             "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.grant#CreateGrantInput$body]}",
             "filename": "/repo/models/src/main/smithy/grant.smithy",
             "line": 132,
-            "column": 5
-        },
-        {
-            "id": "IdempotencyTokenIgnored",
-            "severity": "SUPPRESSED",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
-            "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
-            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 1295,
             "column": 5
         },
         {
@@ -498,7 +886,7 @@
             "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput",
             "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.unifiedsources#CreateSource, but that operation uses com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
             "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 1277,
+            "line": 1274,
             "column": 1
         },
         {
@@ -507,7 +895,7 @@
             "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceOutput",
             "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#CreateSource, but that operation uses com.amazon.semanticcontext.unifiedsources#CreateSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
             "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 1365,
+            "line": 1362,
             "column": 1
         },
         {
@@ -522,19 +910,19 @@
         {
             "id": "OperationNameAmbiguity",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#GetSourceOutput",
-            "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#GetSource, but that operation uses com.amazon.semanticcontext.unifiedsources#GetSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
-            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 1386,
+            "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest",
+            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
+            "filename": "/repo/models/src/main/smithy/grant.smithy",
+            "line": 98,
             "column": 1
         },
         {
             "id": "OperationNameAmbiguity",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest",
-            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
-            "filename": "/repo/models/src/main/smithy/grant.smithy",
-            "line": 98,
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#GetSourceOutput",
+            "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#GetSource, but that operation uses com.amazon.semanticcontext.unifiedsources#GetSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
+            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
+            "line": 1383,
             "column": 1
         },
         {
@@ -543,116 +931,8 @@
             "shapeId": "com.amazon.semanticcontext.ontologygraph#FetchOntologyInput$sourceUrl",
             "message": "A pattern trait is applied without a trailing '$', meaning only part of the string must match the regular expression. Explicitly anchoring regular expressions is preferable because it is more restrictive by default and does not require modelers to understand that Smithy patterns are not automatically anchored.",
             "filename": "/repo/models/src/main/smithy/ontology-graph.smithy",
-            "line": 358,
+            "line": 355,
             "column": 9
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.dictionary#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.dictionary#StringList` conflicts with `com.amazon.semanticcontext.ontologygraph#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-dictionary.smithy",
-            "line": 79,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.dictionary#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.dictionary#StringList` conflicts with `com.amazon.semanticcontext.ontologyinduction#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-dictionary.smithy",
-            "line": 79,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.dictionary#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.dictionary#StringList` conflicts with `com.amazon.semanticcontext.unifiedsources#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-dictionary.smithy",
-            "line": 79,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologygraph#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.ontologygraph#StringList` conflicts with `com.amazon.semanticcontext.dictionary#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-graph.smithy",
-            "line": 148,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologygraph#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.ontologygraph#StringList` conflicts with `com.amazon.semanticcontext.ontologyinduction#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-graph.smithy",
-            "line": 148,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologygraph#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.ontologygraph#StringList` conflicts with `com.amazon.semanticcontext.unifiedsources#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-graph.smithy",
-            "line": 148,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyinduction#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.ontologyinduction#StringList` conflicts with `com.amazon.semanticcontext.dictionary#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-induction.smithy",
-            "line": 1415,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyinduction#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.ontologyinduction#StringList` conflicts with `com.amazon.semanticcontext.ontologygraph#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-induction.smithy",
-            "line": 1415,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyinduction#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.ontologyinduction#StringList` conflicts with `com.amazon.semanticcontext.unifiedsources#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/ontology-induction.smithy",
-            "line": 1415,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.unifiedsources#StringList` conflicts with `com.amazon.semanticcontext.dictionary#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 858,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.unifiedsources#StringList` conflicts with `com.amazon.semanticcontext.ontologygraph#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 858,
-            "column": 1
-        },
-        {
-            "id": "Service",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#StringList",
-            "message": "Shape name `com.amazon.semanticcontext.unifiedsources#StringList` conflicts with `com.amazon.semanticcontext.ontologyinduction#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/repo/models/src/main/smithy/unified-sources.smithy",
-            "line": 858,
-            "column": 1
         }
     ],
     "version": "1.0"

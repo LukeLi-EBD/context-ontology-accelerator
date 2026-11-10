@@ -1,4 +1,4 @@
-﻿# Auto-generated — models only (see smithy-generate.sh)
+# Auto-generated — models only (see smithy-generate.sh)
 from coa_data_layer_server.models.access_denied_error_response_content import AccessDeniedErrorResponseContent
 from coa_data_layer_server.models.answer_candidate import AnswerCandidate
 from coa_data_layer_server.models.answer_timings import AnswerTimings
@@ -26,6 +26,7 @@ from coa_data_layer_server.models.missing_gap import MissingGap
 from coa_data_layer_server.models.namespace_not_found_error_response_content import NamespaceNotFoundErrorResponseContent
 from coa_data_layer_server.models.nearby_term import NearbyTerm
 from coa_data_layer_server.models.no_result_error_response_content import NoResultErrorResponseContent
+from coa_data_layer_server.models.not_found_error_response_content import NotFoundErrorResponseContent
 from coa_data_layer_server.models.ontology_not_published_error_response_content import OntologyNotPublishedErrorResponseContent
 from coa_data_layer_server.models.query_mode import QueryMode
 from coa_data_layer_server.models.query_request_content import QueryRequestContent

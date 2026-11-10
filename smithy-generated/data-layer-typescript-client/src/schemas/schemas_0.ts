@@ -12,6 +12,9 @@ const _CLL = "CoverageLayerList";
 const _CS = "ConfidenceScore";
 const _CW = "ConformanceWarning";
 const _CWL = "ConformanceWarningList";
+const _DD = "DownloadDocument";
+const _DDI = "DownloadDocumentInput";
+const _DDO = "DownloadDocumentOutput";
 const _DF = "DimensionFilter";
 const _DFL = "DimensionFilterList";
 const _DS = "DescribeSchema";
@@ -36,6 +39,7 @@ const _MG = "MissingGap";
 const _MGL = "MissingGapList";
 const _MT = "MatchedTerm";
 const _MTL = "MatchedTermList";
+const _NFE = "NotFoundError";
 const _NLQ = "NaturalLanguageQuery";
 const _NNFE = "NamespaceNotFoundError";
 const _NRE = "NoResultError";
@@ -76,21 +80,25 @@ const _TSPARQLI = "TranslateSPARQLInput";
 const _TSPARQLO = "TranslateSPARQLOutput";
 const _VE = "ValidationError";
 const _VKGEE = "VKGExecutionError";
+const _XCS = "X-Content-Sha256";
 const _a = "answerable";
 const _aM = "answerMode";
 const _an = "answer";
 const _c = "client";
 const _cC = "coverageChars";
 const _cI = "chunkId";
+const _cS = "contentSha256";
 const _cW = "conformanceWarnings";
 const _ca = "candidates";
 const _ch = "chunks";
 const _cl = "classes";
 const _co = "code";
 const _con = "confidence";
+const _cont = "content";
 const _cov = "coverage";
 const _cove = "covered";
 const _d = "degraded";
+const _dI = "documentId";
 const _dM = "durationMs";
 const _dS = "dataSources";
 const _dSI = "dataSourceId";
@@ -112,6 +120,7 @@ const _gC = "graphContext";
 const _gCr = "graphCount";
 const _h = "hint";
 const _hE = "httpError";
+const _hH = "httpHeader";
 const _hQ = "httpQuery";
 const _hTF = "howToFix";
 const _ht = "http";
@@ -215,6 +224,7 @@ const _w = "what";
 const _wM = "wallMs";
 const n0 = "com.amazon.semanticcontext.common";
 const n1 = "com.amazon.semanticcontext.datalayer";
+const n2 = "com.amazon.semanticcontext.documents";
 
 // smithy-typescript generated code
 import { TypeRegistry } from "@smithy/core/schema";
@@ -234,6 +244,7 @@ import {
   InternalServerError,
   NamespaceNotFoundError,
   NoResultError,
+  NotFoundError,
   OntologyNotPublishedError,
   QueryTranslationError,
   RateLimitExceededError,
@@ -266,6 +277,12 @@ export var InternalServerError$: StaticErrorSchema = [-3, n0, _ISE,
   [0], 1
 ];
 n0_registry.registerError(InternalServerError$, InternalServerError);
+export var NotFoundError$: StaticErrorSchema = [-3, n0, _NFE,
+  { [_e]: _c, [_hE]: 404 },
+  [_m],
+  [0], 1
+];
+n0_registry.registerError(NotFoundError$, NotFoundError);
 export var ServiceUnavailableError$: StaticErrorSchema = [-3, n0, _SUE,
   { [_e]: _se, [_hE]: 503 },
   [_m],
@@ -538,6 +555,17 @@ export var TranslateSPARQLOutput$: StaticStructureSchema = [3, n1, _TSPARQLO,
   [_sQ, _con, _tr, _oV],
   [0, () => ConfidenceScore$, () => TraceStepList, 0], 3
 ];
+export var DownloadDocumentInput$: StaticStructureSchema = [3, n2, _DDI,
+  0,
+  [_nI, _dI],
+  [[0, 1], [0, 1]], 2
+];
+export var DownloadDocumentOutput$: StaticStructureSchema = [3, n2, _DDO,
+  0,
+  [_cS, _cont],
+  [[0, { [_hH]: _XCS }], [21, 16]], 1
+];
+var StringList = 64 | 0;
 var AnswerCandidateList: StaticListSchema = [1, n1, _ACL,
   0, () => AnswerCandidate$
 ];
@@ -589,7 +617,6 @@ var SparqlRowList: StaticListSchema = [1, n1, _SRL,
   0, 64 | 0
 ];
 var SparqlVariableList = 64 | 0;
-var StringList = 64 | 0;
 var SupportingContentList: StaticListSchema = [1, n1, _SCLu,
   0, [() => SupportingContent$,
     0]
@@ -624,4 +651,7 @@ export var RunSparql$: StaticOperationSchema = [9, n1, _RS,
 ];
 export var TranslateSPARQL$: StaticOperationSchema = [9, n1, _TSPARQL,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/translate", 200] }, () => TranslateSPARQLInput$, () => TranslateSPARQLOutput$
+];
+export var DownloadDocument$: StaticOperationSchema = [9, n2, _DD,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/documents/{documentId}/content", 200] }, () => DownloadDocumentInput$, () => DownloadDocumentOutput$
 ];

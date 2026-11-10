@@ -13,6 +13,11 @@ import {
   DescribeSchemaCommand,
 } from "./commands/DescribeSchemaCommand";
 import {
+  type DownloadDocumentCommandInput,
+  type DownloadDocumentCommandOutput,
+  DownloadDocumentCommand,
+} from "./commands/DownloadDocumentCommand";
+import {
   type GraphTraverseCommandInput,
   type GraphTraverseCommandOutput,
   GraphTraverseCommand,
@@ -35,6 +40,7 @@ const commands = {
   QueryCommand,
   RunSparqlCommand,
   TranslateSPARQLCommand,
+  DownloadDocumentCommand,
 };
 
 export interface DataLayerService {
@@ -155,6 +161,23 @@ export interface DataLayerService {
     args: TranslateSPARQLCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: TranslateSPARQLCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link DownloadDocumentCommand}
+   */
+  downloadDocument(
+    args: DownloadDocumentCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<DownloadDocumentCommandOutput>;
+  downloadDocument(
+    args: DownloadDocumentCommandInput,
+    cb: (err: any, data?: DownloadDocumentCommandOutput) => void
+  ): void;
+  downloadDocument(
+    args: DownloadDocumentCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: DownloadDocumentCommandOutput) => void
   ): void;
 }
 

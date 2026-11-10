@@ -105,6 +105,10 @@ export interface ResolveFactConflictsCommandOutput extends FactConflictResolutio
  * //         values: [
  * //           "STRING_VALUE",
  * //         ],
+ * //         keptFactIds: [
+ * //           "STRING_VALUE",
+ * //         ],
+ * //         retiredFactIds: "<FactIdList>",
  * //       },
  * //     ],
  * //   },

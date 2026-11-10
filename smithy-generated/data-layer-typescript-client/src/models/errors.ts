@@ -71,6 +71,26 @@ export class ValidationError extends __BaseException {
 }
 
 /**
+ * Returned with HTTP 404 when the requested resource does not exist.
+ * @public
+ */
+export class NotFoundError extends __BaseException {
+  readonly name = "NotFoundError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<NotFoundError, __BaseException>) {
+    super({
+      name: "NotFoundError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+/**
  * Returned with HTTP 403 when the caller lacks permission to perform the requested operation.
  * @public
  */
