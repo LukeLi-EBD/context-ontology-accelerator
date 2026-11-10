@@ -692,6 +692,8 @@ CONTROL_PLANE_ROUTES: list[tuple[str, str, str]] = [
     ("GET", "/namespaces/{namespaceId}/graph/datatype-property", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/graph/statements", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/graph/canvas/manifest", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/graph/canvas", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/graph/path", "viewNamespace"),
     ("POST", "/namespaces/{namespaceId}/documents", "manageSource"),
     ("GET", "/namespaces/{namespaceId}/documents", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/documents/{documentId}/chunks", "searchDocuments"),

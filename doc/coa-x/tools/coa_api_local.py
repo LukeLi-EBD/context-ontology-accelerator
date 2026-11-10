@@ -569,6 +569,10 @@ ROUTES: list[tuple[str, str]] = [
     # GetCanvasManifest (F13): capabilities/limits the canvas must honour
     # before it draws. Read-only, no store access.
     ("/namespaces/{namespaceId}/graph/canvas/manifest", ONTOLOGY),
+    # GetCanvasSubgraph (F08–F12) / FindGraphPath (F04–F07): read-only canvas
+    # pages and bounded path search.
+    ("/namespaces/{namespaceId}/graph/canvas", ONTOLOGY),
+    ("/namespaces/{namespaceId}/graph/path", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/ontology-overview", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/class", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/object-property", ONTOLOGY),

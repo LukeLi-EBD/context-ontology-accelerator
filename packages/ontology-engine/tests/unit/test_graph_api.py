@@ -681,7 +681,7 @@ def test_canvas_manifest_reports_capabilities_and_limits():
     assert resp.status_code == 200
     body = resp.json()
     assert body["capabilities"] == ["nodeKinds", "graphFilter", "offsetPaging"]
-    assert body["limits"] == {"max_nodes": 200, "max_edges": 400, "max_page_size": 100}
+    assert body["limits"] == {"maxNodes": 200, "maxEdges": 400, "maxPageSize": 100}
 
 
 def test_canvas_manifest_is_namespace_agnostic():
@@ -691,3 +691,139 @@ def test_canvas_manifest_is_namespace_agnostic():
     b = client.get("/graph/canvas/manifest", params={"namespace": "insurance"}).json()
 
     assert a == b
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# GET /graph/canvas
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_canvas_subgraph_serializes_camel_case_fields(_patch_build_stores):
+    """The contract names ``nodeCount`` / ``nextOffset``; a snake_case body
+    would parse as undefined in the generated clients (the exact shape F13
+    failed on before the canvas was wired to a real response)."""
+    _patch_build_stores.mock_graph.get_canvas_subgraph.return_value = {
+        "nodes": [{"uri": "https://example.org/onto#Claim", "label": "Claim", "kind": "class"}],
+        "edges": [
+            {
+                "source": "https://example.org/onto#Claim",
+                "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                "predicateLabel": "subClassOf",
+                "target": "https://example.org/onto#Event",
+                "graph": "https://ontology-workbench.local/default/onto",
+                "direction": "outgoing",
+            }
+        ],
+        "truncated": True,
+        "nodeCount": 1,
+        "edgeCount": 1,
+        "nextOffset": 100,
+    }
+
+    resp = client.get("/graph/canvas", params={"namespace": "default", "limit": 100})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["nodeCount"] == 1
+    assert body["nextOffset"] == 100
+    assert body["edges"][0]["predicateLabel"] == "subClassOf"
+    assert "node_count" not in body
+
+
+def test_canvas_subgraph_passes_kinds_and_graph_filters(_patch_build_stores):
+    _patch_build_stores.mock_graph.get_canvas_subgraph.return_value = {
+        "nodes": [],
+        "edges": [],
+        "truncated": False,
+        "nodeCount": 0,
+        "edgeCount": 0,
+    }
+
+    resp = client.get(
+        "/graph/canvas",
+        params={
+            "namespace": "default",
+            "kinds": "class, object-property",
+            "graph": "https://ontology-workbench.local/default/onto",
+            "limit": 20,
+            "offset": 40,
+        },
+    )
+
+    assert resp.status_code == 200
+    _patch_build_stores.mock_graph.get_canvas_subgraph.assert_called_once_with(
+        "default",
+        kinds=["class", "object-property"],
+        graph_uri="https://ontology-workbench.local/default/onto",
+        limit=20,
+        offset=40,
+    )
+
+
+def test_canvas_subgraph_rejects_unknown_kind(_patch_build_stores):
+    resp = client.get("/graph/canvas", params={"namespace": "default", "kinds": "class,banana"})
+
+    assert resp.status_code == 400
+    assert "banana" in resp.json()["detail"]
+
+
+def test_canvas_subgraph_rejects_limit_above_manifest_ceiling(_patch_build_stores):
+    resp = client.get("/graph/canvas", params={"namespace": "default", "limit": 101})
+
+    assert resp.status_code == 400
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# GET /graph/path
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_find_graph_path_returns_nodes_edges_and_hops(_patch_build_stores):
+    _patch_build_stores.mock_graph.find_graph_path.return_value = {
+        "paths": [
+            {
+                "nodes": [
+                    {"uri": "https://example.org/onto#Claim", "label": "Claim", "kind": "class"},
+                    {"uri": "https://example.org/onto#Event", "label": "Event", "kind": "class"},
+                ],
+                "edges": [
+                    {
+                        "source": "https://example.org/onto#Claim",
+                        "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                        "predicateLabel": "subClassOf",
+                        "target": "https://example.org/onto#Event",
+                        "graph": "https://ontology-workbench.local/default/onto",
+                        "direction": "outgoing",
+                    }
+                ],
+                "hops": 1,
+            }
+        ],
+        "truncated": False,
+    }
+
+    resp = client.get(
+        "/graph/path",
+        params={
+            "namespace": "default",
+            "start": "https://example.org/onto#Claim",
+            "end": "https://example.org/onto#Event",
+            "max_hops": 3,
+            "limit": 5,
+        },
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["paths"][0]["hops"] == 1
+    assert body["paths"][0]["edges"][0]["predicateLabel"] == "subClassOf"
+    assert body["truncated"] is False
+
+
+def test_find_graph_path_rejects_invalid_iri(_patch_build_stores):
+    resp = client.get(
+        "/graph/path",
+        params={"namespace": "default", "start": "not-an-iri", "end": "https://example.org/onto#Event"},
+    )
+
+    assert resp.status_code == 400

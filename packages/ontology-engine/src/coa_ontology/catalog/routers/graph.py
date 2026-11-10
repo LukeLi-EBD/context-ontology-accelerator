@@ -49,6 +49,8 @@ from fastapi import APIRouter, HTTPException, Query
 from coa_ontology.catalog.graph_schemas import (
     CanvasLimits,
     CanvasManifest,
+    CanvasSubgraphPage,
+    GraphPathResult,
     GraphSearchHit,
     GraphSearchResult,
     GraphStatementPage,
@@ -104,6 +106,12 @@ _MAX_OVERVIEW_OFFSET = 1_000_000
 # here so the UI stops paging at the boundary instead of learning it from a 400.
 _CANVAS_CAPABILITIES: tuple[str, ...] = ("nodeKinds", "graphFilter", "offsetPaging")
 _CANVAS_LIMITS: dict[str, int] = {"max_nodes": 200, "max_edges": 400, "max_page_size": 100}
+# The three node kinds GetCanvasSubgraph accepts. Anything else is a client bug,
+# not a filter that silently matches nothing.
+_CANVAS_KINDS: tuple[str, ...] = ("class", "object-property", "datatype-property")
+_CANVAS_PATH_MAX_HOPS = 6
+_CANVAS_PATH_MAX_LIMIT = 20
+_DEFAULT_CANVAS_PAGE_SIZE = 50
 
 # Fixed client-facing messages: backend exception text (store class names,
 # endpoints) is logged, never returned, and the caller's own URI is not echoed.
@@ -245,6 +253,97 @@ def get_canvas_manifest():
     together — the manifest is the declared contract, not a probe result.
     """
     return CanvasManifest(capabilities=list(_CANVAS_CAPABILITIES), limits=CanvasLimits(**_CANVAS_LIMITS))
+
+
+@router.get("/canvas", response_model=CanvasSubgraphPage)
+def get_canvas_subgraph(
+    namespace: str = "default",
+    kinds: str | None = None,
+    graph: str | None = None,
+    limit: int = _DEFAULT_CANVAS_PAGE_SIZE,
+    offset: int = 0,
+):
+    """One page of drawable canvas nodes and edges.
+
+    Paging is offset-based on the backend's index order (no global sort), so
+    ``nextOffset`` from the previous page is the continuation token. A node-kind
+    filter keeps only subjects typed as that kind; the page is still a full page
+    because the type test runs inside the query, not after it.
+    """
+    max_page = _CANVAS_LIMITS["max_page_size"]
+    if not 1 <= limit <= max_page:
+        raise HTTPException(400, f"limit must be between 1 and {max_page}")
+    if not 0 <= offset <= _MAX_SEARCH_OFFSET:
+        raise HTTPException(400, f"offset must be between 0 and {_MAX_SEARCH_OFFSET}")
+    if graph is not None and (not graph or len(graph) > _MAX_STATEMENT_TERM_LENGTH):
+        raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER)
+
+    parsed_kinds: list[str] | None = None
+    if kinds:
+        parsed_kinds = [k.strip() for k in kinds.split(",") if k.strip()]
+        unknown = [k for k in parsed_kinds if k not in _CANVAS_KINDS]
+        if unknown:
+            raise HTTPException(400, "Unknown node kind(s): " + ", ".join(unknown))
+
+    graph_store = _graph(namespace)
+    try:
+        page = graph_store.get_canvas_subgraph(
+            namespace,
+            kinds=parsed_kinds,
+            graph_uri=graph,
+            limit=limit,
+            offset=offset,
+        )
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("canvas subgraph unsupported by backend: %s", e)
+        raise HTTPException(501, "Canvas subgraph is not supported on this backend.") from e
+    except ValueError as e:
+        log.warning("invalid canvas filter: %s", e)
+        raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER) from e
+    return CanvasSubgraphPage(**page)
+
+
+@router.get("/path", response_model=GraphPathResult)
+def find_graph_path(
+    namespace: str = "default",
+    start: str = Query(...),
+    end: str = Query(...),
+    max_hops: int = 3,
+    limit: int = 5,
+):
+    """Simple paths between ``start`` and ``end``, shortest first.
+
+    ``max_hops`` and ``limit`` are clamped to the canvas limits rather than
+    rejected so a UI slider can never turn a click into a 400; ``truncated``
+    carries the fact that more paths exist.
+    """
+    for label, value in (("start", start), ("end", end)):
+        if not value or len(value) > _MAX_STATEMENT_TERM_LENGTH:
+            raise HTTPException(400, f"Invalid {label} IRI.")
+        if not value.startswith(("http://", "https://", "urn:")):
+            raise HTTPException(400, f"Invalid {label} IRI.")
+
+    if not 1 <= max_hops <= _CANVAS_PATH_MAX_HOPS:
+        raise HTTPException(400, f"max_hops must be between 1 and {_CANVAS_PATH_MAX_HOPS}")
+    if not 1 <= limit <= _CANVAS_PATH_MAX_LIMIT:
+        raise HTTPException(400, f"limit must be between 1 and {_CANVAS_PATH_MAX_LIMIT}")
+
+    graph_store = _graph(namespace)
+    try:
+        result = graph_store.find_graph_path(
+            namespace,
+            start=start,
+            end=end,
+            max_hops=max_hops,
+            limit=limit,
+        )
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("graph path unsupported by backend: %s", e)
+        raise HTTPException(501, "Graph path search is not supported on this backend.") from e
+    except ValueError as e:
+        log.warning("invalid graph path IRI: %s", e)
+        raise HTTPException(400, "Invalid graph path IRI.") from e
+    return GraphPathResult(**result)
 
 
 @router.get("/statements", response_model=GraphStatementPage)

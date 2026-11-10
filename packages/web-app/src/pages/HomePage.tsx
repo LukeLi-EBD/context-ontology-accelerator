@@ -11,6 +11,7 @@ import {
   ContentLayout,
   Grid,
   Header,
+  Link,
   SpaceBetween,
 } from "@cloudscape-design/components";
 import { useUser } from "@auth";
@@ -138,6 +139,9 @@ export const HomePage: React.FC = () => {
     ) ?? 0;
   // F03: an empty environment gets a next-step card instead of an empty page.
   const emptyEnvironment = namespaces.isSuccess && namespaceCount === 0;
+  // F14: the overview card doubles as an entrance into an ontology page.
+  const firstNamespaceId =
+    namespaces.data?.pages[0]?.namespaces?.[0]?.namespaceId ?? null;
 
   // F01/F02: version pointer + named-graph count, refreshable without leaving `/`.
   const apiClient = useApiClient();
@@ -270,7 +274,7 @@ export const HomePage: React.FC = () => {
         {overviewError ? (
           <Box color="text-status-error">{overviewError}</Box>
         ) : (
-          <ColumnLayout columns={3} variant="text-grid">
+          <ColumnLayout columns={4} variant="text-grid">
             <div>
               <Box variant="awsui-key-label">T-Box 版本</Box>
               <Box>
@@ -289,6 +293,21 @@ export const HomePage: React.FC = () => {
                   ? `${healthyComponents}/${totalComponents} 正常`
                   : "—"}
               </Box>
+            </div>
+            <div data-testid="home-ontology-entry">
+              <Box variant="awsui-key-label">本体入口</Box>
+              {firstNamespaceId ? (
+                <SpaceBetween size="xxs">
+                  <Link href={`/namespaces/${firstNamespaceId}/ontology/graph`}>
+                    浏览本体
+                  </Link>
+                  <Link href={`/namespaces/${firstNamespaceId}/ontology/canvas`}>
+                    打开画布
+                  </Link>
+                </SpaceBetween>
+              ) : (
+                <Box color="text-body-secondary">—</Box>
+              )}
             </div>
           </ColumnLayout>
         )}

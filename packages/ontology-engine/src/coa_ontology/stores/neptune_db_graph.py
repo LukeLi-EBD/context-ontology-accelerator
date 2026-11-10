@@ -1716,6 +1716,311 @@ class NeptuneDBGraphStore(GraphStore):
         ]
         return {"statements": statements, "truncated": truncated}
 
+    # ── Canvas subgraph / path ────────────────────────────────────────
+
+    def get_canvas_subgraph(
+        self,
+        namespace: str | None = None,
+        *,
+        kinds: list[str] | None = None,
+        graph_uri: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> dict:
+        """Shape one triple page into drawable nodes and edges.
+
+        The page window comes from the same unsorted named-graph scan as
+        :meth:`list_statements`; nodes and edges are then derived from those
+        rows. A node kind filter pushes the ``rdf:type`` test into SPARQL so a
+        filtered page is still a full page, not a post-filtered fragment.
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        if graph_uri is not None:
+            graphs = [g for g in graphs if g == graph_uri]
+        empty = {"nodes": [], "edges": [], "truncated": False, "nodeCount": 0, "edgeCount": 0}
+        if not graphs:
+            return empty
+
+        safe_limit = max(1, min(limit, _MAX_SEARCH_PAGE_SIZE))
+        safe_offset = max(0, offset)
+        values = "\n          ".join(_iri(g) for g in graphs)
+
+        type_values: list[str] = []
+        for kind in kinds or ():
+            type_values.extend(_KIND_TO_SPARQL_TYPES.get(kind, []))
+        type_filter = ""
+        if type_values:
+            type_filter = "?s %s ?kind . FILTER(?kind IN (%s))" % (
+                _iri(RDF + "type"),
+                ", ".join(_iri(t) for t in type_values),
+            )
+
+        sparql = f"""
+        SELECT ?g ?s ?p ?o WHERE {{
+          VALUES ?g {{
+          {values}
+          }}
+          GRAPH ?g {{
+            ?s ?p ?o .
+            {type_filter}
+          }}
+        }}
+        LIMIT {safe_limit + 1} OFFSET {safe_offset}
+        """
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        truncated = len(bindings) > safe_limit
+
+        labels: dict[str, str] = {}
+        kinds_by_uri: dict[str, str] = {}
+        nodes: dict[str, dict] = {}
+        edges: list[dict] = []
+
+        def ensure(uri: str) -> dict:
+            node = nodes.get(uri)
+            if node is None:
+                node = {"uri": uri, "label": None, "kind": None}
+                nodes[uri] = node
+            return node
+
+        for row in bindings[:safe_limit]:
+            g = row.get("g", {}).get("value", "")
+            s = row.get("s", {}).get("value", "")
+            p = row.get("p", {}).get("value", "")
+            o = row.get("o", {}).get("value", "")
+            if not s:
+                continue
+            ensure(s)
+            if p == RDF + "type":
+                kind = _kind_from_type(o)
+                if kind:
+                    kinds_by_uri[s] = kind
+                continue
+            if p == RDFS + "label":
+                if o and s not in labels:
+                    labels[s] = o
+                continue
+            if p == RDFS + "comment":
+                continue
+            if not _is_storable_iri(o):
+                continue
+            ensure(o)
+            edges.append(
+                {
+                    "source": s,
+                    "predicate": p,
+                    "predicateLabel": _local_name(p),
+                    "target": o,
+                    "graph": g,
+                    "direction": "outgoing",
+                }
+            )
+
+        for uri, node in nodes.items():
+            node["label"] = labels.get(uri)
+            node["kind"] = kinds_by_uri.get(uri) or "resource"
+
+        result = {
+            "nodes": list(nodes.values()),
+            "edges": edges,
+            "truncated": truncated,
+            "nodeCount": len(nodes),
+            "edgeCount": len(edges),
+        }
+        if truncated:
+            result["nextOffset"] = safe_offset + safe_limit
+        return result
+
+    def find_graph_path(
+        self,
+        namespace: str | None = None,
+        *,
+        start: str,
+        end: str,
+        max_hops: int = 3,
+        limit: int = 5,
+    ) -> dict:
+        """Enumerate simple undirected paths between ``start`` and ``end``.
+
+        Neighbours are fetched per node and cached, so a bounded search never
+        scans the whole namespace. Both hop and expansion caps are deliberate:
+        an ontology graph can be dense, and returning fewer paths with
+        ``truncated=True`` is honest where an unbounded DFS would hang.
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        if not graphs or not _is_storable_iri(start) or not _is_storable_iri(end):
+            return {"paths": [], "truncated": False}
+
+        safe_hops = max(1, min(max_hops, 6))
+        safe_limit = max(1, min(limit, 20))
+        values = "\n          ".join(_iri(g) for g in graphs)
+
+        if start == end:
+            node = self._path_nodes(scope, [start]).get(start, {"uri": start, "label": None, "kind": "resource"})
+            return {"paths": [{"nodes": [node], "edges": [], "hops": 0}], "truncated": False}
+
+        adjacency: dict[str, list[dict]] = {}
+        expansions = 0
+        expansion_cap = 400
+        capped = False
+
+        def neighbours(node_uri: str) -> list[dict]:
+            nonlocal expansions, capped
+            cached = adjacency.get(node_uri)
+            if cached is not None:
+                return cached
+            if expansions >= expansion_cap:
+                capped = True
+                return []
+            expansions += 1
+            out_q = f"""
+            SELECT ?p ?o ?g WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              GRAPH ?g {{ {_iri(node_uri)} ?p ?o }}
+            }}
+            LIMIT 200
+            """
+            in_q = f"""
+            SELECT ?s ?p ?g WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              GRAPH ?g {{ ?s ?p {_iri(node_uri)} }}
+            }}
+            LIMIT 200
+            """
+            found: list[dict] = []
+            seen: set[tuple[str, str, str, str]] = set()
+
+            def add(edge: dict, neighbour: str) -> None:
+                key = (edge["source"], edge["predicate"], edge["target"], edge["graph"])
+                if key in seen:
+                    return
+                seen.add(key)
+                found.append({"neighbor": neighbour, "edge": edge})
+
+            for row in _sparql_query(out_q).get("results", {}).get("bindings", []):
+                p = row.get("p", {}).get("value", "")
+                o = row.get("o", {}).get("value", "")
+                if p in (RDF + "type", RDFS + "label", RDFS + "comment"):
+                    continue
+                if not _is_storable_iri(o):
+                    continue
+                add(
+                    {
+                        "source": node_uri,
+                        "predicate": p,
+                        "predicateLabel": _local_name(p),
+                        "target": o,
+                        "graph": row.get("g", {}).get("value", ""),
+                        "direction": "outgoing",
+                    },
+                    o,
+                )
+            for row in _sparql_query(in_q).get("results", {}).get("bindings", []):
+                s = row.get("s", {}).get("value", "")
+                p = row.get("p", {}).get("value", "")
+                if p in (RDF + "type", RDFS + "label", RDFS + "comment"):
+                    continue
+                if not _is_storable_iri(s):
+                    continue
+                add(
+                    {
+                        "source": s,
+                        "predicate": p,
+                        "predicateLabel": _local_name(p),
+                        "target": node_uri,
+                        "graph": row.get("g", {}).get("value", ""),
+                        "direction": "incoming",
+                    },
+                    s,
+                )
+            adjacency[node_uri] = found
+            return found
+
+        paths: list[dict] = []
+        path_nodes: list[str] = [start]
+        path_edges: list[dict] = []
+
+        def walk(current: str, visited: set[str]) -> None:
+            nonlocal capped
+            if len(paths) >= safe_limit:
+                return
+            if current == end:
+                paths.append({"nodes": list(path_nodes), "edges": list(path_edges), "hops": len(path_edges)})
+                return
+            if len(path_edges) >= safe_hops:
+                return
+            for item in neighbours(current):
+                neighbour = item["neighbor"]
+                if neighbour in visited:
+                    continue
+                visited.add(neighbour)
+                path_nodes.append(neighbour)
+                path_edges.append(item["edge"])
+                walk(neighbour, visited)
+                path_edges.pop()
+                path_nodes.pop()
+                visited.discard(neighbour)
+                if len(paths) >= safe_limit:
+                    capped = True
+                    return
+
+        walk(start, {start})
+        paths.sort(key=lambda p: (p["hops"], [n for n in p["nodes"]]))
+
+        wanted: list[str] = [start]
+        for path in paths:
+            for uri in path["nodes"]:
+                if uri not in wanted:
+                    wanted.append(uri)
+        details = self._path_nodes(scope, wanted)
+
+        rendered: list[dict] = []
+        for path in paths:
+            rendered.append(
+                {
+                    "nodes": [details.get(uri, {"uri": uri, "label": None, "kind": "resource"}) for uri in path["nodes"]],
+                    "edges": path["edges"],
+                    "hops": path["hops"],
+                }
+            )
+        return {"paths": rendered, "truncated": capped}
+
+    def _path_nodes(self, namespace: str, uris: list[str]) -> dict[str, dict]:
+        """Labels and kinds for the nodes on a path, in one round trip."""
+        result = {uri: {"uri": uri, "label": None, "kind": None} for uri in uris}
+        if not uris:
+            return result
+        ns_prefix = _namespace_graph_prefix(namespace).rstrip("/") + "/"
+        q = f"""
+        SELECT ?s ?l ?t WHERE {{
+          VALUES ?s {{ {" ".join(_iri(u) for u in uris)} }}
+          GRAPH ?g {{
+            OPTIONAL {{ ?s {_iri(RDFS + "label")} ?l }}
+            OPTIONAL {{ ?s {_iri(RDF + "type")} ?t }}
+          }}
+          FILTER(STRSTARTS(STR(?g), "{_esc(ns_prefix)}"))
+        }}
+        """
+        for row in _sparql_query(q).get("results", {}).get("bindings", []):
+            uri = row.get("s", {}).get("value", "")
+            entry = result.get(uri)
+            if entry is None:
+                continue
+            label = row.get("l", {}).get("value")
+            if label and not entry["label"]:
+                entry["label"] = label
+            kind = _kind_from_type(row.get("t", {}).get("value", ""))
+            if kind and _kind_specificity(kind) > _kind_specificity(entry["kind"] or "unknown"):
+                entry["kind"] = kind
+        for entry in result.values():
+            entry["kind"] = entry["kind"] or "resource"
+        return result
+
     def mapped_class_backends(self, class_uris: Iterable[str], namespace: str | None = None) -> dict[str, str]:
         """Which backend answers each of ``class_uris`` already, across every graph of the namespace.
 

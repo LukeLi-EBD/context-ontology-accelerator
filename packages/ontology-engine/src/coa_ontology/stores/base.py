@@ -448,6 +448,40 @@ class GraphStore(Protocol):
         """
         ...
 
+    # Canvas subgraph / path -------------------------------------------
+    def get_canvas_subgraph(
+        self,
+        namespace: str | None = None,
+        *,
+        kinds: Iterable[str] | None = None,
+        graph_uri: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> dict:
+        """One page of drawable nodes and edges, shaped from a triple page.
+
+        ``kinds`` keeps only subjects typed as ``class``, ``object-property``
+        or ``datatype-property``. Literal objects never become edges; they are
+        used as node labels. Returns ``{"nodes", "edges", "truncated",
+        "nodeCount", "edgeCount", "nextOffset"}``.
+        """
+        ...
+
+    def find_graph_path(
+        self,
+        namespace: str | None = None,
+        *,
+        start: str,
+        end: str,
+        max_hops: int = 3,
+        limit: int = 5,
+    ) -> dict:
+        """Simple paths between two IRIs, shortest first, within ``max_hops``.
+
+        Returns ``{"paths": [{"nodes", "edges", "hops"}], "truncated": bool}``.
+        """
+        ...
+
     # Ontology overview ------------------------------------------------
     def get_ontology_overview(
         self,

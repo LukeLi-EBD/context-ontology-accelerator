@@ -716,6 +716,12 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/graph/canvas/manifest": {
         "GET": ("viewNamespace", "Ontology"),
     },
+    "/namespaces/{namespaceId}/graph/canvas": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/graph/path": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
     # ── Documents ───────────────────────────────────────────────────────
     # Uploading bytes is a write to the namespace's source assets, so it reuses
     # manageSource (same power as /sources); the registry list stays a metadata

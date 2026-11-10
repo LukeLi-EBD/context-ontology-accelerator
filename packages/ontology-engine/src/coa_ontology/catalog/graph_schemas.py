@@ -7,7 +7,8 @@ Kept in a separate module from ``catalog/schemas.py`` so the existing
 ontology / embedding payloads remain isolated from this newer surface.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 class GraphNeighbor(BaseModel):
@@ -175,6 +176,8 @@ class GraphStatementPage(BaseModel):
 class CanvasLimits(BaseModel):
     """Hard limits the canvas must honour when it asks for a subgraph."""
 
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
     max_nodes: int = Field(..., description="Maximum nodes returned by one subgraph page.")
     max_edges: int = Field(..., description="Maximum edges returned alongside those nodes.")
     max_page_size: int = Field(..., description="Maximum page size accepted by maxResults.")
@@ -191,4 +194,57 @@ class CanvasManifest(BaseModel):
 
     capabilities: list[str] = Field(..., description="Capability identifiers this backend supports.")
     limits: CanvasLimits = Field(..., description="Hard limits enforced by the backend.")
+
+
+class CanvasNode(BaseModel):
+    """A drawable node: an IRI with an optional label and coarse kind."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    uri: str = Field(..., description="Full IRI of the node.")
+    label: str | None = Field(default=None, description="``rdfs:label`` when the page carried one.")
+    kind: str | None = Field(default=None, description="``class``, ``object-property``, ``datatype-property`` or ``resource``.")
+
+
+class CanvasEdge(BaseModel):
+    """A drawable edge, including how a path traversed it."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    source: str = Field(..., description="Subject IRI.")
+    predicate: str = Field(..., description="Predicate IRI.")
+    predicate_label: str | None = Field(default=None, description="Local name of the predicate.")
+    target: str = Field(..., description="Object IRI.")
+    graph: str | None = Field(default=None, description="Named graph the triple lives in.")
+    direction: str | None = Field(default=None, description="``outgoing`` or ``incoming``.")
+
+
+class CanvasSubgraphPage(BaseModel):
+    """One page of the canvas, shaped from a triple window."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    nodes: list[CanvasNode] = Field(default_factory=list)
+    edges: list[CanvasEdge] = Field(default_factory=list)
+    truncated: bool = Field(default=False, description="True when another page exists.")
+    node_count: int = Field(default=0, description="Nodes in this page.")
+    edge_count: int = Field(default=0, description="Edges in this page.")
+    next_offset: int | None = Field(default=None, description="Offset of the next page.")
+
+
+class GraphPath(BaseModel):
+    """One simple path: ``hops`` equals the number of edges."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    nodes: list[CanvasNode] = Field(default_factory=list)
+    edges: list[CanvasEdge] = Field(default_factory=list)
+    hops: int = 0
+
+
+class GraphPathResult(BaseModel):
+    """Every path found within the hop and result caps."""
+
+    paths: list[GraphPath] = Field(default_factory=list)
+    truncated: bool = Field(default=False, description="True when more paths exist than returned.")
 

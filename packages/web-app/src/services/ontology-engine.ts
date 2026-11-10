@@ -781,6 +781,109 @@ export async function listStatements(
   );
 }
 
+// ─── Canvas (manifest / subgraph / path) ───────────────────────────────
+
+/** Hard limits the backend enforces; the canvas must not ask past them. */
+export interface CanvasLimits {
+  maxNodes: number;
+  maxEdges: number;
+  maxPageSize: number;
+}
+
+/**
+ * What the canvas can render. Capabilities are identifiers — ignore ones you
+ * do not know instead of treating an unknown value as an error.
+ */
+export interface CanvasManifest {
+  capabilities: string[];
+  limits: CanvasLimits;
+}
+
+export interface CanvasNode {
+  uri: string;
+  label?: string | null;
+  kind?: string | null;
+}
+
+export interface CanvasEdge {
+  source: string;
+  predicate: string;
+  predicateLabel?: string | null;
+  target: string;
+  graph?: string | null;
+  /** ``outgoing`` on a page; a path may traverse an edge ``incoming``. */
+  direction?: string | null;
+}
+
+/** One page of drawable nodes/edges, shaped from a triple window. */
+export interface CanvasSubgraphPage {
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+  truncated: boolean;
+  nodeCount: number;
+  edgeCount: number;
+  nextOffset?: number;
+}
+
+/** One simple path between two IRIs. */
+export interface GraphPath {
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+  hops: number;
+}
+
+export interface GraphPathResult {
+  paths: GraphPath[];
+  truncated: boolean;
+}
+
+/** F13: read the canvas capabilities and limits before drawing anything. */
+export async function getCanvasManifest(
+  apiClient: ApiClient,
+  namespace: string,
+): Promise<CanvasManifest> {
+  return apiClient.get<CanvasManifest>(
+    `/namespaces/${encodeURIComponent(namespace)}/graph/canvas/manifest`,
+  );
+}
+
+/**
+ * F08–F12: one page of canvas nodes/edges. Paging is offset-based on the
+ * backend's index order; pass `nextOffset` from the previous page back to
+ * continue. `kinds` is a comma-separated node-kind filter.
+ */
+export async function getCanvasSubgraph(
+  apiClient: ApiClient,
+  namespace: string,
+  opts?: {
+    kinds?: string;
+    graph?: string;
+    limit?: number;
+    offset?: number;
+  },
+): Promise<CanvasSubgraphPage> {
+  return apiClient.get<CanvasSubgraphPage>(
+    `/namespaces/${encodeURIComponent(namespace)}/graph/canvas${qs({ ...opts })}`,
+  );
+}
+
+/** F04–F07: simple paths between two IRIs, shortest first. */
+export async function findGraphPath(
+  apiClient: ApiClient,
+  namespace: string,
+  start: string,
+  end: string,
+  opts?: { max_hops?: number; limit?: number },
+): Promise<GraphPathResult> {
+  return apiClient.get<GraphPathResult>(
+    `/namespaces/${encodeURIComponent(namespace)}/graph/path${qs({
+      start,
+      end,
+      ...opts,
+    })}`,
+  );
+}
+
 /** One class as returned by the ontology-overview endpoint. */
 export interface OntologyOverviewClass {
   uri: string;
