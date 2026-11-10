@@ -165,7 +165,9 @@ Ensure-Container $PgName @(
     "pgvector/pgvector:pg18-trixie"
 )
 Ensure-Container $OxiName @(
-    "--publish", "7878:7878",
+    # 只绑回环：Oxigraph 无认证，/update 可改图删图。发布到 0.0.0.0 等于把写口
+    # 开放给同网段。8101/8099 都通过 http://127.0.0.1:7878 访问，回环绑定不影响。
+    "--publish", "127.0.0.1:7878:7878",
     "-v", "coa-local-oxigraph-data:/data",
     "oxigraph/oxigraph:0.5.7", "serve", "--location", "/data", "--bind", "0.0.0.0:7878"
 )
