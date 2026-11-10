@@ -10,7 +10,9 @@ Covered behaviour:
   * once the lock is free, a normal call creates the batch and closes both the
     batch and its `import_run` row as completed;
   * the ledger records completed counters, failed runs with their error code,
-    and closes a run abandoned by a dead process as interrupted.
+    and closes a run abandoned by a dead process as interrupted;
+  * a run that lands `failed` closes its batch in the same transaction, so the
+    batch never keeps showing "running" after the run is dead.
 """
 
 from __future__ import annotations
@@ -261,6 +263,31 @@ class ImportRunLedgerTests(unittest.TestCase):
         self.assertIn("forced infrastructure failure", runs[0]["error_message"])
         self.assertIsNone(runs[0]["exit_code"])
         self.assertEqual(runs[0]["counters"], {})
+
+    def test_failed_run_closes_batch_as_interrupted(self):
+        """A dead run must not leave the batch showing "running".
+
+        The batch row has no error column, so the reason travels in
+        `options.lastError`; assert it is present, not blank.
+        """
+        self._write_doc()
+        importer = self._importer(metadata=_BoomOnItems(self.meta))
+        with self.assertRaises(PortError):
+            importer.run(str(self._tmp), namespace_id=NAMESPACE)
+
+        row = self.meta.query(
+            "SELECT b.batch_id, b.status, b.finished_at, b.options "
+            "FROM platform.import_batch b "
+            "JOIN platform.import_run r USING (batch_id) "
+            "WHERE b.root_path = %s",
+            (self._root(),),
+        )[0]
+        self._batch_ids.add(str(row["batch_id"]))
+        self.assertEqual(row["status"], "interrupted")
+        self.assertIsNotNone(row["finished_at"])
+        last_error = row["options"].get("lastError") or {}
+        self.assertEqual(last_error.get("code"), "E_TEST_BOOM")
+        self.assertTrue(str(last_error.get("message") or "").strip())
 
     def test_next_run_closes_abandoned_running_row_as_interrupted(self):
         self._write_doc()
