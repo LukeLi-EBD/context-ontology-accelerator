@@ -14,8 +14,9 @@
 //
 //        ListAnswerQualityRuns
 //
-// Nothing else in control-plane.smithy changes. The operation, its IO shapes
-// and the strategy enum all live in this file under their own namespace.
+// Nothing else in control-plane.smithy changes. The operation and its IO shapes
+// live in this file under their own namespace. The strategy enum is owned by
+// the contract line's answer-quality.smithy (same namespace), not here.
 //
 // ── Scope note ──
 // `GetAnswerQuality` is a local platform-core rerun endpoint and has never been
@@ -29,18 +30,9 @@ namespace com.amazon.semanticcontext.quality
 
 use com.amazon.semanticcontext.common#ValidationError
 
-/// Retrieval strategy used for a golden-set run, mirroring
-/// `platform.answer_quality_run.strategy`.
-enum AnswerQualityStrategy {
-    /// Lexical (term/token) retrieval.
-    lexical
-
-    /// Dense-vector retrieval.
-    vector
-
-    /// Lexical plus vector retrieval.
-    hybrid
-}
+// `AnswerQualityStrategy` (lexical / vector / hybrid) is defined by
+// answer-quality.smithy in this same namespace. Reference it by name; do not
+// redeclare it here.
 
 /// Citation coverage of one retrieval layer across a single run.
 ///
