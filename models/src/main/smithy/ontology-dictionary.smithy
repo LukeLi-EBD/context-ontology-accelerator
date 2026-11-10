@@ -19,7 +19,6 @@ use com.amazon.semanticcontext.common#ValidationError
 // ---------------------------------------------------------------------------
 // Terms (F58/F59)
 // ---------------------------------------------------------------------------
-
 /// Anchor-class and alias counts for the namespace's published T-Box.
 structure TermCounts {
     /// Distinct owl:Class nodes that an alias entry points at (F58).
@@ -122,6 +121,7 @@ operation ListTerms {
         @required
         counts: TermCounts
 
+        /// The alias rows for this page.
         @required
         entries: TermEntryList
 
@@ -129,9 +129,11 @@ operation ListTerms {
         @required
         total: Integer
 
+        /// Number of rows skipped.
         @required
         offset: Integer
 
+        /// Page size actually applied.
         @required
         limit: Integer
     }
@@ -146,78 +148,105 @@ operation ListTerms {
 // ---------------------------------------------------------------------------
 // Data dictionary (F60-F66)
 // ---------------------------------------------------------------------------
-
 /// Lifecycle of one dictionary introspection pass.
 structure DictionaryRefreshRun {
+    /// Server-minted identifier of this introspection pass.
     @required
     runId: String
 
+    /// Source whose dictionary was introspected.
     @required
     sourceId: String
 
+    /// `running`, `succeeded` or `failed`.
     @required
     status: String
 
+    /// Caller-supplied key that makes the refresh replayable.
     idempotencyKey: String
 
+    /// Principal that requested the refresh, when recorded.
     requestedBy: String
 
+    /// ISO-8601 start time.
     startedAt: String
 
+    /// ISO-8601 finish time; absent while still running.
     finishedAt: String
 
+    /// Column rows read from the source.
     processed: Integer
 
+    /// Column rows newly inserted into the snapshot.
     inserted: Integer
 
+    /// Column rows updated in the snapshot.
     updated: Integer
 
+    /// Column rows that were already identical.
     unchanged: Integer
 
+    /// Column rows dropped because the source no longer exposes them.
     removed: Integer
 
+    /// Failure message when `status` is `failed`; absent otherwise.
     error: String
 }
 
 /// One column row in the dictionary (ten-column view, F63).
 structure DictionaryColumn {
+    /// Source this column snapshot belongs to.
     @required
     sourceId: String
 
+    /// Catalog the source exposes the table under.
     @required
     catalog: String
 
+    /// Schema the source exposes the table under.
     @required
     schema: String
 
+    /// Table name.
     @required
     table: String
 
+    /// Column name.
     @required
     column: String
 
+    /// Column data type as reported by the source.
     @required
     dataType: String
 
+    /// Whether the column admits NULL.
     @required
     isNullable: Boolean
 
+    /// Source engine kind, e.g. `postgresql` or `snowflake`.
     @required
     sourceKind: String
 
+    /// How the binding was resolved: `explicit`, `name_match`, `manual` or `none`.
     @required
     bindingMethod: String
 
+    /// Column comment captured from the source, when present.
     comment: String
 
+    /// Ontology property this column is bound to, when bound.
     propertyIri: String
 
+    /// Confidence of a `name_match` binding, 0..1.
     confidence: Double
 
+    /// Human note attached to a `manual` binding.
     bindingNote: String
 
+    /// ISO-8601 time the snapshot observed this column.
     observedAt: String
 
+    /// Refresh run that last wrote this row.
     lastRefreshRunId: String
 }
 
@@ -227,9 +256,11 @@ list DictionaryColumnList {
 
 /// Per-source rollup shown in the source list.
 structure DictionarySummary {
+    /// Source the snapshot belongs to.
     @required
     sourceId: String
 
+    /// Source engine kind, e.g. `postgresql` or `snowflake`.
     @required
     sourceKind: String
 
@@ -237,17 +268,22 @@ structure DictionarySummary {
     @required
     tables: Integer
 
+    /// Column count in the snapshot.
     @required
     columns: Integer
 
+    /// Columns carrying a source comment.
     @required
     commented: Integer
 
+    /// Columns bound to an ontology property.
     @required
     bound: Integer
 
+    /// ISO-8601 time the snapshot was last observed.
     observedAt: String
 
+    /// Most recent refresh run for this source.
     lastRun: DictionaryRefreshRun
 }
 
@@ -257,21 +293,27 @@ list DictionarySummaryList {
 
 /// Per-table rollup on the source dictionary page.
 structure DictionaryTableSummary {
+    /// Table name.
     @required
     table: String
 
+    /// Column count in the table.
     @required
     columns: Integer
 
+    /// Columns carrying a source comment.
     @required
     commented: Integer
 
+    /// Columns bound to an ontology property.
     @required
     bound: Integer
 
+    /// Columns with no source comment.
     @required
     missingComment: Integer
 
+    /// Columns not bound to any ontology property.
     @required
     unbound: Integer
 }
@@ -282,15 +324,19 @@ list DictionaryTableSummaryList {
 
 /// Comment coverage rollup (F66). `ratio` is absent when there are no rows.
 structure CommentCoverage {
+    /// Rows considered.
     @required
     total: Integer
 
+    /// Rows carrying a comment.
     @required
     commented: Integer
 
+    /// Rows with no comment.
     @required
     missing: Integer
 
+    /// Commented rows divided by total, 0..1.
     ratio: Double
 }
 
@@ -315,15 +361,19 @@ operation ListDictionaries {
     }
 
     output := {
+        /// Per-source dictionary rollups for this page.
         @required
         items: DictionarySummaryList
 
+        /// Number of sources that have a snapshot.
         @required
         total: Integer
 
+        /// Number of rows skipped.
         @required
         offset: Integer
 
+        /// Page size actually applied.
         @required
         limit: Integer
     }
@@ -344,8 +394,10 @@ operation GetDictionary {
         @httpLabel
         namespaceId: Uuid
 
+        /// Source whose dictionary is read or refreshed.
         @required
         @httpLabel
+        @length(min: 1, max: 128)
         sourceId: String
 
         /// Restrict the table rollups to one table.
@@ -355,18 +407,24 @@ operation GetDictionary {
     }
 
     output := {
+        /// Source the dictionary belongs to.
         @required
         sourceId: String
 
+        /// Source engine kind, e.g. `postgresql` or `snowflake`.
         sourceKind: String
 
+        /// Catalog the source exposes tables under.
         catalog: String
 
+        /// Schema the source exposes tables under.
         schema: String
 
+        /// Per-table rollups.
         @required
         tables: DictionaryTableSummaryList
 
+        /// Comment coverage for the whole source.
         @required
         totals: CommentCoverage
 
@@ -394,8 +452,10 @@ operation GetDictionaryView {
         @httpLabel
         namespaceId: Uuid
 
+        /// Source whose dictionary is read or refreshed.
         @required
         @httpLabel
+        @length(min: 1, max: 128)
         sourceId: String
 
         /// `all`, `missing_comment`, `unbound` or `mappable_unbound`.
@@ -403,10 +463,12 @@ operation GetDictionaryView {
         @length(min: 1, max: 32)
         view: String
 
+        /// Restrict to one table name.
         @httpQuery("table")
         @length(min: 1, max: 256)
         table: String
 
+        /// Restrict to one column name.
         @httpQuery("column")
         @length(min: 1, max: 256)
         column: String
@@ -439,18 +501,23 @@ operation GetDictionaryView {
     }
 
     output := {
+        /// Column rows for this page.
         @required
         items: DictionaryColumnList
 
+        /// Number of rows after filtering.
         @required
         total: Integer
 
+        /// Number of rows skipped.
         @required
         offset: Integer
 
+        /// Page size actually applied.
         @required
         limit: Integer
 
+        /// The filter view that was applied.
         @required
         view: String
 
@@ -478,22 +545,28 @@ operation GetDictionaryCommentCoverage {
         @httpLabel
         namespaceId: Uuid
 
+        /// Source whose dictionary is read or refreshed.
         @required
         @httpLabel
+        @length(min: 1, max: 128)
         sourceId: String
 
+        /// Restrict the coverage rollup to one table.
         @httpQuery("table")
         @length(min: 1, max: 256)
         table: String
     }
 
     output := {
+        /// Source the coverage applies to.
         @required
         sourceId: String
 
+        /// Comment coverage for the whole source.
         @required
         coverage: CommentCoverage
 
+        /// Per-table coverage rollups.
         @required
         tables: DictionaryTableSummaryList
     }
@@ -518,14 +591,17 @@ operation RefreshDictionaries {
         @httpLabel
         namespaceId: Uuid
 
+        /// Source whose dictionary is read or refreshed.
         @required
         @httpLabel
+        @length(min: 1, max: 128)
         sourceId: String
 
         /// Caller-supplied key; generated per request when absent.
         @length(min: 1, max: 128)
         idempotencyKey: String
 
+        /// Principal requesting the refresh, when the caller supplies one.
         @length(min: 1, max: 128)
         requestedBy: String
     }
