@@ -249,6 +249,46 @@ class GraphPathResult(BaseModel):
     truncated: bool = Field(default=False, description="True when more paths exist than returned.")
 
 
+class GraphLinkNode(BaseModel):
+    """A neighbour reached from the seed IRI, with its shortest hop distance."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    uri: str = Field(..., description="Full IRI of the neighbour.")
+    label: str | None = Field(default=None, description="``rdfs:label`` when the namespace carries one.")
+    kind: str | None = Field(
+        default=None,
+        description="``class``, ``object-property``, ``datatype-property`` or ``resource``.",
+    )
+    hops: int = Field(..., description="Shortest hop distance from the seed IRI (1..3).")
+
+
+class GraphLinkEdge(BaseModel):
+    """One traversed adjacency edge and the hop that discovered it."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    source: str = Field(..., description="Subject IRI.")
+    predicate: str = Field(..., description="Predicate IRI.")
+    predicate_label: str | None = Field(default=None, description="Local name of the predicate.")
+    target: str = Field(..., description="Object IRI.")
+    graph: str | None = Field(default=None, description="Named graph the triple lives in.")
+    direction: str | None = Field(default=None, description="How expansion traversed the edge: ``outgoing`` or ``incoming``.")
+    hops: int = Field(..., description="Hop at which expansion discovered this edge (1..3).")
+
+
+class GraphLinksResult(BaseModel):
+    """The bounded neighbourhood around one IRI.
+
+    ``nodes`` and ``edges`` are empty (not an error) when the IRI has no
+    adjacency inside the namespace. ``truncated`` says the edge limit was hit.
+    """
+
+    nodes: list[GraphLinkNode] = Field(default_factory=list)
+    edges: list[GraphLinkEdge] = Field(default_factory=list)
+    truncated: bool = Field(default=False, description="True when more edges exist than returned.")
+
+
 class SnapshotTbox(BaseModel):
     """Declared schema objects (the T-Box)."""
 

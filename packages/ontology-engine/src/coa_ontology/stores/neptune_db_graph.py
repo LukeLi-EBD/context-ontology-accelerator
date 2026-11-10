@@ -163,6 +163,15 @@ _MAX_SEARCH_PAGE_SIZE = 500
 # stable and reportable, a timeout depends on machine load.
 _MAX_UNFILTERED_SEARCH_QUADS = 50_000
 
+# Neighbourhood (Links) limits. ``_MAX_LINK_HOPS`` is the hard 3-hop ceiling
+# the contract advertises; the API rejects deeper requests rather than silently
+# clamping, so a caller can never believe it saw a 4th hop. The frontier and
+# row-scan caps keep a hub node from turning one expansion into a full scan.
+_MAX_LINK_HOPS = 3
+_MAX_LINK_LIMIT = 500
+_MAX_LINK_FRONTIER = 200
+_MAX_LINK_ROW_SCAN = 2000
+
 
 # ── SigV4 helper ────────────────────────────────────────────────────────
 
@@ -2062,6 +2071,132 @@ class NeptuneDBGraphStore(GraphStore):
                 }
             )
         return {"paths": rendered, "truncated": capped}
+
+    def find_links(
+        self,
+        namespace: str | None = None,
+        *,
+        uri: str,
+        direction: str = "both",
+        max_hops: int = 3,
+        limit: int = 200,
+    ) -> dict:
+        """Bounded breadth-first neighbourhood around one IRI.
+
+        One SPARQL query per hop level (the whole frontier is bound with
+        ``VALUES``) rather than one per node, so a 3-hop expansion costs at
+        most three round trips per direction. Expansion never goes past
+        ``_MAX_LINK_HOPS``; ``truncated`` reports the edge cap instead of
+        silently shrinking the answer. An IRI with no adjacency — or one the
+        store cannot hold — returns empty lists, not an error.
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        if not graphs or not _is_storable_iri(uri):
+            return {"nodes": [], "edges": [], "truncated": False}
+        if direction not in ("outgoing", "incoming", "both"):
+            raise ValueError(f"unknown link direction: {direction!r}")
+
+        safe_hops = max(1, min(max_hops, _MAX_LINK_HOPS))
+        safe_limit = max(1, min(limit, _MAX_LINK_LIMIT))
+        values = "\n          ".join(_iri(g) for g in graphs)
+        include_outgoing = direction in ("outgoing", "both")
+        include_incoming = direction in ("incoming", "both")
+
+        hop_of: dict[str, int] = {uri: 0}
+        edges: list[dict] = []
+        seen: set[tuple[str, str, str, str]] = set()
+        truncated = False
+
+        def rows(frontier: list[str], outgoing: bool) -> list[dict]:
+            term = "?s" if outgoing else "?o"
+            query = f"""
+            SELECT ?s ?p ?o ?g WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              VALUES {term} {{ {" ".join(_iri(n) for n in frontier)} }}
+              GRAPH ?g {{ ?s ?p ?o }}
+            }}
+            LIMIT {_MAX_LINK_ROW_SCAN}
+            """
+            return _sparql_query(query).get("results", {}).get("bindings", [])
+
+        for depth in range(1, safe_hops + 1):
+            frontier = [node for node, hop in hop_of.items() if hop == depth - 1]
+            if not frontier:
+                break
+            if len(frontier) > _MAX_LINK_FRONTIER:
+                frontier = frontier[:_MAX_LINK_FRONTIER]
+                truncated = True
+
+            batches: list[tuple[bool, list[dict]]] = []
+            if include_outgoing:
+                batches.append((True, rows(frontier, True)))
+            if include_incoming:
+                batches.append((False, rows(frontier, False)))
+
+            for outgoing, bindings in batches:
+                if len(bindings) >= _MAX_LINK_ROW_SCAN:
+                    # The scan cap, not the edge cap, cut this level.
+                    truncated = True
+                for row in bindings:
+                    if len(edges) >= safe_limit:
+                        # A row exists that we are not returning: say so rather
+                        # than presenting a capped answer as complete.
+                        truncated = True
+                        break
+                    s = row.get("s", {}).get("value", "")
+                    p = row.get("p", {}).get("value", "")
+                    o = row.get("o", {}).get("value", "")
+                    g = row.get("g", {}).get("value", "")
+                    if not s or not p or not o:
+                        continue
+                    if p in (RDF + "type", RDFS + "label", RDFS + "comment"):
+                        continue
+                    if not _is_storable_iri(s) or not _is_storable_iri(o):
+                        continue
+                    key = (s, p, o, g)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    neighbour = o if outgoing else s
+                    edges.append(
+                        {
+                            "source": s,
+                            "predicate": p,
+                            "predicateLabel": _local_name(p),
+                            "target": o,
+                            "graph": g,
+                            "direction": "outgoing" if outgoing else "incoming",
+                            "hops": depth,
+                        }
+                    )
+                    if neighbour not in hop_of:
+                        hop_of[neighbour] = depth
+                if truncated:
+                    break
+            if truncated:
+                break
+
+        # One batch lookup for every reached node; the seed itself is omitted
+        # from the node list (it is the subject of the caller's question, and a
+        # no-adjacency answer must stay visibly empty).
+        details = self._path_nodes(scope, list(hop_of))
+        nodes: list[dict] = []
+        for node_uri, hops in sorted(hop_of.items(), key=lambda item: (item[1], item[0])):
+            if hops == 0:
+                continue
+            detail = details.get(node_uri) or {}
+            nodes.append(
+                {
+                    "uri": node_uri,
+                    "label": detail.get("label"),
+                    "kind": detail.get("kind") or "resource",
+                    "hops": hops,
+                }
+            )
+        return {"nodes": nodes, "edges": edges, "truncated": truncated}
 
     def _node_details(self, namespace: str, uris: list[str]) -> dict[str, dict]:
         """Labels and kinds for a batch of nodes, in one round trip."""

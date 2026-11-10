@@ -51,6 +51,7 @@ from coa_ontology.catalog.graph_schemas import (
     CanvasLimits,
     CanvasManifest,
     CanvasSubgraphPage,
+    GraphLinksResult,
     GraphPathResult,
     GraphSearchHit,
     GraphSearchResult,
@@ -117,6 +118,16 @@ _CANVAS_KINDS: tuple[str, ...] = ("class", "object-property", "datatype-property
 _CANVAS_PATH_MAX_HOPS = 6
 _CANVAS_PATH_MAX_LIMIT = 20
 _DEFAULT_CANVAS_PAGE_SIZE = 50
+
+# Neighbourhood (Links) bounds. The 3-hop ceiling is contractual, not a
+# tuning knob: a deeper request is a 400, never a silent clamp, so a caller
+# cannot mistake a truncated answer for the full 4th hop. Keep in sync with
+# ``_MAX_LINK_HOPS`` / ``_MAX_LINK_LIMIT`` in stores/neptune_db_graph.py.
+_LINK_DIRECTIONS: tuple[str, ...] = ("outgoing", "incoming", "both")
+_LINK_MAX_HOPS = 3
+_LINK_MAX_LIMIT = 500
+_DEFAULT_LINK_HOPS = 3
+_DEFAULT_LINK_LIMIT = 200
 
 # Fixed client-facing messages: backend exception text (store class names,
 # endpoints) is logged, never returned, and the caller's own URI is not echoed.
@@ -378,6 +389,51 @@ def find_graph_path(
         log.warning("invalid graph path IRI: %s", e)
         raise HTTPException(400, "Invalid graph path IRI.") from e
     return GraphPathResult(**result)
+
+
+@router.get("/links", response_model=GraphLinksResult)
+def find_links(
+    namespace: str = "default",
+    uri: str = Query(...),
+    direction: str = "both",
+    max_hops: int = _DEFAULT_LINK_HOPS,
+    limit: int = _DEFAULT_LINK_LIMIT,
+):
+    """The neighbourhood around ``uri``, up to three hops away.
+
+    Nodes and edges both carry the hop that reached them, so the UI can group
+    by distance and a caller can prove the cap held. ``max_hops`` above the
+    contractual 3 is rejected, not clamped. An IRI with no adjacency returns
+    empty lists (200), which is a distinct outcome from "IRI not in the
+    namespace" and must not be turned into an error.
+    """
+    if not uri or len(uri) > _MAX_STATEMENT_TERM_LENGTH:
+        raise HTTPException(400, "Invalid uri IRI.")
+    if not uri.startswith(("http://", "https://", "urn:")):
+        raise HTTPException(400, "Invalid uri IRI.")
+    if direction not in _LINK_DIRECTIONS:
+        raise HTTPException(400, "direction must be one of outgoing, incoming, both.")
+    if not 1 <= max_hops <= _LINK_MAX_HOPS:
+        raise HTTPException(400, f"max_hops must be between 1 and {_LINK_MAX_HOPS}")
+    if not 1 <= limit <= _LINK_MAX_LIMIT:
+        raise HTTPException(400, f"limit must be between 1 and {_LINK_MAX_LIMIT}")
+
+    graph_store = _graph(namespace)
+    try:
+        result = graph_store.find_links(
+            namespace,
+            uri=uri,
+            direction=direction,
+            max_hops=max_hops,
+            limit=limit,
+        )
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("graph links unsupported by backend: %s", e)
+        raise HTTPException(501, "Graph neighbourhood is not supported on this backend.") from e
+    except ValueError as e:
+        log.warning("invalid graph links IRI: %s", e)
+        raise HTTPException(400, "Invalid uri IRI.") from e
+    return GraphLinksResult(**result)
 
 
 @router.get("/snapshot", response_model=OntologySnapshot, response_model_by_alias=True)

@@ -109,6 +109,16 @@ vi.mock("./explorer/InductedSourcesView", () => ({
     <div data-testid="inducted-sources">sources:{namespace}</div>
   ),
 }));
+vi.mock("./explorer/LinksView", () => ({
+  LinksView: ({ namespace }: { namespace?: string }) => (
+    <div data-testid="links-view">links:{namespace}</div>
+  ),
+}));
+vi.mock("./explorer/PathsView", () => ({
+  PathsView: ({ namespace }: { namespace?: string }) => (
+    <div data-testid="paths-view">paths:{namespace}</div>
+  ),
+}));
 
 // A STABLE client instance — the real useApiClient is useMemo-memoized, so its
 // reference is stable across renders. A fresh object per render would re-trigger
@@ -216,6 +226,22 @@ describe("GraphSearchPage — Explorer tabs", () => {
     );
   });
 
+  it("opens the Links tab from a ?tab=links deep link", async () => {
+    const view = renderPage("?tab=links");
+
+    await waitFor(() => expect(activeTabLabel(view)).toBe("Links"));
+    expect(view.getByTestId("links-view")).toHaveTextContent("links:ns");
+    expect(view.queryByTestId("paths-view")).toBeNull();
+  });
+
+  it("opens the Paths tab from a ?tab=paths deep link", async () => {
+    const view = renderPage("?tab=paths");
+
+    await waitFor(() => expect(activeTabLabel(view)).toBe("Paths"));
+    expect(view.getByTestId("paths-view")).toHaveTextContent("paths:ns");
+    expect(view.queryByTestId("links-view")).toBeNull();
+  });
+
   it("falls back to Classes for an unknown ?tab= value", async () => {
     // An unrecognized id must not leave the Tabs with an activeTabId that
     // matches no panel (which renders an empty page).
@@ -260,7 +286,7 @@ describe("GraphSearchPage — Explorer tabs", () => {
     expect(view.queryByTestId("inducted-sources")).toBeNull();
   });
 
-  it("always renders all five tabs, whichever one is active", async () => {
+  it("always renders every tab, whichever one is active", async () => {
     const view = renderPage("?tab=sources");
     await waitFor(() => expect(activeTabLabel(view)).toBe("Inducted sources"));
     expect(view.getAllByRole("tab").map((t) => t.textContent?.trim())).toEqual([
@@ -269,6 +295,9 @@ describe("GraphSearchPage — Explorer tabs", () => {
       "Ontologies",
       "Inducted sources",
       "Statements",
+      "SPARQL",
+      "Links",
+      "Paths",
     ]);
     // The page header is tab-independent.
     expect(screen.getByText("Explorer")).toBeInTheDocument();

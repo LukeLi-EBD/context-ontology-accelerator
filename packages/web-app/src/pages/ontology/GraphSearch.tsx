@@ -23,6 +23,8 @@ import { InductedSourcesView } from "./explorer/InductedSourcesView";
 import { OntologyInventoryView } from "./explorer/OntologyInventoryView";
 import { SparqlConsoleView } from "./explorer/SparqlConsoleView";
 import { StatementBrowserView } from "./explorer/StatementBrowserView";
+import { LinksView } from "./explorer/LinksView";
+import { PathsView } from "./explorer/PathsView";
 import {
   buildClassTree,
   defaultExpandedIds,
@@ -822,6 +824,8 @@ const EXPLORER_TABS = new Set([
   "ontologies",
   "sources",
   "statements",
+  "links",
+  "paths",
   "sparql",
 ]);
 
@@ -2666,6 +2670,20 @@ export function GraphSearchPage() {
             id: "sparql",
             label: t("SPARQL"),
             content: <SparqlConsoleView namespace={namespaceId} />,
+          },
+          {
+            id: "links",
+            label: t("Links"),
+            content: (
+              <LinksView apiClient={apiClient} namespace={namespaceId} />
+            ),
+          },
+          {
+            id: "paths",
+            label: t("Paths"),
+            content: (
+              <PathsView apiClient={apiClient} namespace={namespaceId} />
+            ),
           },
         ]}
       />

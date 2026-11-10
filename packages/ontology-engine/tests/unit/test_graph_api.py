@@ -827,3 +827,100 @@ def test_find_graph_path_rejects_invalid_iri(_patch_build_stores):
     )
 
     assert resp.status_code == 400
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# GET /graph/links
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_find_links_returns_nodes_edges_and_hops(_patch_build_stores):
+    _patch_build_stores.mock_graph.find_links.return_value = {
+        "nodes": [
+            {"uri": "https://example.org/onto#Policy", "label": "Policy", "kind": "class", "hops": 1},
+            {"uri": "https://example.org/onto#Customer", "label": "Customer", "kind": "class", "hops": 2},
+        ],
+        "edges": [
+            {
+                "source": "https://example.org/onto#Claim",
+                "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                "predicateLabel": "subClassOf",
+                "target": "https://example.org/onto#Policy",
+                "graph": "https://ontology-workbench.local/default/onto",
+                "direction": "outgoing",
+                "hops": 1,
+            }
+        ],
+        "truncated": False,
+    }
+
+    resp = client.get(
+        "/graph/links",
+        params={
+            "namespace": "default",
+            "uri": "https://example.org/onto#Claim",
+            "direction": "both",
+            "max_hops": 2,
+            "limit": 10,
+        },
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [n["hops"] for n in body["nodes"]] == [1, 2]
+    assert body["edges"][0]["hops"] == 1
+    assert body["truncated"] is False
+    _patch_build_stores.mock_graph.find_links.assert_called_once_with(
+        "default",
+        uri="https://example.org/onto#Claim",
+        direction="both",
+        max_hops=2,
+        limit=10,
+    )
+
+
+def test_find_links_empty_neighbourhood_is_200_not_error(_patch_build_stores):
+    _patch_build_stores.mock_graph.find_links.return_value = {
+        "nodes": [],
+        "edges": [],
+        "truncated": False,
+    }
+
+    resp = client.get(
+        "/graph/links",
+        params={"namespace": "default", "uri": "https://example.org/onto#Unused"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"nodes": [], "edges": [], "truncated": False}
+
+
+def test_find_links_rejects_hops_above_three(_patch_build_stores):
+    resp = client.get(
+        "/graph/links",
+        params={"namespace": "default", "uri": "https://example.org/onto#Claim", "max_hops": 4},
+    )
+
+    assert resp.status_code == 400
+    assert "max_hops" in resp.json()["detail"]
+    _patch_build_stores.mock_graph.find_links.assert_not_called()
+
+
+def test_find_links_rejects_unknown_direction(_patch_build_stores):
+    resp = client.get(
+        "/graph/links",
+        params={"namespace": "default", "uri": "https://example.org/onto#Claim", "direction": "sideways"},
+    )
+
+    assert resp.status_code == 400
+    assert "direction" in resp.json()["detail"]
+
+
+def test_find_links_rejects_invalid_iri(_patch_build_stores):
+    resp = client.get(
+        "/graph/links",
+        params={"namespace": "default", "uri": "not-an-iri"},
+    )
+
+    assert resp.status_code == 400
+    assert "uri" in resp.json()["detail"]

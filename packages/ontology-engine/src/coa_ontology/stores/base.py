@@ -501,6 +501,24 @@ class GraphStore(Protocol):
         """
         ...
 
+    def find_links(
+        self,
+        namespace: str | None = None,
+        *,
+        uri: str,
+        direction: str = "both",
+        max_hops: int = 3,
+        limit: int = 200,
+    ) -> dict:
+        """Bounded neighbourhood around ``uri``: nodes, edges and their hops.
+
+        ``direction`` is ``outgoing``, ``incoming`` or ``both``; ``max_hops``
+        never exceeds 3. An IRI with no adjacency returns empty lists rather
+        than raising. Returns ``{"nodes", "edges", "truncated"}`` where each
+        node and edge carries the hop that reached it.
+        """
+        ...
+
     # Health board (coverage, quality, diff) ---------------------------
     def get_health_snapshot(self, namespace: str | None = None) -> dict:
         """T-Box/A-Box coverage: declared classes/properties vs instances.

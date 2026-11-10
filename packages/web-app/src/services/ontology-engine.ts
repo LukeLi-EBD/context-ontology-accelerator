@@ -884,6 +884,52 @@ export async function findGraphPath(
   );
 }
 
+/** Direction a Links expansion follows. */
+export type LinkDirection = "outgoing" | "incoming" | "both";
+
+/** One neighbour reached from the seed IRI. */
+export interface GraphLinkNode {
+  uri: string;
+  label?: string | null;
+  kind?: string | null;
+  hops: number;
+}
+
+/** One adjacency edge, tagged with the hop that discovered it. */
+export interface GraphLinkEdge {
+  source: string;
+  predicate: string;
+  predicateLabel?: string | null;
+  target: string;
+  graph?: string | null;
+  direction?: "outgoing" | "incoming" | string | null;
+  hops: number;
+}
+
+export interface GraphLinksResult {
+  nodes: GraphLinkNode[];
+  edges: GraphLinkEdge[];
+  truncated: boolean;
+}
+
+/**
+ * FindLinks: the neighbourhood around one IRI, at most three hops away.
+ * An IRI with no adjacency returns empty lists, not an error.
+ */
+export async function findGraphLinks(
+  apiClient: ApiClient,
+  namespace: string,
+  uri: string,
+  opts?: { direction?: LinkDirection; max_hops?: number; limit?: number },
+): Promise<GraphLinksResult> {
+  return apiClient.get<GraphLinksResult>(
+    `/namespaces/${encodeURIComponent(namespace)}/graph/links${qs({
+      uri,
+      ...opts,
+    })}`,
+  );
+}
+
 /** One class as returned by the ontology-overview endpoint. */
 export interface OntologyOverviewClass {
   uri: string;
