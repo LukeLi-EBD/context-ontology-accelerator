@@ -361,6 +361,7 @@ export const Playground: React.FC = () => {
                 >
                   <ChatMessage
                     role={msg.role}
+                    namespaceId={namespaceId}
                     messageId={msg.id}
                     state={
                       msg.isLoading

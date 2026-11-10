@@ -5,15 +5,27 @@
  * Graph context section showing entity relationships from the knowledge graph.
  */
 import React from "react";
-import { Box } from "@cloudscape-design/components";
+import {
+  Box,
+  Button,
+  SpaceBetween,
+  StatusIndicator,
+} from "@cloudscape-design/components";
 import type {
   GraphContextItem,
   LegacyGraphContextRelationship,
 } from "@app-types";
 import { useAppI18n } from "../../../i18n/LocaleProvider";
+import { useApiClient } from "../../ApiClientProvider";
+import {
+  getEntityProvenance,
+  type EntityProvenanceReport,
+} from "../../../services/entities";
 
 export interface GraphContextSectionProps {
   context: GraphContextItem;
+  /** When set, each entity gets an inline Provenance lookup button. */
+  namespaceId?: string;
 }
 
 interface RenderedRelationship {
@@ -79,8 +91,84 @@ const legacyRelationship = (
   };
 };
 
+/**
+ * Inline provenance lookup for one entity in an answer (F93). Rendered only
+ * when a namespace is known, so it never reaches for the API client in contexts
+ * that only render static graph evidence.
+ */
+const InlineProvenance: React.FC<{ uri: string }> = ({ uri }) => {
+  const { t } = useAppI18n();
+  const api = useApiClient();
+  const [phase, setPhase] = React.useState<
+    "idle" | "loading" | "done" | "error"
+  >("idle");
+  const [report, setReport] = React.useState<EntityProvenanceReport | null>(
+    null,
+  );
+  const [error, setError] = React.useState<string | null>(null);
+
+  const load = async () => {
+    setPhase("loading");
+    setError(null);
+    try {
+      setReport(await getEntityProvenance(api, uri, 20));
+      setPhase("done");
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : t("Failed to load provenance"),
+      );
+      setPhase("error");
+    }
+  };
+
+  return (
+    <div>
+      <Button
+        variant="inline-link"
+        loading={phase === "loading"}
+        onClick={() => void load()}
+      >
+        {t("Provenance")}
+      </Button>
+      {phase === "done" && report && (
+        <div style={{ marginTop: "2px" }}>
+          <SpaceBetween direction="horizontal" size="xs">
+            <StatusIndicator type="success">
+              {t("Evidenced {count}", { count: report.summary.evidenced })}
+            </StatusIndicator>
+            <StatusIndicator type="pending">
+              {t("Inferred {count}", { count: report.summary.inferred })}
+            </StatusIndicator>
+            <StatusIndicator type="stopped">
+              {t("None {count}", { count: report.summary.none })}
+            </StatusIndicator>
+            <Box variant="small" color="text-body-secondary">
+              {t("of {total} fields/statements", {
+                total: report.summary.total,
+              })}
+            </Box>
+          </SpaceBetween>
+          {report.empty && report.emptyReason ? (
+            <Box variant="small" color="text-body-secondary">
+              {report.emptyReason}
+            </Box>
+          ) : null}
+        </div>
+      )}
+      {phase === "error" && error ? (
+        <Box variant="small" color="text-status-error">
+          {error}
+        </Box>
+      ) : null}
+    </div>
+  );
+};
+
 export const GraphContextSection: React.FC<GraphContextSectionProps> = ({
   context,
+  namespaceId,
 }) => {
   const { t } = useAppI18n();
   const entities = context.entities ?? [];
@@ -125,6 +213,9 @@ export const GraphContextSection: React.FC<GraphContextSectionProps> = ({
                     </Box>
                   )}
                 </Box>
+                {namespaceId && entity.uri ? (
+                  <InlineProvenance uri={entity.uri} />
+                ) : null}
                 {statements.map((statement, index) => (
                   <Box
                     key={`${entity.uri}|statement|${index}`}

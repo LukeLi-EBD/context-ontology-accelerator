@@ -1778,6 +1778,12 @@ export const MESSAGES_JA = {
   "Named graphs": "名前付きグラフ",
   "Entity page": "エンティティページ",
   "Ontology tree": "オントロジーツリー",
+  "Provenance": "出所",
+  "Evidenced {count}": "根拠あり {count}",
+  "Inferred {count}": "推論 {count}",
+  "None {count}": "根拠なし {count}",
+  "of {total} fields/statements": "全 {total} 件の項目/文",
+  "Failed to load provenance": "出所情報を読み込めませんでした",
   "Graph IRI": "グラフ IRI",
   "Named graph IRIs the ontologies in this namespace are stored in.":
     "この名前空間のオントロジーが格納されている名前付きグラフ IRI。",
