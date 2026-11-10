@@ -33,7 +33,6 @@ use com.amazon.semanticcontext.common#ValidationError
 // `AnswerQualityStrategy` (lexical / vector / hybrid) is defined by
 // answer-quality.smithy in this same namespace. Reference it by name; do not
 // redeclare it here.
-
 /// Citation coverage of one retrieval layer across a single run.
 ///
 /// A case counts as covered for a layer when at least one of its citations
@@ -153,10 +152,30 @@ list AnswerQualityRunList {
                     brokenLinkRate: 0.0
                     regression: false
                     layerCoverage: [
-                        { layer: "ontology", covered: 10, evaluated: 10, rate: 1.0 }
-                        { layer: "terms", covered: 8, evaluated: 10, rate: 0.8 }
-                        { layer: "metrics", covered: 6, evaluated: 10, rate: 0.6 }
-                        { layer: "facts", covered: 2, evaluated: 10, rate: 0.2 }
+                        {
+                            layer: "ontology"
+                            covered: 10
+                            evaluated: 10
+                            rate: 1.0
+                        }
+                        {
+                            layer: "terms"
+                            covered: 8
+                            evaluated: 10
+                            rate: 0.8
+                        }
+                        {
+                            layer: "metrics"
+                            covered: 6
+                            evaluated: 10
+                            rate: 0.6
+                        }
+                        {
+                            layer: "facts"
+                            covered: 2
+                            evaluated: 10
+                            rate: 0.2
+                        }
                     ]
                 }
                 {

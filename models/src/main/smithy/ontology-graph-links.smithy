@@ -204,6 +204,10 @@ apply FindLinks @examples([
     {
         title: "An IRI with no adjacency is an empty, successful answer"
         input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", uri: "http://example.com/onto#UnusedClass", maxHops: 3 }
-        output: { nodes: [], edges: [], truncated: false }
+        output: {
+            nodes: []
+            edges: []
+            truncated: false
+        }
     }
 ])
