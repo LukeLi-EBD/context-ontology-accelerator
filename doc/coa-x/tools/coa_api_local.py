@@ -1156,6 +1156,29 @@ def _match(path: str) -> tuple[str, dict[str, str], str] | None:
     return None
 
 
+# namespaceId is a UUID v4 in the contract. Validated once, here, for *every*
+# route that carries it: a handler that skips the check (or looks the id up in
+# a store that simply has no such row) answers 200 with an empty list, and a
+# caller passing the namespace *name* then reads "no data" instead of "bad
+# request". That failure mode is silent, so it is gated before dispatch rather
+# than left to each handler.
+#
+# Ordering contract: this gate runs AFTER the authorization gate. A request
+# without a valid bearer token is 401 even when the path id is malformed; only
+# an authenticated caller may learn that the id itself is invalid (400).
+_NAMESPACE_ID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+)
+
+
+def _invalid_namespace_id(path_params: dict[str, str]) -> str | None:
+    """Return the offending value when ``namespaceId`` is present but not a UUID v4."""
+    raw = path_params.get("namespaceId")
+    if raw is None or _NAMESPACE_ID_RE.match(raw):
+        return None
+    return raw
+
+
 # ---------------------------------------------------------------------------
 # HTTP bridge
 # ---------------------------------------------------------------------------
@@ -2432,6 +2455,24 @@ def _make_app() -> Any:
         if auth_error is not None:
             return _cors(auth_error, origin)
         actor = auth_context["email"]
+        # Authorization first, id shape second. Flipping these two would make an
+        # unauthenticated caller able to probe id validity (400 before 401).
+        bad_namespace_id = _invalid_namespace_id(decoded_params)
+        if bad_namespace_id is not None:
+            print(f"[api] {request.method} {path} -> 400 E_NAMESPACE_ID_INVALID")
+            return _cors(
+                JSONResponse(
+                    {
+                        "error": "E_NAMESPACE_ID_INVALID",
+                        "message": (
+                            "namespaceId must be a UUID v4; "
+                            f"got {bad_namespace_id!r} for {template}"
+                        ),
+                    },
+                    status_code=400,
+                ),
+                origin,
+            )
         if module == KERNEL:
             print(f"[api] {request.method} {path} -> kernel ({template}) as {actor}")
             return _cors(
