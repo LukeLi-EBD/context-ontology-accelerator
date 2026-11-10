@@ -722,6 +722,24 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/graph/path": {
         "GET": ("viewNamespace", "Ontology"),
     },
+    # Snapshot/validate/diff/reasoning all read the built graph; materialize is
+    # the one write (it rewrites the inferred graph) and is gated like the other
+    # ontology-governance writes.
+    "/namespaces/{namespaceId}/graph/snapshot": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/graph/validate": {
+        "POST": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/graph/diff": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/graph/reasoning": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/graph/reasoning/materialize": {
+        "POST": ("manageOntology", "Ontology"),
+    },
     # ── Documents ───────────────────────────────────────────────────────
     # Uploading bytes is a write to the namespace's source assets, so it reuses
     # manageSource (same power as /sources); the registry list stays a metadata
@@ -745,6 +763,11 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
         "POST": ("manageOntology", "Namespace"),
     },
     "/namespaces/{namespaceId}/candidates/{candidateId}/reject": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    # Conflict adjudication retires or rewrites A-Box assertions, the same
+    # governance power as approving a candidate — not a document write.
+    "/namespaces/{namespaceId}/facts/conflicts/resolve": {
         "POST": ("manageOntology", "Namespace"),
     },
     # ── Embeddings ──────────────────────────────────────────────────────
