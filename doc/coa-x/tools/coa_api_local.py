@@ -1472,7 +1472,10 @@ def _kernel_translate(
                 json.dumps(forwarded).encode("utf-8"),
             )
         if template.endswith("/restore"):
-            forwarded = {"actor": payload.get("actor") or "operator"}
+            forwarded = {
+                "actor": payload.get("actor") or "operator",
+                "reason": payload.get("reason"),
+            }
             return (
                 "POST",
                 f"/facts/{quote(fact_id)}/restore",

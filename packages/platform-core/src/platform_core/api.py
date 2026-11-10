@@ -2954,7 +2954,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         fact_id: str,
         body: dict[str, Any] | None = Body(default=None),
     ) -> dict[str, Any]:
-        return runtime.facts.restore(fact_id, (body or {}).get("actor", "api"))
+        return runtime.facts.restore(
+            fact_id, (body or {}).get("actor", "api"), (body or {}).get("reason")
+        )
 
     @app.get("/facts/{fact_id}/events")
     def fact_events(
