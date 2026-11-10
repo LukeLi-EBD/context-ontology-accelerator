@@ -42,6 +42,7 @@ service DataLayerService {
         GraphTraverse
         DescribeSchema
         CheckAnswerable
+        RunSparql
     ]
     errors: [
         ValidationError
