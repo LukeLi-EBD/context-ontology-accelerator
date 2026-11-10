@@ -5198,6 +5198,22 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         "triple",
         "chunk",
     }
+    # Citation kind -> retrieval layer, used to aggregate one run's four-layer
+    # coverage. `chunk` is deliberately absent: a chunk citation is a document
+    # hit, not one of the four ontology/terms/metrics/facts layers, so counting
+    # it would inflate facts coverage.
+    _G4_LAYER_CITATION_MAP = {
+        "ontology": {"ontology-version", "triple"},
+        "terms": {"rdfs-term", "skos-term"},
+        "metrics": {"metric-definition", "formula", "rule-set"},
+        "facts": {
+            "fact-projection",
+            "fact-table",
+            "fact-table-field",
+            "fact-observation",
+            "value-source",
+        },
+    }
     # Frozen 24-query set from doc/_design/24 §5.2 and packages/platform-core/tests/term_eval.py.
     # It is deliberately duplicated here so the panel does not import a test
     # module; the strings and expected classes must stay byte-identical.
@@ -5697,8 +5713,29 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         """
         run_id = "aq-" + uuid.uuid4().hex[:12]
         summary = payload["summary"]
+        cases = payload.get("cases") or []
+        layer_coverage = []
+        for layer in _G4_LAYERS:
+            kinds = _G4_LAYER_CITATION_MAP[layer]
+            covered = sum(
+                1
+                for case in cases
+                if any(
+                    str(citation.get("kind") or "") in kinds
+                    for citation in (case.get("actual") or {}).get("citations") or []
+                )
+            )
+            layer_coverage.append(
+                {
+                    "layer": layer,
+                    "covered": covered,
+                    "evaluated": len(cases),
+                    "rate": round(covered / len(cases), 4) if cases else 0.0,
+                }
+            )
         detail = {
             "summary": summary,
+            "layerCoverage": layer_coverage,
             "citationCoverageByType": payload["citationCoverageByType"],
             "refusalsByType": payload["refusalsByType"],
             "refusalsByReason": payload["refusalsByReason"],
@@ -5964,6 +6001,89 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         payload["runId"] = _record_answer_quality_run(payload) if case_id is None else None
         payload["persisted"] = payload["runId"] is not None
         return payload
+
+    def _g4_answer_quality_runs(
+        limit: int, strategy: str | None, since: str | None
+    ) -> dict[str, Any]:
+        """Read stored golden-set runs, newest first.
+
+        This is the read half of F86: the rows are the same ones
+        `_record_answer_quality_run` writes, so every `runId` returned here can
+        be looked up in `platform.answer_quality_run`. Rows written before the
+        layer aggregation existed have no `layerCoverage` in `detail`; those
+        come back as `None` rather than a fabricated 0.
+        """
+        since_ts: datetime | None = None
+        if since:
+            try:
+                since_ts = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise PortError(
+                    code="InvalidArgument",
+                    message="since must be an ISO-8601 timestamp",
+                    provider="platform",
+                    provider_code="E_ANSWER_QUALITY_SINCE_INVALID",
+                ) from exc
+            if since_ts.tzinfo is None:
+                since_ts = since_ts.replace(tzinfo=timezone.utc)
+        try:
+            rows = runtime.metadata.query(
+                """
+                SELECT run_id, ran_at, strategy, golden_set, evaluated, passed,
+                       failed, pass_rate, citation_coverage_rate,
+                       citation_resolvable_rate, broken_link_rate, regression,
+                       detail, COUNT(*) OVER () AS total_count
+                  FROM platform.answer_quality_run
+                 WHERE (%s::timestamptz IS NULL OR ran_at >= %s::timestamptz)
+                   AND (%s::text IS NULL OR strategy = %s)
+                 ORDER BY ran_at DESC, run_id DESC
+                 LIMIT %s
+                """,
+                (since_ts, since_ts, strategy, strategy, limit),
+            )
+        except Exception as exc:
+            raise PortError(
+                code="InternalError",
+                message="answer quality history is unavailable",
+                provider="platform",
+                provider_code="E_ANSWER_QUALITY_HISTORY_UNAVAILABLE",
+                details={"cause": str(exc)[:200]},
+            ) from exc
+        items = []
+        for row in rows or []:
+            detail = row.get("detail") or {}
+            if isinstance(detail, str):
+                detail = json.loads(detail)
+            ran_at = row.get("ran_at")
+            items.append(
+                {
+                    "runId": row["run_id"],
+                    "ranAt": ran_at.isoformat()
+                    if hasattr(ran_at, "isoformat")
+                    else str(ran_at),
+                    "strategy": row["strategy"],
+                    "goldenSet": row["golden_set"],
+                    "evaluated": int(row["evaluated"]),
+                    "passed": int(row["passed"]),
+                    "failed": int(row["failed"]),
+                    "passRate": float(row["pass_rate"]),
+                    "citationCoverageRate": float(row["citation_coverage_rate"]),
+                    "citationResolvableRate": float(
+                        row["citation_resolvable_rate"]
+                    ),
+                    "brokenLinkRate": float(row["broken_link_rate"]),
+                    "regression": bool(row["regression"]),
+                    "layerCoverage": detail.get("layerCoverage"),
+                }
+            )
+        return {
+            "items": items,
+            "totalCount": int(rows[0]["total_count"]) if rows else 0,
+            "limit": limit,
+            "strategy": strategy,
+            "since": since,
+            "readOnly": True,
+        }
 
     def _g4_provenance_fields(
         detail: dict[str, Any],
@@ -6326,6 +6446,21 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 provider_code="E_ANSWER_STRATEGY_INVALID",
             )
         return _g4_answer_quality_data(strategy, limit, caseId)
+
+    @app.get("/answer/quality/runs")
+    def g4_answer_quality_runs(
+        limit: int = Query(default=20, ge=1, le=200),
+        strategy: str | None = Query(default=None, max_length=20),
+        since: str | None = Query(default=None, max_length=40),
+    ) -> dict[str, Any]:
+        if strategy and strategy not in ("lexical", "vector", "hybrid"):
+            raise PortError(
+                code="InvalidArgument",
+                message="strategy must be lexical/vector/hybrid",
+                provider="platform",
+                provider_code="E_ANSWER_STRATEGY_INVALID",
+            )
+        return _g4_answer_quality_runs(limit, strategy, since)
 
     @app.get("/entity/provenance")
     def g4_entity_provenance(

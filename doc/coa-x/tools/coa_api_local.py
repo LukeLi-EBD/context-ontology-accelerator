@@ -694,6 +694,8 @@ ROUTES: list[tuple[str, str]] = [
     ("/browse/ontology/instances", KERNEL),
     # GetAnswerQuality (F86–F89): golden-set rerun, read-only.
     ("/answer/quality", KERNEL),
+    # ListAnswerQualityRuns (F86 history half): reads platform.answer_quality_run.
+    ("/answer/quality/runs", KERNEL),
     # CheckAnswerable (F76/F79): four-layer coverage and gaps/fixes. Same
     # platform-core evaluation as /answerable; the namespace segment is the
     # contract path, not a partition key in this local deployment.
@@ -1276,6 +1278,14 @@ def _kernel_translate(
         }
         suffix = f"?{urlencode(params)}" if params else ""
         return "GET", f"/answer/quality{suffix}", None
+
+    if template == "/answer/quality/runs":
+        q = query or {}
+        params = {
+            key: q[key] for key in ("strategy", "limit", "since") if q.get(key)
+        }
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/answer/quality/runs{suffix}", None
 
     if template == "/metrics/{metricId}":
         metric_id = path_params.get("metricId", "")
