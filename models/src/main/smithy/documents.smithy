@@ -342,6 +342,57 @@ operation ListDocumentChunks {
     ]
 }
 
+/// Download the stored bytes of one document.
+///
+/// The body is the exact byte sequence stored at upload — no normalisation and
+/// no re-serialisation — so a client can verify it against
+/// `UploadDocument.contentHash` with a plain digest comparison.
+///
+/// `X-Content-Sha256` repeats that digest for the returned bytes. A document
+/// stored with zero bytes answers 200 with an empty body and the SHA-256 of the
+/// empty string; only an unknown document answers `NotFoundError`.
+@http(method: "GET", uri: "/namespaces/{namespaceId}/documents/{documentId}/content", code: 200)
+@readonly
+@examples([
+    {
+        title: "Download the bytes of a stored document"
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", documentId: "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d" }
+        output: {
+            content: "SGVsbG8sIHdvcmxkIQ=="
+            contentSha256: "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8b2e1e5c1c0e5b8"
+        }
+    }
+])
+operation DownloadDocument {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// Document whose bytes to download.
+        @required
+        @httpLabel
+        documentId: Uuid
+    }
+
+    output := {
+        /// Exact stored bytes; empty (0 bytes) when the document was uploaded
+        /// with empty content.
+        @httpPayload
+        content: Blob
+
+        /// SHA-256 of `content`, lowercase hex. Equals the `contentHash`
+        /// returned by `UploadDocument` for the same stored bytes.
+        @required
+        @httpHeader("X-Content-Sha256")
+        contentSha256: String
+    }
+
+    errors: [
+        NotFoundError
+    ]
+}
+
 // ── Fact candidates ─────────────────────────────────────────────────────────
 /// List extracted fact candidates awaiting review (or filtered by status).
 @http(method: "GET", uri: "/namespaces/{namespaceId}/candidates")

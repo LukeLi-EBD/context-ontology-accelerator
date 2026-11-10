@@ -424,8 +424,8 @@ structure OntologyProposal {
     /// Diff stored at propose time.
     diff: OntologyDiff
 
-    /// Counts derived from the diff, as the kernel emits them.
-    impact: Document
+    /// Counts derived from the diff, plus the read-only impact analysis.
+    impact: OntologyImpact
 
     /// Who created the proposal.
     createdBy: String
@@ -482,11 +482,566 @@ structure OntologyProposalDetail {
     @required
     diff: OntologyDiff
 
-    /// Counts derived from the diff.
-    impact: Document
+    /// Counts derived from the diff, plus the read-only impact analysis.
+    impact: OntologyImpact
 
     /// Current pointer; absent when nothing is published.
     current: OntologyPointer
+}
+
+/// How one class or property changed between two versions.
+enum OntologyImpactChange {
+    /// The class or property exists only in the target version.
+    added
+
+    /// The class or property exists only in the baseline.
+    removed
+
+    /// The class or property exists in both; its triples changed.
+    modified
+}
+
+/// Stored diff counts kept on a proposal row.
+structure OntologyImpactCounts {
+    /// Triples the target version adds.
+    @required
+    addedTriples: Integer
+
+    /// Triples the target version removes.
+    @required
+    removedTriples: Integer
+
+    /// Number of class IRIs added.
+    @required
+    addedClasses: Integer
+
+    /// Number of class IRIs removed.
+    @required
+    removedClasses: Integer
+
+    /// Number of property IRIs added.
+    @required
+    addedProperties: Integer
+
+    /// Number of property IRIs removed.
+    @required
+    removedProperties: Integer
+
+    /// Number of properties whose `rdfs:domain` changed.
+    @required
+    domainChanges: Integer
+
+    /// Number of properties whose `rdfs:range` changed.
+    @required
+    rangeChanges: Integer
+}
+
+/// The change set the analysis was computed from.
+structure OntologyImpactChangeSet {
+    /// Counts derived from the stored diff.
+    @required
+    counts: OntologyImpactCounts
+
+    /// Class IRIs added by the target version.
+    @required
+    @length(min: 0, max: 5000)
+    addedClasses: OntologyStringList
+
+    /// Class IRIs removed by the target version.
+    @required
+    @length(min: 0, max: 5000)
+    removedClasses: OntologyStringList
+
+    /// Property IRIs added by the target version.
+    @required
+    @length(min: 0, max: 5000)
+    addedProperties: OntologyStringList
+
+    /// Property IRIs removed by the target version.
+    @required
+    @length(min: 0, max: 5000)
+    removedProperties: OntologyStringList
+
+    /// Domain changes per property.
+    @required
+    @length(min: 0, max: 5000)
+    domainChanges: OntologyDomainChangeList
+
+    /// Range changes per property.
+    @required
+    @length(min: 0, max: 5000)
+    rangeChanges: OntologyDomainChangeList
+
+    /// True when at least one breaking item exists.
+    @required
+    breaking: Boolean
+
+    /// Elements that make the change breaking.
+    @required
+    @length(min: 0, max: 5000)
+    breakingItems: OntologyBreakingItemList
+}
+
+/// One affected class.
+structure OntologyImpactClass {
+    /// Class IRI.
+    @required
+    iri: String
+
+    /// Display label; the IRI's local name when the T-Box has no label.
+    @required
+    label: String
+
+    /// How the class changed.
+    @required
+    change: OntologyImpactChange
+
+    /// Triples added under this class.
+    @required
+    addedTriples: Integer
+
+    /// Triples removed under this class.
+    @required
+    removedTriples: Integer
+}
+
+/// One affected property.
+structure OntologyImpactProperty {
+    /// Property IRI.
+    @required
+    iri: String
+
+    /// Display label; the IRI's local name when the T-Box has no label.
+    @required
+    label: String
+
+    /// How the property changed.
+    @required
+    change: OntologyImpactChange
+
+    /// Triples added under this property.
+    @required
+    addedTriples: Integer
+
+    /// Triples removed under this property.
+    @required
+    removedTriples: Integer
+
+    /// `rdfs:domain` changes recorded for this property.
+    @required
+    @length(min: 0, max: 500)
+    domainChanges: OntologyDomainChangeList
+
+    /// `rdfs:range` changes recorded for this property.
+    @required
+    @length(min: 0, max: 500)
+    rangeChanges: OntologyDomainChangeList
+}
+
+/// Instance count of one affected class.
+structure OntologyImpactClassInstances {
+    /// Class IRI.
+    @required
+    iri: String
+
+    /// Display label.
+    @required
+    label: String
+
+    /// Instances of the class across the A-Box graphs.
+    ///
+    /// Absent when no A-Box graph is configured: the count is not computable,
+    /// and absence is not the same as zero. A configured A-Box that genuinely
+    /// holds no instance reports `0`.
+    instances: Integer
+}
+
+/// Instance impact of the change.
+structure OntologyImpactInstances {
+    /// Instances across every A-Box graph.
+    ///
+    /// Absent when no A-Box graph is configured: the count is not computable,
+    /// and absence is not the same as zero. A configured A-Box with no
+    /// instances reports `0`.
+    total: Integer
+
+    /// Per-class counts, one entry per affected class.
+    @required
+    @length(min: 0, max: 5000)
+    byClass: OntologyImpactClassInstanceList
+
+    /// Where the counts came from.
+    source: String
+
+    /// Why a count is absent, e.g. `没有 A-Box 图，实例数不可算；未以 0 代替`.
+    note: String
+
+    /// Sum of `byClass[].instances` over the affected classes; A-Box only, so
+    /// absent whenever `total` is absent.
+    affectedInstances: Integer
+
+    /// A-Box graph IRIs that were scanned; absent when none is configured.
+    @length(min: 0, max: 500)
+    graphs: OntologyStringList
+}
+
+/// One class or property in the aggregation view.
+structure OntologyImpactAggregation {
+    /// Class or property IRI.
+    @required
+    iri: String
+
+    /// Display label.
+    @required
+    label: String
+
+    /// Triples added under this IRI.
+    @required
+    addedTriples: Integer
+
+    /// Triples removed under this IRI.
+    @required
+    removedTriples: Integer
+}
+
+/// Triple counts that could not be attributed to a class or property.
+structure OntologyImpactTripleCount {
+    /// Triples added.
+    @required
+    addedTriples: Integer
+
+    /// Triples removed.
+    @required
+    removedTriples: Integer
+}
+
+/// Changed triples grouped by subject class and predicate property.
+structure OntologyImpactAggregations {
+    /// Changes grouped by subject class.
+    @required
+    @length(min: 0, max: 5000)
+    byClass: OntologyImpactAggregationList
+
+    /// Changes grouped by predicate property.
+    @required
+    @length(min: 0, max: 5000)
+    byProperty: OntologyImpactAggregationList
+
+    /// Triples whose subject and predicate are neither a known class nor a
+    /// known property.
+    @required
+    unclassified: OntologyImpactTripleCount
+
+    /// True when the two versions have no triple difference.
+    @required
+    empty: Boolean
+
+    /// Why `byClass`/`byProperty` are empty.
+    emptyReason: String
+
+    /// Aggregation method, e.g. `SPARQL GROUP BY ?s ?p over (to MINUS from)`.
+    method: String
+
+    /// Row cap applied to the aggregation query.
+    rowLimit: Integer
+}
+
+/// One metric that depends on the affected classes or properties.
+structure OntologyImpactMetric {
+    /// Metric identifier.
+    @required
+    metricId: String
+
+    /// Metric display name.
+    name: String
+
+    /// Tokens or binding paths that matched, e.g. `text:invoice` or
+    /// `binding:fact_x.invoice_no`.
+    @required
+    @length(min: 0, max: 500)
+    matchedBy: OntologyStringList
+
+    /// Registries the match came from.
+    @required
+    source: String
+}
+
+/// One metric rule that depends on the affected classes or properties.
+structure OntologyImpactRule {
+    /// Metric that owns the rule.
+    @required
+    metricId: String
+
+    /// Rule identifier inside the metric's rule set.
+    ruleId: String
+
+    /// Rule severity, as the rule set declares it.
+    level: String
+
+    /// `rule_set_text` or `dependent_metric`.
+    @required
+    matchedBy: String
+
+    /// Where the rule was read from.
+    @required
+    source: String
+}
+
+/// One dictionary term whose canonical IRI is affected.
+structure OntologyImpactTerm {
+    /// Surface form the term is written as.
+    surface: String
+
+    /// Canonical IRI the surface form resolves to.
+    canonical: String
+
+    /// Language tag, e.g. `zh`.
+    lang: String
+
+    /// Where the term entry came from.
+    source: String
+
+    /// Local name of `canonical`, for display.
+    canonicalLabel: String
+}
+
+/// A registry that could not be read while computing the dependencies.
+structure OntologyImpactNote {
+    /// Registry name, e.g. `metric_definition`.
+    @required
+    source: String
+
+    /// Provider error raised while reading that registry.
+    @required
+    error: String
+}
+
+/// Metrics, rules and terms that depend on the affected IRIs.
+structure OntologyImpactDependencies {
+    /// Metrics whose definitions or bindings mention an affected IRI.
+    @required
+    @length(min: 0, max: 5000)
+    metrics: OntologyImpactMetricList
+
+    /// Metric rules that mention an affected IRI, or belong to a hit metric.
+    @required
+    @length(min: 0, max: 5000)
+    rules: OntologyImpactRuleList
+
+    /// Dictionary terms whose canonical IRI is affected.
+    @required
+    @length(min: 0, max: 5000)
+    terms: OntologyImpactTermList
+
+    /// Registries that could not be read; the analysis still returns.
+    @required
+    @length(min: 0, max: 50)
+    notes: OntologyImpactNoteList
+
+    /// True when no metric and no rule matched.
+    @required
+    empty: Boolean
+
+    /// Why nothing matched.
+    emptyReason: String
+
+    /// How the dependencies were matched.
+    method: String
+}
+
+/// One class whose instance count was independently recounted.
+structure OntologyImpactSample {
+    /// Class IRI that was sampled.
+    @required
+    iri: String
+
+    /// Count reported by the main pass.
+    @required
+    listed: Integer
+
+    /// Count the independent recount returned.
+    @required
+    recounted: Integer
+
+    /// True when `listed` and `recounted` agree.
+    @required
+    consistent: Boolean
+}
+
+/// Independent recount of a sample of the affected class counts.
+structure OntologyImpactVerification {
+    /// Classes that were recounted.
+    @required
+    @length(min: 0, max: 50)
+    sampled: OntologyImpactSampleList
+
+    /// True when every sampled class agreed.
+    ///
+    /// Absent when the counts are not computable (no A-Box graph) and when
+    /// nothing was sampled; absence is not `false`.
+    consistent: Boolean
+
+    /// Why no sample was taken, or which class disagreed.
+    reason: String
+
+    /// Recount method, e.g. `独立 SPARQL 重算（逐类 COUNT DISTINCT）`.
+    source: String
+}
+
+/// One version the analysis read.
+structure OntologyImpactVersionRef {
+    /// Version identifier.
+    versionId: OntologyVersionId
+
+    /// Semantic version.
+    semver: String
+
+    /// Canonical hash of the version.
+    contentHash: String
+
+    /// Declared triple count.
+    tripleCount: Integer
+}
+
+/// Versions the analysis read.
+structure OntologyImpactInputs {
+    /// Baseline version; absent when the analysis had no baseline.
+    from: OntologyImpactVersionRef
+
+    /// Target version.
+    to: OntologyImpactVersionRef
+}
+
+/// What the change affects, as computed at read time.
+structure OntologyImpactAffected {
+    /// Affected classes.
+    @required
+    @length(min: 0, max: 5000)
+    classes: OntologyImpactClassList
+
+    /// Affected properties.
+    @required
+    @length(min: 0, max: 5000)
+    properties: OntologyImpactPropertyList
+
+    /// Instance impact.
+    @required
+    instances: OntologyImpactInstances
+}
+
+/// Read-only change impact analysis of one proposal.
+///
+/// `readOnly` is always true: the analysis runs SPARQL reads and registry
+/// queries and writes nothing.
+structure OntologyImpactAnalysis {
+    /// Baseline version; absent when the target has no previous version.
+    from: OntologyVersionId
+
+    /// Target version.
+    @required
+    to: OntologyVersionId
+
+    /// The change set that was analysed.
+    @required
+    changeSet: OntologyImpactChangeSet
+
+    /// Classes, properties and instances the change touches.
+    @required
+    affected: OntologyImpactAffected
+
+    /// Changed triples grouped by class and property.
+    @required
+    aggregations: OntologyImpactAggregations
+
+    /// Metrics, rules and terms that depend on the affected IRIs.
+    @required
+    dependencies: OntologyImpactDependencies
+
+    /// Independent recount of a sample of the class counts.
+    @required
+    verification: OntologyImpactVerification
+
+    /// Versions the analysis read, when it had both endpoints.
+    inputs: OntologyImpactInputs
+
+    /// SHA-256 over both content hashes and the diff.
+    inputsFingerprint: String
+
+    /// True when classes, properties, metrics and rules are all empty.
+    @required
+    empty: Boolean
+
+    /// Why the analysis is empty.
+    emptyReason: String
+
+    /// When the analysis ran (ISO-8601).
+    @required
+    computedAt: String
+
+    /// Data the analysis was computed from.
+    @required
+    source: String
+
+    /// Always true; the analysis never writes.
+    @required
+    readOnly: Boolean
+}
+
+/// Why the impact analysis could not be produced.
+structure OntologyImpactError {
+    /// Stable provider code.
+    @required
+    code: String
+
+    /// Human-readable explanation.
+    @required
+    message: String
+
+    /// Code-specific detail, e.g. the version that could not be read.
+    details: Document
+}
+
+/// Impact of a proposal.
+///
+/// The counts are written when the proposal is filed. `analysis` and
+/// `analysisError` are mutually exclusive: exactly one of them is present on
+/// every read, so a caller can always tell "analysed" from "analysis failed".
+structure OntologyImpact {
+    /// Triples the target version adds.
+    addedTriples: Integer
+
+    /// Triples the target version removes.
+    removedTriples: Integer
+
+    /// Number of class IRIs added.
+    addedClasses: Integer
+
+    /// Number of class IRIs removed.
+    removedClasses: Integer
+
+    /// Number of property IRIs added.
+    addedProperties: Integer
+
+    /// Number of property IRIs removed.
+    removedProperties: Integer
+
+    /// Number of properties whose `rdfs:domain` changed.
+    domainChanges: Integer
+
+    /// Number of properties whose `rdfs:range` changed.
+    rangeChanges: Integer
+
+    /// Total instances belonging to removed classes.
+    removedClassInstances: Integer
+
+    /// Number of breaking items recorded in the diff.
+    breakingItems: Integer
+
+    /// Read-only analysis; present when the analysis succeeded.
+    analysis: OntologyImpactAnalysis
+
+    /// Why the analysis failed; present when `analysis` is absent.
+    analysisError: OntologyImpactError
 }
 
 /// One row of the hash-chained lifecycle audit log.
@@ -681,8 +1236,8 @@ structure PublishResult {
     /// Whether the caller acknowledged breaking items.
     acknowledgeBreaking: Boolean
 
-    /// Counts derived from the diff.
-    impact: Document
+    /// Counts derived from the diff, plus the read-only impact analysis.
+    impact: OntologyImpact
 
     /// Per-gate verdicts.
     gates: OntologyGateMap
@@ -1028,6 +1583,51 @@ list OntologyBlockerList {
 /// Free-form JSON documents in a lifecycle response.
 list DocumentList {
     member: Document
+}
+
+/// Affected classes in an impact analysis.
+list OntologyImpactClassList {
+    member: OntologyImpactClass
+}
+
+/// Affected properties in an impact analysis.
+list OntologyImpactPropertyList {
+    member: OntologyImpactProperty
+}
+
+/// Per-class instance counts in an impact analysis.
+list OntologyImpactClassInstanceList {
+    member: OntologyImpactClassInstances
+}
+
+/// Aggregation rows in an impact analysis.
+list OntologyImpactAggregationList {
+    member: OntologyImpactAggregation
+}
+
+/// Dependent metrics in an impact analysis.
+list OntologyImpactMetricList {
+    member: OntologyImpactMetric
+}
+
+/// Dependent rules in an impact analysis.
+list OntologyImpactRuleList {
+    member: OntologyImpactRule
+}
+
+/// Dependent terms in an impact analysis.
+list OntologyImpactTermList {
+    member: OntologyImpactTerm
+}
+
+/// Unreadable registries noticed during an impact analysis.
+list OntologyImpactNoteList {
+    member: OntologyImpactNote
+}
+
+/// Recounted classes in an impact analysis.
+list OntologyImpactSampleList {
+    member: OntologyImpactSample
 }
 
 /// List the versions of one ontology.
@@ -1435,6 +2035,116 @@ operation ListOntologyProposals {
                     domainChanges: []
                     rangeChanges: []
                     removedClassInstances: []
+                }
+            }
+            impact: {
+                addedTriples: 12
+                removedTriples: 0
+                addedClasses: 1
+                removedClasses: 0
+                addedProperties: 0
+                removedProperties: 0
+                domainChanges: 0
+                rangeChanges: 0
+                removedClassInstances: 0
+                breakingItems: 0
+                analysis: {
+                    from: "ont-1a2b3c4d5e6f"
+                    to: "ont-draft-9f8e7d6c5b4a"
+                    changeSet: {
+                        counts: {
+                            addedTriples: 12
+                            removedTriples: 0
+                            addedClasses: 1
+                            removedClasses: 0
+                            addedProperties: 0
+                            removedProperties: 0
+                            domainChanges: 0
+                            rangeChanges: 0
+                        }
+                        addedClasses: [ "urn:coa:class:Invoice" ]
+                        removedClasses: []
+                        addedProperties: []
+                        removedProperties: []
+                        domainChanges: []
+                        rangeChanges: []
+                        breaking: false
+                        breakingItems: []
+                    }
+                    affected: {
+                        classes: [
+                            {
+                                iri: "urn:coa:class:Invoice"
+                                label: "Invoice"
+                                change: "added"
+                                addedTriples: 12
+                                removedTriples: 0
+                            }
+                        ]
+                        properties: []
+                        instances: {
+                            byClass: [
+                                { iri: "urn:coa:class:Invoice", label: "Invoice" }
+                            ]
+                            source: "A-Box 未配置"
+                            note: "没有 A-Box 图，实例数不可算；未以 0 代替"
+                        }
+                    }
+                    aggregations: {
+                        byClass: [
+                            { iri: "urn:coa:class:Invoice", label: "Invoice", addedTriples: 12, removedTriples: 0 }
+                        ]
+                        byProperty: []
+                        unclassified: { addedTriples: 0, removedTriples: 0 }
+                        empty: false
+                        method: "SPARQL GROUP BY ?s ?p over (to MINUS from)"
+                    }
+                    dependencies: {
+                        metrics: []
+                        rules: []
+                        terms: []
+                        notes: []
+                        empty: true
+                        emptyReason: "无指标或规则依赖命中"
+                    }
+                    verification: {
+                        sampled: []
+                        reason: "无受影响的类可抽样"
+                    }
+                    empty: false
+                    computedAt: "2026-10-02T09:31:00Z"
+                    source: "diff + A-Box + 指标注册表（只读）"
+                    readOnly: true
+                }
+            }
+        }
+    }
+    {
+        title: "Read one proposal whose impact analysis failed"
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", ontologyId: "https://example.com/ontology/core", proposalId: "prop-6f5e4d3c2b1a" }
+        output: {
+            proposal: {
+                proposalId: "prop-6f5e4d3c2b1a"
+                versionId: "ont-draft-1029384756ab"
+                status: "proposed"
+            }
+            version: {
+                id: "ont-draft-1029384756ab"
+                semver: "1.1.0"
+                status: "proposed"
+            }
+            versionStatus: "proposed"
+            diff: {
+                to: "ont-draft-1029384756ab"
+                breaking: false
+            }
+            impact: {
+                addedTriples: 0
+                removedTriples: 0
+                analysisError: {
+                    code: "E_IMPACT_PREVIOUS_VERSION_UNREADABLE"
+                    message: "baseline version ont-1a2b3c4d5e6f could not be read"
+                    details: { versionId: "ont-1a2b3c4d5e6f" }
                 }
             }
         }
