@@ -544,6 +544,12 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/sources/{sourceId}/tables/{tableId}/keep": {
         "PUT": ("manageSource", "Source"),
     },
+    # Ingestion job history is operational metadata about the namespace's
+    # sources, so listing it carries the same authority as the other source
+    # reads. Starting a run already goes through the source write routes.
+    "/namespaces/{namespaceId}/ingestion-runs": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
     # ── Metric service ─────────────────────────────────────────────────
     # Reads → readMetric; authoring/writes → manageMetric.
     "/namespaces/{namespaceId}/metrics": {
@@ -571,6 +577,15 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
         "GET": ("readMetric", "Metric"),
     },
     "/namespaces/{namespaceId}/export-osi": {
+        "GET": ("readMetric", "Metric"),
+    },
+    # Metric-card reads added with the P5 catalog: the family rollup and the
+    # report manifest are both reads of authored metrics, so they share
+    # readMetric with the metric card routes above rather than any manage action.
+    "/namespaces/{namespaceId}/metrics/families/{familyId}": {
+        "GET": ("readMetric", "Metric"),
+    },
+    "/namespaces/{namespaceId}/metrics/report/manifest": {
         "GET": ("readMetric", "Metric"),
     },
     # ── Ontology induction ─────────────────────────────────────────────
@@ -637,6 +652,16 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     },
     "/namespaces/{namespaceId}/graph/traverse": {
         "POST": ("traverseGraph", "Namespace"),
+    },
+    # SPARQL console and answerability inspection are both read-only (RunSparql
+    # is @readonly and constrained to SELECT/ASK; CheckAnswerable reads coverage
+    # inputs), so they carry query, the same authority as POST /query — not a
+    # manage action just because the verb is POST.
+    "/namespaces/{namespaceId}/sparql": {
+        "POST": ("query", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/answerable": {
+        "POST": ("query", "Namespace"),
     },
     # DescribeSchema is a read of the namespace's ontology summary — gated
     # under the same ``viewNamespace`` action as the other schema/ontology
@@ -751,6 +776,29 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     },
     "/namespaces/{namespaceId}/documents/{documentId}/chunks": {
         "GET": ("searchDocuments", "Source"),
+    },
+    # ── Terms / dictionaries ────────────────────────────────────────────
+    # Terms are the namespace's ontology vocabulary → Ontology reads.
+    # A per-source dictionary is derived source metadata → Source reads.
+    # Refreshing one rebuilds derived state from that source, i.e. the same
+    # authority as re-scanning/reviewing it: manageSource, not manageOntology.
+    "/namespaces/{namespaceId}/terms": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/dictionaries": {
+        "GET": ("viewNamespace", "Source"),
+    },
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}": {
+        "GET": ("viewNamespace", "Source"),
+    },
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}/view": {
+        "GET": ("viewNamespace", "Source"),
+    },
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage": {
+        "GET": ("viewNamespace", "Source"),
+    },
+    "/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh": {
+        "POST": ("manageSource", "Source"),
     },
     # ── Fact candidates ─────────────────────────────────────────────────
     # Listing the review queue is metadata. Approving or rejecting writes a fact
