@@ -585,11 +585,16 @@ def _osi_metric_to_definition(
     time_grain = ""
     ontology_concepts: list[str] = []
     label: str | None = None
+    domain: str | None = None
+    evidence_basis: str | None = None
+    publishable: bool | None = None
 
     if osi_metric.custom_extensions:
         ext = osi_metric.custom_extensions
         if ext.label_error:
             raise ValueError(ext.label_error)
+        if ext.provenance_error:
+            raise ValueError(ext.provenance_error)
         label = None if ext.label is None else normalize_metric_label(ext.label)
         data_source_id = ext.data_source_id
         source_table = ext.source_table
@@ -597,6 +602,9 @@ def _osi_metric_to_definition(
         return_type = ext.return_type
         time_grain = ext.time_dimension
         ontology_concepts = ext.ontology_concepts
+        domain = ext.domain
+        evidence_basis = ext.evidence_basis
+        publishable = ext.publishable
 
     # If no data_source_id from extensions, try to resolve from datasets
     if not data_source_id and document.datasets and len(document.datasets) == 1:
@@ -637,6 +645,9 @@ def _osi_metric_to_definition(
         defined_by=caller,
         effective_from=datetime.now(UTC).strftime("%Y-%m-%d"),
         label=label,
+        domain=domain,
+        evidence_basis=evidence_basis,
+        publishable=publishable,
     )
     # The CreateMetric contract bounds: a metric stored outside them could not be
     # fetched, updated or deleted afterwards. Raised as ValueError so every import

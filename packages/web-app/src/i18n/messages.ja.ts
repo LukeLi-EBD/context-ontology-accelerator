@@ -1601,6 +1601,9 @@ export const MESSAGES_JA = {
   "Properties whose domain class is not in this proposal.":
     "ドメインクラスがこの提案に含まれないプロパティです。",
   Domain: "ドメイン",
+  Governance: "ガバナンス",
+  "Evidence basis": "根拠区分",
+  Publishable: "公開可否",
   Pending: "レビュー待ち",
   "Accepting…": "承認中…",
   Accepted: "承認済み",

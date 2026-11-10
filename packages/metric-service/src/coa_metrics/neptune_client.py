@@ -230,6 +230,12 @@ class MetricDefinition:
     # on rdfs:label or SKOS: Tier 1 lists metrics by rdfs:label and Tier 2 reads
     # skos:altLabel as synonyms, and nothing may match on the label.
     label: str | None = None
+    # COA-private provenance extensions (not OSI standard fields). ``None`` is
+    # the explicit "unknown" state: no triple is written, and readers must not
+    # resolve it to false/empty. ``publishable`` is three-state.
+    domain: str | None = None
+    evidence_basis: str | None = None
+    publishable: bool | None = None
 
 
 # ── Neptune Metric Client ───────────────────────────────────────────────
@@ -590,6 +596,15 @@ class MetricNeptuneClient:
             # Untagged plain literal: metric-service does not know the namespace
             # language, and readers take the label only from the untagged literal.
             triples.append(f'{_iri(uri)} {_iri(COA_VOCAB + "displayLabel")} "{_esc(metric.label)}" .')
+        # Provenance is COA-private, not OSI. Unknown writes no triple at all so
+        # it stays distinguishable from an explicit false.
+        if metric.domain is not None:
+            triples.append(f'{_iri(uri)} {_iri(COA_VOCAB + "domain")} "{_esc(metric.domain)}" .')
+        if metric.evidence_basis is not None:
+            triples.append(f'{_iri(uri)} {_iri(COA_VOCAB + "evidenceBasis")} "{_esc(metric.evidence_basis)}" .')
+        if metric.publishable is not None:
+            publishable_literal = f'"{"true" if metric.publishable else "false"}"^^{_iri(XSD + "boolean")}'
+            triples.append(f"{_iri(uri)} {_iri(COA_VOCAB + 'publishable')} {publishable_literal} .")
 
         # Expression dialects — stored as JSON string
         dialects_json = json.dumps(
@@ -645,6 +660,14 @@ class MetricNeptuneClient:
                     props["label"] = o_val
             elif p == COA_VOCAB + "dataSourceId":
                 props["data_source_id"] = o_val
+            elif p == COA_VOCAB + "domain":
+                props["domain"] = o_val
+            elif p == COA_VOCAB + "evidenceBasis":
+                props["evidence_basis"] = o_val
+            elif p == COA_VOCAB + "publishable":
+                # xsd:boolean literal; readers keep the three-state shape — a
+                # missing triple stays None (unknown), never False.
+                props["publishable"] = o_val.strip().lower() == "true"
             elif p == COA_VOCAB + "sourceTable":
                 props["source_table"] = o_val
             elif p == COA_VOCAB + "expressionDialects":
@@ -687,6 +710,9 @@ class MetricNeptuneClient:
             defined_by=props.get("defined_by"),
             effective_from=props.get("effective_from"),
             label=props.get("label"),
+            domain=props.get("domain"),
+            evidence_basis=props.get("evidence_basis"),
+            publishable=props.get("publishable"),
         )
 
 

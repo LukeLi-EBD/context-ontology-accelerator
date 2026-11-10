@@ -138,6 +138,15 @@ class OsiCustomExtension:
     # ``label_error`` records it so import fails that metric alone.
     label: str | None = None
     label_error: str | None = None
+    # COA-private provenance extensions (not OSI standard fields). ``None`` is
+    # the explicit "unknown" state for all three; it must never be collapsed
+    # into ``false`` or an empty string. ``publishable`` keeps the full
+    # three-state semantics: True / False / None.
+    domain: str | None = None
+    evidence_basis: str | None = None
+    publishable: bool | None = None
+    # A wrongly typed provenance value fails that metric alone, like label.
+    provenance_error: str | None = None
 
 
 @dataclass
@@ -191,6 +200,22 @@ def _opt_str(mapping: dict[str, Any], key: str) -> str:
     """
     value = mapping.get(key)
     return "" if value is None else str(value)
+
+
+def _opt_provenance_str(mapping: dict[str, Any], key: str, errors: list[str]) -> str | None:
+    """Read an optional provenance scalar, preserving the "unknown" state.
+
+    ``None`` means the key is absent (or explicit YAML null) — unknown. An empty
+    string is also unknown: it is not a domain/evidence value. Any other
+    non-string type is a contract violation and is reported instead of coerced.
+    """
+    value = mapping.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        errors.append(f"{key} must be a string")
+        return None
+    return value if value else None
 
 
 def _opt_str_list(mapping: dict[str, Any], key: str) -> list[str]:
@@ -496,6 +521,20 @@ def _parse_custom_extensions(raw_extensions: Any, path: str) -> OsiCustomExtensi
                 label = raw_label
             elif raw_label is not None:
                 label_error = "label must be a string"
+
+            # Provenance fields: absent / null means unknown, an empty string is
+            # treated as unknown too (an empty domain is not a domain). A value of
+            # the wrong type fails this metric instead of being coerced.
+            provenance_errors: list[str] = []
+            domain = _opt_provenance_str(data, "domain", provenance_errors)
+            evidence_basis = _opt_provenance_str(data, "evidence_basis", provenance_errors)
+            raw_publishable = data.get("publishable")
+            publishable: bool | None = None
+            if isinstance(raw_publishable, bool):
+                publishable = raw_publishable
+            elif raw_publishable is not None:
+                provenance_errors.append("publishable must be a boolean")
+
             return OsiCustomExtension(
                 data_source_id=_opt_str(data, "data_source_id"),
                 source_table=_opt_str(data, "source_table"),
@@ -507,6 +546,10 @@ def _parse_custom_extensions(raw_extensions: Any, path: str) -> OsiCustomExtensi
                 effective_from=_opt_str(data, "effective_from"),
                 label=label,
                 label_error=label_error,
+                domain=domain,
+                evidence_basis=evidence_basis,
+                publishable=publishable,
+                provenance_error="; ".join(provenance_errors) or None,
             )
 
     return None
@@ -593,6 +636,14 @@ def _serialize_metric(metric: OsiMetric) -> dict[str, Any]:
         # Left out when there is no label, so exports of unlabelled metrics do not change.
         if ext.label:
             data["label"] = ext.label
+        # COA-private provenance extensions. Only emitted when known; an unknown
+        # field stays absent rather than round-tripping as false/empty.
+        if ext.domain is not None:
+            data["domain"] = ext.domain
+        if ext.evidence_basis is not None:
+            data["evidence_basis"] = ext.evidence_basis
+        if ext.publishable is not None:
+            data["publishable"] = ext.publishable
 
         if data:
             result["custom_extensions"] = [{"vendor_name": OSI_VENDOR_NAME, "data": data}]

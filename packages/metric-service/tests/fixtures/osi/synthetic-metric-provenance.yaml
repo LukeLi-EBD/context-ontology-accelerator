@@ -1,0 +1,60 @@
+# SYNTHETIC TEST FIXTURE — not real customer data.
+# Used only to prove the COA-private provenance chain:
+#   bundle -> metric graph -> GetMetric -> metric detail UI
+# The three metrics intentionally cover publishable = true / false / unknown.
+# Unknown means the key is absent; it must never be materialised as false or "".
+osi_spec_version: "1.0"
+metrics:
+  - name: synthetic_provenance_true
+    description: "Synthetic fixture: provenance known, publishable true."
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "SELECT COUNT(*) FROM platform.bank_loan_account"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: platform-demo
+          source_table: platform.bank_loan_account
+          unit: count
+          return_type: "integer"
+          time_dimension: day
+          label: "Synthetic provenance true"
+          # COA-private extensions, not OSI standard fields.
+          domain: bank
+          evidence_basis: regulatory
+          publishable: true
+  - name: synthetic_provenance_false
+    description: "Synthetic fixture: provenance known, publishable false."
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "SELECT COUNT(*) FROM platform.bank_loan_account"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: platform-demo
+          source_table: platform.bank_loan_account
+          unit: count
+          return_type: "integer"
+          time_dimension: day
+          label: "Synthetic provenance false"
+          # false must survive as false, not be dropped as a falsy value.
+          domain: customer
+          evidence_basis: industry
+          publishable: false
+  - name: synthetic_provenance_unknown
+    description: "Synthetic fixture: provenance unknown (keys absent)."
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "SELECT COUNT(*) FROM platform.bank_loan_account"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: platform-demo
+          source_table: platform.bank_loan_account
+          unit: count
+          return_type: "integer"
+          time_dimension: day
+          label: "Synthetic provenance unknown"

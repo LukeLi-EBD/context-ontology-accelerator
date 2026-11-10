@@ -209,6 +209,9 @@ def _metric_to_osi(metric: MetricDefinition) -> OsiMetric:
         defined_by=metric.defined_by or "",
         effective_from=metric.effective_from or "",
         label=metric.label,
+        domain=metric.domain,
+        evidence_basis=metric.evidence_basis,
+        publishable=metric.publishable,
     )
 
     return OsiMetric(

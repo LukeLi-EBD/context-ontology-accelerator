@@ -1473,6 +1473,25 @@ export interface MetricDefinition {
    * @public
    */
   effectiveFrom?: string | undefined;
+
+  /**
+   * COA-private provenance: business domain. Absent means unknown.
+   * @public
+   */
+  domain?: string | undefined;
+
+  /**
+   * COA-private provenance: evidence basis. Absent means unknown.
+   * @public
+   */
+  evidenceBasis?: string | undefined;
+
+  /**
+   * COA-private provenance: publishable. Absent means unknown; false is
+   * "not publishable", not a missing value.
+   * @public
+   */
+  publishable?: boolean | undefined;
 }
 
 /**

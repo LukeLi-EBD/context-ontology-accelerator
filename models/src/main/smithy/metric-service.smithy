@@ -236,6 +236,19 @@ structure MetricDefinition {
 
     /// Set by server — date the metric became effective.
     effectiveFrom: String
+
+    /// COA-private provenance: business domain. Absent means unknown.
+    /// Not an OSI standard field; migrate when OSI standardises an equivalent.
+    domain: String
+
+    /// COA-private provenance: evidence basis. Absent means unknown.
+    /// Not an OSI standard field; migrate when OSI standardises an equivalent.
+    evidenceBasis: String
+
+    /// COA-private provenance: publishable. Absent means unknown; an explicit
+    /// false is "not publishable", not a missing value.
+    /// Not an OSI standard field; migrate when OSI standardises an equivalent.
+    publishable: Boolean
 }
 
 list MetricDefinitionList {

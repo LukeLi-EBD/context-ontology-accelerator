@@ -316,6 +316,14 @@ def _metric_to_dict(metric: MetricDefinition) -> dict[str, Any]:
         result["definedBy"] = metric.defined_by
     if metric.effective_from:
         result["effectiveFrom"] = metric.effective_from
+    # Provenance is COA-private and three-state. Unknown stays absent: clients
+    # must render "unknown", never infer false or an empty string from omission.
+    if metric.domain is not None:
+        result["domain"] = metric.domain
+    if metric.evidence_basis is not None:
+        result["evidenceBasis"] = metric.evidence_basis
+    if metric.publishable is not None:
+        result["publishable"] = metric.publishable
     return result
 
 

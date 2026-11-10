@@ -13,6 +13,7 @@ from coa_metrics.neptune_client import (
     COA_VOCAB,
     OWL,
     RDFS,
+    XSD,
     MetricAiContext,
     MetricDefinition,
     MetricDialect,
@@ -147,6 +148,53 @@ class TestCreateMetric:
         # Non-IRI concepts should NOT appear as governedMetricFor triples
         assert "governedMetricFor" not in sparql
 
+    @patch("coa_metrics.neptune_client._sparql_query")
+    @patch("coa_metrics.neptune_client._sparql_update")
+    def test_create_writes_three_state_provenance(
+        self, mock_update: patch, mock_query: patch, client: MetricNeptuneClient
+    ) -> None:
+        """publishable=false must be written as xsd:boolean false, not dropped."""
+        mock_query.return_value = {"boolean": True}
+        metric = MetricDefinition(
+            name="provenance_false",
+            description="desc",
+            expression_dialects=[MetricDialect(dialect="trino", expression="COUNT(*)")],
+            data_source_id="ds-1",
+            source_table="t",
+            domain="bank",
+            evidence_basis="regulatory",
+            publishable=False,
+        )
+        client.create_metric("ns", metric)
+
+        sparql = mock_update.call_args[0][0]
+        assert COA_VOCAB + "domain" in sparql
+        assert '"bank"' in sparql
+        assert COA_VOCAB + "evidenceBasis" in sparql
+        assert '"regulatory"' in sparql
+        assert f'"false"^^{_iri(XSD + "boolean")}' in sparql
+
+    @patch("coa_metrics.neptune_client._sparql_query")
+    @patch("coa_metrics.neptune_client._sparql_update")
+    def test_create_omits_unknown_provenance(
+        self, mock_update: patch, mock_query: patch, client: MetricNeptuneClient
+    ) -> None:
+        """Unknown writes no triple at all; it is never materialised as false/empty."""
+        mock_query.return_value = {"boolean": True}
+        metric = MetricDefinition(
+            name="provenance_unknown",
+            description="desc",
+            expression_dialects=[MetricDialect(dialect="trino", expression="COUNT(*)")],
+            data_source_id="ds-1",
+            source_table="t",
+        )
+        client.create_metric("ns", metric)
+
+        sparql = mock_update.call_args[0][0]
+        assert COA_VOCAB + "domain" not in sparql
+        assert COA_VOCAB + "evidenceBasis" not in sparql
+        assert COA_VOCAB + "publishable" not in sparql
+
 
 # ── Get tests ───────────────────────────────────────────────────────────
 
@@ -183,6 +231,39 @@ class TestGetMetric:
         assert len(metric.expression_dialects) == 1
         assert metric.unit == "count"
         assert metric.ontology_concepts == [f"{GRAPH_BASE_URI}/namespace/ns/ontology/x/Order"]
+
+    @patch("coa_metrics.neptune_client._sparql_query")
+    def test_get_preserves_provenance_three_state(self, mock_query: patch, client: MetricNeptuneClient) -> None:
+        mock_query.return_value = {
+            "results": {
+                "bindings": [
+                    {"p": {"value": COA_VOCAB + "domain"}, "o": {"value": "bank"}},
+                    {"p": {"value": COA_VOCAB + "evidenceBasis"}, "o": {"value": "regulatory"}},
+                    {"p": {"value": COA_VOCAB + "publishable"}, "o": {"value": "false"}},
+                ]
+            }
+        }
+
+        metric = client.get_metric("test-ns", "provenance_false")
+
+        assert metric is not None
+        assert metric.domain == "bank"
+        assert metric.evidence_basis == "regulatory"
+        # A stored false must come back as False, not None.
+        assert metric.publishable is False
+
+    @patch("coa_metrics.neptune_client._sparql_query")
+    def test_get_unknown_provenance_stays_none(self, mock_query: patch, client: MetricNeptuneClient) -> None:
+        mock_query.return_value = {
+            "results": {"bindings": [{"p": {"value": RDFS + "comment"}, "o": {"value": "Unknown"}}]}
+        }
+
+        metric = client.get_metric("test-ns", "provenance_unknown")
+
+        assert metric is not None
+        assert metric.domain is None
+        assert metric.evidence_basis is None
+        assert metric.publishable is None
 
     @patch("coa_metrics.neptune_client._sparql_query")
     def test_get_returns_none_when_not_found(self, mock_query: patch, client: MetricNeptuneClient) -> None:

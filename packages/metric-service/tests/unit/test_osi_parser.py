@@ -431,6 +431,145 @@ class TestSerializeOsiYaml:
         assert doc1.datasets[0].name == doc2.datasets[0].name
 
 
+# ── Provenance Extension Tests (COA-private) ────────────────────────────
+
+
+PROVENANCE_OSI_YAML = """\
+osi_spec_version: "1.0"
+metrics:
+  - name: synthetic_provenance_true
+    description: "Synthetic provenance: true"
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(*)"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: ds-synthetic
+          source_table: synthetic_table
+          domain: bank
+          evidence_basis: regulatory
+          publishable: true
+  - name: synthetic_provenance_false
+    description: "Synthetic provenance: false"
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(*)"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: ds-synthetic
+          source_table: synthetic_table
+          domain: customer
+          evidence_basis: industry
+          publishable: false
+  - name: synthetic_provenance_unknown
+    description: "Synthetic provenance: unknown"
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(*)"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: ds-synthetic
+          source_table: synthetic_table
+"""
+
+
+class TestProvenanceExtensions:
+    """The three COA-private provenance fields must keep true / false / unknown distinct."""
+
+    def test_parses_three_publishable_states(self) -> None:
+        result = parse_osi_yaml(PROVENANCE_OSI_YAML)
+        assert result.success
+        by_name = {m.name: m for m in result.document.metrics}
+
+        true_ext = by_name["synthetic_provenance_true"].custom_extensions
+        assert true_ext.domain == "bank"
+        assert true_ext.evidence_basis == "regulatory"
+        assert true_ext.publishable is True
+        assert true_ext.provenance_error is None
+
+        false_ext = by_name["synthetic_provenance_false"].custom_extensions
+        assert false_ext.publishable is False
+
+        unknown_ext = by_name["synthetic_provenance_unknown"].custom_extensions
+        # Absent keys are unknown, not false and not an empty string.
+        assert unknown_ext.domain is None
+        assert unknown_ext.evidence_basis is None
+        assert unknown_ext.publishable is None
+
+    def test_wrong_types_fail_only_that_metric(self) -> None:
+        content = """\
+osi_spec_version: "1.0"
+metrics:
+  - name: bad_provenance
+    description: "Wrong types"
+    expression:
+      dialects:
+        - dialect: ANSI_SQL
+          expression: "COUNT(*)"
+    custom_extensions:
+      - vendor_name: COA
+        data:
+          data_source_id: ds-synthetic
+          source_table: synthetic_table
+          domain: 42
+          evidence_basis: [regulatory]
+          publishable: "true"
+"""
+        result = parse_osi_yaml(content)
+        # Parsing keeps the document usable; the metric records a per-metric error
+        # that import turns into a skip-with-warning.
+        assert result.success
+        ext = result.document.metrics[0].custom_extensions
+        assert ext.domain is None
+        assert ext.evidence_basis is None
+        assert ext.publishable is None
+        assert ext.provenance_error is not None
+        assert "domain must be a string" in ext.provenance_error
+        assert "evidence_basis must be a string" in ext.provenance_error
+        assert "publishable must be a boolean" in ext.provenance_error
+
+    def test_serialize_writes_known_values_and_omits_unknown(self) -> None:
+        doc = OsiDocument(
+            metrics=[
+                OsiMetric(
+                    name="known",
+                    description="Known",
+                    expression=[OsiDialectExpression(dialect="ANSI_SQL", expression="COUNT(*)")],
+                    custom_extensions=OsiCustomExtension(
+                        data_source_id="ds-1",
+                        source_table="t",
+                        domain="bank",
+                        evidence_basis="regulatory",
+                        publishable=False,
+                    ),
+                ),
+                OsiMetric(
+                    name="unknown",
+                    description="Unknown",
+                    expression=[OsiDialectExpression(dialect="ANSI_SQL", expression="COUNT(*)")],
+                    custom_extensions=OsiCustomExtension(data_source_id="ds-1", source_table="t"),
+                ),
+            ],
+        )
+        parsed = parse_osi_yaml(serialize_osi_yaml(doc))
+        assert parsed.success
+        by_name = {m.name: m.custom_extensions for m in parsed.document.metrics}
+
+        assert by_name["known"].domain == "bank"
+        assert by_name["known"].evidence_basis == "regulatory"
+        # false must survive the round trip rather than being dropped as falsy.
+        assert by_name["known"].publishable is False
+        assert by_name["unknown"].domain is None
+        assert by_name["unknown"].evidence_basis is None
+        assert by_name["unknown"].publishable is None
+
+
 # ── AI Context Parsing Tests ────────────────────────────────────────────
 
 

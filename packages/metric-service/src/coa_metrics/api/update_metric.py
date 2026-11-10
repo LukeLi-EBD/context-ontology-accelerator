@@ -255,4 +255,9 @@ def _build_updated_metric(
         effective_from=existing.effective_from or datetime.now(UTC).strftime("%Y-%m-%d"),
         # Full replace, like unit and returnType: an absent or null label clears it.
         label=request.label,
+        # Provenance is bundle-only (COA-private extensions) and has no input in
+        # UpdateMetric, so carry the stored values through instead of wiping them.
+        domain=existing.domain,
+        evidence_basis=existing.evidence_basis,
+        publishable=existing.publishable,
     )

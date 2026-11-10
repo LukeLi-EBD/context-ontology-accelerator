@@ -52,6 +52,11 @@ export interface MetricDefinition extends Required<
   ontologyConcepts?: string[];
   definedBy?: string;
   effectiveFrom?: string;
+  // COA-private provenance, carried through OSI custom_extensions. Absent means
+  // unknown; never coalesce it to false or an empty string.
+  domain?: string;
+  evidenceBasis?: string;
+  publishable?: boolean;
 }
 
 /** Input for create/update — excludes namespaceId (passed via URL). */

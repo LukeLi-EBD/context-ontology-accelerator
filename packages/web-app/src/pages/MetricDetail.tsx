@@ -92,6 +92,14 @@ export const MetricDetail: React.FC = () => {
     return <Alert type="warning">{t("Metric not found.")}</Alert>;
   }
 
+  // Three-state provenance: absent is "unknown", and must stay visually distinct
+  // from an explicit false ("No").
+  const provenanceText = (value: string | boolean | undefined) => {
+    if (value === undefined) return t("Unknown");
+    if (typeof value === "boolean") return value ? t("Yes") : t("No");
+    return value;
+  };
+
   return (
     <SpaceBetween size="l">
       {/* Overview */}
@@ -155,6 +163,24 @@ export const MetricDetail: React.FC = () => {
           <div>
             <Box variant="awsui-key-label">{t("Default time grain")}</Box>
             <div>{metric.defaultTimeGrain ?? "—"}</div>
+          </div>
+        </ColumnLayout>
+      </Container>
+
+      {/* Governance — COA-private provenance from the bundle's custom_extensions */}
+      <Container header={<Header variant="h2">{t("Governance")}</Header>}>
+        <ColumnLayout columns={3} variant="text-grid">
+          <div>
+            <Box variant="awsui-key-label">{t("Domain")}</Box>
+            <div>{provenanceText(metric.domain)}</div>
+          </div>
+          <div>
+            <Box variant="awsui-key-label">{t("Evidence basis")}</Box>
+            <div>{provenanceText(metric.evidenceBasis)}</div>
+          </div>
+          <div>
+            <Box variant="awsui-key-label">{t("Publishable")}</Box>
+            <div>{provenanceText(metric.publishable)}</div>
           </div>
         </ColumnLayout>
       </Container>

@@ -507,6 +507,7 @@ const _eC = "embeddingCount";
 const _eCx = "extractionConfig";
 const _eE = "executionEngine";
 const _eF = "effectiveFrom";
+const _evb = "evidenceBasis";
 const _eI = "expiresIn";
 const _eIS = "expiresInSeconds";
 const _eIx = "externalId";
@@ -595,6 +596,7 @@ const _jN = "jsonName";
 const _k = "kind";
 const _ke = "key";
 const _l = "label";
+const _pub = "publishable";
 const _lC = "llmCalls";
 const _lF = "llmFailures";
 const _lSA = "lastScanAt";
@@ -1193,8 +1195,8 @@ export var MetricAiContext$: StaticStructureSchema = [3, n7, _MAC,
 ];
 export var MetricDefinition$: StaticStructureSchema = [3, n7, _MD,
   0,
-  [_na, _des, _ex, _dSI, _sT, _mIe, _nI, _l, _dTG, _u, _rT, _aC, _oC, _dB, _eF],
-  [0, 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0, 0, 0], 5
+  [_na, _des, _ex, _dSI, _sT, _mIe, _nI, _l, _dTG, _u, _rT, _aC, _oC, _dB, _eF, _do, _evb, _pub],
+  [0, 0, () => MetricExpression$, 0, 0, 0, 0, 0, 0, 0, 0, () => MetricAiContext$, 64 | 0, 0, 0, 0, 0, 2], 5
 ];
 export var MetricDialect$: StaticStructureSchema = [3, n7, _MDe,
   0,
