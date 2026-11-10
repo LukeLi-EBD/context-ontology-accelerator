@@ -191,9 +191,9 @@ describe("ApiStack WAF WebACL", () => {
   };
 
   it("keeps the synthesized template well under the 1 MB CloudFormation limit", () => {
-    // The merged OpenAPI body is inlined into the template, so every modeled
-    // operation, error response and constraint grows it. Fail at 900 KB to leave
-    // headroom before a deploy is rejected outright.
+    // The merged OpenAPI body ships as an S3 asset (ApiDefinition.fromAsset),
+    // so the spec itself no longer counts against the template ceiling. Keep
+    // failing at 900 KB so unrelated template growth still trips the wire.
     const size = Buffer.byteLength(JSON.stringify(mkApi().toJSON()));
     expect(size).toBeLessThan(900 * 1024);
   });
@@ -470,12 +470,7 @@ describe("ApiStack GET /health", () => {
   };
 
   /** The OpenAPI body API Gateway is created from. */
-  const specBody = (stack: ApiStack): Record<string, any> => {
-    const apis = Template.fromStack(stack).findResources(
-      "AWS::ApiGateway::RestApi",
-    );
-    return Object.values(apis)[0].Properties.Body;
-  };
+  const specBody = (stack: ApiStack): Record<string, any> => stack.apiSpec;
 
   const healthGet = (stack: ApiStack): Record<string, any> =>
     specBody(stack).paths["/health"].get;
@@ -591,10 +586,7 @@ describe("Data-layer API authentication", () => {
       resourceRoleMappingsTable: mkTable("RRM"),
       cacheInvalidationTable: mkTable("Cache"),
     });
-    const apis = Template.fromStack(stack).findResources(
-      "AWS::ApiGateway::RestApi",
-    );
-    deployedSpec = Object.values(apis)[0].Properties.Body as OpenApiSpec;
+    deployedSpec = stack.apiSpec as OpenApiSpec;
     return deployedSpec;
   };
 
