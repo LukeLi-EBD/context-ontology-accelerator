@@ -2618,4 +2618,34 @@ export const MESSAGES_JA = {
   triples: "トリプル",
   conforms: "適合",
   violations: "違反",
+  // P5 metric card: family view, bindings and external status.
+  "External status": "外部ステータス",
+  "Path: {path}": "経路: {path}",
+  Families: "ファミリー",
+  "All metrics": "すべてのメトリクス",
+  "{count} variants": "バリエーション {count} 件",
+  "{count} external": "外部 {count} 件",
+  "No metric families in this namespace.":
+    "この名前空間にはメトリクスファミリーがありません。",
+  Bound: "バインド済み",
+  "Family variants": "ファミリーバリエーション",
+  "Variants answer the same business question with a different formula, window or denominator.":
+    "バリエーションは同じ業務上の問いに対し、計算式・期間・分母を変えて回答します。",
+  Differs: "差異あり",
+  "Class and field bindings": "クラスとフィールドのバインディング",
+  "Field bindings come from the metric's physical binding. Bindings carry a column name, not an IRI, so the entity-page link resolves that column against an ontology class of the same name.":
+    "フィールドバインディングはメトリクスの物理バインディングに由来します。バインディングは IRI ではなく列名を持つため、エンティティページへのリンクは同名のオントロジークラスで列名を解決します。",
+  "Class binding": "クラスバインディング",
+  "No ontology class matches this metric's grain ({grain}).":
+    "このメトリクスの粒度（{grain}）に一致するオントロジークラスはありません。",
+  "Field bindings": "フィールドバインディング",
+  "Fact table": "ファクトテーブル",
+  "Entity column": "エンティティ列",
+  "Value expression": "値の式",
+  Aggregate: "集計",
+  Filter: "フィルター",
+  Window: "期間",
+  Open: "開く",
+  "No field bindings recorded for this metric version.":
+    "このメトリクスバージョンにはフィールドバインディングが登録されていません。",
 } as const;

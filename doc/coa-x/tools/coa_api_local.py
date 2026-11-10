@@ -559,6 +559,10 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/metrics", METRICS),
     ("/namespaces/{namespaceId}/metrics/{name}", METRICS),
     ("/namespaces/{namespaceId}/metrics/validate", METRICS),
+    # P5 metric-catalog reads (F55/F57): the governed family index and the
+    # report manifest live in the kernel; expose them under the contract path.
+    ("/namespaces/{namespaceId}/metrics/report/manifest", KERNEL),
+    ("/namespaces/{namespaceId}/metrics/families/{familyId}", KERNEL),
     ("/namespaces/{namespaceId}/bulk-delete-metrics", METRICS),
     ("/namespaces/{namespaceId}/import-osi", METRICS),
     ("/namespaces/{namespaceId}/import-osi/upload-url", METRICS),
@@ -670,6 +674,10 @@ ROUTES: list[tuple[str, str]] = [
     # GetMetric (F100): the platform metric card now carries `fieldBindings`,
     # so the read has to be reachable locally instead of only inside the kernel.
     ("/metrics/{metricId}", KERNEL),
+    # F54: the metric card resolves its grain to an ontology class and offers an
+    # entity-page hop, so the console needs the kernel's browse reads.
+    ("/browse/ontology/tree", KERNEL),
+    ("/browse/ontology/instances", KERNEL),
     # GetAnswerQuality (F86–F89): golden-set rerun, read-only.
     ("/answer/quality", KERNEL),
     ("/system-health", ONTOLOGY),
@@ -1058,6 +1066,33 @@ def _kernel_translate(
     if template == "/metrics/{metricId}":
         metric_id = path_params.get("metricId", "")
         return "GET", f"/metrics/{quote(metric_id, safe='')}", None
+
+    if template == "/namespaces/{namespaceId}/metrics/report/manifest":
+        q = query or {}
+        params = {
+            key: q[key]
+            for key in ("scope", "domain", "evidenceBasis", "publishable")
+            if q.get(key) not in (None, "")
+        }
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/metrics/report/manifest{suffix}", None
+
+    if template == "/namespaces/{namespaceId}/metrics/families/{familyId}":
+        family_id = path_params.get("familyId", "")
+        return "GET", f"/metrics/report/families/{quote(family_id, safe='')}", None
+
+    if template == "/browse/ontology/tree":
+        return "GET", "/browse/ontology/tree", None
+
+    if template == "/browse/ontology/instances":
+        q = query or {}
+        params = {
+            key: q[key]
+            for key in ("class", "limit", "offset")
+            if q.get(key) not in (None, "")
+        }
+        suffix = f"?{urlencode(params)}" if params else ""
+        return "GET", f"/browse/ontology/instances{suffix}", None
 
     if template == "/entities/{entityId}/provenance":
         iri = path_params.get("entityId", "")

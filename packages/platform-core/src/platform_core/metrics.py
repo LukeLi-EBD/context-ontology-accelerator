@@ -15,7 +15,7 @@ from typing import Any
 
 from .adapters.metadata_pg import MetadataPg
 from .errors import PortError
-from . import source_ref
+from . import metric_external, source_ref
 
 PUBLISH_CODE = "E_METRIC_NOT_PUBLISHABLE"
 DISABLED_CODE = "E_METRIC_FORMULA_DISABLED"
@@ -40,7 +40,8 @@ _COMPUTE_COLUMNS = _COLUMNS + (
 
 _DETAIL_COLUMNS = _COLUMNS + (
     ", definition, formula_text, denominator_text, observation_period, "
-    "granularity, provenance_label, unit, definition_version"
+    "granularity, grain, provenance_label, unit, definition_version, "
+    "computability_tier"
 )
 
 _AGGREGATES = {"sum", "max", "min", "avg", "count", "count_distinct"}
@@ -146,6 +147,9 @@ def _card(row: dict[str, Any], detail: bool = False) -> dict[str, Any]:
                 "denominatorText": row.get("denominator_text"),
                 "observationPeriodText": row.get("observation_period"),
                 "granularityText": row.get("granularity"),
+                # F54: the grain code is what the console matches against the
+                # ontology class local name; the prose text is display-only.
+                "grain": row.get("grain"),
                 "provenanceLabel": row.get("provenance_label"),
                 "unit": row.get("unit"),
                 "definitionVersion": row.get("definition_version"),
@@ -200,9 +204,22 @@ class MetricService:
         card = _card(row, detail=True)
         # Field bindings let the metric page answer "which entity/column does
         # this metric bind to?" — the reverse of the entity page's lookup.
-        card["fieldBindings"] = self._field_bindings(
-            metric_id, row.get("definition_version")
+        bindings = self._field_bindings(metric_id, row.get("definition_version"))
+        card["fieldBindings"] = bindings
+        # Unbound is a first-class state here: 32 of the 85 governed metrics
+        # have no field binding yet, and an empty sourceTable must never be
+        # invented to hide that.
+        card["bindingStatus"] = "bound" if bindings else "unbound"
+        judgement = metric_external.judgement(row)
+        card["externalEligible"] = judgement["eligible"]
+        card["externalStatus"] = judgement["status"]
+        card["externalLabel"] = judgement["label"]
+        card["externalReason"] = judgement["reason"]
+        family_id = row.get("variant_of") or (
+            metric_id if row.get("output_mode") == "index" else None
         )
+        card["familyId"] = family_id
+        card["variantMetricIds"] = self.variants(family_id) if family_id else []
         return card
 
     def _field_bindings(
