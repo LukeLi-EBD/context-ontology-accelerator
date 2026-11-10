@@ -1,2 +1,0 @@
-2026-11-10 18:24:55 [info     ] authorization_file_loaded      path=C:\Users\cpslau\AppData\Local\Temp\coa-local-stack\serve\authz.json principal_count=1 roles=['default', 'platform-admin']
-2026-11-10 18:24:55 [info     ] upstream_client_resolved       interface=AuthorizationPolicies provider=local-file

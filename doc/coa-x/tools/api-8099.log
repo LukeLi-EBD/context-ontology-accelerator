@@ -1,2 +1,0 @@
-[api] metadata catalog -> json-snapshot (LocalCatalogClient)
-[api] object store -> upstream s3 (provider=unset)
