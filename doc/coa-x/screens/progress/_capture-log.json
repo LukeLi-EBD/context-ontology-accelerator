@@ -1,0 +1,97 @@
+{
+  "capturedAt": "2026-11-10T01:00:54.308Z",
+  "results": [
+    {
+      "file": "01-home.png",
+      "url": "/",
+      "note": "COA 首页 / Dashboard",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 1175,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: UI Smoke Test\nCOA\nHome\nCOA\nHome\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\nPolicy\nCoverage\nParty\nClaim\nPayment\nAgent\nEndorsement\nAI Platform · Context Layer\nContext Ontology Accelerator\nThe governed context layer for enterprise AI.\n\nConnect to your Glue and SageMaker catalogs, induce a W3C-standard semantic model, and serve it to analysts and AI agents over MCP.\n\nWelcome, Local Dev. Create a namespace and connect your first source in a few guided steps.\n\nGet started\nView namespaces\nHow it works\nScan\n\nPoint Context Ontology Accelerator at your Glue and SageMaker catalogs. It inventories tables and columns, then previews AI-generated business context for your review.\n\nOntology\n\nDraft a W3C-standard ontology over scanned catalogs. Author validation rules, define governed metrics, and publish through a versioned workflow.\n\nServe\n\nExpose the governed surface to analysts and agents. Every request flows through policy enforcement, with every decision logged.\n\nv0.3.9",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "pageErrors": []
+    },
+    {
+      "file": "02-documents.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/documents",
+      "note": "文档库",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 816,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nDemo Namespace\nDocuments\nCOA\nDemo Namespace\nDocuments\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\nDocuments (5)\nAll statuses\nUpload document\n\nUpload a document and follow its ingestion: chunks, extraction, and review.\n\nTitle\n\t\nStatus\n\t\nChunks\n\t\nLast updated\nTitle\n\t\nStatus\n\t\nChunks\n\t\nLast updated\n\n\ne2e-ledger-20261110.txt\n\t\nIndexed\n\t\n1\n\t\n2026/11/10 04:01:53\n\n\nacceptance-2026-facts.txt\n\t\nIndexed\n\t\n1\n\t\n2026/11/10 00:25:08\n\n\nacceptance-2026.txt\n\t\nIndexed\n\t\n1\n\t\n2026/11/10 00:23:59\n\n\n采购管理办法（2026年修订）\n\t\nIndexed\n\t\n1\n\t\n2026/11/9 23:38:50\n\n\n??????????(2026??)\n\t\nIndexed\n\t\n1\n\t\n2026/11/9 23:37:28\nv0.3.9",
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "file": "03-document-detail.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/documents/322e9b93-1f9e-4836-a141-4734cf551707",
+      "note": "文档详情",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 611,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nDemo Namespace\nDocuments\ne2e-ledger-20261110.txt\nCOA\nDemo Namespace\nDocuments\ne2e-ledger-20261110.txt\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\ne2e-ledger-20261110.txt (1)\nOpen in retrieval\n\nIndexed\nLast updated: 2026/11/10 04:01:53\n\n\t\nChunk\n\t\nPage\n\t\nCharacters\n\t\nChunk text\n\t\nChunk\n\t\nPage\n\t\nCharacters\n\t\nChunk text\n\n\n\t\n1\n\t\n1\n\t\n0–27\n\t\n合同台账属于档案资料。档案管理员的复核权限是50万元。\n\nBack to documents\n\nv0.3.9",
+      "consoleErrors": [
+        "Warning: validateDOMNesting(...): %s cannot appear as a descendant of <%s>.%s <div> p \n    at div\n    at div\n    at http://127.0.0.1:5173/node_modules/.vite/deps/chunk-VSXVNK27.js?v=12365d86:38:73\n    at http://127.0.0.1:5173/node_modules/.vite/deps/chunk-AOPE2DEI.js?v=12365d86:55:60\n    at SpaceBet"
+      ],
+      "pageErrors": []
+    },
+    {
+      "file": "04-candidates.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/candidates",
+      "note": "候选审批",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 2096,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nDemo Namespace\nCandidates\nCOA\nDemo Namespace\nCandidates\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\nCandidates (15)\nAll statuses\n\nCandidates extracted from this namespace's documents. Approving one writes the fact and projects it into the graph.\n\nSubject\n\t\nPredicate\n\t\nObject\n\t\nConfidence\n\t\nDocument\n\t\nStatus\n\t\nActions\nSubject\n\t\nPredicate\n\t\nObject\n\t\nConfidence\n\t\nDocument\n\t\nStatus\n\t\nActions\n\n\n档案管理员的复核权限\n\t\nrdf:type\n\t\n50万元\n\t\n0.55\n\t\n322e9b93-1f9e-4836-a141-4734cf551707\n\t\nApproved\n\t\nVerify A-Box\n\n\n合同台账\n\t\n属于\n\t\n档案资料\n\t\n0.60\n\t\n322e9b93-1f9e-4836-a141-4734cf551707\n\t\nApproved\n\t\nVerify A-Box\n\n\n档案管理员\n\t\n复核权限\n\t\n50万元\n\t\n0.62\n\t\n322e9b93-1f9e-4836-a141-4734cf551707\n\t\nPending\n\t\nApprove\nReject\n\n\n采购票据\n\t\n属于\n\t\n财务文件\n\t\n0.60\n\t\n4c24aad2-7426-4333-b78c-80b3fd2a01a7\n\t\nApproved\n\t\nVerify A-Box\n\n\n采购经理的复核权限\n\t\nrdf:type\n\t\n五百万元\n\t\n0.55\n\t\n4c24aad2-7426-4333-b78c-80b3fd2a01a7\n\t\nPending\n\t\nApprove\nReject\n\n\n采购经理\n\t\n复核权限\n\t\n五百万元\n\t\n0.62\n\t\n4c24aad2-7426-4333-b78c-80b3fd2a01a7\n\t\nPending\n\t\nApprove\nReject\n\n\n采购经理的审批权限\n",
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "file": "05-facts-ledger.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/facts",
+      "note": "事实账本 / 冲突裁决",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 2179,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nOntology\n事实账本\nCOA\nOntology\n事实账本\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\n事实账本\n刷新\n\nA-Box 断言账本：列表、详情、冲突与撤回/恢复。写入动作必须填写操作人并进入审计链。\n\n筛选\n状态\n生效中（active）\n主语 IRI\n谓词 IRI\n操作人（actor，写入必填）\n理由（写入时进入审计）\n裁决与撤销都会把这段文字写进账本事件链\n查询\n只看有冲突的事实\n事实列表\n批量撤回（预览）\n\n共 3 条；已选 0 条\n\n\t\nfactId\n\t\n主语\n\t\n谓词\n\t\n宾语\n\t\n状态\n\t\n冲突\n\t\n来源\n\t\n查看\n\n\n\t\nfact-8f914f7bc90c\n\t\nurn:coa:entity:%E5%90%88%E5%90%8C%E5%8F%B0%E8%B4%A6\n\t\nurn:coa:predicate:%E5%B1%9E%E4%BA%8E\n\t\n业务档案\n\t\nactive\n\t\n是\n\t\nmanual\n\t\n详情\n\n\n\t\nfact-e6ff9d5a011a\n\t\nurn:coa:entity:%E5%90%88%E5%90%8C%E5%8F%B0%E8%B4%A6\n\t\nurn:coa:predicate:%E5%B1%9E%E4%BA%8E\n\t\n档案资料\n\t\nactive\n\t\n是\n\t\nextraction / 322e9b93-1f9e-4836-a141-4734cf551707 / 7337c612-9cd4-46a5-9daf-31639e3fd38d\n\t\n详情\n\n\n\t\nfact-4a21c1e945ca\n\t\nurn:coa:entity:%E9%87%87%E8%B4%AD%E7%A5%A8%E6%8D%AE\n\t\nurn:coa:predicate:%E5%B1%9E%E4%BA%8E\n\t\n财务文件\n\t\nactive\n\t\n-\n\t\nextraction / 4c24aad2-7426-4333-b78c-80b3fd2a01a7 / ffe25290-d61b-4248-9729-740c03502d50\n\t\n详情\n事实详情\n\n单条断言及其事件链\n\n在列表里点「详情」查看单条事实与事件链。\n冲突分组（1）\n\n同一主语+谓词下出现多个不同宾语即视为冲突\n\n主语\n",
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "file": "06-governance.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/governance",
+      "note": "治理页",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 6398,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nOntology\n治理\nCOA\nOntology\n治理\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\n治理\n\n事件审计与 bundle 迁移。审计读取不写库；bundle 导出写文件系统，导入会新建数据库。\n\n事件审计\n刷新\n\n来自 GET /ontology/events 的哈希链审计；action 过滤在服务端生效。\n\n动作过滤\n全部动作\n时间\n\t\n动作\n\t\nactor\n\t\nversionId\n\t\nproposalId\n\t\n详情\n\n\n2026-11-09T19:33:35.406904+00:00\n\t\npublished\n\t\nverify-bot\n\t\nont-9dd9da99a996\n\t\nprop-cf1599fd0ee1\n\t\ngoverned\n\n\n2026-11-09T19:33:35.406904+00:00\n\t\nsuperseded\n\t\nverify-bot\n\t\nont-cd9b53f05264\n\t\n-\n\t\ngate-test\n\n\n2026-11-09T19:33:35.406904+00:00\n\t\nbreaking_acknowledged\n\t\nverify-bot\n\t\nont-9dd9da99a996\n\t\nprop-cf1599fd0ee1\n\t\n1 项：class_removed https://coa.local/ont/chain#Loan\n\n\n2026-11-09T19:27:26.943368+00:00\n\t\napproved\n\t\nverify-bot\n\t\nont-f11f9eb6b10c\n\t\nprop-5112d5d78361\n\t\nverify gate B\n\n\n2026-11-09T19:27:26.943368+00:00\n\t\nreview\n\t\nverify-bot\n\t\nont-f11f9eb6b10c\n\t\nprop-5112d5d78361\n\t\nverify gate B\n\n\n2026-11-09T19:27:26.925566+00:00\n\t\nproposed\n\t\nverify-bot\n\t\nont-f11f9eb6b10c\n\t\nprop-5112d5d78361\n\t\n-\n\n\n2026-11-09T19:27:26.064833+00:00\n\t\nimpor",
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "file": "07-ontology-versions.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/ontology/versions",
+      "note": "本体版本页",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 2318,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nOntology\n版本与发布\nCOA\nOntology\n版本与发布\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\n版本与发布\n刷新\n\n本体 T-Box 从「提案」到「生效」的完整链路。每一步都会把后端响应留在下方操作记录里。\n\n当前发布版本\nont-9dd9da99a996\n操作人（actor）\n\n提案、评审、发布、回滚都以该身份写入审计；留空时提交会被拒绝。\n\nactor（必填）\n例如 local-dev@example.invalid\n① 注册版本（导入 TTL 生成草稿）\n\nontologyId 作为目标命名空间传给注册接口；默认 fsldm-local。\n\nontologyId\nTurtle 内容\n注册草稿版本\n版本 (8)\n\n② 为草稿发起提案 → ③ 评审 → ④ 发布 → ⑤ 回滚到任意版本\n\nsemver\n\t\nversionId\n\t\n状态\n\t\n三元组\n\t\n创建时间\n\t\n⑥ 详情\n\t\n操作\n\n\n0.0.0\n\t\nont-cd9b53f05264\n\t\nsuperseded\n\t\n3\n\t\n2026-11-09T18:34:09.907882+00:00\n\t\n详情 / 差异\n\t\n② 发起提案\n④ 发布\n⑤ 回滚到此版本\n\n\n0.0.0\n\t\nont-cea17d4fac11\n\t\nsuperseded\n\t\n3\n\t\n2026-11-09T18:34:59.063620+00:00\n\t\n详情 / 差异\n\t\n② 发起提案\n④ 发布\n⑤ 回滚到此版本\n\n\n0.0.0\n\t\nont-528f9760b4ef\n\t\nsuperseded\n\t\n3\n\t\n2026-11-09T18:35:13.172384+00:00\n\t\n详情 / 差异\n\t\n② 发起提案\n④ 发布\n⑤ 回滚到此版本\n\n\n0.4.0\n\t\nont-2a3d108e40d9\n\t\nsuperseded\n\t\n5\n\t\n2026-11-09T18:41:31.332445+00:00\n\t\n详情 / 差异\n\t\n② 发起提案\n④ 发布\n⑤ 回滚到此版本\n\n\n0.5.0\n\t\nont-6eca6ff6b758\n\t\nsuperseded\n\t\n7\n\t\n2026-11-09T18:46:54.180745+00:00\n\t\n详情 / 差异\n\t\n② 发起提案\n④ 发布\n",
+      "consoleErrors": [],
+      "pageErrors": []
+    },
+    {
+      "file": "08-retrieval.png",
+      "url": "/namespaces/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/retrieval",
+      "note": "检索页",
+      "status": "ok",
+      "title": "Context Ontology Accelerator",
+      "bodyLength": 792,
+      "bodyHead": "Context Ontology Accelerator\nNamespace: Demo Namespace\nCOA\nDemo Namespace\nRetrieval\nCOA\nDemo Namespace\nRetrieval\nContext Ontology Accelerator\nHome\nScan\nSources\nDocuments\nOntology\nInduction\nExplorer\n版本与发布\n治理\n事实账本\nMetrics\nCandidates\nRetrieval\nServe\nPlayground\nMCP Server\nAdministration\nNamespaces\nIdentity\nSystem Health\nKnowledge-base search\n\nCalls the contract's KBSearch operation and returns ranked chunks with their source documents.\n\nSearch\nAsk the namespace\n\nRuns the contract's Query operation in standard mode and shows the synthesized answer.\n\nAsk\nVector retrieval\n\nReads a chunk's stored embedding and runs a real k-NN search with it. The query vector and the hits both come from the vector store.\n\nSelect a document\n\nSelect a document to inspect\n\nRun a search to see the hits.\nv0.3.9",
+      "consoleErrors": [],
+      "pageErrors": []
+    }
+  ]
+}

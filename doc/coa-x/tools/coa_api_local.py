@@ -616,6 +616,9 @@ ROUTES: list[tuple[str, str]] = [
     # The chain is readable without the assertion row: undo entries only hold an
     # eventId, so this path is the console's independent audit read.
     ("/namespaces/{namespaceId}/facts/{factId}/events", KERNEL),
+    # GetEntity (DataLayer read). Kept un-namespaced to match the contract
+    # (09 §4.8: GET /entities/{iri}); the IRI itself carries the identity.
+    ("/entities/{entityId}", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -939,6 +942,14 @@ def _kernel_translate(
 
     if template.endswith("/verify"):
         return "GET", "/ontology/verify", None
+
+    if template == "/entities/{entityId}":
+        iri = path_params.get("entityId", "")
+        q = query or {}
+        params = {key: q[key] for key in ("limit",) if q.get(key)}
+        suffix = f"?{urlencode(params)}" if params else ""
+        # Encode the whole IRI so its slashes cannot be read as path separators.
+        return "GET", f"/entities/{quote(iri, safe='')}{suffix}", None
 
     if "/facts" in template:
         fact_id = path_params.get("factId", "")
