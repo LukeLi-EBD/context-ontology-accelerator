@@ -1,21 +1,56 @@
 // SPDX-License-Identifier: Apache-2.0
-// P13 / F107 — ontology proposal detail with the impact checklist.
+// P13 / F107 — T-Box version-proposal detail with the impact checklist.
 //
-// This file is self-contained on purpose: the shared control-plane.smithy is
-// being edited by the contract validation / regeneration line this round, so
-// nothing here touches it. Two lines must be merged later:
+// ── Why a separate op, and why it is named this way ────────────────────────
+//
+// The contract already has `GetProposal` (ontology-induction.smithy, already
+// registered in control-plane.smithy), so extending it was checked first.
+// Reconciled item by item against base 9a36752c:
+//
+//   GetProposal today                              F107 needs
+//   ---------------------------------------------  ----------------------------
+//   input: namespaceId + proposalId: Uuid          namespaceId + ontologyId
+//   (no ontologyId label)                          + proposalId: String
+//   URI /namespaces/{ns}/proposals/{pid}           /namespaces/{ns}/ontologies/
+//                                                  {oid}/proposals/{pid}
+//   output: induction artifacts (ontologyTurtle,   versionId / versionStatus /
+//   r2rmlTurtle, presigned URLs, metadata,         current pointer / stored diff
+//   acceptError)                                   / impact analysis
+//   status: ProposalStatus = inducing | pending |  status: proposed | approved |
+//   accepting | accepted | ...                     published | superseded | ...
+//   served by the ontology-engine Lambda, store    served by the platform kernel,
+//   coa_ontology proposals (DynamoDB-shaped)       store platform.ontology_proposal
+//
+// These are two different resources on two different backends. The existing op
+// addresses an *induction* proposal (document/table -> ontology) whose id is a
+// Uuid; F107's proposal is a *version lifecycle* proposal whose id looks like
+// `prop-32e6cc1834cd` (not a Uuid) and whose row lives in
+// platform.ontology_proposal keyed by version. Adding `impact` to `GetProposal`
+// is therefore not an additive change: it would need a new path label, a new id
+// shape, a second status enum, a second backend, and version pairs that the
+// induction record does not carry. Decision: keep a separate operation, renamed
+// `GetOntologyVersionProposal` so it can never be read as a duplicate of
+// `GetProposal`.
+//
+// Note: doc/coa-x/12-剩余51条批量排期.md (P13) says "无新 op；
+// GetOntologyProposal 响应补 impact 字段", but no such op exists in any .smithy
+// file at 9a36752c — nor on main 1c066384. The only proposal-detail op in the
+// model is the induction `GetProposal` above. The plan text assumed an op that
+// was never registered.
+//
+// ── Merge steps (shared model untouched) ───────────────────────────────────
 //
 //   1. models/src/main/smithy/control-plane.smithy — inside the `use` block,
-//      next to the other ontologygraph uses, add exactly:
+//      next to the other ontology uses, add exactly:
 //
-//          use com.amazon.semanticcontext.ontologylifecycle#GetOntologyProposal
+//          use com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersionProposal
 //
 //   2. models/src/main/smithy/control-plane.smithy — inside
 //      `service ControlPlaneService { operations: [ ... ] }`, directly after
 //      `GetOntologyOverview`, add exactly:
 //
 //          // ── Ontology version lifecycle (F107) ───────────────────────────
-//          GetOntologyProposal
+//          GetOntologyVersionProposal
 //
 // After both lines are merged, regenerate with the normal pipeline; do not
 // hand-write the client.
@@ -37,11 +72,17 @@ use com.amazon.semanticcontext.common#OntologyId
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 
-/// Read one proposal together with its stored diff and the O-03 impact
-/// checklist. Read-only: nothing is written, no gate is run.
+/// Read one T-Box version proposal together with its stored diff and the O-03
+/// impact checklist. Read-only: nothing is written, no gate is run.
+///
+/// Not the same operation as the induction `GetProposal`
+/// (`/namespaces/{namespaceId}/proposals/{proposalId}`): that one addresses a
+/// Uuid-keyed induction proposal served by the ontology engine; this one
+/// addresses a version-lifecycle proposal nested under its ontology and served
+/// by the platform kernel. See the file header for the full comparison.
 @readonly
 @http(method: "GET", uri: "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}", code: 200)
-operation GetOntologyProposal {
+operation GetOntologyVersionProposal {
     input := {
         @required
         @httpLabel

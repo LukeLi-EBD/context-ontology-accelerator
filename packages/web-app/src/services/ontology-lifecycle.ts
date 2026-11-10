@@ -213,7 +213,7 @@ export interface OntologyImpactError {
 }
 
 /**
- * `GetOntologyProposal.impact`: the counts stored at propose time plus the
+ * `GetOntologyVersionProposal.impact`: the counts stored at propose time plus the
  * full analysis. `analysis` and `analysisError` are mutually exclusive.
  */
 export interface OntologyImpact {
@@ -231,7 +231,7 @@ export interface OntologyImpact {
   analysisError?: OntologyImpactError | null;
 }
 
-/** GetOntologyProposal: the proposal, its version, and the stored diff. */
+/** GetOntologyVersionProposal: the proposal, its version, and the stored diff. */
 export interface OntologyProposalDetail {
   proposal: OntologyProposal & {
     diff?: OntologyDiff;
@@ -378,7 +378,7 @@ export async function listOntologyProposals(
   return client.get<ProposalList>(`${root(namespace, ontologyId)}/proposals`);
 }
 
-/** GetOntologyProposal: proposal detail, including the diff stored at propose time. */
+/** GetOntologyVersionProposal: proposal detail, including the diff stored at propose time. */
 export async function getOntologyProposal(
   client: ApiClient,
   namespace: string,
