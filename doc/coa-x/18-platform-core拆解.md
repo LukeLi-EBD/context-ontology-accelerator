@@ -2,7 +2,7 @@
 
 > 日期：2026-11-10
 > 范围：只读核对 `packages/platform-core` 29 个顶层条目、8099 桥的 KERNEL 路由表、契约归属与运行中的容器；**不搬代码、不开 worktree、不建 PR**。
-> 本文回答三件事：① 29 个条目里哪些是活代码；② 42 条 KERNEL 路由归哪个限界上下文；③ 按什么顺序搬，哪些不能与 P8 并行。
+> 本文回答三件事：① 29 个条目里哪些是活代码；② 43 条 KERNEL 路由归哪个限界上下文；③ 按什么顺序搬，哪些不能与 P8 并行。
 
 ## 0. 摘要
 
@@ -10,17 +10,17 @@
 |---|---|
 | 判据已改 | M3a 第三条从「目录不存在」改为三条：入口不再 import / 活代码已按限界上下文迁入 COA 包 / 目录只剩归档物（`00-总计划.md` §5.2 第 3 步，`17-M3a出口盘点.md` §0.5） |
 | 29 个条目分档 | **活 4**（`src/`、`config/`、`reasoner/`、`pyproject.toml`）、**半活 2**（`tests/`、`web/`）、**非运行期 23** |
-| KERNEL 路由 | **42 条**：术语/别名 1、数据字典 5、指标卡 2、推理 2、本体生命周期 15、事实账本 10、实体与溯源 2、指标详情 1、浏览树/实例 2、质量 1、可答性 1 |
+| KERNEL 路由 | **43 条**：术语/别名 1、数据字典 5、指标卡 2、推理 2、本体生命周期 15、事实账本 10、实体与溯源 2、指标详情 1、浏览树/实例 2、质量 1、可答性 1、文档摄入 1 |
 | 契约归属 | 38 条落 `ControlPlaneService`（含 `dictionary` / `facts` / `ontologygraph` 模块）、3 条落 `MetricService`、1 条落 `DataLayerService` |
 | 搬迁顺序 | **R1 迁移链**（先，但等 P8）→ **R2 reasoner**（次，不可与 P8 并行）→ **R3 KERNEL 路由**（最后） |
-| 核心风险 | 目录不是死代码，是 8099 的最大后端；硬删 = 42 条路由退化 503、迁移链断源、7879 失去构建源 |
+| 核心风险 | 目录不是死代码，是 8099 的最大后端；硬删 = 43 条路由退化 503、迁移链断源、7879 失去构建源 |
 
 ## 1. 判据与机械检查
 
 | # | 判据 | 机械检查 | 当前 |
 |---|---|---|---|
 | 1 | coa 的任何入口都不再 import `platform-core` | 对 `packages/*/src`、`doc/coa-x/tools/*.py`、`coa-runtime` 组合根 `grep -n "platform_core"`；命中即不满足 | **不满足**：起栈脚本把 `packages/platform-core/src` 插进 `sys.path`（`coa_api_local.py` L54）并 import `platform_core.*`（L878–881、L955–962、L1781）；`local_bootstrap.py` 同；`packages/local-providers/tests` import 其适配器 |
-| 2 | 活代码已按限界上下文迁入 COA 包 | 每块（迁移链 / reasoner / 42 条路由）≥1 次真跑通，且新旧响应逐字段一致 | **不满足**：三块都还在原目录 |
+| 2 | 活代码已按限界上下文迁入 COA 包 | 每块（迁移链 / reasoner / 43 条路由）≥1 次真跑通，且新旧响应逐字段一致 | **不满足**：三块都还在原目录 |
 | 3 | 目录只剩归档物 | `Test-Path packages/platform-core` = `True` 但 `Get-ChildItem` 只剩 README/历史脚本/旧配置；`grep -rn "platform_core" --include=*.py --include=*.toml --include=*.yml` 在代码与配置中 0 命中 | **不满足**：29 个条目里 4 个是运行物，`src/` 是包本身 |
 
 判据为什么改、原判据错在哪，写在 `17-M3a出口盘点.md` §0.5，本文不重复；这里只给落地清单。
@@ -39,7 +39,7 @@
 
 | # | 条目 | 档 | 证据 | 处置建议 |
 |---:|---|---|---|---|
-| 1 | `src/` | 活 | 起栈脚本插 `sys.path` 并 import；42 条 KERNEL 路由由它承载；`local_bootstrap` 跑它的 `sql/` 迁移 | 拆成三块迁：迁移链 → R1；路由 → R3；适配器随端口实现走 |
+| 1 | `src/` | 活 | 起栈脚本插 `sys.path` 并 import；43 条 KERNEL 路由由它承载；`local_bootstrap` 跑它的 `sql/` 迁移 | 拆成三块迁：迁移链 → R1；路由 → R3；适配器随端口实现走 |
 | 2 | `config/` | 活 | `authoritative-8080.yaml` 被起栈脚本当生命周期配置读（`_LIFECYCLE_CONFIG`，`coa_api_local.py` L506） | 随 R3 一起迁；先确认它是否只服务 8080 语义，若是则归档进 `examples/` |
 | 3 | `reasoner/` | 活 | 7879 容器 `coa-local-reasoner`，镜像 `agent-reasoner:0.1-s5`，`docker history` 显示 `COPY app.py /app/app.py` | **R2** 迁到 ontology-engine 侧，重建镜像 |
 | 4 | `pyproject.toml` | 活 | 定义包与 `platform` CLI；测试用 `pip install -e` 路径 | R1/R3 完成后随目录归档；期间不能先删 |
@@ -60,7 +60,7 @@
 
 | 模块 | 谁在用 | 迁往 |
 |---|---|---|
-| `api.py` | 起栈脚本 `create_app`；42 条路由的实现 | 按路由域拆（R3） |
+| `api.py` | 起栈脚本 `create_app`；43 条路由的实现 | 按路由域拆（R3） |
 | `assembly.py` / `config.py` / `ontology_init.py` | 起栈脚本初始化 | control-plane 的启动装配 |
 | `catalog.py`（`introspect_pg`） | 桥的 catalog 同步（L955） | control-plane / metadata store |
 | `dictionary_api.py` | 桥直接调用（L956）；F60–F66 | control-plane（`ControlPlaneService` 字典域） |
@@ -74,7 +74,7 @@
 | `impact.py` | `_governance_impact` 内联可用；`/ontology/impact` 未在桥登记 | 随 F107 / P13 |
 | `sql/V*.sql`（至 V48） | `local_bootstrap` 迁移；`SUPPORTED_SCHEMA_VERSION` 闸 | **R1** |
 
-## 3. 42 条 KERNEL 路由的领域归属
+## 3. 43 条 KERNEL 路由的领域归属
 
 来源：`doc/coa-x/tools/coa_api_local.py` L549–L695（`KERNEL` 路由表）。契约归属按 `models/src/main/smithy` 实测。
 
@@ -148,7 +148,7 @@
 |---|---|
 | 29 个条目清单 | `Get-ChildItem -Force packages/platform-core`（2026-11-10） |
 | 起栈脚本 import 与 `sys.path` | `doc/coa-x/tools/coa_api_local.py` L54、L878–881、L955–962、L1781 |
-| 42 条 KERNEL 路由 | `doc/coa-x/tools/coa_api_local.py` L549–L695 |
+| 43 条 KERNEL 路由 | `doc/coa-x/tools/coa_api_local.py` L549–L695 |
 | 生命周期配置 | `doc/coa-x/tools/coa_api_local.py` L506 |
 | 迁移入口 | `doc/coa-x/tools/local_bootstrap.py`（`MetadataPg` + `migrate`） |
 | 7879 镜像来源 | `docker history agent-reasoner:0.1-s5` → `COPY app.py /app/app.py` |
