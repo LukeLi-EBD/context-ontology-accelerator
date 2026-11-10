@@ -892,7 +892,10 @@ class Importer:
                 return
             self._mark(
                 batch_id, group, "indexed",
-                degraded=group.degraded or bool(indexed.get("degraded")),
+                # `degraded` promises missing vectors. Every chunk of this group
+                # was embedded on this pass, so a flag left by an earlier failed
+                # attempt (or by the document row it was resumed from) is stale.
+                degraded=False,
             )
             self._bump("embedded", int(indexed.get("embedded") or 0))
             self._bump("indexed", len(group.rows))

@@ -12,7 +12,9 @@ Covered behaviour:
   * the ledger records completed counters, failed runs with their error code,
     and closes a run abandoned by a dead process as interrupted;
   * a run that lands `failed` closes its batch in the same transaction, so the
-    batch never keeps showing "running" after the run is dead.
+    batch never keeps showing "running" after the run is dead;
+  * a retried file that succeeds drops the stale `degraded` flag left by the
+    failed attempt.
 """
 
 from __future__ import annotations
@@ -73,7 +75,17 @@ class _Documents:
             "VALUES (%s, %s, 1024, %s::vector) ON CONFLICT (chunk_id, model) DO NOTHING",
             (chunk_id, MODEL, _VECTOR),
         )
-        return {"documentId": sha, "ingested": True, "deduplicated": False, "degraded": False}
+        # The real ingest_path returns the stored view on dedupe, so a document
+        # left `degraded` by a failed embed reports degraded=True on the retry.
+        status = self._meta.query(
+            "SELECT status FROM platform.document WHERE document_id = %s", (sha,)
+        )[0]["status"]
+        return {
+            "documentId": sha,
+            "ingested": True,
+            "deduplicated": False,
+            "degraded": status == "degraded",
+        }
 
 
 class _BoomOnItems:
@@ -141,11 +153,12 @@ class ImportRunLedgerTests(unittest.TestCase):
 
     # ---- helpers -------------------------------------------------------
 
-    def _importer(self, documents=None, metadata=None):
+    def _importer(self, documents=None, metadata=None, search=None):
         runtime = SimpleNamespace(
             metadata=metadata or self.meta,
             documents=documents or _Documents(self.meta, self._shas),
-            search=SimpleNamespace(
+            search=search
+            or SimpleNamespace(
                 index_document=lambda document_id: {"embedded": 1, "degraded": False}
             ),
             vectors=SimpleNamespace(pointer=lambda: {"model": MODEL}),
@@ -243,6 +256,70 @@ class ImportRunLedgerTests(unittest.TestCase):
         self.assertEqual(int(run["counters"]["total"]), 1)
         self.assertEqual(int(run["counters"]["indexed"]), 1)
         self.assertEqual(int(run["counters"]["failedThisRun"]), 0)
+
+    def test_retried_file_clears_stale_degraded_flag(self):
+        """A retried file that succeeds must not keep the stale `degraded` flag.
+
+        `degraded` promises missing vectors. The first pass fails with a degraded
+        embed (E_EMBED_UNAVAILABLE) and marks the item degraded; the retry has a
+        working embedding service, so the item is indexed and the flag must go.
+        """
+        sha = self._write_doc()
+
+        def degraded_index(document_id):
+            # Mirrors SearchService._mark_embed_degraded: the document row is
+            # left `degraded`, which is what the retry ingest then reports back.
+            self.meta.execute(
+                "UPDATE platform.document SET status = 'degraded' WHERE document_id = %s",
+                (document_id,),
+            )
+            return {
+                "embedded": 0,
+                "degraded": True,
+                "failureCode": "E_EMBED_UNAVAILABLE",
+                "reasons": ["E_EMBED_UNAVAILABLE"],
+            }
+
+        first = self._importer(
+            search=SimpleNamespace(index_document=degraded_index)
+        ).run(str(self._tmp), namespace_id=NAMESPACE)
+        self._batch_ids.add(first["batchId"])
+        self.assertEqual(first["failedThisRun"], 1)
+
+        batch_id = uuid.UUID(first["batchId"])
+        before = self.meta.query(
+            "SELECT status, degraded FROM platform.import_item WHERE batch_id = %s",
+            (batch_id,),
+        )[0]
+        self.assertEqual(before["status"], "failed")
+        self.assertTrue(before["degraded"])
+
+        # Drop the stub's placeholder vector so the retry must really re-index.
+        self.meta.execute(
+            "DELETE FROM platform.chunk_embedding WHERE chunk_id IN "
+            "(SELECT chunk_id FROM platform.document_chunk WHERE document_id = %s)",
+            (sha,),
+        )
+
+        def healthy_index(document_id):
+            self.meta.execute(
+                "UPDATE platform.document SET status = 'parsed' WHERE document_id = %s",
+                (document_id,),
+            )
+            return {"embedded": 1, "degraded": False}
+
+        second = self._importer(
+            search=SimpleNamespace(index_document=healthy_index)
+        ).run(str(self._tmp), namespace_id=NAMESPACE, retry_failed=True)
+        self.assertEqual(second["batchId"], first["batchId"])
+        self.assertEqual(second["failed"], 0)
+
+        after = self.meta.query(
+            "SELECT status, degraded FROM platform.import_item WHERE batch_id = %s",
+            (batch_id,),
+        )[0]
+        self.assertEqual(after["status"], "indexed")
+        self.assertFalse(after["degraded"])
 
     def test_failed_run_records_status_and_error_code(self):
         self._write_doc()
