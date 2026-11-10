@@ -114,7 +114,6 @@ structure EmbeddingListOutput {
 }
 
 // ── Operations ──────────────────────────────────────────────────────────────
-
 /// Return every stored embedding (vector included) for one entity URI.
 ///
 /// Chunk vectors are addressed as `urn:coa:chunk:<chunkId>`; filtering by
@@ -124,12 +123,7 @@ structure EmbeddingListOutput {
 @examples([
     {
         title: "Read a chunk's vector"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            entityUri: "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
-            entityType: "chunk"
-            embeddingType: "chunk"
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", entityUri: "urn:coa:chunk:1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d", entityType: "chunk", embeddingType: "chunk" }
         output: {
             embeddings: [
                 {
@@ -191,7 +185,9 @@ operation GetEntityEmbeddings {
             modelId: "BAAI/bge-m3"
             topK: 5
         }
-        output: { embeddings: [] }
+        output: {
+            embeddings: []
+        }
     }
 ])
 operation SearchEmbeddings {

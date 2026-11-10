@@ -177,7 +177,6 @@ map FactOverrides {
 }
 
 // ── Documents ───────────────────────────────────────────────────────────────
-
 /// Store a document's bytes and register it for ingestion.
 ///
 /// `contentBase64` carries the bytes. The content hash is computed server-side
@@ -189,18 +188,8 @@ map FactOverrides {
 @examples([
     {
         title: "Upload a plain-text policy"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            filename: "loan-policy.txt"
-            contentType: "text/plain"
-            contentBase64: "5L+d6K+B6LS35qy+5pS/562W"
-        }
-        output: {
-            documentId: "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
-            version: 1
-            contentHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-            status: "PROCESSING"
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", filename: "loan-policy.txt", contentType: "text/plain", contentBase64: "5L+d6K+B6LS35qy+5pS/562W" }
+        output: { documentId: "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d", version: 1, contentHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", status: "PROCESSING" }
     }
 ])
 operation UploadDocument {
@@ -255,7 +244,9 @@ operation UploadDocument {
         status: DocumentStatus
     }
 
-    errors: [ConflictError]
+    errors: [
+        ConflictError
+    ]
 }
 
 /// List documents registered in the namespace, newest first.
@@ -266,7 +257,9 @@ operation UploadDocument {
     {
         title: "List the namespace's documents"
         input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11" }
-        output: { items: [] }
+        output: {
+            items: []
+        }
     }
 ])
 operation ListDocuments {
@@ -303,10 +296,7 @@ operation ListDocuments {
 @examples([
     {
         title: "List one document's chunks"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            documentId: "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d"
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", documentId: "9a7b6c5d-4e3f-4a2b-8c1d-0e9f8a7b6c5d" }
         output: {
             items: [
                 {
@@ -347,11 +337,12 @@ operation ListDocumentChunks {
         items: DocumentChunkList
     }
 
-    errors: [NotFoundError]
+    errors: [
+        NotFoundError
+    ]
 }
 
 // ── Fact candidates ─────────────────────────────────────────────────────────
-
 /// List extracted fact candidates awaiting review (or filtered by status).
 @http(method: "GET", uri: "/namespaces/{namespaceId}/candidates")
 @readonly
@@ -359,11 +350,10 @@ operation ListDocumentChunks {
 @examples([
     {
         title: "List pending candidates"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            status: "PENDING"
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", status: "PENDING" }
+        output: {
+            items: []
         }
-        output: { items: [] }
     }
 ])
 operation ListFactCandidates {
@@ -404,14 +394,8 @@ operation ListFactCandidates {
 @examples([
     {
         title: "Approve a candidate"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            candidateId: "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
-        }
-        output: {
-            factId: "4d5e6f70-8192-4a3b-9c4d-5e6f708192a3"
-            status: "APPROVED"
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", candidateId: "3c4d5e6f-7081-492a-8b3c-4d5e6f708192" }
+        output: { factId: "4d5e6f70-8192-4a3b-9c4d-5e6f708192a3", status: "APPROVED" }
     }
 ])
 operation ApproveFactCandidate {
@@ -443,7 +427,10 @@ operation ApproveFactCandidate {
         status: FactCandidateStatus
     }
 
-    errors: [ConflictError, NotFoundError]
+    errors: [
+        ConflictError
+        NotFoundError
+    ]
 }
 
 /// Reject a candidate. The row is kept for audit; nothing is written to the
@@ -452,11 +439,7 @@ operation ApproveFactCandidate {
 @examples([
     {
         title: "Reject a candidate"
-        input: {
-            namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
-            candidateId: "3c4d5e6f-7081-492a-8b3c-4d5e6f708192"
-            reason: "Predicate is too generic to publish."
-        }
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", candidateId: "3c4d5e6f-7081-492a-8b3c-4d5e6f708192", reason: "Predicate is too generic to publish." }
         output: { status: "REJECTED" }
     }
 ])
@@ -486,5 +469,7 @@ operation RejectFactCandidate {
         status: FactCandidateStatus
     }
 
-    errors: [NotFoundError]
+    errors: [
+        NotFoundError
+    ]
 }

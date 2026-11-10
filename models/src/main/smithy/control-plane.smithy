@@ -46,6 +46,7 @@ use com.amazon.semanticcontext.namespace#UpdateNamespaceStatus
 use com.amazon.semanticcontext.ontologygraph#DeleteOntology
 use com.amazon.semanticcontext.ontologygraph#DownloadOntology
 use com.amazon.semanticcontext.ontologygraph#FetchOntology
+use com.amazon.semanticcontext.ontologygraph#GetCanvasManifest
 use com.amazon.semanticcontext.ontologygraph#GetGraphClass
 use com.amazon.semanticcontext.ontologygraph#GetGraphDatatypeProperty
 use com.amazon.semanticcontext.ontologygraph#GetGraphObjectProperty
@@ -57,7 +58,6 @@ use com.amazon.semanticcontext.ontologygraph#GraphSearch
 use com.amazon.semanticcontext.ontologygraph#IngestOntologyFromS3
 use com.amazon.semanticcontext.ontologygraph#ListOntologies
 use com.amazon.semanticcontext.ontologygraph#ListStatements
-use com.amazon.semanticcontext.ontologygraph#GetCanvasManifest
 use com.amazon.semanticcontext.ontologygraph#UploadOntology
 use com.amazon.semanticcontext.ontologyinduction#AcceptProposal
 use com.amazon.semanticcontext.ontologyinduction#CancelProposal
