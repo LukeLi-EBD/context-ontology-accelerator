@@ -588,6 +588,12 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/metrics/report/manifest": {
         "GET": ("readMetric", "Metric"),
     },
+    # The metric card is a read of one authored metric. Its path label is
+    # metricId, which _map_request_to_cedar already extracts as the resource id,
+    # so it shares readMetric with the metric routes above.
+    "/metrics/{metricId}": {
+        "GET": ("readMetric", "Metric"),
+    },
     # ── Ontology induction ─────────────────────────────────────────────
     # Induction jobs operate on the namespace's Ontology; review of generated
     # changes operates on OntologyProposal resources. Both are gated by
@@ -714,6 +720,80 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/ontology/foundational/{key}/load": {
         "POST": ("manageOntology", "Ontology"),
     },
+    # ── Ontology versions, proposals, bundles, validation ───────────────
+    # Versions are immutable snapshots: listing, reading, diffing and exporting
+    # one all inspect existing state, so they carry viewNamespace like the rest
+    # of the ontology reads. Import is the write in this group — it registers an
+    # uploaded document as a new draft version, changing the ontology's version
+    # chain, so it is manageOntology, not manageSource for the bytes it uses.
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/diff": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/export": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/import": {
+        "POST": ("manageOntology", "Ontology"),
+    },
+    # A proposal is a governance record *about* an ontology version, so it uses
+    # the OntologyProposal resource type like the existing ``/proposals/*``
+    # routes. Filing or reviewing one mutates that record (manageOntology);
+    # reading or listing it is a view.
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals": {
+        "GET": ("viewNamespace", "OntologyProposal"),
+        "POST": ("manageOntology", "OntologyProposal"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}": {
+        "GET": ("viewNamespace", "OntologyProposal"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}/review": {
+        "POST": ("manageOntology", "OntologyProposal"),
+    },
+    # Publish and rollback move the ``tbox/current`` pointer, i.e. they change
+    # the ontology itself, so they are manageOntology on Ontology (no proposal).
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/publish": {
+        "POST": ("manageOntology", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/rollback": {
+        "POST": ("manageOntology", "Ontology"),
+    },
+    # The event feed reads stored audit history. Verify recomputes the lifecycle
+    # and PROV hash chains but persists nothing, so it must not require a manage
+    # action just because it is a POST — same split as ``/graph/validate``.
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/events": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/verify": {
+        "POST": ("viewNamespace", "Ontology"),
+    },
+    # Inspecting a bundle only reads its manifest. Exporting writes a bundle
+    # artifact into the namespace's storage, and importing restores one into the
+    # database; both are writes gated like the other ontology upload/ingest
+    # routes.
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/export": {
+        "POST": ("manageOntology", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/inspect": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/import": {
+        "POST": ("manageOntology", "Ontology"),
+    },
+    # Starting validation computes and stores a job result over the ontology, so
+    # it is a write. Polling that job only reports progress and stays a read —
+    # the same split as ``/ontologies/{ontologyId}/ingest-status/{jobId}``.
+    "/namespaces/{namespaceId}/validate": {
+        "POST": ("manageOntology", "Ontology"),
+    },
+    "/namespaces/{namespaceId}/validate/jobs/{jobId}": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
     "/namespaces/{namespaceId}/proposals/{proposalId}/repair-datatypes": {
         "POST": ("manageOntology", "OntologyProposal"),
     },
@@ -747,6 +827,12 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/graph/path": {
         "GET": ("viewNamespace", "Ontology"),
     },
+    # FindLinks is a bounded (three hop) neighbourhood read around one IRI and
+    # never writes the graph, so it shares viewNamespace with the other
+    # ``/graph/*`` reads.
+    "/namespaces/{namespaceId}/graph/links": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
     # Snapshot/validate/diff/reasoning all read the built graph; materialize is
     # the one write (it rewrites the inferred graph) and is gated like the other
     # ontology-governance writes.
@@ -775,6 +861,12 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
         "GET": ("viewNamespace", "Source"),
     },
     "/namespaces/{namespaceId}/documents/{documentId}/chunks": {
+        "GET": ("searchDocuments", "Source"),
+    },
+    # DownloadDocument is @readonly and returns the stored bytes, i.e. document
+    # content — the same authority as reading chunks (searchDocuments), not the
+    # metadata-level viewNamespace the registry list uses.
+    "/namespaces/{namespaceId}/documents/{documentId}/content": {
         "GET": ("searchDocuments", "Source"),
     },
     # ── Terms / dictionaries ────────────────────────────────────────────
@@ -813,6 +905,42 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/candidates/{candidateId}/reject": {
         "POST": ("manageOntology", "Namespace"),
     },
+    # ── Fact ledger ─────────────────────────────────────────────────────
+    # Facts are asserted A-Box triples held per namespace. Listing, reading one,
+    # reading its event chain and listing conflicts all inspect the ledger and
+    # are namespace reads. Asserting, retracting, restoring and adjudicating
+    # conflicts (including batch/undo) rewrite ledger rows and their
+    # hash-chained events, i.e. the same ontology-governance power as approving
+    # a candidate — hence manageOntology on Namespace, which is also the basis
+    # of the existing ``/facts/conflicts/resolve`` entry below.
+    "/namespaces/{namespaceId}/facts": {
+        "GET": ("viewNamespace", "Namespace"),
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/{factId}": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/{factId}/events": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/{factId}/retract": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/{factId}/restore": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/conflicts": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/conflicts/batch": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/conflicts/undo": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/facts/retract": {
+        "POST": ("manageOntology", "Namespace"),
+    },
     # Conflict adjudication retires or rewrites A-Box assertions, the same
     # governance power as approving a candidate — not a document write.
     "/namespaces/{namespaceId}/facts/conflicts/resolve": {
@@ -828,6 +956,41 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     },
     "/namespaces/{namespaceId}/embeddings/search": {
         "POST": ("searchDocuments", "Source"),
+    },
+    # ── Global graph browse, entities, answer quality ───────────────────
+    # These routes carry no {namespaceId} either, so their resource id resolves
+    # to "*" and namespace-scoped grants cannot match. They are all reads, so
+    # they use the read actions global_viewer.cedar permits on any resource
+    # (viewNamespace / query / searchDocuments) rather than ``list``: listing
+    # namespaces is what every authenticated user may do, while browsing the
+    # graph or downloading provenance requires the viewer role.
+    #
+    # Browse reads the same class/instance data as ``/graph/*`` → Ontology read.
+    "/browse/ontology/tree": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/browse/ontology/instances": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    # GetEntity reads one A-Box entity, which is graph data. GetEntityProvenance
+    # reports, per field, which source documents evidence it, i.e. document-
+    # derived content — the same power as reading document chunks — so it uses
+    # searchDocuments on Source while the entity itself is an ontology read.
+    "/entities/{entityId}": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
+    "/entities/{entityId}/provenance": {
+        "GET": ("searchDocuments", "Source"),
+    },
+    # GetAnswerQuality runs the golden question set; the operation documents the
+    # endpoint as read-only (it persists nothing) but it still computes answers
+    # the way /query does, so it carries query. Listing stored runs only reads
+    # results and is a plain namespace read.
+    "/answer/quality": {
+        "GET": ("query", "Namespace"),
+    },
+    "/answer/quality/runs": {
+        "GET": ("viewNamespace", "Namespace"),
     },
     # ── Platform-scoped ─────────────────────────────────────────────────
     # No {namespaceId}, so the resource id resolves to "*" (see
