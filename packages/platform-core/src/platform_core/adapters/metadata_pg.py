@@ -16,7 +16,7 @@ from ..sqlsplit import split_sql_statements
 
 log = logging.getLogger(__name__)
 
-SUPPORTED_SCHEMA_VERSION = 45
+SUPPORTED_SCHEMA_VERSION = 47
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -64,6 +64,12 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     (43, "V43__source_ref_stale_mark.sql", "B-01 tier-1 stale source-ref markers: append-only platform.source_ref_stale_mark (idempotent)"),
     (44, "V44__fact_reconcile_event.sql", "fact ledger reconciliation: allow the `reconciled` audit event"),
     (45, "V45__answer_quality_run.sql", "F86 answer quality: one row per full golden-set run (no trend)"),
+    # V46 belongs to the P4 branch (quota/plan work) and is deliberately absent
+    # here. This branch only adds V47, so the merged registry must stay ordered
+    # 45 -> 46 -> 47. Never run this branch's migrate() against a shared
+    # environment before V46 lands: the resulting high-water mark would skip it
+    # and migration_gap_versions() would then refuse the merged build.
+    (47, "V47__import_batch_namespace.sql", "P8 import batch namespace: namespace_id + insert-time requirement"),
 ]
 
 # Retired migration numbers, kept permanently empty.
