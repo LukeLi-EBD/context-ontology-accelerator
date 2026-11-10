@@ -5790,6 +5790,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "refusalsByReason": payload["refusalsByReason"],
             "refusalsWithoutLayers": payload["refusalsWithoutLayers"],
             "brokenLinks": payload["brokenLinks"],
+            # Keep the denominator with the run: a later comparison is only
+            # meaningful when both runs evaluated the same number of cases.
+            "goldenSet": payload["goldenSet"],
+            "evaluatedCount": payload["evaluatedCount"],
+            "totalCount": payload["totalCount"],
+            "truncated": payload["truncated"],
         }
         try:
             runtime.metadata.query(
@@ -5989,8 +5995,16 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "id": "r02-golden-10",
                 "count": len(_G4_GOLDEN_SET),
                 "evaluated": cases_total,
+                "available": len(golden),
                 "caseId": case_id,
             },
+            # A run may evaluate fewer cases than the golden set holds (the
+            # caller's `limit`, or a caseId drill-down). State that explicitly
+            # instead of letting a subset pass for the whole set: the pass rate
+            # below is computed over `evaluatedCount`, not `totalCount`.
+            "evaluatedCount": cases_total,
+            "totalCount": len(golden),
+            "truncated": cases_total < len(golden),
             "summary": {
                 "cases": cases_total,
                 "passed": sum(1 for item in cases if item["pass"]),
@@ -6484,7 +6498,11 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.get("/answer/quality")
     def g4_answer_quality(
         strategy: str = Query(default="lexical"),
-        limit: int = Query(default=10, ge=1, le=10),
+        # ``limit`` is the evaluation scope, not just a page size: it slices the
+        # golden set. The default matches the contract-wide page cap (200) and
+        # the service answers ``truncated``/``evaluatedCount``/``totalCount`` so
+        # a short run is never mistaken for the full set.
+        limit: int = Query(default=200, ge=1, le=200),
         caseId: str | None = Query(default=None, max_length=10),
     ) -> dict[str, Any]:
         if strategy not in ("lexical", "vector", "hybrid"):

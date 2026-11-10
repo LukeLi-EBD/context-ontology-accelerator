@@ -268,6 +268,20 @@ class AnswerQualityTests(unittest.TestCase):
             self.assertTrue(item["actual"]["missingLayers"])
         self.assertTrue(payload["refusalsByReason"])
 
+    def test_limit_is_an_evaluation_scope_and_truncation_is_explicit(self):
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with _client() as client:
+                full = client.get("/answer/quality").json()
+                page = client.get("/answer/quality", params={"limit": 5}).json()
+        self.assertEqual(full["evaluatedCount"], 10)
+        self.assertEqual(full["totalCount"], 10)
+        self.assertFalse(full["truncated"])
+        self.assertEqual(page["evaluatedCount"], 5)
+        self.assertEqual(page["totalCount"], 10)
+        self.assertTrue(page["truncated"])
+        self.assertEqual(page["summary"]["cases"], 5)
+        self.assertEqual(page["goldenSet"]["available"], 10)
+
     def test_case_id_drill_down(self):
         with patch.object(api_module, "_qa_answer", _fake_answer):
             with _client() as client:

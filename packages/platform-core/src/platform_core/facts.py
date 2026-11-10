@@ -1128,6 +1128,15 @@ class FactLedger:
             clauses.append("f.source_document_id = %s")
             params.append(source_document_id)
         where = "WHERE " + " AND ".join(clauses) if clauses else ""
+        page_size = max(1, min(limit, 500))
+        # `count` used to be the only size signal and it is the page length, so
+        # a caller could not tell a full list from a truncated one. Count the
+        # filtered set once and expose it, so "there is more" is always visible.
+        total_row = self._meta.query(
+            f"SELECT COUNT(*) AS total FROM platform.fact_assertion f {where}",
+            tuple(params),
+        )
+        total = int(total_row[0]["total"]) if total_row else 0
         rows = self._meta.query(
             f"""
             SELECT f.* FROM platform.fact_assertion f
@@ -1135,13 +1144,20 @@ class FactLedger:
              ORDER BY f.asserted_at DESC, f.fact_id
              LIMIT %s
             """,
-            tuple(params + [max(1, min(limit, 500))]),
+            tuple(params + [page_size]),
         )
+        truncated = total > len(rows)
         items = [_row(row) for row in rows]
         self._mark_conflicts(items)
         if conflict_only:
             items = [item for item in items if item.get("conflict")]
-        return {"state": state, "items": items, "count": len(items)}
+        return {
+            "state": state,
+            "items": items,
+            "count": len(items),
+            "totalCount": total,
+            "truncated": truncated,
+        }
 
     def annotate(self, facts: list[dict[str, Any]]) -> None:
         """Attach factId/source/conflict to ContextResolver facts (mutates in place)."""
