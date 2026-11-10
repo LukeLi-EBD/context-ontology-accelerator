@@ -28,6 +28,7 @@ from . import __version__
 from . import dictionary_api
 from . import entity_view
 from . import healthboard
+from . import metric_external
 from . import term_api
 from . import termgate
 from .adapters.ontology_pg import (
@@ -4385,7 +4386,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # M-05: E1 25 条行业公式（来源：doc/_fsldm/12-口径终裁-v9.md §1）。
     # 该清单只用于“声明核对”，不参与清单取数；清单仍逐条读库。
     _G3_E1_SOURCE = "doc/_fsldm/12-口径终裁-v9.md §1"
-    _G3_INDUSTRY_NOTICE = "内部基线、不外报"
+    _G3_INDUSTRY_NOTICE = metric_external.INDUSTRY_NOTICE
     _G3_E1_INDUSTRY_IDS = (
         "FIN-BANK-002",
         "FIN-BANK-005",
@@ -4423,29 +4424,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return text or "口径未给出"
 
     def _g3_evidence(row: dict[str, Any]) -> dict[str, Any]:
-        basis = (row.get("evidence_basis") or "none").strip() or "none"
-        provenance = (row.get("provenance_label") or "").strip()
-        if basis == "regulatory":
-            return {
-                "code": basis,
-                "basisLabel": "监管原文",
-                "source": provenance or "监管原文",
-                "hasRegulatoryText": True,
-            }
-        if basis == "industry":
-            return {
-                "code": basis,
-                "basisLabel": "行业通行（未获监管原文）",
-                "source": provenance or "行业通行",
-                "hasRegulatoryText": False,
-                "notice": _G3_INDUSTRY_NOTICE,
-            }
-        return {
-            "code": basis,
-            "basisLabel": "无证据",
-            "source": provenance or "未给出",
-            "hasRegulatoryText": False,
-        }
+        # Shared with the metric card (platform_core.metric_external) so the
+        # manifest and the card can never disagree about evidence.
+        return metric_external.evidence(row)
 
     # 预检与执行共用同一个聚合集合（metrics._AGGREGATES），不另存副本：
     # count / count_distinct 在事实层已完成去重，compute 读取观测行时按实体内
@@ -4578,37 +4559,15 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     def _g3_metric_row(row: dict[str, Any]) -> dict[str, Any]:
         metric_id = str(row.get("metric_id") or "")
         tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
-        evidence = _g3_evidence(row)
         publishable = bool(row.get("publishable"))
         formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
-        external_eligible = bool(
-            publishable
-            and evidence["code"] == "regulatory"
-            and tier == "structurally_computable"
-        )
         execution = _g3_execution(row)
-        if external_eligible:
-            external_status = "external_candidate"
-            external_label = "对外可出数候选（需事实与观测）"
-            external_reason = (
-                "证据为监管原文、publishable=true、口径结构性可算；"
-                "资格判定未含观测与窗口，实际可执行性见 executionPath"
-                if execution["executable"]
-                else "证据为监管原文、publishable=true、口径结构性可算；"
-                f"但当前不可直接 compute（{execution['reasonCode']}）：{execution['reason']}"
-            )
-        elif evidence["code"] == "industry":
-            external_status = "internal_baseline"
-            external_label = _G3_INDUSTRY_NOTICE
-            external_reason = f"行业公式未获监管原文：{_G3_INDUSTRY_NOTICE}"
-        elif not publishable:
-            external_status = "unpublishable"
-            external_label = "不可发布"
-            external_reason = "publishable=false"
-        else:
-            external_status = "blocked"
-            external_label = "不可对外"
-            external_reason = f"口径未达结构性可算：{tier}"
+        judgement = metric_external.judgement(row, execution)
+        evidence = judgement["evidence"]
+        external_eligible = judgement["eligible"]
+        external_status = judgement["status"]
+        external_label = judgement["label"]
+        external_reason = judgement["reason"]
 
         missing = row.get("missing")
         if row.get("output_mode") == "index":

@@ -28,6 +28,7 @@ import type {
   CreateMetricInput as _CreateMetricInput,
 } from "@coa/control-plane-client";
 import { useControlPlaneClient } from "@components/ControlPlaneClientProvider";
+import { useApiClient } from "@components/ApiClientProvider";
 
 // Re-export Smithy types with required fields narrowed for UI usage.
 // The generated types mark @required output fields as T | undefined
@@ -440,5 +441,213 @@ export function useExportOsi(namespaceId: string) {
       );
       return { content: out.content as string };
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// P5 metric card (F54/F55/F56/F57)
+//
+// These reads are served by the platform kernel, not by the metric contract:
+// F54/F56 extend the "GetMetric (F100)" platform card (`/metrics/{metricId}`),
+// and F55/F57 add the family and report-manifest reads defined in
+// models/src/main/smithy/metric-catalog.smithy. The generated client predates
+// all three, so they go through the plain ApiClient.
+// ---------------------------------------------------------------------------
+
+/** One physical binding of a metric to a fact table column. */
+export interface MetricFieldBinding {
+  /** numerator / denominator / index. */
+  role?: string;
+  factTable?: string;
+  entityColumn?: string;
+  valueExpr?: string;
+  agg?: string;
+  filterSql?: string;
+  windowColumn?: string;
+  windowMode?: string;
+}
+
+/** Platform metric card: the detail fields plus bindings and external status. */
+export interface MetricCard {
+  metricId: string;
+  name?: string | null;
+  domain?: string | null;
+  evidenceBasis?: string | null;
+  publishable?: boolean | null;
+  variantOf?: string | null;
+  outputMode?: string | null;
+  /** Grain code (e.g. `customer`); matched against ontology class local names. */
+  grain?: string | null;
+  granularityText?: string | null;
+  unit?: string | null;
+  definitionVersion?: string | null;
+  bindingStatus: "bound" | "unbound";
+  fieldBindings: MetricFieldBinding[];
+  externalEligible?: boolean;
+  externalStatus?: string;
+  externalLabel?: string;
+  externalReason?: string;
+  familyId?: string | null;
+  variantMetricIds?: string[];
+}
+
+export function useGetMetricCard(metricId: string) {
+  const apiClient = useApiClient();
+
+  return useQuery<MetricCard, Error>({
+    queryKey: ["metric-card", metricId],
+    queryFn: () =>
+      apiClient.get<MetricCard>(`/metrics/${encodeURIComponent(metricId)}`),
+    enabled: !!metricId,
+  });
+}
+
+export interface MetricFamilyVariant {
+  metricId: string;
+  nameZh?: string;
+  displayName?: string;
+  grain?: string;
+  grainCode?: string;
+  computability?: string;
+  computabilityLabel?: string;
+  denominator?: number | null;
+  denominatorText?: string | null;
+  formula?: string | null;
+  unit?: string | null;
+  publishable?: boolean;
+  externalEligible?: boolean;
+  evidenceBasis?: string;
+  window?: { kind?: string; minWindowDays?: number | null; text?: string };
+}
+
+export interface MetricFamilyDiff {
+  field: string;
+  label?: string;
+  different: boolean;
+  values: Record<string, string | null | undefined>;
+}
+
+export interface MetricFamily {
+  familyId: string;
+  indexMetricId?: string;
+  nameZh?: string;
+  variantCount: number;
+  selectionRequired?: boolean;
+  source?: string;
+  guidance?: string | null;
+  variants: MetricFamilyVariant[];
+  diffs: MetricFamilyDiff[];
+}
+
+export function useGetMetricFamily(namespaceId: string, familyId?: string) {
+  const apiClient = useApiClient();
+
+  return useQuery<{ family: MetricFamily }, Error>({
+    queryKey: ["metric-family", namespaceId, familyId ?? null],
+    queryFn: () =>
+      apiClient.get<{ family: MetricFamily }>(
+        `/namespaces/${encodeURIComponent(namespaceId)}/metrics/families/${encodeURIComponent(familyId!)}`,
+      ),
+    enabled: !!namespaceId && !!familyId,
+  });
+}
+
+/** One row of the governed-metric report manifest. */
+export interface MetricReportItem {
+  metricId: string;
+  nameZh?: string;
+  displayName?: string;
+  domain?: string;
+  publishable?: boolean;
+  evidenceBasis?: string;
+  evidenceBasisLabel?: string;
+  formula?: string;
+  computability?: string;
+  computabilityLabel?: string;
+  computabilityTone?: string;
+  gap?: string;
+  gapCode?: string | null;
+  externalEligible?: boolean;
+  externalStatus?: string;
+  externalLabel?: string;
+  externalReason?: string;
+  executionPath?: string;
+  executable?: boolean;
+  executionReason?: string;
+  variantOf?: string | null;
+  outputMode?: string | null;
+}
+
+export interface MetricReportManifest {
+  items: MetricReportItem[];
+  count: number;
+  meta?: {
+    total?: number;
+    counts?: {
+      external?: number;
+      externalCandidates?: number;
+      executableNow?: number;
+    };
+    tiers?: Record<string, number>;
+  };
+  filters?: Record<string, unknown>;
+}
+
+export function useGetMetricReportManifest(
+  namespaceId: string,
+  scope: "all" | "external" = "all",
+) {
+  const apiClient = useApiClient();
+
+  return useQuery<MetricReportManifest, Error>({
+    queryKey: ["metric-report-manifest", namespaceId, scope],
+    queryFn: () =>
+      apiClient.get<MetricReportManifest>(
+        `/namespaces/${encodeURIComponent(namespaceId)}/metrics/report/manifest?scope=${scope}`,
+      ),
+    enabled: !!namespaceId,
+  });
+}
+
+export interface OntologyClassRef {
+  iri: string;
+  label?: string;
+}
+
+/**
+ * Class list used to resolve a metric grain to the ontology class it counts.
+ * Deliberately the kernel's browse read rather than graph search: it needs no
+ * ontology-engine hop, and the card only needs iri + label.
+ */
+export function useOntologyClasses(namespaceId: string) {
+  const apiClient = useApiClient();
+
+  return useQuery<{ classes: OntologyClassRef[] }, Error>({
+    queryKey: ["ontology-classes", namespaceId],
+    queryFn: () =>
+      apiClient.get<{ classes: OntologyClassRef[] }>("/browse/ontology/tree"),
+    enabled: !!namespaceId,
+  });
+}
+
+export interface OntologyInstanceRef {
+  iri: string;
+  label?: string;
+}
+
+export function useClassInstances(
+  namespaceId: string,
+  classIri: string | undefined,
+  limit = 5,
+) {
+  const apiClient = useApiClient();
+
+  return useQuery<{ items: OntologyInstanceRef[]; total: number }, Error>({
+    queryKey: ["ontology-instances", namespaceId, classIri ?? null, limit],
+    queryFn: () =>
+      apiClient.get<{ items: OntologyInstanceRef[]; total: number }>(
+        `/browse/ontology/instances?class=${encodeURIComponent(classIri!)}&limit=${limit}`,
+      ),
+    enabled: !!namespaceId && !!classIri,
   });
 }
