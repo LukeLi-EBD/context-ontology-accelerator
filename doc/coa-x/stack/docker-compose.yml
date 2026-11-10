@@ -1,0 +1,220 @@
+# One-command local stack for the COA control plane (M3b).
+#
+# Why this file lives here (doc/coa-x/stack/) instead of the repo root:
+# it is a development artefact of the coa-x line, exactly like the hand-run
+# scripts in doc/coa-x/tools/.  The product deployment compose stays in
+# packages/platform-core/docker-compose.yml (the 8080/8082 old stack), and
+# keeping the two apart makes it impossible to start the wrong one by accident.
+#
+# Port contract (do not reuse the shared stack's ports):
+#   PostgreSQL   127.0.0.1:6044
+#   Oxigraph     127.0.0.1:7988   (loopback only)
+#   engine       127.0.0.1:8812
+#   bridge       127.0.0.1:8799   (also serves the control-plane kernel)
+# Reserved for the future standalone control-plane split: 8798 (not published).
+#
+# Services that exist today:
+#   postgres, oxigraph, ontology-engine, bridge
+#   migrate (one-shot), seed (one-shot, profile "seed")
+# There is no separate control-plane container: at this commit the control
+# plane is the platform_core kernel embedded in the bridge (43 KERNEL routes).
+# Splitting it is R3 work; creating an empty container here would be a shell.
+
+name: m3-local-stack
+
+x-app: &app
+  image: coa-m3-local:dev
+  build:
+    context: .
+    dockerfile: Dockerfile
+  working_dir: /repo
+  volumes:
+    # Read-only so a container can never mutate the worktree under test.
+    - ../../..:/repo:ro
+    - m3-local-app-data:/data
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+
+x-app-env: &app-env
+  LOG_LEVEL: INFO
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+  # --- databases -----------------------------------------------------------
+  # platform = metadata / facts / metric catalogue; serve_local = lifecycle app.
+  COA_CONTROL_PLANE_PG_DSN: postgresql://platform:platform_dev@postgres:5432/platform
+  COA_METADATA_PG_DSN: postgresql://platform:platform_dev@postgres:5432/platform
+  PLATFORM__DATABASE__URL: postgresql://platform:platform_dev@postgres:5432/serve_local
+  # --- lifecycle app state -------------------------------------------------
+  # The bridge derives its scratch dir from TEMP/TMP, and the worktree is
+  # mounted read-only, so TEMP must point into the writable volume.
+  TEMP: /data/tmp
+  TMP: /data/tmp
+  TMPDIR: /data/tmp
+  PLATFORM__DATA_DIR: /data/lifecycle
+  PLATFORM__STORAGE__ROOT: /data/storage
+  PLATFORM__STORAGE__TMP_DIR: /data/tmp
+  PLATFORM__STORAGE__MIN_FREE_PCT: "2"
+  # Written at bridge start-up; must not land in the read-only worktree.
+  COA_LOCAL_CATALOG_SNAPSHOT: /data/local-catalog.json
+  PLATFORM__REASONING__SHAPES_DIR: /data/shapes
+  PLATFORM__REASONING__ENDPOINT: http://host.docker.internal:7879
+  PLATFORM__EMBEDDING__ENDPOINT: http://host.docker.internal:8081/v1
+  # --- provider selection (never defaulted in code) ------------------------
+  COA_PROVIDER_CONTROL_PLANE_STORE: postgres
+  COA_PROVIDER_METRIC_IMPORT_JOBS: postgres
+  COA_PROVIDER_METRIC_GRAPH: oxigraph
+  COA_PROVIDER_ONTOLOGY_GRAPH: oxigraph
+  COA_PROVIDER_ONTOLOGY_REGISTRY: postgres
+  COA_PROVIDER_ONTOLOGY_JOBS: postgres
+  COA_PROVIDER_ONTOLOGY_OBJECTS: fs
+  COA_PROVIDER_ONTOLOGY_VECTOR: pgvector
+  COA_PROVIDER_ONTOLOGY_EMBEDDING: http
+  # --- transports ----------------------------------------------------------
+  COA_GRAPH_OXIGRAPH_URL: http://oxigraph:7988
+  COA_ONTOLOGY_OXIGRAPH_URL: http://oxigraph:7988
+  COA_LOCAL_OBJECT_ROOT: /data/objects
+  COA_LOCAL_OBJECT_BASE: http://127.0.0.1:8799/_local/objects
+  COA_EMBEDDING_URL: http://host.docker.internal:8081/v1
+  ONTOLOGY_ENGINE_ENDPOINT: http://ontology-engine:8812
+  COA_CONTEXT_MANAGER_ENDPOINT: http://host.docker.internal:8091
+  # --- names every local provider expects (no code defaults) ---------------
+  # Registry and job rows are partitioned by this logical table name; the
+  # registry provider refuses to start without it or COA_ONTOLOGY_REGISTRY_TABLE.
+  DYNAMODB_TABLE: coa-local-ontologies
+  NDB_GRAPH_URI_BASE: https://coa.local/graph
+  # Local-only write whitelist: production must not carry this prefix.
+  COA_LOCAL_GRAPH_ALLOWED_EXTRA_PREFIXES: https://coa.local/graph
+  COA_LOCAL_REASONING_ABOX_GRAPH: https://coa.local/graph/550e8400-e29b-41d4-a716-446655440000/urn%3Acoa%3Aabox%3Aplatform-synthetic
+  PLATFORM__REASONING__MAX_ASSEMBLY_BYTES: "157286400"
+  BUCKET_NAME: coa-local-documents
+  COA_EMBEDDING_MODEL: BAAI/bge-m3
+  COA_EMBEDDING_DIMENSIONS: "1024"
+  COA_VECTOR_DIMENSIONS: "1024"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18-trixie
+    environment:
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: platform_dev
+      POSTGRES_DB: platform
+      POSTGRES_INITDB_ARGS: --data-checksums
+    ports:
+      - "127.0.0.1:6044:5432"
+    volumes:
+      - m3-local-pg-data:/var/lib/postgresql/18/docker
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform -d platform"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  oxigraph:
+    image: oxigraph/oxigraph:0.5.7
+    # No healthcheck: the image is distroless (no shell, no curl/wget).
+    # Consumers retry on first use instead of depending on a probe.
+    command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7988"]
+    ports:
+      - "127.0.0.1:7988:7988"
+    volumes:
+      - m3-local-oxigraph-data:/data
+
+  # One-shot: migrate BOTH databases to the schema version this worktree ships.
+  # The bridge refuses to start when serve_local is stale, and the kernel
+  # answers 500 on writes when platform is stale, so both DSNs are required.
+  migrate:
+    <<: *app
+    restart: "no"
+    command:
+      - sh
+      - -lc
+      - >
+        python doc/coa-x/tools/local_bootstrap.py migrate --dsn "$$COA_CONTROL_PLANE_PG_DSN" &&
+        python doc/coa-x/tools/local_bootstrap.py migrate --dsn "$$PLATFORM__DATABASE__URL"
+    environment:
+      <<: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ontology-engine:
+    <<: *app
+    command: ["python", "doc/coa-x/tools/coa_ontology_local.py"]
+    environment:
+      <<: *app-env
+      COA_ONTOLOGY_HOST: 0.0.0.0
+      COA_ONTOLOGY_PORT: "8812"
+    ports:
+      # Host port is configurable because 8812 is a popular port on this box
+      # (another worktree already runs an engine there).  The bridge never uses
+      # this mapping: inside the network the engine is always ontology-engine:8812.
+      - "127.0.0.1:${COA_STACK_ENGINE_PORT:-8812}:8812"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oxigraph:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8812/health', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+
+  bridge:
+    <<: *app
+    # Serves the contract routes and the in-process control-plane kernel.
+    command: ["python", "doc/coa-x/tools/coa_api_local.py"]
+    environment:
+      <<: *app-env
+      COA_LOCAL_API_HOST: 0.0.0.0
+      COA_LOCAL_API_PORT: "8799"
+    ports:
+      - "127.0.0.1:8799:8799"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      ontology-engine:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8799/health', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+
+  # Optional: load the three FSLDM folios into one namespace's graph so
+  # /graph/search has something to find.  Run explicitly:
+  #   docker compose -f doc/coa-x/stack/docker-compose.yml run --rm seed
+  seed:
+    <<: *app
+    profiles: ["seed"]
+    restart: "no"
+    command:
+      - python
+      - doc/coa-x/tools/coa_ontology_local.py
+      - --seed
+      - --namespace
+      - ${COA_STACK_NAMESPACE:-550e8400-e29b-41d4-a716-446655440000}
+    environment:
+      <<: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      oxigraph:
+        condition: service_started
+
+volumes:
+  m3-local-pg-data:
+  m3-local-oxigraph-data:
+  m3-local-app-data:
