@@ -3,7 +3,7 @@
     "description": "@coa/control-plane-client client",
     "version": "1.0.0",
     "scripts": {
-        "build": "pnpm run build:cjs && pnpm run build:es && pnpm run build:types",
+        "build": "concurrently 'yarn:build:cjs' 'yarn:build:es' 'yarn:build:types'",
         "build:cjs": "tsc -p tsconfig.cjs.json",
         "build:es": "tsc -p tsconfig.es.json",
         "build:types": "tsc -p tsconfig.types.json",

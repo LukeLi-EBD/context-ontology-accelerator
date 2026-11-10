@@ -816,6 +816,52 @@ operation ListStatements {
     }
 }
 
+/// Discover what the canvas can render, and its hard limits.
+///
+/// The canvas reads this before requesting a subgraph so it can disable the
+/// controls the backend cannot honour and label a capped result honestly,
+/// instead of guessing the limits on the client.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/canvas/manifest", code: 200)
+operation GetCanvasManifest {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+    }
+
+    output := {
+        /// Capabilities the canvas may rely on (e.g. ``nodeKinds``,
+        /// ``graphFilter``, ``cursorPaging``). Clients must ignore values
+        /// they do not recognise, so a capability can be added without
+        /// breaking older frontends.
+        @required
+        capabilities: CanvasCapabilityList
+
+        /// Hard limits enforced by the backend.
+        @required
+        limits: CanvasLimits
+    }
+}
+
+list CanvasCapabilityList {
+    member: String
+}
+
+structure CanvasLimits {
+    /// Maximum nodes returned by one canvas subgraph page.
+    @required
+    maxNodes: Integer
+
+    /// Maximum edges returned alongside those nodes.
+    @required
+    maxEdges: Integer
+
+    /// Maximum page size accepted by ``maxResults``.
+    @required
+    maxPageSize: Integer
+}
+
 /// Look up a class vertex by IRI.
 ///
 /// The IRI is passed as a query parameter (``?uri=…``) rather than a

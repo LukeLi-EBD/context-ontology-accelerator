@@ -5324,6 +5324,218 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/graph/canvas/manifest": {
+            "get": {
+                "description": "Discover what the canvas can render, and its hard limits.\n\nThe canvas reads this before requesting a subgraph so it can disable the\ncontrols the backend cannot honour and label a capped result honestly,\ninstead of guessing the limits on the client.",
+                "operationId": "GetCanvasManifest",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetCanvasManifest_example1": {
+                                "summary": "Read the canvas capabilities and limits",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetCanvasManifest 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetCanvasManifestResponseContent"
+                                },
+                                "examples": {
+                                    "GetCanvasManifest_example1": {
+                                        "summary": "Read the canvas capabilities and limits",
+                                        "description": "",
+                                        "value": {
+                                            "capabilities": [
+                                                "nodeKinds",
+                                                "graphFilter",
+                                                "offsetPaging"
+                                            ],
+                                            "limits": {
+                                                "maxNodes": 200,
+                                                "maxEdges": 400,
+                                                "maxPageSize": 100
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphCanvasManifest",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetCanvasManifest_example1": {
+                                "summary": "Read the canvas capabilities and limits",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/graph/class": {
             "get": {
                 "description": "Look up a class vertex by IRI.\n\nThe IRI is passed as a query parameter (``?uri=…``) rather than a\npath label to avoid double-encoding issues with slashes and hash\nfragments common in OWL IRIs (e.g. ``http://example.org/ont#Foo``).",
@@ -24883,6 +25095,28 @@
                     "status"
                 ]
             },
+            "CanvasLimits": {
+                "type": "object",
+                "properties": {
+                    "maxNodes": {
+                        "type": "number",
+                        "description": "Maximum nodes returned by one canvas subgraph page."
+                    },
+                    "maxEdges": {
+                        "type": "number",
+                        "description": "Maximum edges returned alongside those nodes."
+                    },
+                    "maxPageSize": {
+                        "type": "number",
+                        "description": "Maximum page size accepted by ``maxResults``."
+                    }
+                },
+                "required": [
+                    "maxEdges",
+                    "maxNodes",
+                    "maxPageSize"
+                ]
+            },
             "ColumnDenylist": {
                 "type": "object",
                 "additionalProperties": {
@@ -26281,6 +26515,25 @@
                 "required": [
                     "key",
                     "title"
+                ]
+            },
+            "GetCanvasManifestResponseContent": {
+                "type": "object",
+                "properties": {
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Capabilities the canvas may rely on (e.g. ``nodeKinds``,\n``graphFilter``, ``cursorPaging``). Clients must ignore values\nthey do not recognise, so a capability can be added without\nbreaking older frontends."
+                    },
+                    "limits": {
+                        "$ref": "#/components/schemas/CanvasLimits"
+                    }
+                },
+                "required": [
+                    "capabilities",
+                    "limits"
                 ]
             },
             "GetEntityEmbeddingsResponseContent": {

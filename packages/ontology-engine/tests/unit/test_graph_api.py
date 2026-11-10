@@ -666,3 +666,28 @@ class TestNamespaceSchema:
             "https://example.org/onto#Claim",
             "https://example.org/onto#Policy",
         ]
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# GET /graph/canvas/manifest
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def test_canvas_manifest_reports_capabilities_and_limits():
+    """The canvas disables controls from this response, so it must be served
+    without touching a store (a capability probe must not depend on data)."""
+    resp = client.get("/graph/canvas/manifest", params={"namespace": "default"})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["capabilities"] == ["nodeKinds", "graphFilter", "offsetPaging"]
+    assert body["limits"] == {"max_nodes": 200, "max_edges": 400, "max_page_size": 100}
+
+
+def test_canvas_manifest_is_namespace_agnostic():
+    """Namespace-scoped URL, namespace-independent payload: the limits are the
+    backend's, not a tenant's, so two namespaces must agree."""
+    a = client.get("/graph/canvas/manifest", params={"namespace": "default"}).json()
+    b = client.get("/graph/canvas/manifest", params={"namespace": "insurance"}).json()
+
+    assert a == b

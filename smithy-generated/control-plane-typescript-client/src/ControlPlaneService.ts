@@ -99,6 +99,11 @@ import {
   FetchOntologyCommand,
 } from "./commands/FetchOntologyCommand";
 import {
+  type GetCanvasManifestCommandInput,
+  type GetCanvasManifestCommandOutput,
+  GetCanvasManifestCommand,
+} from "./commands/GetCanvasManifestCommand";
+import {
   type GetEntityEmbeddingsCommandInput,
   type GetEntityEmbeddingsCommandOutput,
   GetEntityEmbeddingsCommand,
@@ -501,6 +506,7 @@ const commands = {
   DeleteOntologyCommand,
   DownloadOntologyCommand,
   FetchOntologyCommand,
+  GetCanvasManifestCommand,
   GetGraphClassCommand,
   GetGraphDatatypePropertyCommand,
   GetGraphObjectPropertyCommand,
@@ -1207,6 +1213,23 @@ export interface ControlPlaneService {
     args: FetchOntologyCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: FetchOntologyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetCanvasManifestCommand}
+   */
+  getCanvasManifest(
+    args: GetCanvasManifestCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetCanvasManifestCommandOutput>;
+  getCanvasManifest(
+    args: GetCanvasManifestCommandInput,
+    cb: (err: any, data?: GetCanvasManifestCommandOutput) => void
+  ): void;
+  getCanvasManifest(
+    args: GetCanvasManifestCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetCanvasManifestCommandOutput) => void
   ): void;
 
   /**

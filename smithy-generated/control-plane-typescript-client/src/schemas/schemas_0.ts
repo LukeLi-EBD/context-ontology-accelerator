@@ -27,6 +27,7 @@ const _CG = "CreateGrant";
 const _CGI = "CreateGrantInput";
 const _CGO = "CreateGrantOutput";
 const _CGR = "CreateGrantRequest";
+const _CL = "CanvasLimits";
 const _CM = "ConceptMatch";
 const _CMI = "CreateMetricInput";
 const _CML = "ConceptMatchList";
@@ -101,6 +102,9 @@ const _FOL = "FoundationalOntologyList";
 const _FOO = "FetchOntologyOutput";
 const _FOS = "FoundationalOntologySummary";
 const _GC = "GlueConfiguration";
+const _GCM = "GetCanvasManifest";
+const _GCMI = "GetCanvasManifestInput";
+const _GCMO = "GetCanvasManifestOutput";
 const _GE = "GraphEdge";
 const _GEE = "GetEntityEmbeddings";
 const _GEEI = "GetEntityEmbeddingsInput";
@@ -448,6 +452,7 @@ const _cTo = "confidenceThreshold";
 const _cU = "constraintsUrl";
 const _ca = "created_at";
 const _can = "canonical";
+const _cap = "capabilities";
 const _cc = "constraint_config";
 const _ch = "changes";
 const _cl = "classes";
@@ -609,18 +614,22 @@ const _lSJI = "lastScanJobId";
 const _lT = "licenseTier";
 const _la = "language";
 const _lab = "labels";
-const _li = "limit";
+const _li = "limits";
+const _lim = "limit";
 const _lin = "links";
 const _lo = "location";
 const _lt = "license_tier";
 const _m = "message";
 const _mC = "metricsCreated";
 const _mCU = "matchedClassUri";
+const _mE = "maxEdges";
 const _mEE = "metadataEnrichmentEnabled";
 const _mI = "modelId";
 const _mIe = "metricId";
+const _mN = "maxNodes";
 const _mOI = "matchedOntologyId";
 const _mP = "metricsProcessed";
+const _mPS = "maxPageSize";
 const _mR = "maxResults";
 const _mT = "metricsTotal";
 const _mTa = "matchType";
@@ -1312,6 +1321,11 @@ export var UpdateNamespaceStatusOutput$: StaticStructureSchema = [3, n2, _UNSO,
   [_nam],
   [[() => NamespaceDetail$, 0]], 1
 ];
+export var CanvasLimits$: StaticStructureSchema = [3, n8, _CL,
+  0,
+  [_mN, _mE, _mPS],
+  [1, 1, 1], 3
+];
 export var DeleteOntologyInput$: StaticStructureSchema = [3, n8, _DOI,
   0,
   [_nI, _oIn],
@@ -1336,6 +1350,16 @@ export var FetchOntologyOutput$: StaticStructureSchema = [3, n8, _FOO,
   0,
   [_re],
   [15], 1
+];
+export var GetCanvasManifestInput$: StaticStructureSchema = [3, n8, _GCMI,
+  0,
+  [_nI],
+  [[0, 1]], 1
+];
+export var GetCanvasManifestOutput$: StaticStructureSchema = [3, n8, _GCMO,
+  0,
+  [_cap, _li],
+  [64 | 0, () => CanvasLimits$], 2
 ];
 export var GetGraphClassInput$: StaticStructureSchema = [3, n8, _GGCI,
   0,
@@ -1374,8 +1398,8 @@ export var GetOntologyOutput$: StaticStructureSchema = [3, n8, _GOO,
 ];
 export var GetOntologyOverviewInput$: StaticStructureSchema = [3, n8, _GOOI,
   0,
-  [_nI, _oIn, _li, _of, _sa],
-  [[0, 1], [0, { [_hQ]: _oi }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }], [2, { [_hQ]: _sa }]], 2
+  [_nI, _oIn, _lim, _of, _sa],
+  [[0, 1], [0, { [_hQ]: _oi }], [1, { [_hQ]: _lim }], [1, { [_hQ]: _of }], [2, { [_hQ]: _sa }]], 2
 ];
 export var GetOntologyUploadUrlInput$: StaticStructureSchema = [3, n8, _GOUUIe,
   0,
@@ -1404,8 +1428,8 @@ export var GraphSearchHit$: StaticStructureSchema = [3, n8, _GSH,
 ];
 export var GraphSearchInput$: StaticStructureSchema = [3, n8, _GSI,
   0,
-  [_nI, _q, _k, _oIn, _eOI, _li, _of],
-  [[0, 1], [0, { [_hQ]: _q }], [0, { [_hQ]: _k }], [0, { [_hQ]: _oi }], [0, { [_hQ]: _eoi }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 2
+  [_nI, _q, _k, _oIn, _eOI, _lim, _of],
+  [[0, 1], [0, { [_hQ]: _q }], [0, { [_hQ]: _k }], [0, { [_hQ]: _oi }], [0, { [_hQ]: _eoi }], [1, { [_hQ]: _lim }], [1, { [_hQ]: _of }]], 2
 ];
 export var GraphSearchOutput$: StaticStructureSchema = [3, n8, _GSO,
   0,
@@ -1444,8 +1468,8 @@ export var IngestOntologyFromS3Output$: StaticStructureSchema = [3, n8, _IOFSO,
 ];
 export var ListOntologiesInput$: StaticStructureSchema = [3, n8, _LOI,
   0,
-  [_nI, _oT, _dT, _ur, _sR, _lT, _li, _nT, _mR],
-  [[0, 1], [0, { [_hQ]: _ot }], [0, { [_hQ]: _dt }], [0, { [_hQ]: _ur }], [0, { [_hQ]: _sr }], [0, { [_hQ]: _lt }], [1, { [_hQ]: _li }], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
+  [_nI, _oT, _dT, _ur, _sR, _lT, _lim, _nT, _mR],
+  [[0, 1], [0, { [_hQ]: _ot }], [0, { [_hQ]: _dt }], [0, { [_hQ]: _ur }], [0, { [_hQ]: _sr }], [0, { [_hQ]: _lt }], [1, { [_hQ]: _lim }], [0, { [_hQ]: _nT }], [1, { [_hQ]: _mR }]], 1
 ];
 export var ListOntologiesOutput$: StaticStructureSchema = [3, n8, _LOO,
   0,
@@ -1454,8 +1478,8 @@ export var ListOntologiesOutput$: StaticStructureSchema = [3, n8, _LOO,
 ];
 export var ListStatementsInput$: StaticStructureSchema = [3, n8, _LSI,
   0,
-  [_nI, _su, _pr, _oV, _gra, _li, _of],
-  [[0, 1], [0, { [_hQ]: _su }], [0, { [_hQ]: _pr }], [0, { [_hQ]: _ob }], [0, { [_hQ]: _gra }], [1, { [_hQ]: _li }], [1, { [_hQ]: _of }]], 1
+  [_nI, _su, _pr, _oV, _gra, _lim, _of],
+  [[0, 1], [0, { [_hQ]: _su }], [0, { [_hQ]: _pr }], [0, { [_hQ]: _ob }], [0, { [_hQ]: _gra }], [1, { [_hQ]: _lim }], [1, { [_hQ]: _of }]], 1
 ];
 export var ListStatementsOutput$: StaticStructureSchema = [3, n8, _LSO,
   0,
@@ -2200,6 +2224,7 @@ var ValidationWarningList: StaticListSchema = [1, n7, _VWL,
 var NamespaceSummaryList: StaticListSchema = [1, n2, _NSL,
   0, () => NamespaceSummary$
 ];
+var CanvasCapabilityList = 64 | 0;
 var GraphEdgeList: StaticListSchema = [1, n8, _GEL,
   0, [() => GraphEdge$,
     0]
@@ -2421,6 +2446,9 @@ export var DownloadOntology$: StaticOperationSchema = [9, n8, _DOo,
 ];
 export var FetchOntology$: StaticOperationSchema = [9, n8, _FO,
   { [_ht]: ["POST", "/namespaces/{namespaceId}/ontologies/{ontologyId}/fetch", 200] }, () => FetchOntologyInput$, () => FetchOntologyOutput$
+];
+export var GetCanvasManifest$: StaticOperationSchema = [9, n8, _GCM,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/canvas/manifest", 200] }, () => GetCanvasManifestInput$, () => GetCanvasManifestOutput$
 ];
 export var GetGraphClass$: StaticOperationSchema = [9, n8, _GGC,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/graph/class", 200] }, () => GetGraphClassInput$, () => GraphVertex$

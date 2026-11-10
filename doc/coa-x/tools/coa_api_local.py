@@ -566,6 +566,9 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/graph/search", ONTOLOGY),
     # ListStatements (F67–F70): read-only statement listing, namespace-scoped.
     ("/namespaces/{namespaceId}/graph/statements", ONTOLOGY),
+    # GetCanvasManifest (F13): capabilities/limits the canvas must honour
+    # before it draws. Read-only, no store access.
+    ("/namespaces/{namespaceId}/graph/canvas/manifest", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/ontology-overview", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/class", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/object-property", ONTOLOGY),

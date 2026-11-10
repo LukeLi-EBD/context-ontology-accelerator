@@ -710,6 +710,12 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/graph/statements": {
         "GET": ("viewNamespace", "Ontology"),
     },
+    # Canvas capability probe: it decides which controls the UI enables, so
+    # namespace read access is the whole requirement. Mapping it as a write
+    # would keep viewers from rendering the canvas at all.
+    "/namespaces/{namespaceId}/graph/canvas/manifest": {
+        "GET": ("viewNamespace", "Ontology"),
+    },
     # ── Documents ───────────────────────────────────────────────────────
     # Uploading bytes is a write to the namespace's source assets, so it reuses
     # manageSource (same power as /sources); the registry list stays a metadata

@@ -47,6 +47,8 @@ from coa_control_plane_server.models import (
 from fastapi import APIRouter, HTTPException, Query
 
 from coa_ontology.catalog.graph_schemas import (
+    CanvasLimits,
+    CanvasManifest,
     GraphSearchHit,
     GraphSearchResult,
     GraphStatementPage,
@@ -95,6 +97,13 @@ _MAX_SEARCH_QUERY_LENGTH = 4000
 # negative ``offset`` reads as 0.
 _MAX_OVERVIEW_LIMIT = 10_000
 _MAX_OVERVIEW_OFFSET = 1_000_000
+
+# Canvas manifest (F13). ``nodeKinds`` / ``graphFilter`` / ``offsetPaging`` are
+# the controls the canvas actually implements today; anything else must stay
+# hidden. Limits match what GetCanvasSubgraph will enforce, and are published
+# here so the UI stops paging at the boundary instead of learning it from a 400.
+_CANVAS_CAPABILITIES: tuple[str, ...] = ("nodeKinds", "graphFilter", "offsetPaging")
+_CANVAS_LIMITS: dict[str, int] = {"max_nodes": 200, "max_edges": 400, "max_page_size": 100}
 
 # Fixed client-facing messages: backend exception text (store class names,
 # endpoints) is logged, never returned, and the caller's own URI is not echoed.
@@ -223,6 +232,19 @@ def search_entities(
         log.warning("entity search unsupported by backend: %s", e)
         raise HTTPException(501, "Entity search is not supported on this backend.") from e
     return GraphSearchResult(hits=[GraphSearchHit(**r) for r in results], total_count=total)
+
+
+@router.get("/canvas/manifest", response_model=CanvasManifest)
+def get_canvas_manifest():
+    """What the canvas can render, and the limits it must page within.
+
+    Served from constants rather than derived from a scan: the point is to let
+    the UI disable controls the backend cannot honour *before* it draws, so a
+    wrong guess here would surface as a button that always fails. When a
+    capability or limit changes, it changes here and in ``GetCanvasSubgraph``
+    together — the manifest is the declared contract, not a probe result.
+    """
+    return CanvasManifest(capabilities=list(_CANVAS_CAPABILITIES), limits=CanvasLimits(**_CANVAS_LIMITS))
 
 
 @router.get("/statements", response_model=GraphStatementPage)

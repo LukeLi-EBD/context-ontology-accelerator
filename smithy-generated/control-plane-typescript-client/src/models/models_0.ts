@@ -2544,6 +2544,60 @@ export interface FetchOntologyOutput {
 /**
  * @public
  */
+export interface GetCanvasManifestInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+}
+
+/**
+ * @public
+ */
+export interface CanvasLimits {
+  /**
+   * Maximum nodes returned by one canvas subgraph page.
+   * @public
+   */
+  maxNodes: number | undefined;
+
+  /**
+   * Maximum edges returned alongside those nodes.
+   * @public
+   */
+  maxEdges: number | undefined;
+
+  /**
+   * Maximum page size accepted by ``maxResults``.
+   * @public
+   */
+  maxPageSize: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetCanvasManifestOutput {
+  /**
+   * Capabilities the canvas may rely on (e.g. ``nodeKinds``,
+   * ``graphFilter``, ``cursorPaging``). Clients must ignore values
+   * they do not recognise, so a capability can be added without
+   * breaking older frontends.
+   * @public
+   */
+  capabilities: string[] | undefined;
+
+  /**
+   * Hard limits enforced by the backend.
+   * @public
+   */
+  limits: CanvasLimits | undefined;
+}
+
+/**
+ * @public
+ */
 export interface GetGraphClassInput {
   /**
    * UUID v4 identifier.

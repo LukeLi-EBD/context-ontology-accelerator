@@ -265,3 +265,14 @@ apply ListStatements @examples([
         }
     }
 ])
+
+apply GetCanvasManifest @examples([
+    {
+        title: "Read the canvas capabilities and limits"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d" }
+        output: {
+            capabilities: ["nodeKinds", "graphFilter", "offsetPaging"]
+            limits: { maxNodes: 200, maxEdges: 400, maxPageSize: 100 }
+        }
+    }
+])

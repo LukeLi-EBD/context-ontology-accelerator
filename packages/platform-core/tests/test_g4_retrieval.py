@@ -323,6 +323,42 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertTrue(seen)
         self.assertTrue(all(item.get("persist") is False for item in seen))
 
+    def test_full_run_is_recorded_once(self):
+        runtime = SimpleNamespace(
+            metadata=FakeMetadata(),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+        )
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with TestClient(api_module.create_app(runtime, [])) as client:
+                payload = client.get("/answer/quality").json()
+        inserts = [
+            (sql, params)
+            for sql, params in runtime.metadata.calls
+            if "INSERT INTO platform.answer_quality_run" in sql
+        ]
+        self.assertEqual(len(inserts), 1)
+        self.assertTrue(payload["persisted"])
+        self.assertTrue(payload["runId"].startswith("aq-"))
+        self.assertEqual(inserts[0][1][0], payload["runId"])
+
+    def test_case_drill_down_is_not_recorded(self):
+        runtime = SimpleNamespace(
+            metadata=FakeMetadata(),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+        )
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with TestClient(api_module.create_app(runtime, [])) as client:
+                payload = client.get("/answer/quality", params={"caseId": "G01"}).json()
+        inserts = [
+            sql for sql, _ in runtime.metadata.calls
+            if "INSERT INTO platform.answer_quality_run" in sql
+        ]
+        self.assertEqual(inserts, [])
+        self.assertFalse(payload["persisted"])
+        self.assertIsNone(payload["runId"])
+
     def test_facts_data_source_comes_from_observation_row(self):
         row = {
             "metric_id": "FIN-BANK-001",

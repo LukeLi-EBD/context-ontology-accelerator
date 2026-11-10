@@ -19,6 +19,7 @@ export * from "./DeleteSourceCommand";
 export * from "./DownloadOntologyCommand";
 export * from "./ExportOsiCommand";
 export * from "./FetchOntologyCommand";
+export * from "./GetCanvasManifestCommand";
 export * from "./GetEntityEmbeddingsCommand";
 export * from "./GetGraphClassCommand";
 export * from "./GetGraphDatatypePropertyCommand";

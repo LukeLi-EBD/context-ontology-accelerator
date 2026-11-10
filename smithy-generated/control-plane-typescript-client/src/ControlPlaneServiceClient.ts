@@ -98,6 +98,10 @@ import type { DownloadOntologyCommandInput, DownloadOntologyCommandOutput } from
 import type { ExportOsiCommandInput, ExportOsiCommandOutput } from "./commands/ExportOsiCommand";
 import type { FetchOntologyCommandInput, FetchOntologyCommandOutput } from "./commands/FetchOntologyCommand";
 import type {
+  GetCanvasManifestCommandInput,
+  GetCanvasManifestCommandOutput,
+} from "./commands/GetCanvasManifestCommand";
+import type {
   GetEntityEmbeddingsCommandInput,
   GetEntityEmbeddingsCommandOutput,
 } from "./commands/GetEntityEmbeddingsCommand";
@@ -306,6 +310,7 @@ export type ServiceInputTypes =
   | DownloadOntologyCommandInput
   | ExportOsiCommandInput
   | FetchOntologyCommandInput
+  | GetCanvasManifestCommandInput
   | GetEntityEmbeddingsCommandInput
   | GetGraphClassCommandInput
   | GetGraphDatatypePropertyCommandInput
@@ -403,6 +408,7 @@ export type ServiceOutputTypes =
   | DownloadOntologyCommandOutput
   | ExportOsiCommandOutput
   | FetchOntologyCommandOutput
+  | GetCanvasManifestCommandOutput
   | GetEntityEmbeddingsCommandOutput
   | GetGraphClassCommandOutput
   | GetGraphDatatypePropertyCommandOutput

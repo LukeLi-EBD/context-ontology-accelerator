@@ -171,3 +171,24 @@ class GraphStatementPage(BaseModel):
     statements: list[GraphStatement] = Field(..., description="The page of statements.")
     truncated: bool = Field(default=False, description="True when more statements remain.")
 
+
+class CanvasLimits(BaseModel):
+    """Hard limits the canvas must honour when it asks for a subgraph."""
+
+    max_nodes: int = Field(..., description="Maximum nodes returned by one subgraph page.")
+    max_edges: int = Field(..., description="Maximum edges returned alongside those nodes.")
+    max_page_size: int = Field(..., description="Maximum page size accepted by maxResults.")
+
+
+class CanvasManifest(BaseModel):
+    """What the canvas can render, and where it must stop.
+
+    ``capabilities`` is a list of identifiers; clients must ignore values they
+    do not recognise so a capability can be added without breaking older
+    frontends. ``limits`` is the same set the subgraph endpoint enforces, so the
+    UI can disable "load more" at the boundary instead of failing on click.
+    """
+
+    capabilities: list[str] = Field(..., description="Capability identifiers this backend supports.")
+    limits: CanvasLimits = Field(..., description="Hard limits enforced by the backend.")
+

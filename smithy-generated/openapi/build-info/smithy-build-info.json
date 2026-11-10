@@ -1,104 +1,5 @@
 {
-    "metadata": {
-        "validators": [
-            {
-                "name": "EmitEachSelector",
-                "id": "OperationMissingDocumentation",
-                "message": "Every public operation must have documentation (a /// doc comment).",
-                "configuration": {
-                    "selector": "operation :not([trait|documentation])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "OperationMissingExamples",
-                "message": "Every public operation must have an @examples trait.",
-                "configuration": {
-                    "selector": "operation :not([trait|examples])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "StructureMissingDocumentation",
-                "message": "Every domain structure must have documentation (a /// doc comment). Synthesized @input/@output wrappers are exempt.",
-                "configuration": {
-                    "selector": "structure :not([trait|documentation]) :not([trait|input]) :not([trait|output])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "MemberMissingDocumentation",
-                "message": "Every structure member must have documentation (a /// doc comment) unless its target type is itself documented. Otherwise it renders blank in the API reference.",
-                "configuration": {
-                    "selector": "structure > member :not([trait|documentation]) :not(:test(> [trait|documentation]))"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "EnumMissingDocumentation",
-                "message": "Every enum must have documentation (a /// doc comment).",
-                "configuration": {
-                    "selector": "[id|namespace^=com.amazon.semanticcontext] :is(enum) :not([trait|documentation])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "EnumValueMissingDocumentation",
-                "message": "Every enum value must have documentation (a /// doc comment) so it is described in the API reference.",
-                "configuration": {
-                    "selector": "[id|namespace^=com.amazon.semanticcontext] :is(enum) > member :not([trait|documentation])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "InputStringMissingLength",
-                "message": "Every input-reachable string member must have @length on the member or its target (enums excepted; @pattern alone is not enough).",
-                "configuration": {
-                    "selector": "operation[id|namespace^=com.amazon.semanticcontext] -[input]-> structure ~> member :test(> string :not(enum) :not([trait|enum]) :not([trait|length])) :not([trait|length])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "InputNumberMissingRange",
-                "message": "Every input-reachable numeric member must have @range with both min and max on the member or its target (a member-level @range replaces the target's).",
-                "configuration": {
-                    "selector": "operation[id|namespace^=com.amazon.semanticcontext] -[input]-> structure ~> member :not([id='com.amazon.semanticcontext.datalayer#KBSearchInput$minScore']) :test(> number :not(intEnum)) :not([trait|range|min] [trait|range|max]) :not(:not([trait|range]) :test(> [trait|range|min] [trait|range|max]))"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "InputCollectionMissingLength",
-                "message": "Every input-reachable list or map member must have @length on the member or its target.",
-                "configuration": {
-                    "selector": "operation[id|namespace^=com.amazon.semanticcontext] -[input]-> structure ~> member :test(> :is(list, map) :not([trait|length])) :not([trait|length])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "InputBlobMissingLength",
-                "message": "Every input-reachable blob member must have @length on the member or its target.",
-                "configuration": {
-                    "selector": "operation[id|namespace^=com.amazon.semanticcontext] -[input]-> structure ~> member :test(> blob :not([trait|length])) :not([trait|length])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "InputDocumentNotAllowlisted",
-                "message": "Input-reachable document members are free-form JSON that no model constraint bounds. Tag the member @tags([\"bounded-at-runtime\"]) only once its handler enforces a size cap, and say so in its doc comment.",
-                "configuration": {
-                    "selector": "operation[id|namespace^=com.amazon.semanticcontext] -[input]-> structure ~> member :test(> document) :not([trait|tags|(values)='bounded-at-runtime'])"
-                }
-            },
-            {
-                "name": "EmitEachSelector",
-                "id": "UnauthenticatedOperation",
-                "message": "Only the HealthCheck liveness probe may opt out of authentication; remove @optionalAuth / @auth([]) from this shape.",
-                "configuration": {
-                    "selector": "[id|namespace^=com.amazon.semanticcontext] :is(operation, service) :not([id=com.amazon.semanticcontext#HealthCheck]) :is([trait|optionalAuth], [trait|auth|(length)=0])"
-                }
-            }
-        ]
-    },
+    "metadata": {},
     "operationShapeIds": [
         "com.amazon.semanticcontext#GetSystemHealth",
         "com.amazon.semanticcontext#HealthCheck",
@@ -142,6 +43,7 @@
         "com.amazon.semanticcontext.ontologygraph#DeleteOntology",
         "com.amazon.semanticcontext.ontologygraph#DownloadOntology",
         "com.amazon.semanticcontext.ontologygraph#FetchOntology",
+        "com.amazon.semanticcontext.ontologygraph#GetCanvasManifest",
         "com.amazon.semanticcontext.ontologygraph#GetGraphClass",
         "com.amazon.semanticcontext.ontologygraph#GetGraphDatatypeProperty",
         "com.amazon.semanticcontext.ontologygraph#GetGraphObjectProperty",
@@ -152,6 +54,7 @@
         "com.amazon.semanticcontext.ontologygraph#GraphSearch",
         "com.amazon.semanticcontext.ontologygraph#IngestOntologyFromS3",
         "com.amazon.semanticcontext.ontologygraph#ListOntologies",
+        "com.amazon.semanticcontext.ontologygraph#ListStatements",
         "com.amazon.semanticcontext.ontologygraph#UploadOntology",
         "com.amazon.semanticcontext.ontologyinduction#AcceptProposal",
         "com.amazon.semanticcontext.ontologyinduction#CancelProposal",
@@ -236,7 +139,29 @@
         "aws.auth#sigv4",
         "aws.auth#sigv4a",
         "aws.auth#unsignedPayload",
+        "aws.cloudformation#cfnAdditionalIdentifier",
+        "aws.cloudformation#cfnDefaultValue",
+        "aws.cloudformation#cfnExcludeProperty",
+        "aws.cloudformation#cfnMutability",
+        "aws.cloudformation#cfnName",
+        "aws.cloudformation#cfnResource",
         "aws.customizations#s3UnwrappedXmlOutput",
+        "aws.endpoints#dualStackOnlyEndpoints",
+        "aws.endpoints#endpointsModifier",
+        "aws.endpoints#rulesBasedEndpoints",
+        "aws.endpoints#standardPartitionalEndpoints",
+        "aws.endpoints#standardRegionalEndpoints",
+        "aws.iam#actionName",
+        "aws.iam#actionPermissionDescription",
+        "aws.iam#conditionKeys",
+        "aws.iam#conditionKeyValue",
+        "aws.iam#defineConditionKeys",
+        "aws.iam#disableConditionKeyInference",
+        "aws.iam#iamAction",
+        "aws.iam#iamResource",
+        "aws.iam#requiredActions",
+        "aws.iam#serviceResolvedConditionKeys",
+        "aws.iam#supportedPrincipalTypes",
         "aws.protocols#awsJson1_0",
         "aws.protocols#awsJson1_1",
         "aws.protocols#awsQuery",
@@ -326,12 +251,25 @@
         "smithy.api#xmlName",
         "smithy.api#xmlNamespace",
         "smithy.openapi#specificationExtension",
-        "smithy.protocols#rpcv2Cbor"
+        "smithy.protocols#rpcv2Cbor",
+        "smithy.rules#clientContextParams",
+        "smithy.rules#contextParam",
+        "smithy.rules#endpointBdd",
+        "smithy.rules#endpointRuleSet",
+        "smithy.rules#endpointTests",
+        "smithy.rules#operationContextParams",
+        "smithy.rules#staticContextParams",
+        "smithy.test#eventStreamTests",
+        "smithy.test#httpMalformedRequestTests",
+        "smithy.test#httpRequestTests",
+        "smithy.test#httpResponseTests",
+        "smithy.waiters#waitable"
     ],
     "traitNames": [
         "aws.api#arnReference",
         "aws.apigateway#authorizer",
         "aws.apigateway#authorizers",
+        "aws.endpoints#endpointsModifier",
         "aws.protocols#restJson1",
         "smithy.api#authDefinition",
         "smithy.api#box",
@@ -386,7 +324,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#UpdateSourceMetadata",
             "message": "This operation uses the `PUT` method in the `http` trait, but is not marked with the idempotent trait",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 1739,
             "column": 1
         },
@@ -395,7 +333,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#DeleteSource",
             "message": "This operation uses the `DELETE` method in the `http` trait, but is not marked with the idempotent trait",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 1675,
             "column": 1
         },
@@ -404,7 +342,7 @@
             "severity": "SUPPRESSED",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
             "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 1295,
             "column": 5
         },
@@ -413,7 +351,7 @@
             "severity": "SUPPRESSED",
             "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest$clientToken",
             "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.grant#CreateGrantInput$body]}",
-            "filename": "/work/src/main/smithy/grant.smithy",
+            "filename": "/tmp/gen-src/grant.smithy",
             "line": 132,
             "column": 5
         },
@@ -422,43 +360,16 @@
             "severity": "SUPPRESSED",
             "shapeId": "com.amazon.semanticcontext.grant#CreatePlatformGrantRequest$clientToken",
             "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.grant#CreatePlatformGrantInput$body]}",
-            "filename": "/work/src/main/smithy/grant.smithy",
+            "filename": "/tmp/gen-src/grant.smithy",
             "line": 229,
             "column": 5
         },
         {
             "id": "OperationNameAmbiguity",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest",
-            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
-            "filename": "/work/src/main/smithy/grant.smithy",
-            "line": 98,
-            "column": 1
-        },
-        {
-            "id": "OperationNameAmbiguity",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#GetSourceOutput",
-            "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#GetSource, but that operation uses com.amazon.semanticcontext.unifiedsources#GetSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
-            "line": 1386,
-            "column": 1
-        },
-        {
-            "id": "OperationNameAmbiguity",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.grant#CreatePlatformGrantRequest",
-            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreatePlatformGrant, but that operation uses com.amazon.semanticcontext.grant#CreatePlatformGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
-            "filename": "/work/src/main/smithy/grant.smithy",
-            "line": 207,
-            "column": 1
-        },
-        {
-            "id": "OperationNameAmbiguity",
-            "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput",
             "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.unifiedsources#CreateSource, but that operation uses com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 1277,
             "column": 1
         },
@@ -467,8 +378,35 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceOutput",
             "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#CreateSource, but that operation uses com.amazon.semanticcontext.unifiedsources#CreateSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 1365,
+            "column": 1
+        },
+        {
+            "id": "OperationNameAmbiguity",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest",
+            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
+            "filename": "/tmp/gen-src/grant.smithy",
+            "line": 98,
+            "column": 1
+        },
+        {
+            "id": "OperationNameAmbiguity",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#GetSourceOutput",
+            "message": "The name of this shape implies that it is the output of com.amazon.semanticcontext.unifiedsources#GetSource, but that operation uses com.amazon.semanticcontext.unifiedsources#GetSourceOperationOutput for output. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate output types.",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
+            "line": 1386,
+            "column": 1
+        },
+        {
+            "id": "OperationNameAmbiguity",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.grant#CreatePlatformGrantRequest",
+            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreatePlatformGrant, but that operation uses com.amazon.semanticcontext.grant#CreatePlatformGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
+            "filename": "/tmp/gen-src/grant.smithy",
+            "line": 207,
             "column": 1
         },
         {
@@ -476,7 +414,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.ontologygraph#FetchOntologyInput$sourceUrl",
             "message": "A pattern trait is applied without a trailing '$', meaning only part of the string must match the regular expression. Explicitly anchoring regular expressions is preferable because it is more restrictive by default and does not require modelers to understand that Smithy patterns are not automatically anchored.",
-            "filename": "/work/src/main/smithy/ontology-graph.smithy",
+            "filename": "/tmp/gen-src/ontology-graph.smithy",
             "line": 348,
             "column": 9
         },
@@ -485,7 +423,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.ontologygraph#StringList",
             "message": "Shape name `com.amazon.semanticcontext.ontologygraph#StringList` conflicts with `com.amazon.semanticcontext.ontologyinduction#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/work/src/main/smithy/ontology-graph.smithy",
+            "filename": "/tmp/gen-src/ontology-graph.smithy",
             "line": 147,
             "column": 1
         },
@@ -494,7 +432,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.ontologygraph#StringList",
             "message": "Shape name `com.amazon.semanticcontext.ontologygraph#StringList` conflicts with `com.amazon.semanticcontext.unifiedsources#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/work/src/main/smithy/ontology-graph.smithy",
+            "filename": "/tmp/gen-src/ontology-graph.smithy",
             "line": 147,
             "column": 1
         },
@@ -503,7 +441,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.ontologyinduction#StringList",
             "message": "Shape name `com.amazon.semanticcontext.ontologyinduction#StringList` conflicts with `com.amazon.semanticcontext.ontologygraph#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/work/src/main/smithy/ontology-induction.smithy",
+            "filename": "/tmp/gen-src/ontology-induction.smithy",
             "line": 1415,
             "column": 1
         },
@@ -512,7 +450,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.ontologyinduction#StringList",
             "message": "Shape name `com.amazon.semanticcontext.ontologyinduction#StringList` conflicts with `com.amazon.semanticcontext.unifiedsources#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/work/src/main/smithy/ontology-induction.smithy",
+            "filename": "/tmp/gen-src/ontology-induction.smithy",
             "line": 1415,
             "column": 1
         },
@@ -521,7 +459,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#StringList",
             "message": "Shape name `com.amazon.semanticcontext.unifiedsources#StringList` conflicts with `com.amazon.semanticcontext.ontologygraph#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 858,
             "column": 1
         },
@@ -530,7 +468,7 @@
             "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.unifiedsources#StringList",
             "message": "Shape name `com.amazon.semanticcontext.unifiedsources#StringList` conflicts with `com.amazon.semanticcontext.ontologyinduction#StringList` in the `com.amazon.semanticcontext#ControlPlaneService` service closure. Shapes in the closure of a service should have case-insensitively unique names regardless of their namespaces. Use the `rename` property of the service to disambiguate shape names.",
-            "filename": "/work/src/main/smithy/unified-sources.smithy",
+            "filename": "/tmp/gen-src/unified-sources.smithy",
             "line": 858,
             "column": 1
         }

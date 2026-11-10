@@ -5716,6 +5716,64 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "resolvable": resolvable,
         }
 
+    def _record_answer_quality_run(payload: dict[str, Any]) -> str:
+        """Persist one full golden-set run and return its run id.
+
+        A single-case drill-down is a view of an existing run, not a new
+        measurement, so it never reaches here. A run that cannot be recorded
+        raises instead of being dropped: the row exists precisely because the
+        result cannot be recomputed from a later response.
+        """
+        run_id = "aq-" + uuid.uuid4().hex[:12]
+        summary = payload["summary"]
+        detail = {
+            "summary": summary,
+            "citationCoverageByType": payload["citationCoverageByType"],
+            "refusalsByType": payload["refusalsByType"],
+            "refusalsByReason": payload["refusalsByReason"],
+            "refusalsWithoutLayers": payload["refusalsWithoutLayers"],
+            "brokenLinks": payload["brokenLinks"],
+        }
+        try:
+            runtime.metadata.query(
+                """
+                INSERT INTO platform.answer_quality_run
+                  (run_id, strategy, golden_set, evaluated, passed, failed,
+                   pass_rate, cases_with_citations, citation_coverage_rate,
+                   citations, resolvable_citations, citation_resolvable_rate,
+                   broken_links, broken_link_rate, regression, detail)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                RETURNING run_id
+                """,
+                (
+                    run_id,
+                    payload["strategy"],
+                    payload["goldenSet"]["id"],
+                    summary["cases"],
+                    summary["passed"],
+                    summary["failed"],
+                    summary["passRate"],
+                    summary["casesWithCitations"],
+                    summary["citationCoverageRate"],
+                    summary["citations"],
+                    summary["resolvableCitations"],
+                    summary["citationResolvableRate"],
+                    len(payload["brokenLinks"]),
+                    summary["brokenLinkRate"],
+                    summary["regression"],
+                    json.dumps(detail, ensure_ascii=False, default=str),
+                ),
+            )
+        except Exception as exc:
+            raise PortError(
+                code="InternalError",
+                message="answer quality run could not be persisted",
+                provider="platform",
+                provider_code="E_ANSWER_QUALITY_PERSIST_FAILED",
+                details={"cause": str(exc)[:200]},
+            ) from exc
+        return run_id
+
     def _g4_answer_quality_data(
         strategy: str, limit: int, case_id: str | None = None
     ) -> dict[str, Any]:
@@ -5868,7 +5926,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                     else 0.0,
                 }
             )
-        return {
+        payload = {
             "strategy": strategy,
             "goldenSet": {
                 "id": "r02-golden-10",
@@ -5929,6 +5987,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             ),
             "readOnly": True,
         }
+        # Full-set runs are recorded; `caseId` is a drill-down into an existing
+        # run, not a new measurement. `readOnly` above still holds: the row is a
+        # derived quality record, not a change to ontology/metric/fact data.
+        payload["runId"] = _record_answer_quality_run(payload) if case_id is None else None
+        payload["persisted"] = payload["runId"] is not None
+        return payload
 
     def _g4_provenance_fields(
         detail: dict[str, Any],
