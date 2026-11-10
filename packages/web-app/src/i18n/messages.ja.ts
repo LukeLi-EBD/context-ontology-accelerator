@@ -508,6 +508,7 @@ export const MESSAGES_JA = {
   "Source table values": "ソーステーブルの値",
   "Defined by values": "定義者の値",
   "No metrics": "メトリクスがありません",
+  Unbound: "未バインド",
   "No metrics have been defined yet. Import an OSI file to get started.":
     "メトリクスはまだ定義されていません。OSI ファイルをインポートして開始してください。",
   "Import OSI": "OSI をインポート",

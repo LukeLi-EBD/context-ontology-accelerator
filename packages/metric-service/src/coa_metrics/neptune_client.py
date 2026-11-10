@@ -236,6 +236,10 @@ class MetricDefinition:
     domain: str | None = None
     evidence_basis: str | None = None
     publishable: bool | None = None
+    # Whether the metric is bound to a physical source. ``"unbound"`` keeps the
+    # definition visible without inventing a table: ``sourceTable`` is then not
+    # written at all (never an empty string). Stored on ``vocab#bindingStatus``.
+    binding_status: str | None = None
 
 
 # ── Neptune Metric Client ───────────────────────────────────────────────
@@ -589,9 +593,15 @@ class MetricNeptuneClient:
             f"{_iri(uri)} {_iri(RDFS + 'subClassOf')} {_iri(COA_VOCAB + 'GovernedMetric')} .",
             f'{_iri(uri)} {_iri(RDFS + "label")} "{_esc(metric.name)}" .',
             f'{_iri(uri)} {_iri(RDFS + "comment")} "{_esc(metric.description)}" .',
-            f'{_iri(uri)} {_iri(COA_VOCAB + "dataSourceId")} "{_esc(metric.data_source_id)}" .',
-            f'{_iri(uri)} {_iri(COA_VOCAB + "sourceTable")} "{_esc(metric.source_table)}" .',
         ]
+        # An empty source is absence, not a value: writing "" would make
+        # "no table" indistinguishable from "a table named ''".
+        if metric.data_source_id:
+            triples.append(f'{_iri(uri)} {_iri(COA_VOCAB + "dataSourceId")} "{_esc(metric.data_source_id)}" .')
+        if metric.source_table:
+            triples.append(f'{_iri(uri)} {_iri(COA_VOCAB + "sourceTable")} "{_esc(metric.source_table)}" .')
+        if metric.binding_status:
+            triples.append(f'{_iri(uri)} {_iri(COA_VOCAB + "bindingStatus")} "{_esc(metric.binding_status)}" .')
         if metric.label:
             # Untagged plain literal: metric-service does not know the namespace
             # language, and readers take the label only from the untagged literal.
@@ -670,6 +680,8 @@ class MetricNeptuneClient:
                 props["publishable"] = o_val.strip().lower() == "true"
             elif p == COA_VOCAB + "sourceTable":
                 props["source_table"] = o_val
+            elif p == COA_VOCAB + "bindingStatus":
+                props["binding_status"] = o_val
             elif p == COA_VOCAB + "expressionDialects":
                 dialects_raw = json.loads(o_val)
                 props["expression_dialects"] = [
@@ -713,6 +725,7 @@ class MetricNeptuneClient:
             domain=props.get("domain"),
             evidence_basis=props.get("evidence_basis"),
             publishable=props.get("publishable"),
+            binding_status=props.get("binding_status"),
         )
 
 

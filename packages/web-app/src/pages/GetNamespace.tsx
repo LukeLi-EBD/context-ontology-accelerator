@@ -541,9 +541,21 @@ const MetricsTab: React.FC<{ namespaceId: string }> = ({ namespaceId }) => {
     {
       id: "dataSourceId",
       header: t("Data source"),
-      cell: (m) => m.dataSourceId,
+      cell: (m) => m.dataSourceId || "—",
     },
-    { id: "sourceTable", header: t("Table"), cell: (m) => m.sourceTable },
+    {
+      id: "sourceTable",
+      header: t("Table"),
+      // ``bindingStatus`` is written by the metric graph; the generated client
+      // type predates it, so read it structurally. Absent/short-circuits to the
+      // absence of ``sourceTable`` for older records.
+      cell: (m) =>
+        (m as MetricDefinition & { bindingStatus?: string }).bindingStatus === "unbound" || !m.sourceTable ? (
+          <Box color="text-status-inactive">{t("Unbound")}</Box>
+        ) : (
+          m.sourceTable
+        ),
+    },
   ];
 
   return (
