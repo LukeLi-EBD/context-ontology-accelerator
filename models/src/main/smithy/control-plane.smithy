@@ -11,6 +11,12 @@ use aws.protocols#restJson1
 use com.amazon.semanticcontext.common#InternalServerError
 use com.amazon.semanticcontext.common#ServiceUnavailableError
 use com.amazon.semanticcontext.common#ValidationError
+use com.amazon.semanticcontext.dictionary#GetDictionary
+use com.amazon.semanticcontext.dictionary#GetDictionaryCommentCoverage
+use com.amazon.semanticcontext.dictionary#GetDictionaryView
+use com.amazon.semanticcontext.dictionary#ListDictionaries
+use com.amazon.semanticcontext.dictionary#ListTerms
+use com.amazon.semanticcontext.dictionary#RefreshDictionaries
 use com.amazon.semanticcontext.documents#ApproveFactCandidate
 use com.amazon.semanticcontext.documents#ListDocumentChunks
 use com.amazon.semanticcontext.documents#ListDocuments
@@ -261,6 +267,13 @@ service ControlPlaneService {
         // ── Entity embeddings ───────────────────────────────────────────
         GetEntityEmbeddings
         SearchEmbeddings
+        // ── Terms + data dictionary (F58-F66) ───────────────────────────
+        ListTerms
+        ListDictionaries
+        GetDictionary
+        GetDictionaryView
+        GetDictionaryCommentCoverage
+        RefreshDictionaries
     ]
     errors: [
         ValidationError
