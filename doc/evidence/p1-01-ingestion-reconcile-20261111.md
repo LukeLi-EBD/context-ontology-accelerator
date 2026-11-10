@@ -97,6 +97,13 @@ root：`C:\Users\cpslau\AppData\Local\Temp\p1-mixed-mix01\docs`（3 个文件，
 > `--retry-failed` 会把该批次全部 `failed` 重置为 `pending`，所以「只重试一部分」靠
 > `--batch-size` 限制单次处理文件数；不要用删文件的方式制造部分失败（行会卡在 `pending`）。
 
+## 行数口径（页面行 ≠ `import_run` 行）
+
+页面一行 = 一个 `import_batch`（按 `root_path` 归并），**不是** `import_run` 的行数；
+页面上那五个数字是 `import_item` 的聚合，**不是** `import_run.counters`。同一批次重跑
+4 次只占页面 1 行。不要拿 `SELECT count(*) FROM platform.import_run` 去对页面行数，
+否则会以为页面漏行。
+
 ## 状态口径
 
 `import_batch.status='completed'` 的含义是「每个发现的条目都处理过（indexed 或 failed）」，
