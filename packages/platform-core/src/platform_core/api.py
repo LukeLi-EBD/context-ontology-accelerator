@@ -2796,6 +2796,30 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.post("/facts/conflicts/resolve")
     def resolve_conflict(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        action = body.get("action")
+        # `batch` is the fourth adjudication on the same decision surface: one
+        # `keep` rule applied to every pending group inside an explicit scope.
+        # It lives here so the contract has one operation per decision, while
+        # `/facts/conflicts/batch` stays as the earliest callers' entry point.
+        if isinstance(action, str) and action.lower() == "batch":
+            outcome = runtime.facts.batch_keep(
+                keep=body.get("keep"),
+                predicate=body.get("predicate"),
+                subject=body.get("subject"),
+                source_document_id=body.get("sourceDocumentId"),
+                actor=body.get("actor", "operator"),
+                reason=body.get("reason"),
+                dry_run=bool(body.get("dryRun", True)),
+            )
+            # The scope members are optional on the wire: only echo the ones
+            # the caller actually supplied, so the response never carries an
+            # empty IRI (the contract types them as 1..2048 chars).
+            result: dict[str, Any] = {"action": "batch", "batch": outcome}
+            if body.get("subject"):
+                result["subject"] = body["subject"]
+            if body.get("predicate"):
+                result["predicate"] = body["predicate"]
+            return result
         missing = [
             key for key in ("subject", "predicate", "action")
             if not isinstance(body.get(key), str) or not body.get(key)

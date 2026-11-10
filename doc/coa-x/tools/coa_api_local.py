@@ -1073,6 +1073,22 @@ def _kernel_translate(
     if "/facts" in template:
         fact_id = path_params.get("factId", "")
         q = query or {}
+        if template.endswith("/facts") and method == "POST":
+            # Assert one fact. Without this the shared tail below answered a
+            # list, so a POST looked like it succeeded while writing nothing.
+            forwarded = {
+                key: payload[key]
+                for key in (
+                    "subject", "predicate", "object", "objectKind", "graph",
+                    "sourceKind", "sourceDocumentId", "sourceRunId", "actor",
+                )
+                if payload.get(key) not in (None, "")
+            }
+            return (
+                "POST",
+                "/facts",
+                json.dumps(forwarded, ensure_ascii=False).encode("utf-8"),
+            )
         if template.endswith("/events"):
             params = {
                 key: q[key] for key in ("limit", "before", "format") if q.get(key)
@@ -1107,6 +1123,10 @@ def _kernel_translate(
                 )
                 if payload.get(key) not in (None, "")
             }
+            # `action=batch` previews by default, so an explicit dryRun=false is
+            # the only way to write; it must survive the translation.
+            if "dryRun" in payload:
+                forwarded["dryRun"] = bool(payload.get("dryRun"))
             return (
                 "POST",
                 "/facts/conflicts/resolve",
@@ -1277,14 +1297,21 @@ async def _kernel_proxy(
         if isinstance(kernel_status, dict):
             last = kernel_status.get("lastJob") or {}
             available = bool(kernel_status.get("available"))
+            failed_count = int(kernel_status.get("failedJobs") or 0)
             translated = {
                 "available": available,
                 "engine": (
                     kernel_status.get("provider") or kernel_status.get("engine")
                 ) if available else None,
                 "failures": {
-                    "count": int(kernel_status.get("failedJobs") or 0),
-                    "detail": "platform.reasoning_job kind=materialize state=failed",
+                    "count": failed_count,
+                    # Only name the failed rows when there are any; a zero
+                    # count with "state=failed" would contradict itself.
+                    "detail": (
+                        "platform.reasoning_job kind=materialize state=failed"
+                        if failed_count
+                        else None
+                    ),
                 },
                 "detail": (
                     f"mode={kernel_status.get('mode')} "
@@ -1297,6 +1324,23 @@ async def _kernel_proxy(
                     "platform.reasoning_job)"
                 ),
                 "sampledAt": datetime.now(timezone.utc).isoformat(),
+                # The health board shows the SHACL gate from the last run, so
+                # the stage results travel with the status instead of being
+                # inferred from /graph/validate, which cannot see them.
+                "inferredTriples": kernel_status.get("inferredTriples"),
+                "lastJob": (
+                    {
+                        "jobId": last.get("jobId"),
+                        "state": last.get("state"),
+                        "inferred": last.get("inferred"),
+                        "consistent": last.get("consistent"),
+                        "finishedAt": last.get("finishedAt"),
+                        "skipped": bool((last.get("result") or {}).get("skipped")),
+                        "stages": (last.get("result") or {}).get("stages") or {},
+                    }
+                    if last
+                    else None
+                ),
             }
             content = json.dumps(translated, ensure_ascii=False).encode("utf-8")
 

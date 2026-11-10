@@ -692,8 +692,8 @@ class FactLedger:
         self._insert_triple(new_row)
         return {
             "action": action, "subject": subject, "predicate": predicate,
-            "newFact": self.get(new_id), "originalFactIds": originals,
-            "mergedFrom": originals,
+            "newFact": self.get(new_id), "mergedFactId": new_id,
+            "originalFactIds": originals, "mergedFrom": originals,
         }
 
     def undo_resolution(
@@ -1019,15 +1019,20 @@ class FactLedger:
                 "keptFactIds": outcome.get("keptFactIds", []),
                 "retiredFactIds": outcome.get("retiredFactIds", []),
             })
-        return {
+        outcome: dict[str, Any] = {
             "batchId": batch_id, "dryRun": bool(dry_run), "keep": keep,
-            "filter": {
-                "subject": subject, "predicate": predicate,
-                "sourceDocumentId": source_document_id,
-            },
             "matched": matched, "kept": kept, "skipped": skipped,
             "affectedFacts": affected_facts, "results": results,
         }
+        # The contract types the scope members as optional top-level fields;
+        # only echo the ones the caller supplied.
+        if subject:
+            outcome["subject"] = subject
+        if predicate:
+            outcome["predicate"] = predicate
+        if source_document_id:
+            outcome["sourceDocumentId"] = source_document_id
+        return outcome
 
     def purge_test(self, graph: str) -> int:
         """Test-only cleanup. Assertion rows go, the purge itself is audited.
