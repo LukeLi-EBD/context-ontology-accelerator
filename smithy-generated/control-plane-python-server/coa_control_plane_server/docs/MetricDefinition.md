@@ -21,6 +21,9 @@ Name | Type | Description | Notes
 **ontology_concepts** | **List[str]** | Ontology concept URIs this metric is associated with. | [optional] 
 **defined_by** | **str** | Set by server — principal who created/updated the metric. | [optional] 
 **effective_from** | **str** | Set by server — date the metric became effective. | [optional] 
+**domain** | **str** | COA-private provenance: business domain. Absent means unknown. Not an OSI standard field; migrate when OSI standardises an equivalent. | [optional] 
+**evidence_basis** | **str** | COA-private provenance: evidence basis. Absent means unknown. Not an OSI standard field; migrate when OSI standardises an equivalent. | [optional] 
+**publishable** | **bool** | COA-private provenance: publishable. Absent means unknown; an explicit false is \&quot;not publishable\&quot;, not a missing value. Not an OSI standard field; migrate when OSI standardises an equivalent. | [optional] 
 
 ## Example
 

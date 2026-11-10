@@ -241,3 +241,27 @@ apply GetOntologyOverview @examples([
         }
     }
 ])
+
+apply ListStatements @examples([
+    {
+        title: "List the statements that mention one subject"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", subject: "http://example.com/onto#Customer", limit: 2 }
+        output: {
+            statements: [
+                {
+                    graph: "http://coa.amazon.com/onto/sales-crm"
+                    subject: "http://example.com/onto#Customer"
+                    predicate: "http://www.w3.org/2000/01/rdf-schema#label"
+                    object: "Customer"
+                }
+                {
+                    graph: "http://coa.amazon.com/onto/sales-crm"
+                    subject: "http://example.com/onto#Customer"
+                    predicate: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                    object: "http://www.w3.org/2002/07/owl#Class"
+                }
+            ]
+            truncated: false
+        }
+    }
+])

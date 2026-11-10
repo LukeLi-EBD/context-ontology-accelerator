@@ -66,7 +66,10 @@ class TestListMetricsResponseContent(unittest.TestCase):
                             ''
                             ], 
                         defined_by = '', 
-                        effective_from = '', )
+                        effective_from = '', 
+                        domain = '', 
+                        evidence_basis = '', 
+                        publishable = True, )
                     ]
             )
         else:
@@ -101,7 +104,10 @@ class TestListMetricsResponseContent(unittest.TestCase):
                             ''
                             ], 
                         defined_by = '', 
-                        effective_from = '', )
+                        effective_from = '', 
+                        domain = '', 
+                        evidence_basis = '', 
+                        publishable = True, )
                     ],
         )
         """

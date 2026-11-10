@@ -64,7 +64,10 @@ class TestGetMetricResponseContent(unittest.TestCase):
                         ''
                         ], 
                     defined_by = '', 
-                    effective_from = '', )
+                    effective_from = '', 
+                    domain = '', 
+                    evidence_basis = '', 
+                    publishable = True, )
             )
         else:
             return GetMetricResponseContent(
@@ -97,7 +100,10 @@ class TestGetMetricResponseContent(unittest.TestCase):
                         ''
                         ], 
                     defined_by = '', 
-                    effective_from = '', ),
+                    effective_from = '', 
+                    domain = '', 
+                    evidence_basis = '', 
+                    publishable = True, ),
         )
         """
 

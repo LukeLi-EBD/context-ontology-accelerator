@@ -39,7 +39,8 @@ class TestDocumentSummary(unittest.TestCase):
                 title = '',
                 status = 'UPLOADED',
                 chunk_count = 1.337,
-                updated_at = 1.337
+                updated_at = '',
+                error_message = ''
             )
         else:
             return DocumentSummary(
@@ -47,7 +48,7 @@ class TestDocumentSummary(unittest.TestCase):
                 title = '',
                 status = 'UPLOADED',
                 chunk_count = 1.337,
-                updated_at = 1.337,
+                updated_at = '',
         )
         """
 

@@ -95,6 +95,37 @@ export interface ListStatementsCommandOutput extends ListStatementsOutput, __Met
  * <p>Base exception class for all service exceptions from ControlPlaneService service.</p>
  *
  *
+ * @example List the statements that mention one subject
+ * ```javascript
+ * //
+ * const input = {
+ *   limit: 2,
+ *   namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+ *   subject: "http://example.com/onto#Customer"
+ * };
+ * const command = new ListStatementsCommand(input);
+ * const response = await client.send(command);
+ * /* response is
+ * {
+ *   statements: [
+ *     {
+ *       graph: "http://coa.amazon.com/onto/sales-crm",
+ *       object: "Customer",
+ *       predicate: "http://www.w3.org/2000/01/rdf-schema#label",
+ *       subject: "http://example.com/onto#Customer"
+ *     },
+ *     {
+ *       graph: "http://coa.amazon.com/onto/sales-crm",
+ *       object: "http://www.w3.org/2002/07/owl#Class",
+ *       predicate: "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+ *       subject: "http://example.com/onto#Customer"
+ *     }
+ *   ],
+ *   truncated: false
+ * }
+ * *\/
+ * ```
+ *
  * @public
  */
 export class ListStatementsCommand extends $Command

@@ -92,10 +92,19 @@ jobs:
       # `git status` also reports files the generator creates, which a plain
       # `git diff` over tracked files misses. The clients' own .gitignore keeps
       # build output (dist-*, node_modules, *.tsbuildinfo) out of the comparison.
+      #
+      # Two outputs are excluded because their bytes depend on how the checkout
+      # is laid out, not on the model:
+      #   - .inputs.sha256 hashes raw file bytes, so it differs between the LF
+      #     checkout CI uses and a CRLF one (core.autocrlf=true).
+      #   - openapi/build-info records absolute source paths and validation-event
+      #     filenames (e.g. /work/src/... vs /home/runner/work/...).
       - name: Check generated artifacts are committed
         run: |
           set -euo pipefail
-          changed="$(git status --porcelain -- smithy-generated)"
+          changed="$(git status --porcelain -- smithy-generated \
+            ':(exclude)smithy-generated/.inputs.sha256' \
+            ':(exclude)smithy-generated/openapi/build-info')"
           if [ -n "$changed" ]; then
             echo "$changed"
             git --no-pager diff --stat -- smithy-generated

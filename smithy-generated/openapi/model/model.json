@@ -1762,6 +1762,9 @@
                     "target": "com.amazon.semanticcontext.ontologygraph#ListOntologies"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ontologygraph#ListStatements"
+                },
+                {
                     "target": "com.amazon.semanticcontext.ontologygraph#UploadOntology"
                 },
                 {
@@ -7506,6 +7509,24 @@
                     "traits": {
                         "smithy.api#documentation": "Set by server — date the metric became effective."
                     }
+                },
+                "domain": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "COA-private provenance: business domain. Absent means unknown.\nNot an OSI standard field; migrate when OSI standardises an equivalent."
+                    }
+                },
+                "evidenceBasis": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "COA-private provenance: evidence basis. Absent means unknown.\nNot an OSI standard field; migrate when OSI standardises an equivalent."
+                    }
+                },
+                "publishable": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "COA-private provenance: publishable. Absent means unknown; an explicit\nfalse is \"not publishable\", not a missing value.\nNot an OSI standard field; migrate when OSI standardises an equivalent."
+                    }
                 }
             },
             "traits": {
@@ -9865,7 +9886,8 @@
                 "predicateLabel": {
                     "target": "smithy.api#String",
                     "traits": {
-                        "smithy.api#documentation": "Human-readable label of the predicate."
+                        "smithy.api#documentation": "Human-readable label of the predicate.",
+                        "smithy.api#jsonName": "predicate_label"
                     }
                 },
                 "direction": {
@@ -10085,12 +10107,55 @@
                 "totalCount": {
                     "target": "smithy.api#Integer",
                     "traits": {
-                        "smithy.api#documentation": "Total number of hits matching the query across all pages, so a\nclient can render a known page count. Independent of ``limit`` /\n``offset``."
+                        "smithy.api#documentation": "Total number of hits matching the query across all pages, so a\nclient can render a known page count. Independent of ``limit`` /\n``offset``.",
+                        "smithy.api#jsonName": "total_count"
                     }
                 }
             },
             "traits": {
                 "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GraphStatement": {
+            "type": "structure",
+            "members": {
+                "graph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Named graph the statement lives in.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Subject IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "predicate": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Predicate IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "object": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Object term: an IRI, or the lexical form of a literal.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One RDF statement (triple) in a namespace's named graphs."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GraphStatementList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GraphStatement"
             }
         },
         "com.amazon.semanticcontext.ontologygraph#GraphVertex": {
@@ -10138,19 +10203,22 @@
                 "altLabels": {
                     "target": "com.amazon.semanticcontext.ontologygraph#StringList",
                     "traits": {
-                        "smithy.api#documentation": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
+                        "smithy.api#documentation": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property.",
+                        "smithy.api#jsonName": "alt_labels"
                     }
                 },
                 "graphUris": {
                     "target": "com.amazon.semanticcontext.ontologygraph#StringList",
                     "traits": {
-                        "smithy.api#documentation": "IRIs of the named graphs the vertex appears in."
+                        "smithy.api#documentation": "IRIs of the named graphs the vertex appears in.",
+                        "smithy.api#jsonName": "graph_uris"
                     }
                 },
                 "isMapped": {
                     "target": "smithy.api#Boolean",
                     "traits": {
-                        "smithy.api#documentation": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
+                        "smithy.api#documentation": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``.",
+                        "smithy.api#jsonName": "is_mapped"
                     }
                 },
                 "superseded": {
@@ -10616,6 +10684,140 @@
                     "traits": {
                         "smithy.api#documentation": "The ontologies registered in the namespace.",
                         "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ListStatements": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#ListStatementsInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#ListStatementsOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Enumerate the statements in a namespace's named graphs.\n\nRead-only and namespace-scoped: the query only ever sees graphs under the\nnamespace's prefix, and each filter narrows that set (they combine with\nAND). Subject / predicate are IRIs; object is an IRI when it starts with\n``http://``, ``https://`` or ``urn:`` and a literal lexical form otherwise.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List the statements that mention one subject",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "subject": "http://example.com/onto#Customer",
+                            "limit": 2
+                        },
+                        "output": {
+                            "statements": [
+                                {
+                                    "graph": "http://coa.amazon.com/onto/sales-crm",
+                                    "subject": "http://example.com/onto#Customer",
+                                    "predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+                                    "object": "Customer"
+                                },
+                                {
+                                    "graph": "http://coa.amazon.com/onto/sales-crm",
+                                    "subject": "http://example.com/onto#Customer",
+                                    "predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+                                    "object": "http://www.w3.org/2002/07/owl#Class"
+                                }
+                            ],
+                            "truncated": false
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/graph/statements",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ListStatementsInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "subject": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#VertexIri",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict to one subject IRI.",
+                        "smithy.api#httpQuery": "subject"
+                    }
+                },
+                "predicate": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#VertexIri",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict to one predicate IRI.",
+                        "smithy.api#httpQuery": "predicate"
+                    }
+                },
+                "objectValue": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict to one object: an IRI, or a literal's lexical form.",
+                        "smithy.api#httpQuery": "object",
+                        "smithy.api#length": {
+                            "max": 2048
+                        }
+                    }
+                },
+                "graph": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#VertexIri",
+                    "traits": {
+                        "smithy.api#documentation": "Restrict to one named graph IRI in the namespace.",
+                        "smithy.api#httpQuery": "graph"
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum number of statements to return (the page size).",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 200
+                        }
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of leading statements to skip, for pagination.",
+                        "smithy.api#httpQuery": "offset",
+                        "smithy.api#range": {
+                            "min": 0,
+                            "max": 1000000
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#ListStatementsOutput": {
+            "type": "structure",
+            "members": {
+                "statements": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GraphStatementList",
+                    "traits": {
+                        "smithy.api#documentation": "The page of matching statements, in the backend's named-graph\nindex order (stable for a static graph, not a sorted order).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "truncated": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when the page was capped at ``limit`` and more statements\nexist beyond this window."
                     }
                 }
             },

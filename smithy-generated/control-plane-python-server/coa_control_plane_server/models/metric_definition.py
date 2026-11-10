@@ -17,7 +17,7 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional
 from typing_extensions import Annotated
 from coa_control_plane_server.models.metric_ai_context import MetricAiContext
@@ -45,7 +45,10 @@ class MetricDefinition(BaseModel):
     ontology_concepts: Optional[List[Annotated[str, Field(strict=True, max_length=2048)]]] = Field(default=None, description="Ontology concept URIs this metric is associated with.", alias="ontologyConcepts")
     defined_by: Optional[StrictStr] = Field(default=None, description="Set by server — principal who created/updated the metric.", alias="definedBy")
     effective_from: Optional[StrictStr] = Field(default=None, description="Set by server — date the metric became effective.", alias="effectiveFrom")
-    __properties: ClassVar[List[str]] = ["metricId", "namespaceId", "name", "label", "description", "expression", "dataSourceId", "sourceTable", "defaultTimeGrain", "unit", "returnType", "aiContext", "ontologyConcepts", "definedBy", "effectiveFrom"]
+    domain: Optional[StrictStr] = Field(default=None, description="COA-private provenance: business domain. Absent means unknown. Not an OSI standard field; migrate when OSI standardises an equivalent.")
+    evidence_basis: Optional[StrictStr] = Field(default=None, description="COA-private provenance: evidence basis. Absent means unknown. Not an OSI standard field; migrate when OSI standardises an equivalent.", alias="evidenceBasis")
+    publishable: Optional[StrictBool] = Field(default=None, description="COA-private provenance: publishable. Absent means unknown; an explicit false is \"not publishable\", not a missing value. Not an OSI standard field; migrate when OSI standardises an equivalent.")
+    __properties: ClassVar[List[str]] = ["metricId", "namespaceId", "name", "label", "description", "expression", "dataSourceId", "sourceTable", "defaultTimeGrain", "unit", "returnType", "aiContext", "ontologyConcepts", "definedBy", "effectiveFrom", "domain", "evidenceBasis", "publishable"]
 
     @field_validator('namespace_id')
     def namespace_id_validate_regular_expression(cls, value):
@@ -152,7 +155,10 @@ class MetricDefinition(BaseModel):
             "aiContext": MetricAiContext.from_dict(obj["aiContext"]) if obj.get("aiContext") is not None else None,
             "ontologyConcepts": obj.get("ontologyConcepts"),
             "definedBy": obj.get("definedBy"),
-            "effectiveFrom": obj.get("effectiveFrom")
+            "effectiveFrom": obj.get("effectiveFrom"),
+            "domain": obj.get("domain"),
+            "evidenceBasis": obj.get("evidenceBasis"),
+            "publishable": obj.get("publishable")
         })
         return _obj
 

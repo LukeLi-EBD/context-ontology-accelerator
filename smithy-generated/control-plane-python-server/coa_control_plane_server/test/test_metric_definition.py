@@ -63,7 +63,10 @@ class TestMetricDefinition(unittest.TestCase):
                     ''
                     ],
                 defined_by = '',
-                effective_from = ''
+                effective_from = '',
+                domain = '',
+                evidence_basis = '',
+                publishable = True
             )
         else:
             return MetricDefinition(

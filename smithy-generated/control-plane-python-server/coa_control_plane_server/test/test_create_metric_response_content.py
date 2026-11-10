@@ -64,7 +64,10 @@ class TestCreateMetricResponseContent(unittest.TestCase):
                         ''
                         ], 
                     defined_by = '', 
-                    effective_from = '', ),
+                    effective_from = '', 
+                    domain = '', 
+                    evidence_basis = '', 
+                    publishable = True, ),
                 warnings = [
                     coa_control_plane_server.models.validation_warning.ValidationWarning(
                         field = '', 
@@ -103,7 +106,10 @@ class TestCreateMetricResponseContent(unittest.TestCase):
                         ''
                         ], 
                     defined_by = '', 
-                    effective_from = '', ),
+                    effective_from = '', 
+                    domain = '', 
+                    evidence_basis = '', 
+                    publishable = True, ),
         )
         """
 

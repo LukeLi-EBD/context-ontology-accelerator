@@ -42,7 +42,8 @@ class TestListDocumentsResponseContent(unittest.TestCase):
                         title = '', 
                         status = 'UPLOADED', 
                         chunk_count = 1.337, 
-                        updated_at = 1.337, )
+                        updated_at = '', 
+                        error_message = '', )
                     ]
             )
         else:
@@ -53,7 +54,8 @@ class TestListDocumentsResponseContent(unittest.TestCase):
                         title = '', 
                         status = 'UPLOADED', 
                         chunk_count = 1.337, 
-                        updated_at = 1.337, )
+                        updated_at = '', 
+                        error_message = '', )
                     ],
         )
         """

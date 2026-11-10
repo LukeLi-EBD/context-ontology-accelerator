@@ -6720,6 +6720,305 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/graph/statements": {
+            "get": {
+                "description": "Enumerate the statements in a namespace's named graphs.\n\nRead-only and namespace-scoped: the query only ever sees graphs under the\nnamespace's prefix, and each filter narrows that set (they combine with\nAND). Subject / predicate are IRIs; object is an IRI when it starts with\n``http://``, ``https://`` or ``urn:`` and a literal lexical form otherwise.",
+                "operationId": "ListStatements",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListStatements_example1": {
+                                "summary": "List the statements that mention one subject",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "subject",
+                        "in": "query",
+                        "description": "Restrict to one subject IRI.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "pattern": "^(?:https?://[^/\\s<>\"{}|\\\\^`]|urn:)[^\\s<>\"{}|\\\\^`]*$",
+                            "description": "Restrict to one subject IRI."
+                        },
+                        "examples": {
+                            "ListStatements_example1": {
+                                "summary": "List the statements that mention one subject",
+                                "description": "",
+                                "value": "http://example.com/onto#Customer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "predicate",
+                        "in": "query",
+                        "description": "Restrict to one predicate IRI.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "pattern": "^(?:https?://[^/\\s<>\"{}|\\\\^`]|urn:)[^\\s<>\"{}|\\\\^`]*$",
+                            "description": "Restrict to one predicate IRI."
+                        }
+                    },
+                    {
+                        "name": "object",
+                        "in": "query",
+                        "description": "Restrict to one object: an IRI, or a literal's lexical form.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "description": "Restrict to one object: an IRI, or a literal's lexical form."
+                        }
+                    },
+                    {
+                        "name": "graph",
+                        "in": "query",
+                        "description": "Restrict to one named graph IRI in the namespace.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "minLength": 1,
+                            "pattern": "^(?:https?://[^/\\s<>\"{}|\\\\^`]|urn:)[^\\s<>\"{}|\\\\^`]*$",
+                            "description": "Restrict to one named graph IRI in the namespace."
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Maximum number of statements to return (the page size).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 200,
+                            "minimum": 1,
+                            "description": "Maximum number of statements to return (the page size)."
+                        },
+                        "examples": {
+                            "ListStatements_example1": {
+                                "summary": "List the statements that mention one subject",
+                                "description": "",
+                                "value": 2
+                            }
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "description": "Number of leading statements to skip, for pagination.",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 1000000,
+                            "minimum": 0,
+                            "description": "Number of leading statements to skip, for pagination."
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ListStatements 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ListStatementsResponseContent"
+                                },
+                                "examples": {
+                                    "ListStatements_example1": {
+                                        "summary": "List the statements that mention one subject",
+                                        "description": "",
+                                        "value": {
+                                            "statements": [
+                                                {
+                                                    "graph": "http://coa.amazon.com/onto/sales-crm",
+                                                    "subject": "http://example.com/onto#Customer",
+                                                    "predicate": "http://www.w3.org/2000/01/rdf-schema#label",
+                                                    "object": "Customer"
+                                                },
+                                                {
+                                                    "graph": "http://coa.amazon.com/onto/sales-crm",
+                                                    "subject": "http://example.com/onto#Customer",
+                                                    "predicate": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+                                                    "object": "http://www.w3.org/2002/07/owl#Class"
+                                                }
+                                            ],
+                                            "truncated": false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphStatements",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "ListStatements_example1": {
+                                "summary": "List the statements that mention one subject",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/import-jobs/{jobId}": {
             "get": {
                 "description": "Poll the status of an asynchronous OSI import job.",
@@ -26037,21 +26336,21 @@
                         },
                         "description": "Descriptive comments (rdfs:comment) on the vertex."
                     },
-                    "altLabels": {
+                    "alt_labels": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "description": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
                     },
-                    "graphUris": {
+                    "graph_uris": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "description": "IRIs of the named graphs the vertex appears in."
                     },
-                    "isMapped": {
+                    "is_mapped": {
                         "type": "boolean",
                         "description": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
                     },
@@ -26109,21 +26408,21 @@
                         },
                         "description": "Descriptive comments (rdfs:comment) on the vertex."
                     },
-                    "altLabels": {
+                    "alt_labels": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "description": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
                     },
-                    "graphUris": {
+                    "graph_uris": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "description": "IRIs of the named graphs the vertex appears in."
                     },
-                    "isMapped": {
+                    "is_mapped": {
                         "type": "boolean",
                         "description": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
                     },
@@ -26181,21 +26480,21 @@
                         },
                         "description": "Descriptive comments (rdfs:comment) on the vertex."
                     },
-                    "altLabels": {
+                    "alt_labels": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "description": "Alternative labels (skos:altLabel) — carries source synonyms curated\nduring enrichment and emitted onto the induced class/property."
                     },
-                    "graphUris": {
+                    "graph_uris": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "description": "IRIs of the named graphs the vertex appears in."
                     },
-                    "isMapped": {
+                    "is_mapped": {
                         "type": "boolean",
                         "description": "Whether this vertex carries the ``coa:isMapped`` marker — i.e. it is\nbacked by an R2RML mapping and therefore answerable by the structured\nTier-2 (NL→SPARQL / NL→SQL) path. Structured / table-backed classes are\ntrue; unstructured-induced and foundational classes are false (the marker\nis absent). Derived from the top-level ``coa:isMapped`` triple and\nexcluded from ``edges``."
                     },
@@ -27099,7 +27398,7 @@
                         "type": "string",
                         "description": "IRI of the connecting predicate."
                     },
-                    "predicateLabel": {
+                    "predicate_label": {
                         "type": "string",
                         "description": "Human-readable label of the predicate."
                     },
@@ -27178,13 +27477,41 @@
                         },
                         "description": "The matching graph search hits (the requested page window)."
                     },
-                    "totalCount": {
+                    "total_count": {
                         "type": "number",
                         "description": "Total number of hits matching the query across all pages, so a\nclient can render a known page count. Independent of ``limit`` /\n``offset``."
                     }
                 },
                 "required": [
                     "hits"
+                ]
+            },
+            "GraphStatement": {
+                "type": "object",
+                "description": "One RDF statement (triple) in a namespace's named graphs.",
+                "properties": {
+                    "graph": {
+                        "type": "string",
+                        "description": "Named graph the statement lives in."
+                    },
+                    "subject": {
+                        "type": "string",
+                        "description": "Subject IRI."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "description": "Predicate IRI."
+                    },
+                    "object": {
+                        "type": "string",
+                        "description": "Object term: an IRI, or the lexical form of a literal."
+                    }
+                },
+                "required": [
+                    "graph",
+                    "object",
+                    "predicate",
+                    "subject"
                 ]
             },
             "GraphVertexKind": {
@@ -28146,6 +28473,25 @@
                     "items"
                 ]
             },
+            "ListStatementsResponseContent": {
+                "type": "object",
+                "properties": {
+                    "statements": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphStatement"
+                        },
+                        "description": "The page of matching statements, in the backend's named-graph\nindex order (stable for a static graph, not a sorted order)."
+                    },
+                    "truncated": {
+                        "type": "boolean",
+                        "description": "True when the page was capped at ``limit`` and more statements\nexist beyond this window."
+                    }
+                },
+                "required": [
+                    "statements"
+                ]
+            },
             "LoadFoundationalOntologyRequestContent": {
                 "type": "object",
                 "properties": {
@@ -28340,6 +28686,18 @@
                     "effectiveFrom": {
                         "type": "string",
                         "description": "Set by server — date the metric became effective."
+                    },
+                    "domain": {
+                        "type": "string",
+                        "description": "COA-private provenance: business domain. Absent means unknown.\nNot an OSI standard field; migrate when OSI standardises an equivalent."
+                    },
+                    "evidenceBasis": {
+                        "type": "string",
+                        "description": "COA-private provenance: evidence basis. Absent means unknown.\nNot an OSI standard field; migrate when OSI standardises an equivalent."
+                    },
+                    "publishable": {
+                        "type": "boolean",
+                        "description": "COA-private provenance: publishable. Absent means unknown; an explicit\nfalse is \"not publishable\", not a missing value.\nNot an OSI standard field; migrate when OSI standardises an equivalent."
                     }
                 },
                 "required": [
