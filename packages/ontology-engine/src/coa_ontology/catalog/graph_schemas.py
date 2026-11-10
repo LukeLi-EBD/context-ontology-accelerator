@@ -248,3 +248,140 @@ class GraphPathResult(BaseModel):
     paths: list[GraphPath] = Field(default_factory=list)
     truncated: bool = Field(default=False, description="True when more paths exist than returned.")
 
+
+class SnapshotTbox(BaseModel):
+    """Declared schema objects (the T-Box)."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    classes: int = 0
+    object_properties: int = 0
+    datatype_properties: int = 0
+
+
+class SnapshotAbox(BaseModel):
+    """Asserted instances using that schema (the A-Box)."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    instances: int = 0
+    classes_with_instances: int = 0
+
+
+class SnapshotCoverage(BaseModel):
+    """How much of the declared schema the data actually uses."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    class_coverage: float = Field(default=0.0, description="``classesWithInstances / classes`` in 0..1.")
+    unlabeled_classes: int = 0
+
+
+class OntologySnapshot(BaseModel):
+    """T-Box/A-Box coverage plus the namespace graphs the diff form can offer."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    tbox: SnapshotTbox = Field(default_factory=SnapshotTbox)
+    abox: SnapshotAbox = Field(default_factory=SnapshotAbox)
+    coverage: SnapshotCoverage = Field(default_factory=SnapshotCoverage)
+    graphs: list[str] = Field(default_factory=list)
+    source: str = ""
+    sampled_at: str = ""
+
+
+class QualityCount(BaseModel):
+    """A measured count that may be unavailable."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    count: int | None = Field(default=None, description="Null when the check could not run.")
+    detail: str | None = None
+
+
+class ShaclReport(BaseModel):
+    """SHACL gate outcome; ``skipped`` is explicit, never zero violations."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    status: str = Field(..., description="One of ok, violations, skipped, error.")
+    violations: int | None = None
+    conforms: bool | None = None
+    detail: str | None = None
+
+
+class QualityValidation(BaseModel):
+    """Read-only quality checks for the health board."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    orphan_instances: QualityCount = Field(default_factory=QualityCount)
+    unlabeled_classes: QualityCount = Field(default_factory=QualityCount)
+    shacl: ShaclReport
+    inference_failures: QualityCount = Field(default_factory=QualityCount)
+    source: str = ""
+    sampled_at: str = ""
+
+
+class ReasoningStatus(BaseModel):
+    """Whether an inference engine is wired up, and why not when it is not."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    available: bool = False
+    engine: str | None = None
+    failures: QualityCount = Field(default_factory=QualityCount)
+    detail: str | None = None
+    source: str = ""
+    sampled_at: str = ""
+
+
+class OntologyDiffCounts(BaseModel):
+    """Triple and schema delta counts."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    added_triples: int = 0
+    removed_triples: int = 0
+    added_classes: int = 0
+    removed_classes: int = 0
+    added_properties: int = 0
+    removed_properties: int = 0
+
+
+class TripleExample(BaseModel):
+    """One sampled triple."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    subject: str
+    predicate: str
+    object: str
+
+
+class OntologyDiffExamples(BaseModel):
+    """Sample triples for each side of the diff."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    added_triples: list[TripleExample] = Field(default_factory=list)
+    removed_triples: list[TripleExample] = Field(default_factory=list)
+
+
+class OntologyDiff(BaseModel):
+    """Result of comparing two named graphs of one namespace."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    baseline_graph: str
+    target_graph: str
+    counts: OntologyDiffCounts = Field(default_factory=OntologyDiffCounts)
+    added_classes: list[str] = Field(default_factory=list)
+    removed_classes: list[str] = Field(default_factory=list)
+    added_properties: list[str] = Field(default_factory=list)
+    removed_properties: list[str] = Field(default_factory=list)
+    examples: OntologyDiffExamples = Field(default_factory=OntologyDiffExamples)
+    truncated: bool = False
+    source: str = ""
+    sampled_at: str = ""
+

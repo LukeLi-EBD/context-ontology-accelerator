@@ -482,6 +482,35 @@ class GraphStore(Protocol):
         """
         ...
 
+    # Health board (coverage, quality, diff) ---------------------------
+    def get_health_snapshot(self, namespace: str | None = None) -> dict:
+        """T-Box/A-Box coverage: declared classes/properties vs instances.
+
+        Returns ``{"tbox", "abox", "coverage", "graphs"}`` where ``coverage``
+        carries ``classCoverage`` (0..1) and ``unlabeledClasses``.
+        """
+        ...
+
+    def run_quality_validation(self, namespace: str | None = None) -> dict:
+        """Read-only quality checks: orphan instances, unlabeled classes, SHACL.
+
+        Returns ``{"orphanInstances", "unlabeledClasses", "shacl",
+        "inferenceFailures"}``; each count is a ``{"count", "detail"}`` pair
+        whose ``count`` is null when the check cannot run.
+        """
+        ...
+
+    def diff_named_graphs(
+        self, from_graph: str, to_graph: str, namespace: str | None = None, limit: int = 20
+    ) -> dict:
+        """Compare two named graphs of one namespace, read-only.
+
+        Returns counts plus sampled added/removed classes, properties and
+        triples. Raises ``ValueError`` when either graph is not a named graph
+        of the namespace.
+        """
+        ...
+
     # Ontology overview ------------------------------------------------
     def get_ontology_overview(
         self,

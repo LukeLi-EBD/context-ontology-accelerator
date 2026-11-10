@@ -2085,6 +2085,286 @@ class NeptuneDBGraphStore(GraphStore):
             sources.setdefault(b["c"]["value"], set()).add(b["src"]["value"])
         return sources
 
+    # ── Health board: coverage, quality, graph diff ──────────────────
+
+    @staticmethod
+    def _scalar_int(sparql: str) -> int:
+        """Run one ``COUNT`` query and return its ``?n`` binding as an int."""
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        if not bindings:
+            return 0
+        try:
+            return int(bindings[0].get("n", {}).get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _rows(sparql: str) -> list[dict]:
+        """Run a SELECT and return its bindings (already limited by the query)."""
+        return _sparql_query(sparql).get("results", {}).get("bindings", [])
+
+    def _unlabeled_class_count(self, ns_prefix: str, graphs: list[str]) -> int:
+        """Declared classes with neither ``rdfs:label`` nor ``skos:prefLabel``."""
+        values = "\n          ".join(_iri(g) for g in graphs)
+        type_iri = _iri(RDF + "type")
+        return self._scalar_int(
+            f"""
+            SELECT (COUNT(DISTINCT ?c) AS ?n) WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              GRAPH ?g {{ ?c {type_iri} {_iri(OWL + "Class")} }}
+              FILTER NOT EXISTS {{
+                GRAPH ?l {{ ?c {_iri(RDFS + "label")} ?x }}
+                FILTER(STRSTARTS(STR(?l), "{_esc(ns_prefix)}"))
+              }}
+              FILTER NOT EXISTS {{
+                GRAPH ?l {{ ?c {_iri("http://www.w3.org/2004/02/skos/core#prefLabel")} ?x }}
+                FILTER(STRSTARTS(STR(?l), "{_esc(ns_prefix)}"))
+              }}
+            }}
+            """
+        )
+
+    def _orphan_instance_count(self, ns_prefix: str, graphs: list[str]) -> int:
+        """Instances with no edge beyond ``rdf:type``/``rdfs:label`` and no inbound reference."""
+        values = "\n          ".join(_iri(g) for g in graphs)
+        type_iri = _iri(RDF + "type")
+        return self._scalar_int(
+            f"""
+            SELECT (COUNT(DISTINCT ?s) AS ?n) WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              GRAPH ?g {{ ?c {type_iri} {_iri(OWL + "Class")} }}
+              VALUES ?h {{
+              {values}
+              }}
+              GRAPH ?h {{ ?s {type_iri} ?c }}
+              FILTER NOT EXISTS {{
+                GRAPH ?i {{ ?s ?p ?o . FILTER(?p != {type_iri} && ?p != {_iri(RDFS + "label")}) }}
+                FILTER(STRSTARTS(STR(?i), "{_esc(ns_prefix)}"))
+              }}
+              FILTER NOT EXISTS {{
+                GRAPH ?j {{ ?x ?q ?s }}
+                FILTER(STRSTARTS(STR(?j), "{_esc(ns_prefix)}"))
+              }}
+            }}
+            """
+        )
+
+    def get_health_snapshot(self, namespace: str | None = None) -> dict:
+        """T-Box/A-Box coverage for the health board.
+
+        The T-Box is every class/property declared in any namespace graph; the
+        A-Box is every distinct subject typed by one of those classes, wherever
+        in the namespace it lives (locally the FSLDM classes are declared in the
+        ontology graph and instantiated in the synthetic A-Box graph, so the
+        join must cross graphs).
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        empty = {
+            "tbox": {"classes": 0, "objectProperties": 0, "datatypeProperties": 0},
+            "abox": {"instances": 0, "classesWithInstances": 0},
+            "coverage": {"classCoverage": 0.0, "unlabeledClasses": 0},
+            "graphs": [],
+        }
+        if not graphs:
+            return empty
+
+        values = "\n          ".join(_iri(g) for g in graphs)
+        type_iri = _iri(RDF + "type")
+        class_iri = _iri(OWL + "Class")
+
+        def declared(type_uri: str) -> int:
+            return self._scalar_int(
+                f"""
+                SELECT (COUNT(DISTINCT ?c) AS ?n) WHERE {{
+                  VALUES ?g {{
+                  {values}
+                  }}
+                  GRAPH ?g {{ ?c {type_iri} {_iri(type_uri)} }}
+                }}
+                """
+            )
+
+        classes = declared(OWL + "Class")
+        object_properties = declared(OWL + "ObjectProperty")
+        datatype_properties = declared(OWL + "DatatypeProperty")
+
+        row = self._rows(
+            f"""
+            SELECT (COUNT(DISTINCT ?s) AS ?n) (COUNT(DISTINCT ?c) AS ?m) WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              GRAPH ?g {{ ?c {type_iri} {class_iri} }}
+              VALUES ?h {{
+              {values}
+              }}
+              GRAPH ?h {{ ?s {type_iri} ?c }}
+            }}
+            """
+        )
+        binding = row[0] if row else {}
+        instances = int(binding.get("n", {}).get("value", 0) or 0)
+        classes_with_instances = int(binding.get("m", {}).get("value", 0) or 0)
+
+        ns_prefix = _namespace_graph_prefix(scope).rstrip("/") + "/"
+        return {
+            "tbox": {
+                "classes": classes,
+                "objectProperties": object_properties,
+                "datatypeProperties": datatype_properties,
+            },
+            "abox": {"instances": instances, "classesWithInstances": classes_with_instances},
+            "coverage": {
+                "classCoverage": round(classes_with_instances / classes, 4) if classes else 0.0,
+                "unlabeledClasses": self._unlabeled_class_count(ns_prefix, graphs),
+            },
+            "graphs": graphs,
+        }
+
+    def run_quality_validation(self, namespace: str | None = None) -> dict:
+        """Read-only quality checks: orphan instances, unlabeled classes, SHACL.
+
+        SHACL is reported as ``skipped`` because this service has no shapes
+        loader; inference failures are unobservable here. Both carry a null
+        count and a reason rather than a fabricated zero.
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        ns_prefix = _namespace_graph_prefix(scope).rstrip("/") + "/"
+        if not graphs:
+            return {
+                "orphanInstances": {"count": 0, "detail": "namespace has no named graphs"},
+                "unlabeledClasses": {"count": 0, "detail": "namespace has no named graphs"},
+                "shacl": {"status": "skipped", "detail": "no SHACL shapes are configured (no-shapes)"},
+                "inferenceFailures": {"count": None, "detail": "no reasoner is wired up in this deployment"},
+            }
+        return {
+            "orphanInstances": {
+                "count": self._orphan_instance_count(ns_prefix, graphs),
+                "detail": "instances typed by a declared class with no other edge and no inbound reference",
+            },
+            "unlabeledClasses": {
+                "count": self._unlabeled_class_count(ns_prefix, graphs),
+                "detail": "declared classes missing rdfs:label and skos:prefLabel",
+            },
+            "shacl": {
+                "status": "skipped",
+                "detail": "no SHACL shapes are configured (no-shapes); not reported as zero violations",
+            },
+            "inferenceFailures": {
+                "count": None,
+                "detail": "inference jobs are not observable from this service",
+            },
+        }
+
+    def diff_named_graphs(
+        self, from_graph: str, to_graph: str, namespace: str | None = None, limit: int = 20
+    ) -> dict:
+        """Compare two named graphs of this namespace with SPARQL ``MINUS``.
+
+        Both IRIs must already be one of the namespace's named graphs, so the
+        diff cannot be used to read a graph outside the caller's namespace.
+        """
+        scope = namespace or self._namespace
+        allowed = _namespace_graphs(scope)
+        for label, graph in (("from", from_graph), ("to", to_graph)):
+            if graph not in allowed:
+                raise ValueError(f"{label} graph is not a named graph of namespace {scope!r}: {graph!r}")
+
+        safe_limit = max(1, min(limit, 200))
+        f, t = _iri(from_graph), _iri(to_graph)
+        type_iri = _iri(RDF + "type")
+        class_iri = _iri(OWL + "Class")
+
+        def prop_pattern(graph_iri: str) -> str:
+            return (
+                f"{{ GRAPH {graph_iri} {{ ?p {type_iri} {_iri(OWL + 'ObjectProperty')} }} }}"
+                f" UNION {{ GRAPH {graph_iri} {{ ?p {type_iri} {_iri(OWL + 'DatatypeProperty')} }} }}"
+            )
+
+        def distinct_after_minus(var: str, left: str, right: str) -> list[str]:
+            rows = self._rows(
+                f"""
+                SELECT DISTINCT ?{var} WHERE {{
+                  {left}
+                  MINUS {{ {right} }}
+                }}
+                ORDER BY ?{var}
+                LIMIT {safe_limit + 1}
+                """
+            )
+            return [r[var]["value"] for r in rows if r.get(var, {}).get("value")]
+
+        def triple_examples(target: str, baseline: str) -> list[dict]:
+            rows = self._rows(
+                f"""
+                SELECT ?s ?p ?o WHERE {{
+                  GRAPH {target} {{ ?s ?p ?o }}
+                  MINUS {{ GRAPH {baseline} {{ ?s ?p ?o }} }}
+                }}
+                LIMIT {safe_limit + 1}
+                """
+            )
+            return [
+                {
+                    "subject": r.get("s", {}).get("value", ""),
+                    "predicate": r.get("p", {}).get("value", ""),
+                    "object": r.get("o", {}).get("value", ""),
+                }
+                for r in rows
+            ]
+
+        class_left = f"GRAPH {t} {{ ?c {type_iri} {class_iri} }}"
+        class_right = f"GRAPH {f} {{ ?c {type_iri} {class_iri} }}"
+        added_classes = distinct_after_minus("c", class_left, class_right)
+        removed_classes = distinct_after_minus("c", class_right, class_left)
+        added_properties = distinct_after_minus("p", prop_pattern(t), prop_pattern(f))
+        removed_properties = distinct_after_minus("p", prop_pattern(f), prop_pattern(t))
+        added_examples = triple_examples(t, f)
+        removed_examples = triple_examples(f, t)
+
+        def count_after_minus(left: str, right: str, var: str) -> int:
+            return self._scalar_int(
+                f"SELECT (COUNT(DISTINCT ?{var}) AS ?n) WHERE {{ {left} MINUS {{ {right} }} }}"
+            )
+
+        counts = {
+            "addedTriples": self._scalar_int(
+                f"SELECT (COUNT(*) AS ?n) WHERE {{ GRAPH {t} {{ ?s ?p ?o }} MINUS {{ GRAPH {f} {{ ?s ?p ?o }} }} }}"
+            ),
+            "removedTriples": self._scalar_int(
+                f"SELECT (COUNT(*) AS ?n) WHERE {{ GRAPH {f} {{ ?s ?p ?o }} MINUS {{ GRAPH {t} {{ ?s ?p ?o }} }} }}"
+            ),
+            "addedClasses": count_after_minus(class_left, class_right, "c"),
+            "removedClasses": count_after_minus(class_right, class_left, "c"),
+            "addedProperties": count_after_minus(prop_pattern(t), prop_pattern(f), "p"),
+            "removedProperties": count_after_minus(prop_pattern(f), prop_pattern(t), "p"),
+        }
+        truncated = any(
+            len(rows) > safe_limit
+            for rows in (added_classes, removed_classes, added_properties, removed_properties)
+        ) or len(added_examples) > safe_limit or len(removed_examples) > safe_limit
+
+        return {
+            "baselineGraph": from_graph,
+            "targetGraph": to_graph,
+            "counts": counts,
+            "addedClasses": added_classes[:safe_limit],
+            "removedClasses": removed_classes[:safe_limit],
+            "addedProperties": added_properties[:safe_limit],
+            "removedProperties": removed_properties[:safe_limit],
+            "examples": {
+                "addedTriples": added_examples[:safe_limit],
+                "removedTriples": removed_examples[:safe_limit],
+            },
+            "truncated": truncated,
+        }
+
     # ── Health ────────────────────────────────────────────────────────
 
     def health_check(self) -> dict:

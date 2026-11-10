@@ -105,6 +105,10 @@ _PATH_MAP = {
     "/namespaces/{namespaceId}/graph/canvas/manifest": "/graph/canvas/manifest",
     "/namespaces/{namespaceId}/graph/canvas": "/graph/canvas",
     "/namespaces/{namespaceId}/graph/path": "/graph/path",
+    "/namespaces/{namespaceId}/graph/snapshot": "/graph/snapshot",
+    "/namespaces/{namespaceId}/graph/validate": "/graph/validate",
+    "/namespaces/{namespaceId}/graph/reasoning": "/graph/reasoning",
+    "/namespaces/{namespaceId}/graph/diff": "/graph/diff",
     "/namespaces/{namespaceId}/graph/ontology-overview": "/graph/ontology-overview",
     # ``/namespaces/{namespaceId}/schema`` is the canonical Smithy DescribeSchema
     # URI; ``/graph/schema`` is the legacy alias kept for the ontology-engine

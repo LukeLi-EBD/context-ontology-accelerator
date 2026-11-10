@@ -577,6 +577,12 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/graph/class", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/object-property", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/datatype-property", ONTOLOGY),
+    # Health board (F126–F131): coverage, quality/reasoning and graph diff.
+    # `validate` is a read-only measurement despite the POST verb.
+    ("/namespaces/{namespaceId}/graph/snapshot", ONTOLOGY),
+    ("/namespaces/{namespaceId}/graph/validate", ONTOLOGY),
+    ("/namespaces/{namespaceId}/graph/reasoning", ONTOLOGY),
+    ("/namespaces/{namespaceId}/graph/diff", ONTOLOGY),
     ("/namespaces/{namespaceId}/ontologies", ONTOLOGY),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}", ONTOLOGY),
     ("/namespaces/{namespaceId}/ontologies/{ontologyId}/download", ONTOLOGY),
@@ -1368,12 +1374,36 @@ async def _local_system_health() -> dict[str, Any]:
         except Exception as exc:
             pointer = {"ok": False, "status": "unreadable", "detail": _short_error(exc)}
 
+    schema_version: dict[str, Any] | None = None
+    if runtime is not None:
+        try:
+            from platform_core.adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+
+            rows = runtime.metadata.query(
+                "SELECT COALESCE(MAX(version), 0) AS v FROM platform.schema_version"
+            )
+            db_version = int(rows[0]["v"]) if rows else None
+            schema_version = {
+                "codeVersion": SUPPORTED_SCHEMA_VERSION,
+                "dbVersion": db_version,
+                "consistent": (
+                    db_version == SUPPORTED_SCHEMA_VERSION if db_version is not None else None
+                ),
+                "source": "platform.schema_version MAX(version) vs the version this build ships",
+            }
+        except Exception as exc:
+            # Health must stay answerable when the migration table is
+            # unreadable; the page then shows the reason instead of a guess.
+            schema_version = None
+            print(f"[api] schema version probe failed: {_short_error(exc)}")
+
     status = "ok" if all(item["status"] == "ok" for item in components) else "degraded"
     return {
         "status": status,
         "components": components,
         "pointer": pointer,
         "namedGraphs": named_graphs,
+        "schemaVersion": schema_version,
         "checkedAt": datetime.now(timezone.utc).isoformat(),
     }
 

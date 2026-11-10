@@ -31,6 +31,7 @@ mismatched routes usually indicate a UI bug.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 
 from coa_control_plane_server.models import (
     GetOntologyOverviewResponseContent as _OntologyOverview,
@@ -55,6 +56,10 @@ from coa_ontology.catalog.graph_schemas import (
     GraphSearchResult,
     GraphStatementPage,
     GraphVertex,
+    OntologyDiff,
+    OntologySnapshot,
+    QualityValidation,
+    ReasoningStatus,
 )
 from coa_ontology.catalog.namespace_language import label_preference_for
 from coa_ontology.query_params import require_enum_value
@@ -131,6 +136,25 @@ _MAX_STATEMENT_TERM_LENGTH = 2048
 
 def _graph(namespace: str | None) -> GraphStore:
     return build_stores(namespace)[0]
+
+
+def _now_iso() -> str:
+    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# Provenance strings the health board renders verbatim, so a number on the page
+# can be traced back to the query shape that produced it.
+_HEALTH_SNAPSHOT_SOURCE = (
+    "SPARQL aggregation over the namespace named graphs: owl:Class / owl:ObjectProperty / "
+    "owl:DatatypeProperty declarations joined to rdf:type usage"
+)
+_HEALTH_VALIDATE_SOURCE = (
+    "SPARQL over the namespace named graphs (outgoing edges and inbound references); "
+    "SHACL shapes are not configured in this deployment"
+)
+_REASONING_SOURCE = "ontology-engine capability check (no reasoner wired up)"
+_DIFF_SOURCE = "SPARQL MINUS between the two named graphs"
+_MAX_DIFF_LIMIT = 200
 
 
 def _lookup(vertex_uri: str, namespace: str, kind: str) -> GraphVertex:
@@ -344,6 +368,99 @@ def find_graph_path(
         log.warning("invalid graph path IRI: %s", e)
         raise HTTPException(400, "Invalid graph path IRI.") from e
     return GraphPathResult(**result)
+
+
+@router.get("/snapshot", response_model=OntologySnapshot, response_model_by_alias=True)
+def get_ontology_snapshot(namespace: str = "default"):
+    """T-Box/A-Box coverage for the health board.
+
+    Class coverage is ``classesWithInstances / tbox.classes``: a real fraction,
+    so a namespace whose ontology declares 156 classes but only instantiates 4
+    shows 2.6%, not "green".
+    """
+    graph_store = _graph(namespace)
+    try:
+        snapshot = graph_store.get_health_snapshot(namespace)
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("health snapshot unsupported by backend: %s", e)
+        raise HTTPException(501, "Ontology snapshot is not supported on this backend.") from e
+    except ValueError as e:
+        log.warning("invalid namespace for health snapshot: %s", e)
+        raise HTTPException(400, "Invalid namespace.") from e
+    return OntologySnapshot(**snapshot, source=_HEALTH_SNAPSHOT_SOURCE, sampled_at=_now_iso())
+
+
+@router.post("/validate", response_model=QualityValidation, response_model_by_alias=True)
+def run_validation(namespace: str = "default"):
+    """Read-only quality checks: orphan instances, unlabeled classes, SHACL.
+
+    Checks that cannot run report ``skipped``/null with a reason. SHACL never
+    degrades into "0 violations" just because no shapes are loaded.
+    """
+    graph_store = _graph(namespace)
+    try:
+        validation = graph_store.run_quality_validation(namespace)
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("quality validation unsupported by backend: %s", e)
+        raise HTTPException(501, "Quality validation is not supported on this backend.") from e
+    except ValueError as e:
+        log.warning("invalid namespace for quality validation: %s", e)
+        raise HTTPException(400, "Invalid namespace.") from e
+    return QualityValidation(**validation, source=_HEALTH_VALIDATE_SOURCE, sampled_at=_now_iso())
+
+
+@router.get("/reasoning", response_model=ReasoningStatus, response_model_by_alias=True)
+def get_reasoning_status(namespace: str = "default"):
+    """Whether a reasoner is wired up in this deployment.
+
+    Served from capability constants: this service materialises nothing, so
+    the honest answer is ``available: false`` with the reason, not a zero
+    failure count that implies reasoning ran and succeeded.
+    """
+    return ReasoningStatus(
+        available=False,
+        engine=None,
+        failures={
+            "count": None,
+            "detail": "inference jobs are not observable from this service",
+        },
+        detail="This deployment serves asserted triples only; no reasoner is configured.",
+        source=_REASONING_SOURCE,
+        sampled_at=_now_iso(),
+    )
+
+
+@router.get("/diff", response_model=OntologyDiff, response_model_by_alias=True)
+def get_ontology_diff(
+    namespace: str = "default",
+    from_graph: str = Query(..., alias="from"),
+    to_graph: str = Query(..., alias="to"),
+    limit: int = 20,
+):
+    """Compare two named graphs of this namespace with SPARQL ``MINUS``.
+
+    Both IRIs must be named graphs of the namespace, so the diff cannot be used
+    to read a graph outside it. Added means present in ``to``, absent from
+    ``from``.
+    """
+    for label, value in (("from", from_graph), ("to", to_graph)):
+        if not value or len(value) > _MAX_STATEMENT_TERM_LENGTH:
+            raise HTTPException(400, f"Invalid {label} graph IRI.")
+        if not value.startswith(("http://", "https://", "urn:")):
+            raise HTTPException(400, f"Invalid {label} graph IRI.")
+    if not 1 <= limit <= _MAX_DIFF_LIMIT:
+        raise HTTPException(400, f"limit must be between 1 and {_MAX_DIFF_LIMIT}")
+
+    graph_store = _graph(namespace)
+    try:
+        result = graph_store.diff_named_graphs(from_graph, to_graph, namespace=namespace, limit=limit)
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("graph diff unsupported by backend: %s", e)
+        raise HTTPException(501, "Graph diff is not supported on this backend.") from e
+    except ValueError as e:
+        log.warning("invalid graph for diff: %s", e)
+        raise HTTPException(400, "Both graphs must be named graphs of this namespace.") from e
+    return OntologyDiff(**result, source=_DIFF_SOURCE, sampled_at=_now_iso())
 
 
 @router.get("/statements", response_model=GraphStatementPage)
