@@ -7,6 +7,7 @@ codes so clients see provider codes instead of stack traces.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -3196,15 +3197,54 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.get("/governance/proposals/{proposal_id}")
     def governance_get_proposal(proposal_id: str) -> dict[str, Any]:
+        from . import impact as impact_module
+
         proposal = runtime.ontology.get_proposal(proposal_id)
         version = runtime.ontology.get(proposal["versionId"])
+        # F107: the detail view carries the full O-03 checklist, not just the
+        # counts stored at propose time. When the analysis cannot run, the
+        # reason travels with the response — an empty block must never read as
+        # "nothing is affected".
+        impact: dict[str, Any] = dict(proposal.get("impact") or {})
+        try:
+            impact["analysis"] = impact_module.analyze(
+                runtime,
+                from_version=proposal.get("againstVersion"),
+                to_version=proposal["versionId"],
+            )
+            impact["analysisError"] = None
+        except PortError as exc:
+            impact["analysis"] = None
+            impact["analysisError"] = {
+                "code": exc.provider_code or exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            logging.getLogger(__name__).warning(
+                "proposal impact analysis unavailable: proposal=%s code=%s message=%s",
+                proposal_id,
+                impact["analysisError"]["code"],
+                exc.message,
+            )
+        except Exception as exc:  # the proposal view must stay readable
+            impact["analysis"] = None
+            impact["analysisError"] = {
+                "code": "E_IMPACT_ANALYSIS_FAILED",
+                "message": str(exc),
+                "details": {},
+            }
+            logging.getLogger(__name__).warning(
+                "proposal impact analysis crashed: proposal=%s error=%r",
+                proposal_id,
+                exc,
+            )
         return {
             "proposal": proposal,
             "version": version,
             "versionStatus": version["status"],
             "current": runtime.ontology.current(),
             "diff": proposal.get("diff") or {},
-            "impact": proposal.get("impact") or {},
+            "impact": impact,
         }
 
     @app.post("/governance/proposals/{proposal_id}/approve")

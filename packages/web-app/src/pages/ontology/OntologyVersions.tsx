@@ -42,6 +42,8 @@ import {
   rollbackOntology,
   type OntologyDiff,
   type OntologyEvent,
+  type OntologyImpactClass,
+  type OntologyImpactMetric,
   type OntologyProposal,
   type OntologyProposalDetail,
   type OntologyVersion,
@@ -79,6 +81,14 @@ const OPEN_PROPOSAL = new Set(["proposed", "pending", "open"]);
 function errorText(err: unknown): string {
   if (err instanceof ApiError) return `${err.status} ${err.code}: ${err.message}`;
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * F107: null means "算不了"（A-Box 未配置）；0 才是真的为零。
+ * Rendering must keep them apart, so no `?? 0` here.
+ */
+function instanceText(value: number | null | undefined): string {
+  return value === null || value === undefined ? "null（不可算）" : String(value);
 }
 
 /** One-line summary of an audit payload, leaning on the breaking acknowledgement. */
@@ -466,11 +476,22 @@ export function OntologyVersionsPage() {
           proposal.proposalId,
         );
         setProposalDetail(loaded);
+        // F107: put the impact verdict in the log too, so a reviewer can see
+        // whether instances are null ("算不了") or a real number.
+        const analysis = loaded.impact?.analysis;
+        const impactState = analysis
+          ? `classes=${analysis.affected.classes.length} ` +
+            `instances=${instanceText(analysis.affected.instances.total)} ` +
+            `metrics=${analysis.dependencies.metrics.length}`
+          : loaded.impact?.analysisError
+            ? `error=${loaded.impact.analysisError.code}`
+            : "missing";
         record(
           "提案详情",
           `proposalId=${proposal.proposalId} ` +
             `breaking=${String(loaded.diff?.breaking ?? false)} ` +
-            `+${loaded.diff?.summary?.addedTriples ?? "?"}/-${loaded.diff?.summary?.removedTriples ?? "?"}`,
+            `+${loaded.diff?.summary?.addedTriples ?? "?"}/-${loaded.diff?.summary?.removedTriples ?? "?"} ` +
+            `impact ${impactState}`,
           true,
         );
       } catch (err) {
@@ -557,6 +578,21 @@ export function OntologyVersionsPage() {
     }),
   );
   const publishBlockers: PublishBlocker[] = publishPlan?.result.blockers ?? [];
+
+  // F107: impact panel data. `analysis` and `analysisError` are exclusive; a
+  // null instance count stays null on screen (never coerced to 0).
+  const impactAnalysis = proposalDetail?.impact?.analysis ?? null;
+  const impactError = proposalDetail?.impact?.analysisError ?? null;
+  const impactInstances = impactAnalysis?.affected.instances;
+  const impactClasses = impactAnalysis?.affected.classes ?? [];
+  const impactMetrics = impactAnalysis?.dependencies.metrics ?? [];
+  const instanceByClass = new Map<string, number | null>(
+    (impactInstances?.byClass ?? []).map(
+      (item) => [item.iri, item.instances] as [string, number | null],
+    ),
+  );
+  const instancesUnknown =
+    impactInstances?.total === null || impactInstances?.total === undefined;
 
   const iriList = (title: string, values?: string[]) => (
     <Box>
@@ -915,6 +951,154 @@ export function OntologyVersionsPage() {
                   ))}
                 </SpaceBetween>
               </Box>
+            )}
+
+            <Header variant="h3">影响分析（impact）</Header>
+            {impactAnalysis ? (
+              <SpaceBetween size="m">
+                <KeyValuePairs
+                  columns={3}
+                  items={[
+                    { label: "受影响类", value: String(impactClasses.length) },
+                    {
+                      label: "受影响属性",
+                      value: String(impactAnalysis.affected.properties.length),
+                    },
+                    {
+                      label: "受影响类实例合计",
+                      value: instanceText(impactInstances?.affectedInstances),
+                    },
+                    {
+                      label: "实例总数（A-Box）",
+                      value: instanceText(impactInstances?.total),
+                    },
+                    { label: "依赖指标", value: String(impactMetrics.length) },
+                    {
+                      label: "依赖规则",
+                      value: String(impactAnalysis.dependencies.rules.length),
+                    },
+                    {
+                      label: "抽样重算一致",
+                      value:
+                        impactAnalysis.verification.consistent === null
+                          ? "未验证（无 A-Box）"
+                          : String(impactAnalysis.verification.consistent),
+                    },
+                  ]}
+                />
+                {instancesUnknown && (
+                  <Alert type="warning" header="实例数不可算：A-Box 未配置">
+                    {impactInstances?.note ?? "服务端没有返回实例数，也没有给出原因。"}
+                    。面板显示 null（算不了），不是 0（算了是零），没有用 0 代替。
+                  </Alert>
+                )}
+                {impactClasses.length > 0 ? (
+                  <Table
+                    header={
+                      <Header variant="h3" counter={`(${impactClasses.length})`}>
+                        受影响类
+                      </Header>
+                    }
+                    items={impactClasses}
+                    columnDefinitions={[
+                      {
+                        id: "label",
+                        header: "类",
+                        cell: (item: OntologyImpactClass) => item.label,
+                      },
+                      {
+                        id: "iri",
+                        header: "IRI",
+                        cell: (item: OntologyImpactClass) => (
+                          <Box variant="code">{item.iri}</Box>
+                        ),
+                      },
+                      {
+                        id: "change",
+                        header: "变更",
+                        cell: (item: OntologyImpactClass) => item.change,
+                      },
+                      {
+                        id: "triples",
+                        header: "+/- 三元组",
+                        cell: (item: OntologyImpactClass) =>
+                          `+${item.addedTriples} / -${item.removedTriples}`,
+                      },
+                      {
+                        id: "instances",
+                        header: "实例数",
+                        cell: (item: OntologyImpactClass) =>
+                          instanceText(instanceByClass.get(item.iri)),
+                      },
+                    ]}
+                  />
+                ) : (
+                  <Box color="text-status-inactive">
+                    没有受影响类：{impactAnalysis.emptyReason ?? "服务端返回 0 个受影响类"}。
+                  </Box>
+                )}
+                {impactMetrics.length > 0 ? (
+                  <Table
+                    header={
+                      <Header variant="h3" counter={`(${impactMetrics.length})`}>
+                        依赖指标
+                      </Header>
+                    }
+                    items={impactMetrics}
+                    columnDefinitions={[
+                      {
+                        id: "metricId",
+                        header: "metricId",
+                        cell: (item: OntologyImpactMetric) => (
+                          <Box variant="code">{item.metricId}</Box>
+                        ),
+                      },
+                      {
+                        id: "name",
+                        header: "指标",
+                        cell: (item: OntologyImpactMetric) => item.name ?? "-",
+                      },
+                      {
+                        id: "matchedBy",
+                        header: "命中依据",
+                        cell: (item: OntologyImpactMetric) =>
+                          (item.matchedBy ?? []).join("；") || "-",
+                      },
+                      {
+                        id: "source",
+                        header: "来源",
+                        cell: (item: OntologyImpactMetric) => item.source ?? "-",
+                      },
+                    ]}
+                  />
+                ) : (
+                  <Box color="text-status-inactive">
+                    没有依赖指标：
+                    {impactAnalysis.dependencies.emptyReason ?? "服务端返回 0 个依赖指标"}。
+                  </Box>
+                )}
+                <Box color="text-status-inactive">
+                  只读分析，计算于 {impactAnalysis.computedAt}；来源：
+                  {impactAnalysis.source ?? "-"}
+                </Box>
+              </SpaceBetween>
+            ) : impactError ? (
+              <Alert type="error" header="影响分析未完成">
+                <SpaceBetween size="xs">
+                  <Box variant="code">
+                    {impactError.code}: {impactError.message}
+                  </Box>
+                  <Box>
+                    服务端没有给出可用的影响分析，因此这里不显示受影响类 / 实例 / 指标表格；
+                    缺口就是上面这条错误，而不是「没有影响」。
+                  </Box>
+                </SpaceBetween>
+              </Alert>
+            ) : (
+              <Alert type="warning" header="服务端未返回影响分析">
+                响应里既没有 impact.analysis，也没有 impact.analysisError。
+                面板不会显示空表格，也不会把缺失当成 0；请检查后端是否为本次提案计算了影响。
+              </Alert>
             )}
           </SpaceBetween>
         </Container>
