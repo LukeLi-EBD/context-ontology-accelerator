@@ -36,7 +36,14 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if job_id_error:
         return api_response(400, {"message": job_id_error})
 
-    job = get_job(namespace_id, job_id)
+    try:
+        job = get_job(namespace_id, job_id)
+    except Exception:
+        # The job store is the only source of truth here; there is no fallback.
+        # Fail with a readable 503 instead of letting the backend exception
+        # collapse into the client's bare UNKNOWN_ERROR.
+        logger.exception("import_job_store_unavailable", namespace=namespace_id, job_id=job_id)
+        return api_response(503, {"message": "Import job store is unavailable — try again later"})
     if not job:
         return api_response(404, {"message": "Import job not found"})
 
