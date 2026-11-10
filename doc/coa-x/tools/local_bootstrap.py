@@ -96,9 +96,9 @@ def _embed(text: str) -> list[float]:
 
 
 def _meta(dsn: str):
-    from platform_core.adapters.metadata_pg import MetadataPg
+    from coa_control_plane.platform_db.connection import PgPool
 
-    meta = MetadataPg(dsn, pool_max=2)
+    meta = PgPool(dsn, pool_max=2)
     meta.open(retry_seconds=15)
     return meta
 

@@ -141,6 +141,7 @@
 | 3 | 质量 1 条无契约 | P14 会补 `ListAnswerQualityRuns`，搬之前先把契约补上，否则搬完还是「无契约的 KERNEL 路由」 |
 | 4 | `config/authoritative-8080.yaml` | 名字带 8080，需确认它是「8080 语义配置」还是「通用生命周期配置」；前者随 8080 退役归档，后者随 R3 迁 |
 | 5 | 迁移链版本号 | 现 `SUPPORTED_SCHEMA_VERSION` 由 `platform-core` 提供；搬家后必须保证 P8 的 V47 只在一处登记，否则本地库会卡在版本闸 |
+| 6 | 8080 镜像是否打包 `platform_db` | R2 裁定：**不为 8080 保留打包路径**。`platform-core` 的 `sql/*.sql` package-data 已去掉，不补回。若将来真要重建 8080 镜像，再在「把 `platform_db` 打进镜像」与「提前搬 adapter」之间二选一；现在不定 |
 
 ## 6. 证据索引
 

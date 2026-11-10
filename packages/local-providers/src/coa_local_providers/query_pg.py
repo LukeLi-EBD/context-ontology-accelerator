@@ -1,7 +1,8 @@
-"""COA ``QueryExecutor`` backed by platform_core's PostgreSQL AD (PF-0010).
+"""COA ``QueryExecutor`` backed by the platform PostgreSQL connection layer.
 
-``MetadataPg`` is the platform's psycopg 3 pool + ``dict_row`` wrapper. This
-module exposes it as the async COA ``QueryExecutor``.
+``PgPool`` (``coa_control_plane.platform_db``) is the platform's psycopg 3 pool
+plus ``dict_row`` wrapper. This module exposes it as the async COA
+``QueryExecutor``.
 
 Honest limits, stated rather than hidden:
 
@@ -19,7 +20,7 @@ import asyncio
 import time
 from typing import Any
 
-from platform_core.adapters.metadata_pg import MetadataPg
+from coa_control_plane.platform_db.connection import PgPool
 
 from .contracts import QueryExecutor, QueryResult  # noqa: F401 - runtime contract
 
@@ -39,7 +40,7 @@ class PostgresQueryExecutor:
         open_timeout_seconds: float = 10.0,
     ) -> None:
         self._max_rows = max_rows
-        self._meta = MetadataPg(
+        self._meta = PgPool(
             dsn,
             pool_max=pool_max,
             statement_timeout_ms=statement_timeout_ms,

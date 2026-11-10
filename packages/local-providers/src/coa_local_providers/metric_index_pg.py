@@ -17,8 +17,8 @@ import asyncio
 from collections.abc import Mapping
 from typing import Any
 
+from coa_control_plane.platform_db.connection import PgPool
 from coa_ports import MetricHit, MetricRecord, PortError, PortErrorCode
-from platform_core.adapters.metadata_pg import MetadataPg
 
 # Trigram similarity floor. Kept low because a metric description is short and
 # the caller orders by score itself; a high floor silently drops real matches.
@@ -60,7 +60,7 @@ class PgMetricIndex:
         pool_max: int = 4,
         open_timeout_seconds: float = 10.0,
     ) -> None:
-        self._meta = MetadataPg(dsn, pool_max=pool_max)
+        self._meta = PgPool(dsn, pool_max=pool_max)
         self._meta.open(retry_seconds=open_timeout_seconds)
 
     async def index(self, record: MetricRecord) -> None:

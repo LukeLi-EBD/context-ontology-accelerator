@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
+from coa_control_plane.platform_db import SUPPORTED_SCHEMA_VERSION
+
 from .datagen_abox import SYNTHETIC_GRAPH
 from .errors import PortError
 from .ontology_lifecycle import summarize as _lifecycle_summary
