@@ -18,8 +18,9 @@ import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Table from "@cloudscape-design/components/table";
 import Tabs from "@cloudscape-design/components/tabs";
 import { PendingReviewBanner } from "@components/ontology/PendingReviewBanner";
-import { OntologyInventoryView } from "./explorer/OntologyInventoryView";
 import { InductedSourcesView } from "./explorer/InductedSourcesView";
+import { OntologyInventoryView } from "./explorer/OntologyInventoryView";
+import { StatementBrowserView } from "./explorer/StatementBrowserView";
 
 import {
   searchEntities,
@@ -725,7 +726,12 @@ async function fetchVertexByKind(
   return null;
 }
 
-const EXPLORER_TABS = new Set(["classes", "ontologies", "sources"]);
+const EXPLORER_TABS = new Set([
+  "classes",
+  "ontologies",
+  "sources",
+  "statements",
+]);
 
 export function GraphSearchPage() {
   const { t } = useAppI18n();
@@ -2201,6 +2207,16 @@ export function GraphSearchPage() {
             label: t("Inducted sources"),
             content: (
               <InductedSourcesView
+                apiClient={apiClient}
+                namespace={namespaceId}
+              />
+            ),
+          },
+          {
+            id: "statements",
+            label: t("Statements"),
+            content: (
+              <StatementBrowserView
                 apiClient={apiClient}
                 namespace={namespaceId}
               />

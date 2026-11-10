@@ -56,6 +56,7 @@ use com.amazon.semanticcontext.ontologygraph#GetOntologyUploadUrl
 use com.amazon.semanticcontext.ontologygraph#GraphSearch
 use com.amazon.semanticcontext.ontologygraph#IngestOntologyFromS3
 use com.amazon.semanticcontext.ontologygraph#ListOntologies
+use com.amazon.semanticcontext.ontologygraph#ListStatements
 use com.amazon.semanticcontext.ontologygraph#UploadOntology
 use com.amazon.semanticcontext.ontologyinduction#AcceptProposal
 use com.amazon.semanticcontext.ontologyinduction#CancelProposal
@@ -232,6 +233,7 @@ service ControlPlaneService {
         IngestOntologyFromS3
         GetIngestStatus
         GraphSearch
+        ListStatements
         GetGraphClass
         GetGraphObjectProperty
         GetGraphDatatypeProperty

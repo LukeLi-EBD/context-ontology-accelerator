@@ -44,11 +44,12 @@ from coa_control_plane_server.models import (
 from coa_control_plane_server.models import (
     OntologyPropertySummary as _OntologyPropertySummary,
 )
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from coa_ontology.catalog.graph_schemas import (
     GraphSearchHit,
     GraphSearchResult,
+    GraphStatementPage,
     GraphVertex,
 )
 from coa_ontology.catalog.namespace_language import label_preference_for
@@ -100,6 +101,15 @@ _MAX_OVERVIEW_OFFSET = 1_000_000
 _MSG_LOOKUP_UNSUPPORTED = "Graph lookup is not supported on this backend."
 _MSG_INVALID_VERTEX_URI = "Invalid vertex URI."
 _MSG_VERTEX_NOT_FOUND = "No triples found for this URI in the namespace."
+_MSG_INVALID_STATEMENT_FILTER = "Invalid statement filter."
+
+# ListStatements bounds. ``limit`` / ``offset`` reach SPARQL LIMIT/OFFSET, and
+# the term length equals the Smithy ``objectValue`` @length max; all are
+# rejected at the edge rather than clamped.
+_DEFAULT_STATEMENT_LIMIT = 20
+_MAX_STATEMENT_LIMIT = 200
+_MAX_STATEMENT_OFFSET = 1_000_000
+_MAX_STATEMENT_TERM_LENGTH = 2048
 
 
 def _graph(namespace: str | None) -> GraphStore:
@@ -213,6 +223,58 @@ def search_entities(
         log.warning("entity search unsupported by backend: %s", e)
         raise HTTPException(501, "Entity search is not supported on this backend.") from e
     return GraphSearchResult(hits=[GraphSearchHit(**r) for r in results], total_count=total)
+
+
+@router.get("/statements", response_model=GraphStatementPage)
+def list_statements(
+    namespace: str = "default",
+    subject: str | None = None,
+    predicate: str | None = None,
+    object_value: str | None = Query(default=None, alias="object"),
+    graph: str | None = None,
+    limit: int = _DEFAULT_STATEMENT_LIMIT,
+    offset: int = 0,
+):
+    """One page of the namespace's RDF statements, optionally filtered.
+
+    Every filter is optional and they combine with AND. ``subject`` /
+    ``predicate`` / ``graph`` are IRIs; ``object`` is an IRI when it starts
+    with an IRI scheme and a literal lexical form otherwise. The page is
+    namespace-scoped by the graph store, so a ``graph`` outside the namespace
+    yields an empty page rather than leaking another namespace's triples.
+    """
+    if not 1 <= limit <= _MAX_STATEMENT_LIMIT:
+        raise HTTPException(400, f"limit must be between 1 and {_MAX_STATEMENT_LIMIT}")
+    if not 0 <= offset <= _MAX_STATEMENT_OFFSET:
+        raise HTTPException(400, f"offset must be between 0 and {_MAX_STATEMENT_OFFSET}")
+
+    for value in (subject, predicate, graph):
+        if value is not None and (not value or len(value) > _MAX_STATEMENT_TERM_LENGTH):
+            raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER)
+        if value is not None and not value.startswith(("http://", "https://", "urn:")):
+            raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER)
+    if object_value is not None and len(object_value) > _MAX_STATEMENT_TERM_LENGTH:
+        raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER)
+
+    graph_store = _graph(namespace)
+    try:
+        result = graph_store.list_statements(
+            namespace,
+            subject=subject,
+            predicate=predicate,
+            object_value=object_value,
+            graph_uri=graph,
+            limit=limit,
+            offset=offset,
+        )
+    except (NotImplementedError, AttributeError) as e:
+        log.warning("statement listing unsupported by backend: %s", e)
+        raise HTTPException(501, "Statement listing is not supported on this backend.") from e
+    except ValueError as e:
+        # ``_iri`` rejects malformed / injecting URIs; its text echoes them.
+        log.warning("invalid statement filter: %s", e)
+        raise HTTPException(400, _MSG_INVALID_STATEMENT_FILTER) from e
+    return GraphStatementPage(**result)
 
 
 @router.get("/ontology-overview", response_model=_OntologyOverview, response_model_by_alias=True)

@@ -739,6 +739,83 @@ operation GraphSearch {
     }
 }
 
+/// One RDF statement (triple) in a namespace's named graphs.
+structure GraphStatement {
+    /// Named graph the statement lives in.
+    @required
+    graph: String
+
+    /// Subject IRI.
+    @required
+    subject: String
+
+    /// Predicate IRI.
+    @required
+    predicate: String
+
+    /// Object term: an IRI, or the lexical form of a literal.
+    @required
+    object: String
+}
+
+list GraphStatementList {
+    member: GraphStatement
+}
+
+/// Enumerate the statements in a namespace's named graphs.
+///
+/// Read-only and namespace-scoped: the query only ever sees graphs under the
+/// namespace's prefix, and each filter narrows that set (they combine with
+/// AND). Subject / predicate are IRIs; object is an IRI when it starts with
+/// ``http://``, ``https://`` or ``urn:`` and a literal lexical form otherwise.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/statements", code: 200)
+operation ListStatements {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// Restrict to one subject IRI.
+        @httpQuery("subject")
+        subject: VertexIri
+
+        /// Restrict to one predicate IRI.
+        @httpQuery("predicate")
+        predicate: VertexIri
+
+        /// Restrict to one object: an IRI, or a literal's lexical form.
+        @httpQuery("object")
+        @length(max: 2048)
+        objectValue: String
+
+        /// Restrict to one named graph IRI in the namespace.
+        @httpQuery("graph")
+        graph: VertexIri
+
+        /// Maximum number of statements to return (the page size).
+        @httpQuery("limit")
+        @range(min: 1, max: 200)
+        limit: Integer
+
+        /// Number of leading statements to skip, for pagination.
+        @httpQuery("offset")
+        @range(min: 0, max: 1000000)
+        offset: Integer
+    }
+
+    output := {
+        /// The page of matching statements, in the backend's named-graph
+        /// index order (stable for a static graph, not a sorted order).
+        @required
+        statements: GraphStatementList
+
+        /// True when the page was capped at ``limit`` and more statements
+        /// exist beyond this window.
+        truncated: Boolean
+    }
+}
+
 /// Look up a class vertex by IRI.
 ///
 /// The IRI is passed as a query parameter (``?uri=…``) rather than a

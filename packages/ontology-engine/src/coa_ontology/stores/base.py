@@ -421,6 +421,33 @@ class GraphStore(Protocol):
         """
         ...
 
+    # Statement listing ------------------------------------------------
+    def list_statements(
+        self,
+        namespace: str | None = None,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        object_value: str | None = None,
+        graph_uri: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict:
+        """One page of RDF statements from the namespace's named graphs.
+
+        Filters combine with AND; each is optional. ``subject`` / ``predicate``
+        are IRIs. ``object_value`` is an IRI when it starts with an IRI scheme
+        and a literal lexical form otherwise. ``graph_uri`` pins the page to one
+        named graph of the namespace; a graph outside the namespace yields an
+        empty page.
+
+        Returns ``{"statements": [{"graph", "subject", "predicate", "object"}],
+        "truncated": bool}``. Rows come back in the backend's named-graph index
+        order, stable for a static graph, so ``limit`` / ``offset`` yield
+        repeatable page windows without a global sort.
+        """
+        ...
+
     # Ontology overview ------------------------------------------------
     def get_ontology_overview(
         self,

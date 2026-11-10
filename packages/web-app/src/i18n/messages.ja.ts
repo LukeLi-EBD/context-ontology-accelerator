@@ -2496,6 +2496,18 @@ export const MESSAGES_JA = {
     "この名前空間の文書から抽出された候補です。承認するとファクトが書き込まれ、グラフに反映されます。",
   Subject: "主語",
   Object: "目的語",
+  Statements: "ステートメント",
+  Limit: "件数",
+  Clear: "クリア",
+  Previous: "前へ",
+  Next: "次へ",
+  "Filters combine with AND.": "各条件は AND で組み合わされます。",
+  "Statements are paged in the graph store's index order.":
+    "ステートメントはグラフストアのインデックス順でページングされます。",
+  "No statements match these filters.":
+    "この条件に一致するステートメントはありません。",
+  "Could not load statements": "ステートメントを読み込めませんでした",
+  "Loading statements": "ステートメントを読み込み中",
   Document: "文書",
   "No candidates": "候補がありません",
   "Candidates appear here after a document has been ingested.":

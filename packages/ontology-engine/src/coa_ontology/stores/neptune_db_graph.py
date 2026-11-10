@@ -1642,6 +1642,80 @@ class NeptuneDBGraphStore(GraphStore):
 
         return list(hits.values())
 
+    def list_statements(
+        self,
+        namespace: str | None = None,
+        *,
+        subject: str | None = None,
+        predicate: str | None = None,
+        object_value: str | None = None,
+        graph_uri: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict:
+        """One page of RDF statements from the namespace's named graphs.
+
+        See :meth:`GraphStore.list_statements`. The graph set is enumerated from
+        the namespace's prefix (``GRAPH ?g {{ }}`` uses the named-graph index),
+        so an IRI outside the namespace can never widen the page — a
+        ``graph_uri`` that is not in that set yields an empty result instead.
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        if graph_uri is not None:
+            graphs = [g for g in graphs if g == graph_uri]
+        if not graphs:
+            return {"statements": [], "truncated": False}
+
+        # A fixed term leaves its variable unbound (``<s> ?p ?o``), so each row
+        # falls back to the filter value below.
+        s_term = _iri(subject) if subject else "?s"
+        p_term = _iri(predicate) if predicate else "?p"
+        if object_value:
+            if object_value.startswith(("http://", "https://", "urn:")):
+                o_term = _iri(object_value)
+                object_filter = ""
+            else:
+                # Lexical match via STR(), not a bare ``"..."``: a bare literal
+                # only matches xsd:string, while ontology labels carry language
+                # tags (``@zh`` locally), so it would find nothing.
+                o_term = "?o"
+                object_filter = f'FILTER(STR(?o) = "{_esc(object_value)}")'
+        else:
+            o_term = "?o"
+            object_filter = ""
+
+        # Both bounds already validated at the API edge; clamped here as the
+        # store's own backstop because they are interpolated into SPARQL.
+        safe_limit = max(1, min(limit, _MAX_SEARCH_PAGE_SIZE))
+        safe_offset = max(0, offset)
+        values = "\n          ".join(_iri(g) for g in graphs)
+        # No ORDER BY: sorting a namespace's full triple set costs seconds on a
+        # large A-Box (121k triples locally), and the page window only needs a
+        # stable scan. The named-graph index order this relies on is stable for
+        # a static graph, which is what a read-only browser pages over.
+        sparql = f"""
+        SELECT ?g ?s ?p ?o WHERE {{
+          VALUES ?g {{
+          {values}
+          }}
+          GRAPH ?g {{ {s_term} {p_term} {o_term} {object_filter} }}
+        }}
+        LIMIT {safe_limit + 1} OFFSET {safe_offset}
+        """
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        truncated = len(bindings) > safe_limit
+        statements = [
+            {
+                "graph": b.get("g", {}).get("value", graph_uri or ""),
+                "subject": b.get("s", {}).get("value", subject or ""),
+                "predicate": b.get("p", {}).get("value", predicate or ""),
+                "object": b.get("o", {}).get("value", object_value or ""),
+            }
+            for b in bindings[:safe_limit]
+        ]
+        return {"statements": statements, "truncated": truncated}
+
     def mapped_class_backends(self, class_uris: Iterable[str], namespace: str | None = None) -> dict[str, str]:
         """Which backend answers each of ``class_uris`` already, across every graph of the namespace.
 

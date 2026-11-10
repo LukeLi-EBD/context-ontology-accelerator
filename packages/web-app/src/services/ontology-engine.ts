@@ -741,6 +741,46 @@ export async function getClass(
   );
 }
 
+// ─── Graph (statement listing) ─────────────────────────────────────────
+
+/** One RDF statement as returned by the ListStatements page. */
+export interface GraphStatement {
+  graph: string;
+  subject: string;
+  predicate: string;
+  /** Object IRI, or the lexical form of a literal. */
+  object: string;
+}
+
+/** One page of statements plus whether more remain beyond the window. */
+export interface GraphStatementPage {
+  statements: GraphStatement[];
+  truncated?: boolean;
+}
+
+/** Filters for {@link listStatements}; every field is optional and combines
+ *  with AND. `object` is treated as an IRI when it starts with an IRI scheme
+ *  and as a literal lexical form otherwise. */
+export interface StatementFilters {
+  subject?: string;
+  predicate?: string;
+  object?: string;
+  graph?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** Fetch one page of a namespace's statements (read-only). */
+export async function listStatements(
+  apiClient: ApiClient,
+  namespace: string,
+  opts?: StatementFilters,
+): Promise<GraphStatementPage> {
+  return apiClient.get<GraphStatementPage>(
+    `/namespaces/${encodeURIComponent(namespace)}/graph/statements${qs({ ...opts })}`,
+  );
+}
+
 /** One class as returned by the ontology-overview endpoint. */
 export interface OntologyOverviewClass {
   uri: string;

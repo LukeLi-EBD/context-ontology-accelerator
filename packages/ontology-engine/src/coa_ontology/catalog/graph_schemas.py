@@ -149,3 +149,25 @@ class GraphSearchResult(BaseModel):
 
     hits: list[GraphSearchHit] = Field(..., description="The page of matching hits.")
     total_count: int = Field(..., description="Total distinct matches across all pages.")
+
+
+class GraphStatement(BaseModel):
+    """One RDF statement (triple) from a namespace's named graphs."""
+
+    graph: str = Field(..., description="Named graph the statement lives in.")
+    subject: str = Field(..., description="Subject IRI.")
+    predicate: str = Field(..., description="Predicate IRI.")
+    object: str = Field(..., description="Object IRI, or the lexical form of a literal.")
+
+
+class GraphStatementPage(BaseModel):
+    """One page of statements.
+
+    ``statements`` is the requested ``limit``/``offset`` window in a
+    deterministic order; ``truncated`` is True when more statements remain
+    beyond this window (the backend fetched one extra row to decide).
+    """
+
+    statements: list[GraphStatement] = Field(..., description="The page of statements.")
+    truncated: bool = Field(default=False, description="True when more statements remain.")
+

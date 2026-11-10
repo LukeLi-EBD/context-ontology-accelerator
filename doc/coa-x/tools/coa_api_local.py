@@ -564,6 +564,8 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/ontology/foundational", ONTOLOGY),
     ("/namespaces/{namespaceId}/ontology/foundational/{key}/load", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/search", ONTOLOGY),
+    # ListStatements (F67–F70): read-only statement listing, namespace-scoped.
+    ("/namespaces/{namespaceId}/graph/statements", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/ontology-overview", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/class", ONTOLOGY),
     ("/namespaces/{namespaceId}/graph/object-property", ONTOLOGY),
