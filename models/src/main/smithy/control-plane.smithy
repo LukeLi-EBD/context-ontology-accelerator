@@ -45,6 +45,8 @@ use com.amazon.semanticcontext.metric#ImportOsi
 use com.amazon.semanticcontext.metric#ListMetrics
 use com.amazon.semanticcontext.metric#UpdateMetric
 use com.amazon.semanticcontext.metric#ValidateMetric
+use com.amazon.semanticcontext.metriccatalog#GetMetricFamily
+use com.amazon.semanticcontext.metriccatalog#GetMetricReportManifest
 use com.amazon.semanticcontext.namespace#CreateNamespace
 use com.amazon.semanticcontext.namespace#DeleteNamespace
 use com.amazon.semanticcontext.namespace#GetNamespace
@@ -220,6 +222,8 @@ service ControlPlaneService {
         ExportOsi
         GetOsiUploadUrl
         GetImportJob
+        GetMetricFamily
+        GetMetricReportManifest
         // ── Ontology induction ──────────────────────────────────────────
         StartInduction
         GetInductionJob
