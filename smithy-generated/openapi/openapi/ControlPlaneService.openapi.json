@@ -25097,6 +25097,7 @@
             },
             "CanvasLimits": {
                 "type": "object",
+                "description": "Hard ceilings the canvas subgraph endpoint enforces. Published so the UI\nstops paging at the boundary instead of learning it from a 400.",
                 "properties": {
                     "maxNodes": {
                         "type": "number",

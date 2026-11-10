@@ -1,5 +1,6 @@
 # CanvasLimits
 
+Hard ceilings the canvas subgraph endpoint enforces. Published so the UI stops paging at the boundary instead of learning it from a 400.
 
 ## Properties
 

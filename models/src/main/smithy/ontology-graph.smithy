@@ -848,6 +848,8 @@ list CanvasCapabilityList {
     member: String
 }
 
+/// Hard ceilings the canvas subgraph endpoint enforces. Published so the UI
+/// stops paging at the boundary instead of learning it from a 400.
 structure CanvasLimits {
     /// Maximum nodes returned by one canvas subgraph page.
     @required

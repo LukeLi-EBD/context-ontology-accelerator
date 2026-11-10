@@ -24,7 +24,7 @@ from typing_extensions import Self
 
 class CanvasLimits(BaseModel):
     """
-    CanvasLimits
+    Hard ceilings the canvas subgraph endpoint enforces. Published so the UI stops paging at the boundary instead of learning it from a 400.
     """ # noqa: E501
     max_nodes: Union[StrictFloat, StrictInt] = Field(description="Maximum nodes returned by one canvas subgraph page.", alias="maxNodes")
     max_edges: Union[StrictFloat, StrictInt] = Field(description="Maximum edges returned alongside those nodes.", alias="maxEdges")
