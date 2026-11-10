@@ -552,6 +552,9 @@ ROUTES: list[tuple[str, str]] = [
     ("/namespaces/{namespaceId}/dictionaries/{sourceId}/view", KERNEL),
     ("/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage", KERNEL),
     ("/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh", KERNEL),
+    # P8 ingestion runs (F17/F18). Read-only, served by the in-process
+    # platform_core kernel from platform.import_batch/import_item.
+    ("/namespaces/{namespaceId}/ingestion-runs", KERNEL),
     ("/namespaces/{namespaceId}/documents", SOURCES),
     ("/namespaces/{namespaceId}/documents/{documentId}/chunks", SOURCES),
     ("/namespaces/{namespaceId}/candidates", SOURCES),
@@ -1071,8 +1074,10 @@ def _kernel_translate(
     # P4 terms/dictionary routes already use the kernel's contract shape
     # (`/namespaces/{ns}/terms`, `/namespaces/{ns}/dictionaries/...`), so they
     # are forwarded unchanged instead of being rewritten into `/ontology/*`.
-    if template.startswith("/namespaces/{namespaceId}/terms") or template.startswith(
-        "/namespaces/{namespaceId}/dictionaries"
+    if (
+        template.startswith("/namespaces/{namespaceId}/terms")
+        or template.startswith("/namespaces/{namespaceId}/dictionaries")
+        or template.startswith("/namespaces/{namespaceId}/ingestion-runs")
     ):
         target = template.format(**path_params)
         if query:

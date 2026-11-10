@@ -28,6 +28,7 @@ from . import __version__
 from . import dictionary_api
 from . import entity_view
 from . import healthboard
+from . import ingestion_api
 from . import metric_external
 from . import term_api
 from . import termgate
@@ -6583,5 +6584,8 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # --- P4 terms + data dictionary (F58-F66) ---
     term_api.register_term_routes(app, runtime)
     dictionary_api.register_dictionary_routes(app, runtime)
+
+    # --- P8 ingestion runs (F17/F18) ---
+    ingestion_api.register_ingestion_routes(app, runtime)
 
     return app
