@@ -1,0 +1,4 @@
+[coa-local-s3] root=C:\Users\cpslau\AppData\Local\Temp\coa-local-stack\objects bucket=coa-local-ontology-artifacts base=http://127.0.0.1:8099/_local/objects
+[coa-local-vector] provider=pgvector dsn=127.0.0.1:5444/platform dimensions=1024
+[coa-local-embedding] url=http://127.0.0.1:8081/v1 model=BAAI/bge-m3 dimensions=1024
+[coa-ontology-local] graph=oxigraph registry=postgres jobs=postgres objects=fs vectors=pgvector embeddings=http

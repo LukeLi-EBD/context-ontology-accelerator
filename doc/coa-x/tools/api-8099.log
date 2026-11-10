@@ -1,0 +1,2 @@
+[api] metadata catalog -> json-snapshot (LocalCatalogClient)
+[api] object store -> fs bucket=coa-local-documents
