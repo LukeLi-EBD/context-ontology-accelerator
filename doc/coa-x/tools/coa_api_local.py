@@ -991,6 +991,12 @@ def _kernel_translate(
         )
 
     if template.endswith("/publish"):
+        # F113: `planOnly` runs publish's own gate helpers without writing any
+        # version, event or pointer. The kernel names the switch `dryRun`, so
+        # the bridge translates; when both spellings arrive `planOnly` wins.
+        plan_only = payload["planOnly"] if "planOnly" in payload else payload.get("dryRun", False)
+        if not isinstance(plan_only, bool):
+            raise ValueError("planOnly must be a boolean")
         forwarded = {
             "versionId": payload.get("versionId"),
             "proposalId": payload.get("proposalId"),
@@ -998,6 +1004,7 @@ def _kernel_translate(
             "actor": payload.get("actor") or "operator",
             "reason": payload.get("reason"),
             "expectedVersionId": payload.get("expectedVersionId"),
+            "dryRun": plan_only,
         }
         return "POST", "/governance/publish", json.dumps(forwarded).encode("utf-8")
 
@@ -1005,14 +1012,39 @@ def _kernel_translate(
         target = payload.get("targetVersionId") or payload.get("versionId")
         if not target:
             raise ValueError("rollback requires targetVersionId")
-        if payload.get("planOnly"):
+        # F117: `newVersion` is the bridge switch; `mode` is the contract
+        # spelling. Pointer-only stays the default so the existing F116 call
+        # keeps its meaning, but a non-boolean switch is rejected instead of
+        # being coerced.
+        mode = payload.get("mode")
+        new_version = payload.get("newVersion")
+        if new_version is not None and not isinstance(new_version, bool):
+            raise ValueError("newVersion must be a boolean")
+        if mode is None:
+            mode = "NEW_VERSION" if new_version else "POINTER_ONLY"
+        if mode not in ("POINTER_ONLY", "NEW_VERSION"):
+            raise ValueError("rollback mode must be POINTER_ONLY or NEW_VERSION")
+        plan_only = payload["planOnly"] if "planOnly" in payload else payload.get("dryRun", False)
+        if not isinstance(plan_only, bool):
+            raise ValueError("planOnly must be a boolean")
+        if plan_only:
+            # F115: preview only. The plan route is read-only and takes the
+            # target version id; the mode is echoed by the caller, because the
+            # kernel plan describes the target that would be restored.
             return "GET", f"/governance/rollback/plan?versionId={target}", None
         forwarded = {
             "versionId": target,
             "actor": payload.get("actor") or "operator",
             "reason": payload.get("reason"),
-            "expectedVersionId": payload.get("expectedVersionId"),
         }
+        if mode == "NEW_VERSION":
+            # The kernel's rollback copies the target content into a new
+            # version and moves the pointer there (OQ-48). It has no
+            # optimistic-concurrency parameter, so `expectedVersionId` is not
+            # forwarded on this branch rather than being silently dropped for
+            # a path that claims to honour it.
+            return "POST", "/governance/rollback", json.dumps(forwarded).encode("utf-8")
+        forwarded["expectedVersionId"] = payload.get("expectedVersionId")
         return "POST", "/governance/rollback-to", json.dumps(forwarded).encode("utf-8")
 
     if template.endswith("/events") and "/facts" not in template:
@@ -1346,7 +1378,10 @@ async def _kernel_proxy(
 
     # Two contract responses name the result differently from the kernel:
     # PublishOntology returns `publishedVersion`, RollbackOntology the same.
-    if status < 300 and request.method == "POST" and template.endswith(
+    # Use the translated method, not the client method: a `planOnly` rollback
+    # arrives as POST but is served by the read-only plan route, and must not
+    # come back with a `publishedVersion` field at all.
+    if status < 300 and method == "POST" and template.endswith(
         ("/publish", "/rollback")
     ):
         try:
