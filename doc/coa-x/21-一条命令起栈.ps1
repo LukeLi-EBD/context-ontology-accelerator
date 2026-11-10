@@ -25,6 +25,13 @@ param(
     [int]$OxigraphPort = 0,
     [int]$EnginePort = 0,
     [int]$BridgePort = 0,
+    # Optional.  Leave at 0 (the default) and the route count is only compared
+    # with the last run on this machine, never judged against a baked-in
+    # number: the integration branch already carries extra ops (FindLinks,
+    # ListAnswerQualityRuns, GetOntologyVersionProposal, DownloadDocument), so
+    # a merge legitimately moves the count.  Pass a number only when you want
+    # the check to be strict for this invocation.
+    [int]$ExpectedRoutes = 0,
     [int]$TimeoutSeconds = 300
 )
 
@@ -37,7 +44,6 @@ $Image = 'coa-m3-local:dev'
 # The contract validates namespace ids as UUID v4, so the probe namespace must
 # carry the v4 version/variant nibbles (a zero-filled UUID is rejected with 400).
 $Namespace = '550e8400-e29b-41d4-a716-446655440000'
-$ExpectedRoutes = 138
 
 function Invoke-Compose {
     # Arguments must arrive through an explicit array.  Bare `-d`/`-v` tokens
@@ -263,10 +269,50 @@ if ($null -ne $search.total_count) {
 $consistent = $false
 if ($null -ne $health.schemaVersion) { $consistent = [bool]$health.schemaVersion.consistent }
 
-$routeVerdict = if ("$routeCount" -eq "$ExpectedRoutes") { "$routeCount (expected $ExpectedRoutes)" } else { "$routeCount (MISMATCH, expected $ExpectedRoutes)" }
+# Route count: never bake in an expected value.  The integration branch adds
+# ops by design, so a hard-coded "expected 138" would turn a healthy stack red
+# and teach people that red means nothing.  -ExpectedRoutes is strict when a
+# caller passes it; otherwise compare with the previous run on this machine and
+# only warn.
+$routeFails = $false
+$routeNote = ''
+$routeNumber = 0
+if ("$routeCount" -match '^\d+$') { $routeNumber = [int]$routeCount }
+if ($routeNumber -le 0) {
+    $routeVerdict = "$routeCount (unreadable)"
+    $routeFails = $true
+} elseif ($ExpectedRoutes -gt 0) {
+    if ($routeNumber -eq $ExpectedRoutes) {
+        $routeVerdict = "$routeNumber (expected $ExpectedRoutes)"
+    } else {
+        $routeVerdict = "$routeNumber (expected $ExpectedRoutes - MISMATCH)"
+        $routeFails = $true
+    }
+} else {
+    $baselineRoot = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'coa-m3-local' } else { Join-Path $env:TEMP 'coa-m3-local' }
+    $routeBaselinePath = Join-Path $baselineRoot 'route-baseline.txt'
+    $previous = 0
+    if (Test-Path $routeBaselinePath) {
+        $raw = "$(Get-Content -Path $routeBaselinePath -Raw -ErrorAction SilentlyContinue)".Trim()
+        if ($raw -match '^\d+$') { $previous = [int]$raw }
+    }
+    if ($previous -eq 0) {
+        $routeVerdict = "$routeNumber (first baseline on this machine)"
+        $routeNote = "已记录路由基线 $routeNumber；以后变化只提示，不判红。"
+    } elseif ($previous -eq $routeNumber) {
+        $routeVerdict = "$routeNumber (unchanged since last run)"
+    } else {
+        $routeVerdict = "$routeNumber (was $previous on last run)"
+        $routeNote = "路由数从 $previous 变成 $routeNumber，确认是有意新增（合并带来的 op），不是自检失败。"
+    }
+    try {
+        if (-not (Test-Path $baselineRoot)) { New-Item -ItemType Directory -Path $baselineRoot -Force | Out-Null }
+        [System.IO.File]::WriteAllText($routeBaselinePath, "$routeNumber", (New-Object System.Text.UTF8Encoding($false)))
+    } catch { }
+}
 $schemaVerdict = if ($consistent) { 'consistent=true' } else { 'consistent=FALSE' }
 $overall = 'OK'
-if ($systemHealthStatus -ne 200 -or $namespacesStatus -ne 200 -or -not $consistent -or "$routeCount" -ne "$ExpectedRoutes") {
+if ($systemHealthStatus -ne 200 -or $namespacesStatus -ne 200 -or -not $consistent -or $routeFails) {
     $overall = 'CHECK FAILED'
 }
 
@@ -281,6 +327,7 @@ Write-CheckRow 'GET /health' ("HTTP {0}" -f $healthStatus)
 Write-CheckRow 'GET /system-health' ("HTTP {0}  status={1}" -f $systemHealthStatus, $health.status)
 Write-CheckRow 'GET /namespaces' ("HTTP {0}  items={1}" -f $namespacesStatus, $nsCount)
 Write-CheckRow 'GET /graph/search' ("HTTP {0}  matches={1}" -f $searchStatus, $hitCount)
+if ($routeNote) { Write-Host ("  路由数说明             {0}" -f $routeNote) }
 Write-Host '  components:'
 foreach ($c in $health.components) {
     Write-Host ("    {0,-16} {1}" -f $c.name, $c.status)
