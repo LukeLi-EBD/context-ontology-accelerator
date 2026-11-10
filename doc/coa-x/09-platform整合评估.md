@@ -14,7 +14,7 @@
 三句话：
 
 1. **最终形态只有一套**：COA 原生包在跑（`control-plane` / `data-layer` / `metric-service` / `ontology-engine` / `sources` / `context-manager` / `vkg` / `web-app`），`platform-core` 的每一块能力都搬进上述包的具体模块，搬完原文件删除。
-2. **137 个 HTTP 端点不保留任何一条**。8 条直接落到 COA 已有 operation；73 条落到新增的 86 个 Smithy operation；56 条是同一件事的重复入口，合并进 operation。`platform-core/web` 的 10 个 HTML 页面全部消失，能力在 `web-app` 找到落点（§5）。
+2. **`api.py` 的 HTTP 端点不保留任何一条**（2026-11-09 快照 137 条；2026-11-10 实扫 **135** 条 `@app.*` 路由，差 2 条未逐条归因）。8 条直接落到 COA 已有 operation；73 条落到新增 operation（计划口径 86 个，见 §4.1 对账）；56 条是同一件事的重复入口，合并进 operation。`platform-core/web` 的 10 个 HTML 页面全部消失，能力在 `web-app` 找到落点（§5）。
 3. **工作量按「搬迁 + 契约扩展 + 功能点落点 + 出口切换/删除核对 + 数据接管」重算：161–237 人日（±40%）**。删除本身只占 10–14 人日，真正的成本是证明搬干净了（§8 闸门）与证明 COA 能接管 8080 的数据（§8.3）。
 4. **`platform-core/web` 的原子功能点共 143 条：已具备 37 条、需新增 102 条、纯前端无后端 4 条**（§6.3）。只许合并，不许消失。
 
@@ -29,7 +29,7 @@
 | # | 约束 | 本方案的可判定含义 |
 |---|---|---|
 | P1 | 一个 UI | 只有 `packages/web-app`。`platform-core/web` 10 个页面不是调试工具，是**删**；能力按原子功能点逐条落位（§6.3），**只许合并、不许消失**；验收照表逐条点 |
-| P2 | 一个入口 | 所有能力走 COA 契约：`ControlPlaneService`（83 op）+ `DataLayerService`（5 op）+ `OntologyService`（新增，先承载 36 个新 op）。对外**只有一个网关、一个 base URL**；网关之后可以是多个 service（§5.0）。`api.py` 137 个端点**不得作为第二组路由并存**，逐条搬进 operation |
+| P2 | 一个入口 | 所有能力走 COA 契约：`ControlPlaneService`（现 **110** op）+ `DataLayerService`（现 **7** op）+ `OntologyService`（新增，先承载 36 个新 op）。对外**只有一个网关、一个 base URL**；网关之后可以是多个 service（§5.0）。`api.py` 的 **135 个端点**（2026-11-10 实扫；旧记 137）**不得作为第二组路由并存**，逐条搬进 operation |
 | P3 | 一套契约 | COA 契约没有的能力，用**新增 Smithy operation** 补；不在契约外挂私活（脚本、内部 HTTP、直连库都算私活） |
 | P4 | 一套功能点 | 不许两套说法、两套指标口径、两套健康检查。同一能力只有一个 owner operation、一个 UI 路由、一个数据源 |
 
@@ -41,7 +41,7 @@
 
 | 项 | 事实 | 证据 |
 |---|---|---|
-| 规模 | 43,775 非空行；`api.py` 6,280 行 / **137 个端点**（含 5 组 `/api/*` 与 `/ontology/*` 同义别名）；`ontology_pg.py` 4,420 行 | 目录统计；`api.py` 路由扫描 |
+| 规模 | 43,775 非空行；`api.py` 6,600 行 / **135 个端点**（2026-11-10 实扫；旧记 6,280 行 / 137 个端点）；`ontology_pg.py` 4,420 行 | 目录统计；`api.py` 路由扫描 |
 | 适配器 | 17 个文件、约 10,800 行，已按端口写好 | `platform-core/src/platform_core/adapters/` |
 | 业务模块 | 20+ 个，指标、文档、抽取、事实账本、溯源、bundle、合成数据、健康、影响、术语、搜索、推理、实体视图、画布 | 同目录 |
 | 前端 | `web/` 10 个 HTML（index / browse / answer_panel / entity / search / governance / approvals / documents / ontology / health） | `packages/platform-core/web/` |
@@ -155,16 +155,25 @@
 
 ---
 
-## 4. 137 个端点 → COA operation（核心交付）
+## 4. `api.py` 端点 → COA operation（核心交付）
+
+> **本表是 2026-11-09 对 `api.py` 的逐行快照（137 行），不是现值。** 2026-11-10 实扫 `api.py` 得 **135** 条路由，契约侧 **117** 个 op（`@http` 也是 117），8099 桥 **138** 条路由。三个数不是一套，见 §4.1 对账块。
 
 ### 4.1 分类统计
 
 | 分类 | 行数 | 含义 |
 |---|---|---|
 | 已有 | 8 | COA 契约已有对应 operation（`/search` 需补 `mode` 字段） |
-| 需扩展 | 73 | 能力保留但契约没有 → 新增 86 个 operation（含 13 个「可合并」行的合并目标） |
+| 需扩展 | 73 | 能力保留但契约没有 → 新增 operation（计划口径 86 个，含 13 个「可合并」行的合并目标） |
 | 可合并 | 56 | 同一件事的多个入口（含 5 组 `/api/*` 别名） → 收敛为一个 operation |
-| **合计** | **137** | 与 `api.py` 路由扫描数一致 |
+| **合计** | **137** | 2026-11-09 快照；2026-11-10 实扫 135，差 2 条未逐条归因 |
+
+> **2026-11-10 对账（别把 137 / 86 当现值）**
+> - `api.py`：**135** 条路由（旧记 137）。
+> - Smithy 契约：**117** 个 op（ControlPlane 110 + DataLayer 7；`@http` 计数同为 117）。
+> - 8099 桥：**138** 条路由（其中 KERNEL 43）。
+> - 按 §5 的 86 个计划名逐条对现有契约：**26 个已有同名 op、60 个仍无同名 op**；其中一部分是**改名**（`GetOntologyProposal` → `GetOntologyVersionProposal`（P13 定名，未合主线）、`VerifyOntology` → `RunValidation`、`ImportOntology` → `UploadOntology` / `ImportOsi`、`ExportBundle` → `DownloadOntology`、`GetOntologyTree` → 无对应，由 `ListStatements` 承担）。**注意 `GetProposal` 不能顶替 `GetOntologyProposal`**：前者属归纳链路，后者是平台版本链路的提案，两个资源。
+> - 结论：**「86 个新 operation」只能读作「计划要建的 op 名」，不能读作「还差 86 个」**；「137」同理，只能当 2026-11-09 快照引用。
 
 ### 4.2 健康与状态（9）
 
@@ -278,7 +287,7 @@
 | `GET /ontology/verify` | 需扩展 | `VerifyOntology` | |
 | `POST /governance/proposals` | 可合并 | `ProposeOntologyVersion` | `target=GOVERNANCE` |
 | `GET /governance/proposals` | 可合并 | `ListOntologyProposals` | |
-| `GET /governance/proposals/{id}` | 需扩展 | `GetOntologyProposal` | |
+| `GET /governance/proposals/{id}` | 需扩展 | `GetOntologyVersionProposal`（P13 定名） | |
 | `POST /governance/proposals/{id}/approve` | 可合并 | `ReviewOntologyProposal` | |
 | `POST /governance/proposals/{id}/reject` | 可合并 | `ReviewOntologyProposal` | |
 | `POST /governance/publish` | 可合并 | `PublishOntology` | |
@@ -472,7 +481,7 @@
 | 55 | `ExportOntologyVersion` | `OntologyService` | 版本导出属本体治理 |
 | 56 | `ProposeOntologyVersion` | `OntologyService` | 提案创建属本体治理 |
 | 57 | `ListOntologyProposals` | `OntologyService` | 提案列表属本体治理 |
-| 58 | `GetOntologyProposal` | `OntologyService` | 提案详情属本体治理 |
+| 58 | `GetOntologyVersionProposal`（P13 定名，未合主线） | `OntologyService` | 提案详情属本体治理；**不能挂在归纳链路的 `GetProposal` 上**（不同资源） |
 | 59 | `ReviewOntologyProposal` | `OntologyService` | 提案评审属本体治理 |
 | 60 | `ListOntologyTransitions` | `OntologyService` | 状态迁移审计属本体治理 |
 | 61 | `PublishOntology` | `OntologyService` | 发布是本体生命周期的终态动作 |
@@ -577,7 +586,7 @@
 | `ExportOntologyVersion` | `GET /ontologies/{ontologyId}/versions/{versionId}/export` | `versionId`, `format?` | `contentBase64` 或 `downloadUrl`, `contentType` | `NotFoundError` |
 | `ProposeOntologyVersion` | `POST /ontologies/{ontologyId}/proposals` | `target=ONTOLOGY\|GOVERNANCE`, `baseVersionId`, `contentBase64` 或 `patch`, `rationale` | `proposalId`, `status` | `ConflictError` |
 | `ListOntologyProposals` | `GET /ontologies/{ontologyId}/proposals` | `status?`, `cursor?` | `items[{proposalId,status,author,createdAt}]`, `nextToken?` | — |
-| `GetOntologyProposal` | `GET /ontologies/{ontologyId}/proposals/{proposalId}` | `proposalId` | `proposal`, `transitions[]` | `NotFoundError` |
+| `GetOntologyVersionProposal` | `GET /ontologies/{ontologyId}/proposals/{proposalId}` | `proposalId` | `proposal`, `transitions[]` | `NotFoundError` |
 | `ReviewOntologyProposal` | `POST /ontologies/{ontologyId}/proposals/{proposalId}/review` | `proposalId`, `decision=APPROVE\|REJECT`, `comment?`, `actor?` | `proposalId`, `status`, `transitionId` | `ConflictError`（已终态） |
 | `ListOntologyTransitions` | `GET /ontologies/{ontologyId}/transitions` | `subjectType=PROPOSAL\|VERSION`, `subjectId?`, `cursor?` | `items[]{transitionId,from,to,actor,at}` | — |
 | `PublishOntology` | `POST /ontologies/{ontologyId}/publish` | `versionId`, `actor?` | `publishedVersion`, `publishedAt` | `ConflictError` |
@@ -645,7 +654,7 @@
 | `RunValidation` | `POST /ontologies/{ontologyId}/validation/run` | `shapesVersion?`, `scope?` | `conforms`, `report` | — |
 | `GetEntity` | `GET /entities/{iri}` | `iri` | `entity{iri,types,statements[]}`, `provenance?` | `NotFoundError` |
 
-> 共 8+3+9+5+13+21+6+6+2+6+7 = **86 个新 operation**。其中 `ListIngestionRuns`、`CheckAnswerable`、`ResolveFactConflicts`、`RetractFacts`、`ComputeMetric`、`RollbackOntology`、`ReviewOntologyProposal`、`ImportOntology`、`GetOntologyImport`、`PublishOntologyImport`、`PutOntologyShapes`、`GetOntologyShapes`、`ListOntologyTransitions` 是「可合并」行的合并目标。
+> 共 8+3+9+5+13+21+6+6+2+6+7 = **86 个新 operation**（计划口径，2026-11-09）。**现状对账见 §4.1：26 个已有同名 op、60 个仍无同名 op**。其中 `ListIngestionRuns`、`CheckAnswerable`、`ResolveFactConflicts`、`RetractFacts`、`ComputeMetric`、`RollbackOntology`、`ReviewOntologyProposal`、`ImportOntology`、`GetOntologyImport`、`PublishOntologyImport`、`PutOntologyShapes`、`GetOntologyShapes`、`ListOntologyTransitions` 是「可合并」行的合并目标。
 
 ---
 
@@ -824,7 +833,7 @@
 | F104 | 创建提案 | `:34-39`；`governance.js:433` | `/governance` 提案区 | 新增：`ProposeOntologyVersion` | 创建后列表出现 |
 | F105 | 刷新提案 | `:41`；`governance.js:451` | 合并进 F106 | 新增：`ListOntologyProposals` | 刷新可用 |
 | F106 | 提案列表 | `:43`；`governance.js:103` | `/governance` 左栏 | 新增：`ListOntologyProposals` | 列表显示状态/作者 |
-| F107 | 提案详情（diff + impact） | `:44`；`governance.js:132` | `/governance` 右栏 | 新增：`GetOntologyProposal` + `AnalyzeOntologyImpact` | 详情显示 diff 与影响 |
+| F107 | 提案详情（diff + impact） | `:44`；`governance.js:132` | `/governance` 右栏 | 新增：`GetOntologyVersionProposal` + `AnalyzeOntologyImpact` | 详情显示 diff 与影响 |
 | F108 | 待审批列表 | `:49`；`governance.js:154` | 合并进 F106（`status=PROPOSED`） | 新增：`ListOntologyProposals` | 只显示待审 |
 | F109 | 批准提案（带理由） | `governance.js:185` | 提案行「批准」 | 新增：`ReviewOntologyProposal` | 状态变 APPROVED |
 | F110 | 拒绝提案（带理由） | `governance.js:205` | 提案行「拒绝」 | 新增：`ReviewOntologyProposal` | 状态变 REJECTED |
@@ -971,7 +980,7 @@
 | 层 | COA 原生 | 我们加的 | platform-core 残留 |
 |---|---|---|---|
 | UI | `web-app` 24 路由、Cloudscape | 6 条新路由 + 页面 | **0**（10 页 HTML 删除） |
-| 入口 | `ControlPlaneService` + `DataLayerService` | 86 个新 operation 按 §5.0 分挂 `ControlPlaneService`（32）/ `DataLayerService`（18）/ `OntologyService`（36）；对外仍一个网关、一个 base URL | **0**（137 端点删除） |
+| 入口 | `ControlPlaneService` + `DataLayerService` | 86 个新 operation（计划口径）按 §5.0 分挂 `ControlPlaneService`（32）/ `DataLayerService`（18）/ `OntologyService`（36）；对外仍一个网关、一个 base URL。契约现状 **117** op | **0**（135 端点删除） |
 | 服务 | 8 个原生包 | 各包内新增模块（§3.3 落点） | **0** |
 | 端口 | `coa-ports` 13 端口 + 2 例外 | 不新增端口；`CanvasPort` 等留服务内部 | **0**（`ports.py` 删除） |
 | 组合 | `coa-runtime` | 新增 provider 登记 | **0**（`assembly.py` 删除） |
@@ -987,7 +996,7 @@
 | 步 | 动作 | 进入下一步的闸门（机械可查） |
 |---|---|---|
 | 1 | **能力搬迁**（搬一块验一块） | ① 迁移台账 100% 行有「已搬 / 已删」状态；② 每块能力在目标包有 ≥1 次**真跑通**；③ `grep -rn "platform_core" <目标包>` = 0；④ 双跑：同一请求在旧实现与新实现结果一致 |
-| 2 | **出口切换**（137 端点不再对外） | ① 137 条路由访问日志连续 7 天 = 0（`/healthz` 除外，且它也已由 `HealthCheck` 承担）；② 86 个新 operation 按 §5.0 分挂三套契约，全部有契约测试与一次真跑通；③ `web-app` 网络请求只命中 Smithy 定义路径；④ C9 通过（对外只有一个 base URL）；⑤ 仅保留 8080 只读快照用于比对 |
+| 2 | **出口切换**（135 端点不再对外） | ① 135 条路由访问日志连续 7 天 = 0（`/healthz` 除外，且它也已由 `HealthCheck` 承担）；② 86 个新 operation（计划口径）按 §5.0 分挂三套契约，全部有契约测试与一次真跑通；③ `web-app` 网络请求只命中 Smithy 定义路径；④ C9 通过（对外只有一个 base URL）；⑤ 仅保留 8080 只读快照用于比对 |
 | 3 | **目录删除** | ① `Test-Path packages/platform-core` = `False`；② `grep -rn "platform_core" --include=*.py --include=*.toml --include=*.yml .` = 0；③ compose / pyproject / uv workspace 无引用；④ CI 全绿 |
 | 4 | **实例退役**（8080 / 8082） | §8.3 数据接管判据 8 条全绿 + 双跑 ≥14 天零差异；停服后 5173 全功能可用 |
 
@@ -1025,7 +1034,7 @@ T8 单独补空档的原因：T3/T4 比的是文档字节与命名图 statement 
 | # | 检查 | 命令（示例） | 通过标准 |
 |---|---|---|---|
 | C1 | 对外网关入口唯一 | `grep -rn "FastAPI(\|APIRouter(\|@app\.\(get\|post\|put\|delete\)" packages --include=*.py` | 只命中 `deploy/local/` 的网关适配层；网关内可挂 3 个 service router，但对外注册点 = 1，其余 0 |
-| C2 | 路由由契约生成 | 对比 `grep -c "@http(" models/src/main/smithy/*.smithy` 与本地路由表导出行数 | 当前两侧相等（83 + 5 = 88，2026-11-09 实测）；86 个新 op 落地后两侧同为 174；任何时点两侧必须相等 |
+| C2 | 路由由契约生成 | 对比 `grep -c "@http(" models/src/main/smithy/*.smithy` 与本地路由表导出行数 | **当前不相等（2026-11-10 实测：117 vs 桥 138）**，差额就是契约外桥路由——这正是 B0 与 45 条契约缺口。收敛判据改为「桥路由 = 契约 op 数」，任何时点相等 |
 | C3 | web-app 路由有背书 | `grep -o 'path="[^"]*"' packages/web-app/src/App.tsx \| sort -u` | 每条都在 §6.3 功能点表中有 operation 背书；无背书新增 = 0 |
 | C4 | 无第二套 UI | `Test-Path packages/platform-core/web`；`grep -rn "webui" packages --include=*.py` | 均为 0 |
 | C5 | 无第二套入口 | `grep -rn "create_app(" packages --include=*.py` | 0（`platform_core.api` 已删） |
@@ -1082,7 +1091,7 @@ T8 单独补空档的原因：T3/T4 比的是文档字节与命名图 statement 
 | 4 | §5 阶段 7 只写「硬骨头 + 全量回归」 | 阶段 7 必须包含 `platform-core` 删除与 8080/8082 退役闸门 | 增补 §5.2 下线线（已在 `00` 落地） |
 | 5 | §2 DoD 无「单一入口」判据 | 需要机械可查的收敛判据 | 增补 D8（已在 `00` 落地） |
 | 6 | §5 阶段 1 判据未禁止第二套 UI/入口 | 阶段 1 起就不得新建第二套 | §11.5 增补第 7 条（已在 `00` 落地） |
-| 7 | §4 现状「`platform_core` 43,775 行」 | 数量对，但未记 137 端点与 96 个可迁移能力 | 已在 `00` §4 增索引「137 端点 → operation 见 09 §4」 |
+| 7 | §4 现状「`platform_core` 43,775 行」 | 数量对，但未记 135 端点（旧记 137）与 96 个可迁移能力 | 已在 `00` §4 增索引「端点 → operation 见 09 §4」 |
 | 8 | §2 D1 的 `deploy/local/compose.yml` | 仓库当前不存在 | 未修复；登记为 W8（`11` §4），D1 完成前必须落地 |
 
 ---
@@ -1102,7 +1111,7 @@ T8 单独补空档的原因：T3/T4 比的是文档字节与命名图 statement 
 
 | 事实 | 路径 |
 |---|---|
-| 137 个端点 | `packages/platform-core/src/platform_core/api.py`（路由装饰器扫描） |
+| 135 个端点（旧记 137） | `packages/platform-core/src/platform_core/api.py`（路由装饰器扫描） |
 | 平台自有端口 | `packages/platform-core/src/platform_core/ports.py:26-58` |
 | 10 个 HTML | `packages/platform-core/web/*.html` |
 | COA 契约 operation | `models/src/main/smithy/{control-plane,data-layer,serve,metric-service,ontology-graph,unified-sources,namespace,grant,role}.smithy` |
