@@ -1051,6 +1051,12 @@ class Importer:
                 (batch_id,),
             )[0]["n"]
         )
+        if not interrupted and failed_total > 0:
+            # A batch that still holds failed files is not a successful
+            # invocation. Automation must be able to branch on the exit code
+            # instead of parsing the stdout JSON; the ledger records the same
+            # number below.
+            exit_code = 1
         with self._lock:
             counters = dict(self._counters)
         result = {
@@ -1088,6 +1094,17 @@ class Importer:
             "exitCode": exit_code,
         }
         return result
+
+
+def failure_code_counts(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, int]:
+    """Exact failure-code histogram for one batch (unbounded by list limits)."""
+    rows = runtime.metadata.query(
+        "SELECT COALESCE(failure_code, 'E_UNKNOWN') AS code, COUNT(*) AS n "
+        "FROM platform.import_item WHERE batch_id = %s AND status = 'failed' "
+        "GROUP BY 1 ORDER BY n DESC, code",
+        (batch_id,),
+    )
+    return {str(row["code"]): int(row["n"]) for row in rows}
 
 
 def failure_items(

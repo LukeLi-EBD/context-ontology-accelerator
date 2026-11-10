@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 import traceback
+import uuid
 
 from . import __version__
 from .assembly import assemble
@@ -674,7 +675,7 @@ def main(argv: list[str] | None = None) -> int:
 
                 return run_smoke_s13(runtime, args.base_url)
             if args.command == "import":
-                from .importer import Importer, dry_run
+                from .importer import Importer, dry_run, failure_code_counts
 
                 if args.dry_run:
                     print(json.dumps(dry_run(runtime, args.directory),
@@ -693,6 +694,17 @@ def main(argv: list[str] | None = None) -> int:
                     retry_failed=args.retry_failed,
                 )
                 print(json.dumps(result, ensure_ascii=False, indent=2))
+                if result.get("failed"):
+                    counts = failure_code_counts(
+                        runtime, uuid.UUID(str(result["batchId"]))
+                    )
+                    distribution = ", ".join(
+                        f"{code}={n}" for code, n in counts.items()
+                    )
+                    print(
+                        f"{result['failed']} files failed: {distribution}",
+                        file=sys.stderr,
+                    )
                 return int(result.get("exitCode") or EXIT_OK)
             if args.command == "imports":
                 from .importer import batches_overview, list_items

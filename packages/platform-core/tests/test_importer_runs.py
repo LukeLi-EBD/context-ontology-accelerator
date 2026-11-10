@@ -269,6 +269,37 @@ class ImportRunLedgerTests(unittest.TestCase):
         self.assertIsNone(after["failure_code"])
         self.assertIsNone(after["failure_message"])
 
+    def test_partial_failure_exits_non_zero(self):
+        """Automation needs a hard signal; parsing stdout is not one."""
+        self._write_doc()
+        degraded = SimpleNamespace(
+            index_document=lambda document_id: {
+                "embedded": 0,
+                "degraded": True,
+                "failureCode": "E_EMBED_UNAVAILABLE",
+                "reasons": ["E_EMBED_UNAVAILABLE"],
+            }
+        )
+        result = self._importer(search=degraded).run(
+            str(self._tmp), namespace_id=NAMESPACE
+        )
+        self._batch_ids.add(result["batchId"])
+        self.assertEqual(result["failedThisRun"], 1)
+        self.assertEqual(result["exitCode"], 1)
+        run = self.meta.query(
+            "SELECT exit_code FROM platform.import_run WHERE batch_id = %s",
+            (uuid.UUID(result["batchId"]),),
+        )[0]
+        self.assertEqual(run["exit_code"], 1)
+        from platform_core.importer import failure_code_counts
+
+        self.assertEqual(
+            failure_code_counts(
+                SimpleNamespace(metadata=self.meta), uuid.UUID(result["batchId"])
+            ),
+            {"E_EMBED_UNAVAILABLE": 1},
+        )
+
     # ---- 1) ghost batch ------------------------------------------------
 
     def test_rejected_when_heavy_lock_held_writes_no_rows(self):
