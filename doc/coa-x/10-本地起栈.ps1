@@ -135,6 +135,12 @@ if ($Stop) {
 # ── Start ───────────────────────────────────────────────────────────────
 Write-Host "Starting COA local stack"
 
+# 0) Contract sources must be committed: gradlew build runs :smithyFormat and
+# rewrites models/src, so a dirty tree means the stack and the committed
+# contract disagree. See "契约改动的验证顺序" in 10-本地起栈.md.
+& $Python (Join-Path $Repo "scripts\check-smithy-sources.py")
+if ($LASTEXITCODE -ne 0) { throw "models/src has uncommitted changes - see message above" }
+
 # 1) containers
 Ensure-Container $PgName @(
     "--publish", "127.0.0.1:5444:5432",

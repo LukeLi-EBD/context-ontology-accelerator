@@ -69,6 +69,10 @@ cd "$MODELS_DIR"
 PROJ_DIR="build/smithyprojections/models"
 cd "$REPO_ROOT"
 
+# `gradlew build` runs :smithyFormat, which rewrites models/src in place. Stop
+# here instead of generating artifacts from a contract that is not in git.
+python3 "$REPO_ROOT/scripts/check-smithy-sources.py"
+
 # ── Copy TypeScript clients ──────────────────────────────────────────────────
 echo ""
 echo "Copying TypeScript clients..."
