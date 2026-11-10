@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-SUPPORTED_SCHEMA_VERSION = 52
+SUPPORTED_SCHEMA_VERSION = 53
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -100,7 +100,8 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     # daily ledger takes the next free number instead of its original V35.
     (50, "V50__quota_usage.sql", "C2-1 quota ledger: daily token/request counters per scope"),
     (51, "V51__import_run.sql", "P1 import run ledger: per-invocation status, counters and failure"),
-    (52, "V52__ontology_ownership.sql", "P1 ontology ownership: ontology_id + namespace_id on version/proposal/event"),
+    (52, "V52__ontology_ownership.sql", "P1 ontology ownership: ontology_id/namespace_id/attribution_source columns, no backfill"),
+    (53, "V53__graph_pointer_version_idx.sql", "P1 graph_pointer: index on version_id for reverse lookup / FK support"),
 ]
 
 # Retired migration numbers, kept permanently empty.

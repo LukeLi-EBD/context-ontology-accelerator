@@ -1,9 +1,7 @@
 -- V52 rollback: remove the ownership columns and their indexes.
 --
--- Run only when the V52 migration must be undone. Dropping a column also
--- drops its index and comment, so this returns the three tables to their
--- V51 shape. Rows are not touched; namespace attribution is data, not schema,
--- and is intentionally left to the caller (see the backfill script).
+-- Drops back to the V51 shape. Data in the columns is lost by design — the
+-- backfill is owned by the data line and can be re-run after re-applying V52.
 
 BEGIN;
 
@@ -12,14 +10,17 @@ DROP INDEX IF EXISTS platform.ontology_proposal_owner_idx;
 DROP INDEX IF EXISTS platform.ontology_version_owner_idx;
 
 ALTER TABLE platform.ontology_event
+  DROP COLUMN IF EXISTS attribution_source,
   DROP COLUMN IF EXISTS namespace_id,
   DROP COLUMN IF EXISTS ontology_id;
 
 ALTER TABLE platform.ontology_proposal
+  DROP COLUMN IF EXISTS attribution_source,
   DROP COLUMN IF EXISTS namespace_id,
   DROP COLUMN IF EXISTS ontology_id;
 
 ALTER TABLE platform.ontology_version
+  DROP COLUMN IF EXISTS attribution_source,
   DROP COLUMN IF EXISTS namespace_id,
   DROP COLUMN IF EXISTS ontology_id;
 
