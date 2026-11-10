@@ -23,6 +23,20 @@ describe("formatAppMessage", () => {
     expect(formatAppMessage("ja", "Sources")).toBe("データソース");
   });
 
+  it("shows the local-mode status and empty-state copy in the default locale too", () => {
+    const localModeMessages = [
+      "Local mode · non-streaming",
+      "No sample prompts are published for this namespace.",
+      "Could not load sample prompts.",
+    ];
+    for (const message of localModeMessages) {
+      // English is the default locale and renders the key itself, so a missing
+      // translation must not leave the default UI blank.
+      expect(formatAppMessage("en", message)).toBe(message);
+      expect(formatAppMessage("ja", message)).not.toBe(message);
+    }
+  });
+
   it("interpolates named values after selecting the locale", () => {
     expect(
       formatAppMessage("ja", "Namespace: {name}", { name: "設備管理" }),

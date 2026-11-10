@@ -32,6 +32,50 @@ export interface ExampleQuestionsState {
   status: ExampleQuestionsStatus;
 }
 
+async function loadQuestions(
+  namespaceId: string,
+): Promise<ExampleQuestionsState> {
+  try {
+    const res = await fetch(`/questions/${encodeURIComponent(namespaceId)}.json`, {
+      headers: { Accept: "application/json" },
+    });
+    if (res.status === 404) return { questions: [], status: "missing" };
+    if (!res.ok) return { questions: [], status: "error" };
+    const data = (await res.json()) as QuestionsFile | null;
+    if (!data || !Array.isArray(data.questions)) {
+      return { questions: [], status: "error" };
+    }
+    return {
+      questions: data.questions.filter(
+        (q): q is ExampleQuestion =>
+          typeof q?.question === "string" && q.question.length > 0,
+      ),
+      status: "ready",
+    };
+  } catch {
+    return { questions: [], status: "error" };
+  }
+}
+
+/**
+ * Remounting the Playground (React StrictMode double-invokes effects in
+ * development) must not fetch the same file twice, so a request already in
+ * flight is shared until it settles.
+ */
+const inFlight = new Map<string, Promise<ExampleQuestionsState>>();
+
+function questionsRequest(namespaceId: string): Promise<ExampleQuestionsState> {
+  const pending = inFlight.get(namespaceId);
+  if (pending) return pending;
+  const request = loadQuestions(namespaceId);
+  inFlight.set(namespaceId, request);
+  void request.then(
+    () => inFlight.delete(namespaceId),
+    () => inFlight.delete(namespaceId),
+  );
+  return request;
+}
+
 /**
  * Loads per-namespace sample prompts published to the UI origin at
  * `/questions/{namespaceId}.json` (same origin that serves
@@ -49,36 +93,9 @@ export function useExampleQuestions(namespaceId: string): ExampleQuestionsState 
       return;
     }
     let cancelled = false;
-    fetch(`/questions/${encodeURIComponent(namespaceId)}.json`, {
-      headers: { Accept: "application/json" },
-    })
-      .then(async (res) => {
-        if (cancelled) return;
-        if (res.status === 404) {
-          setState({ questions: [], status: "missing" });
-          return;
-        }
-        if (!res.ok) {
-          setState({ questions: [], status: "error" });
-          return;
-        }
-        const data = (await res.json()) as QuestionsFile | null;
-        if (cancelled) return;
-        if (!data || !Array.isArray(data.questions)) {
-          setState({ questions: [], status: "error" });
-          return;
-        }
-        setState({
-          questions: data.questions.filter(
-            (q): q is ExampleQuestion =>
-              typeof q?.question === "string" && q.question.length > 0,
-          ),
-          status: "ready",
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setState({ questions: [], status: "error" });
-      });
+    void questionsRequest(namespaceId).then((result) => {
+      if (!cancelled) setState(result);
+    });
     return () => {
       cancelled = true;
     };

@@ -61,10 +61,9 @@ export const Playground: React.FC = () => {
   const { namespaceId: urlNamespaceId } = useParams<{ namespaceId: string }>();
   const { namespaceId: providerNamespaceId } = useCurrentNamespace();
 
-  const namespaceId =
-    providerNamespaceId ||
-    urlNamespaceId ||
-    (import.meta.env.DEV ? "demo" : "");
+  // Wait for a real namespace id. A placeholder here would fire requests that
+  // can only 404 (`/namespaces/demo/...`, `/questions/demo.json`).
+  const namespaceId = providerNamespaceId || urlNamespaceId || "";
 
   useBreadcrumbTrail([{ text: t("Serve") }, { text: t("Playground") }]);
 

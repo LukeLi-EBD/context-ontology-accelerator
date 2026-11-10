@@ -70,6 +70,19 @@ describe("useExampleQuestions", () => {
     await waitFor(() => expect(result.current.status).toBe("error"));
   });
 
+  it("shares one request between simultaneous mounts of the same namespace", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ questions: [{ question: "Agreement 有哪些形态？" }] }),
+    );
+
+    const first = renderHook(() => useExampleQuestions(NS_ID));
+    const second = renderHook(() => useExampleQuestions(NS_ID));
+
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    expect(second.result.current.status).toBe("ready");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("reports a network failure as `error`", async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new Error("offline"));
 

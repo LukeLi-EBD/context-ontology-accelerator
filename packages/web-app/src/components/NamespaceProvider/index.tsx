@@ -110,17 +110,25 @@ export const NamespaceProvider: React.FC<React.PropsWithChildren> = ({
       : undefined;
   const lookupFailed = !listed && lookup.isError;
 
+  // With nothing chosen, open the namespace that actually has sources instead
+  // of whichever one the list happens to return first — an empty smoke-test
+  // namespace would otherwise be the default landing surface everywhere.
+  const defaultNamespace = useMemo(
+    () => namespaces.find((n) => (n.sourceCount ?? 0) > 0) ?? namespaces[0],
+    [namespaces],
+  );
+
   const current = useMemo(() => {
-    if (!activeId) return namespaces[0];
+    if (!activeId) return defaultNamespace;
     if (listed) return listed;
     if (lookedUp) return toSummary(lookedUp);
     // A remembered choice the server no longer returns (deleted, or access
-    // removed) falls back to the first namespace, as before. A namespace that
+    // removed) falls back to the default namespace, as before. A namespace that
     // is still being resolved, or the one named in the URL, never falls back:
     // a Playground question must not go to a different namespace.
-    if (lookupFailed && activeId !== urlId) return namespaces[0];
+    if (lookupFailed && activeId !== urlId) return defaultNamespace;
     return undefined;
-  }, [activeId, listed, lookedUp, lookupFailed, urlId, namespaces]);
+  }, [activeId, listed, lookedUp, lookupFailed, urlId, defaultNamespace]);
 
   const namespaceId = current?.namespaceId ?? "";
   const isLoading =

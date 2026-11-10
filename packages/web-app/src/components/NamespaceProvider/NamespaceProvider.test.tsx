@@ -141,6 +141,23 @@ describe("NamespaceProvider", () => {
     expect(text("namespace-id")).toBe(PAGE_1[0]!.namespaceId);
   });
 
+  it("defaults to a namespace that has sources, not an empty one listed first", async () => {
+    const emptyFirst = { ...ns(1), sourceCount: 0 };
+    const populated = { ...ns(2), sourceCount: 3 };
+    const emptyLast = { ...ns(3), sourceCount: 0 };
+    mockSend.mockImplementation((command) =>
+      command.kind === "list"
+        ? Promise.resolve({
+            namespaces: [emptyFirst, populated, emptyLast],
+          })
+        : serveBothPages(command),
+    );
+    renderAt("/");
+    await waitFor(() => expect(text("count")).toBe("3"));
+    expect(text("namespace-id")).toBe(populated.namespaceId);
+    expect(text("current-name")).toBe(populated.name);
+  });
+
   it("makes a page-2 namespace named in the URL the current one", async () => {
     renderAt(`/namespaces/${ON_PAGE_2.namespaceId}/sources`);
     await waitFor(() => expect(text("count")).toBe("28"));
