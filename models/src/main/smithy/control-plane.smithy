@@ -8,6 +8,8 @@ namespace com.amazon.semanticcontext
 use aws.apigateway#authorizer
 use aws.apigateway#authorizers
 use aws.protocols#restJson1
+use com.amazon.semanticcontext.browse#BrowseOntologyTree
+use com.amazon.semanticcontext.browse#ListOntologyInstances
 use com.amazon.semanticcontext.common#InternalServerError
 use com.amazon.semanticcontext.common#ServiceUnavailableError
 use com.amazon.semanticcontext.common#ValidationError
@@ -25,7 +27,19 @@ use com.amazon.semanticcontext.documents#RejectFactCandidate
 use com.amazon.semanticcontext.documents#UploadDocument
 use com.amazon.semanticcontext.embeddings#GetEntityEmbeddings
 use com.amazon.semanticcontext.embeddings#SearchEmbeddings
+use com.amazon.semanticcontext.entity#GetEntity
+use com.amazon.semanticcontext.entity#GetEntityProvenance
+use com.amazon.semanticcontext.facts#AssertFact
+use com.amazon.semanticcontext.facts#BatchKeepFactConflicts
+use com.amazon.semanticcontext.facts#RetractFacts
+use com.amazon.semanticcontext.facts#GetFact
+use com.amazon.semanticcontext.facts#ListFactConflicts
+use com.amazon.semanticcontext.facts#ListFactEvents
+use com.amazon.semanticcontext.facts#ListFacts
 use com.amazon.semanticcontext.facts#ResolveFactConflicts
+use com.amazon.semanticcontext.facts#RestoreFact
+use com.amazon.semanticcontext.facts#RetractFact
+use com.amazon.semanticcontext.facts#UndoFactConflictResolution
 use com.amazon.semanticcontext.grant#CreateGrant
 use com.amazon.semanticcontext.grant#CreatePlatformGrant
 use com.amazon.semanticcontext.grant#DeleteGrant
@@ -53,6 +67,9 @@ use com.amazon.semanticcontext.namespace#GetNamespace
 use com.amazon.semanticcontext.namespace#ListNamespaces
 use com.amazon.semanticcontext.namespace#UpdateNamespace
 use com.amazon.semanticcontext.namespace#UpdateNamespaceStatus
+use com.amazon.semanticcontext.ontologybundle#ExportOntologyBundle
+use com.amazon.semanticcontext.ontologybundle#ImportBundle
+use com.amazon.semanticcontext.ontologybundle#InspectOntologyBundle
 use com.amazon.semanticcontext.ontologygraph#DeleteOntology
 use com.amazon.semanticcontext.ontologygraph#DownloadOntology
 use com.amazon.semanticcontext.ontologygraph#FetchOntology
@@ -95,6 +112,21 @@ use com.amazon.semanticcontext.ontologyinduction#RepairProposalDatatypes
 use com.amazon.semanticcontext.ontologyinduction#StartInduction
 use com.amazon.semanticcontext.ontologyinduction#UpdateProposal
 use com.amazon.semanticcontext.ontologyinduction#ValidateProposal
+use com.amazon.semanticcontext.ontologylifecycle#ProposeOntologyVersion
+use com.amazon.semanticcontext.ontologylifecycle#DiffOntologyVersions
+use com.amazon.semanticcontext.ontologylifecycle#ExportOntologyVersion
+use com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersionProposal
+use com.amazon.semanticcontext.ontologylifecycle#GetOntologyVersion
+use com.amazon.semanticcontext.ontologylifecycle#ImportOntology
+use com.amazon.semanticcontext.ontologylifecycle#ListOntologyEvents
+use com.amazon.semanticcontext.ontologylifecycle#ListOntologyProposals
+use com.amazon.semanticcontext.ontologylifecycle#ListOntologyVersions
+use com.amazon.semanticcontext.ontologylifecycle#PublishOntology
+use com.amazon.semanticcontext.ontologylifecycle#ReviewOntologyProposal
+use com.amazon.semanticcontext.ontologylifecycle#RollbackOntology
+use com.amazon.semanticcontext.ontologylifecycle#VerifyOntology
+use com.amazon.semanticcontext.platformmetric#GetMetricCard
+use com.amazon.semanticcontext.quality#GetAnswerQuality
 use com.amazon.semanticcontext.role#GetNamespaceRole
 use com.amazon.semanticcontext.role#ListNamespaceRoles
 use com.amazon.semanticcontext.role#ListPlatformRoles
@@ -280,6 +312,44 @@ service ControlPlaneService {
         GetDictionaryView
         GetDictionaryCommentCoverage
         RefreshDictionaries
+        // ── Fact ledger (C group: F28, F32-F38) ─────────────────────────
+        ListFacts
+        AssertFact
+        GetFact
+        ListFactConflicts
+        BatchKeepFactConflicts
+        UndoFactConflictResolution
+        RetractFacts
+        RetractFact
+        RestoreFact
+        ListFactEvents
+        // ── Entity read (D group: F46-F47) ──────────────────────────────
+        GetEntity
+        GetEntityProvenance
+        // ── Ontology browse (F group: F87-F93) ──────────────────────────
+        BrowseOntologyTree
+        ListOntologyInstances
+        // ── Answer quality and platform metric cards (G group: F94-F102) ─
+        GetAnswerQuality
+        GetMetricCard
+        // ── T-Box lifecycle (H group: F104, F111-F123) ──────────────────
+        ListOntologyVersions
+        GetOntologyVersion
+        DiffOntologyVersions
+        ExportOntologyVersion
+        ImportOntology
+        ProposeOntologyVersion
+        ListOntologyProposals
+        GetOntologyVersionProposal
+        ReviewOntologyProposal
+        PublishOntology
+        RollbackOntology
+        ListOntologyEvents
+        VerifyOntology
+        // ── Governance bundles (J group: F135-F143) ─────────────────────
+        ExportOntologyBundle
+        InspectOntologyBundle
+        ImportBundle
     ]
     errors: [
         ValidationError

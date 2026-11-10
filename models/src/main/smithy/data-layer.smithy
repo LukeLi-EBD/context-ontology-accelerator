@@ -12,6 +12,7 @@ use com.amazon.semanticcontext.common#AccessDeniedError
 use com.amazon.semanticcontext.common#InternalServerError
 use com.amazon.semanticcontext.common#ServiceUnavailableError
 use com.amazon.semanticcontext.common#ValidationError
+use com.amazon.semanticcontext.documents#DownloadDocument
 
 // Every data-plane operation is authenticated. These routes are served by the
 // same REST API as ControlPlaneService and sit behind the same TokenAuthorizer
@@ -43,6 +44,7 @@ service DataLayerService {
         DescribeSchema
         CheckAnswerable
         RunSparql
+        DownloadDocument
     ]
     errors: [
         ValidationError

@@ -70,6 +70,12 @@ structure FactBatchKeepRow {
 
     /// Values the group had before the decision.
     values: FactIriList
+
+    /// Assertion rows kept by a `kept` row; absent on a dry run.
+    keptFactIds: FactIdList
+
+    /// Assertion rows retired by a `kept` row; absent on a dry run.
+    retiredFactIds: FactIdList
 }
 
 list FactBatchKeepRowList {
