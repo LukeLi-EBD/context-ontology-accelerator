@@ -734,6 +734,25 @@ def _match(path: str) -> tuple[str, dict[str, str], str] | None:
     return None
 
 
+# namespaceId is a UUID v4 in the contract. Validated once, here, for *every*
+# route that carries it: a handler that skips the check (or looks the id up in
+# a store that simply has no such row) answers 200 with an empty list, and a
+# caller passing the namespace *name* then reads "no data" instead of "bad
+# request". That failure mode is silent, so it is gated before dispatch rather
+# than left to each handler.
+_NAMESPACE_ID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+)
+
+
+def _invalid_namespace_id(path_params: dict[str, str]) -> str | None:
+    """Return the offending value when ``namespaceId`` is present but not a UUID v4."""
+    raw = path_params.get("namespaceId")
+    if raw is None or _NAMESPACE_ID_RE.match(raw):
+        return None
+    return raw
+
+
 # ---------------------------------------------------------------------------
 # HTTP bridge
 # ---------------------------------------------------------------------------
@@ -1917,12 +1936,27 @@ def _make_app() -> Any:
                 origin,
             )
         template, path_params, module = matched
+        decoded_params = {k: unquote(v) for k, v in path_params.items()}
+        bad_namespace_id = _invalid_namespace_id(decoded_params)
+        if bad_namespace_id is not None:
+            print(f"[api] {request.method} {path} -> 400 E_NAMESPACE_ID_INVALID")
+            return _cors(
+                JSONResponse(
+                    {
+                        "error": "E_NAMESPACE_ID_INVALID",
+                        "message": (
+                            "namespaceId must be a UUID v4; "
+                            f"got {bad_namespace_id!r} for {template}"
+                        ),
+                    },
+                    status_code=400,
+                ),
+                origin,
+            )
         if module == KERNEL:
             print(f"[api] {request.method} {path} -> kernel ({template})")
             return _cors(
-                await _kernel_proxy(
-                    request, template, {k: unquote(v) for k, v in path_params.items()}
-                ),
+                await _kernel_proxy(request, template, decoded_params),
                 origin,
             )
         handler = _load_handler(module)
@@ -1936,7 +1970,7 @@ def _make_app() -> Any:
             "queryStringParameters": dict(request.query_params) or None,
             "multiValueQueryStringParameters": {k: [v] for k, v in request.query_params.items()}
             or None,
-            "pathParameters": {k: unquote(v) for k, v in path_params.items()} or None,
+            "pathParameters": decoded_params or None,
             "stageVariables": None,
             "requestContext": {
                 "resourceId": "local",
