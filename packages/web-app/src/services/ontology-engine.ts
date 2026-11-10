@@ -913,7 +913,9 @@ export interface OntologyPropertySummary {
 export interface OntologyOverviewResult {
   ontology_id: string;
   namespace?: string;
-  graph_uri?: string | null;
+  /** Named graph the ontology is stored in. The route serialises with
+   *  `by_alias`, so this field arrives camelCase as `graphUri`. */
+  graphUri?: string | null;
   classes: OntologyOverviewClass[];
   /** Named-IRI object properties (domain-class → range-class relationships).
    *  Populated on the full overview; empty on ``sample=true``. */

@@ -1775,6 +1775,20 @@ export const MESSAGES_JA = {
   Subclasses: "サブクラス",
   "Datatype properties": "データ型プロパティ",
   "Object properties": "オブジェクトプロパティ",
+  "Named graphs": "名前付きグラフ",
+  "Graph IRI": "グラフ IRI",
+  "Named graph IRIs the ontologies in this namespace are stored in.":
+    "この名前空間のオントロジーが格納されている名前付きグラフ IRI。",
+  "No named graph was reported for these ontologies.":
+    "これらのオントロジーについて名前付きグラフは報告されていません。",
+  "Object properties (class-to-class relationships) declared by the ontologies in this namespace.":
+    "この名前空間のオントロジーが宣言するオブジェクトプロパティ（クラス間リレーション）。",
+  "Datatype properties (class-to-literal attributes) declared by the ontologies in this namespace.":
+    "この名前空間のオントロジーが宣言するデータ型プロパティ（クラスからリテラルへの属性）。",
+  "No object properties were reported for these ontologies.":
+    "これらのオントロジーについてオブジェクトプロパティは報告されていません。",
+  "No datatype properties were reported for these ontologies.":
+    "これらのオントロジーについてデータ型プロパティは報告されていません。",
   "Inherited from {name}": "{name} から継承",
   "Remove this foundational ontology?": "この基盤オントロジーを削除しますか？",
   "Removing ": "",
