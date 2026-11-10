@@ -626,6 +626,9 @@ ROUTES: list[tuple[str, str]] = [
     # literal-heavy templates first.
     ("/namespaces/{namespaceId}/facts/conflicts/resolve", KERNEL),
     ("/namespaces/{namespaceId}/facts/conflicts/undo", KERNEL),
+    # Predicate/subject-scoped batch keep (F33). Same literal-tail rule as the
+    # two above: it must be registered before the `{factId}` placeholder.
+    ("/namespaces/{namespaceId}/facts/conflicts/batch", KERNEL),
     # Batch retract also carries a literal tail, so it must not fall through to
     # `/facts/{factId}/retract` (that one keeps the single-fact shape).
     ("/namespaces/{namespaceId}/facts/retract", KERNEL),
@@ -1047,6 +1050,23 @@ def _kernel_translate(
             }
             suffix = f"?{urlencode(params)}" if params else ""
             return "GET", f"/facts/{quote(fact_id)}/events{suffix}", None
+        if template.endswith("/facts/conflicts/batch"):
+            # Batch keep is scoped by an explicit filter (predicate/subject/source)
+            # and one chosen value; preview by default, write only when dryRun is false.
+            forwarded = {
+                key: payload[key]
+                for key in (
+                    "keep", "predicate", "subject", "sourceDocumentId", "actor", "reason",
+                )
+                if payload.get(key) not in (None, "")
+            }
+            if "dryRun" in payload:
+                forwarded["dryRun"] = bool(payload.get("dryRun"))
+            return (
+                "POST",
+                "/facts/conflicts/batch",
+                json.dumps(forwarded, ensure_ascii=False).encode("utf-8"),
+            )
         if template.endswith("/facts/conflicts/resolve"):
             # Same fields as the kernel's resolve endpoint; drop empty ones so the
             # kernel's defaults (actor=operator, mergedObjectKind=iri) still apply.
