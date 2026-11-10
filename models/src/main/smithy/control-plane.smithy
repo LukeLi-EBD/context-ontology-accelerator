@@ -125,6 +125,8 @@ use com.amazon.semanticcontext.ontologylifecycle#PublishOntology
 use com.amazon.semanticcontext.ontologylifecycle#ReviewOntologyProposal
 use com.amazon.semanticcontext.ontologylifecycle#RollbackOntology
 use com.amazon.semanticcontext.ontologylifecycle#VerifyOntology
+use com.amazon.semanticcontext.ontologyvalidation#GetOntologyValidationJob
+use com.amazon.semanticcontext.ontologyvalidation#StartOntologyValidation
 use com.amazon.semanticcontext.platformmetric#GetMetricCard
 use com.amazon.semanticcontext.quality#GetAnswerQuality
 use com.amazon.semanticcontext.role#GetNamespaceRole
@@ -350,6 +352,9 @@ service ControlPlaneService {
         ExportOntologyBundle
         InspectOntologyBundle
         ImportBundle
+        // ── Ontology validation jobs (C6: async, multi-tier) ────────────
+        StartOntologyValidation
+        GetOntologyValidationJob
     ]
     errors: [
         ValidationError
