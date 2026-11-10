@@ -64,6 +64,11 @@ _MUTATING_ACTIONS: frozenset[str] = frozenset(
 
 _ARCHIVED_STATUS = "ARCHIVED"
 
+# Sentinel action for "this route is not registered in _PATH_MAPPING". It is not
+# a declared Cedar action: handler() turns it into an immediate Deny before any
+# policy is evaluated (see the fail-closed comment there).
+_UNMAPPED_ACTION = "denyAll"
+
 # ---------------------------------------------------------------------------
 # Token authorizer singleton (created on first invocation)
 # ---------------------------------------------------------------------------
@@ -705,6 +710,42 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/graph/statements": {
         "GET": ("viewNamespace", "Ontology"),
     },
+    # ── Documents ───────────────────────────────────────────────────────
+    # Uploading bytes is a write to the namespace's source assets, so it reuses
+    # manageSource (same power as /sources); the registry list stays a metadata
+    # read, while chunks are document text and therefore searchDocuments. The
+    # read and write actions deliberately share nothing.
+    "/namespaces/{namespaceId}/documents": {
+        "POST": ("manageSource", "Source"),
+        "GET": ("viewNamespace", "Source"),
+    },
+    "/namespaces/{namespaceId}/documents/{documentId}/chunks": {
+        "GET": ("searchDocuments", "Source"),
+    },
+    # ── Fact candidates ─────────────────────────────────────────────────
+    # Listing the review queue is metadata. Approving or rejecting writes a fact
+    # row plus an A-Box triple, i.e. ontology governance — not the same power as
+    # uploading a document, so it must not reuse manageSource.
+    "/namespaces/{namespaceId}/candidates": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/candidates/{candidateId}/approve": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    "/namespaces/{namespaceId}/candidates/{candidateId}/reject": {
+        "POST": ("manageOntology", "Namespace"),
+    },
+    # ── Embeddings ──────────────────────────────────────────────────────
+    # Document-derived content: reading an entity's vectors and running a k-NN
+    # query both read document content, so both are searchDocuments. The POST is
+    # a read — it persists nothing — and must not be mapped to a manage* action
+    # just because of the verb.
+    "/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}": {
+        "GET": ("searchDocuments", "Source"),
+    },
+    "/namespaces/{namespaceId}/embeddings/search": {
+        "POST": ("searchDocuments", "Source"),
+    },
     # ── Platform-scoped ─────────────────────────────────────────────────
     # No {namespaceId}, so the resource id resolves to "*" (see
     # _map_request_to_cedar) and no namespace-scoped grant can ever match it.
@@ -727,12 +768,13 @@ def _map_request_to_cedar(
     """Map an API Gateway request to a Cedar (action, resourceType, resourceId).
 
     Returns a tuple of (cedar_action, cedar_resource_type, resource_id).
-    Unknown routes/methods default to ``("denyAll", "Namespace", "*")`` so a
-    new endpoint that hasn't been registered here fails closed instead of
-    silently inheriting read access.
+    Unknown routes/methods default to ``(_UNMAPPED_ACTION, "Namespace", "*")``;
+    ``handler()`` short-circuits that to a Deny without calling Cedar, so a new
+    endpoint that hasn't been registered here fails closed for every role —
+    including namespace owners, whose seed policy does not constrain the action.
     """
     route = _PATH_MAPPING.get(resource, {})
-    action, resource_type = route.get(http_method, ("denyAll", "Namespace"))
+    action, resource_type = route.get(http_method, (_UNMAPPED_ACTION, "Namespace"))
 
     # Extract the most specific resource ID from path params
     resource_id = (
@@ -841,6 +883,27 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # noqa: ARG
             # exist. (Configuration/DynamoDB errors raise above and fail closed.)
 
     if roles_table:
+        # Unmapped route → deny here, without consulting Cedar. ``denyAll`` is not
+        # a declared Cedar action, and the namespace-owner / namespace-maintainer
+        # seed policies are unconstrained ``permit(principal, action, resource)``
+        # grants, so handing it to the engine let owners through on routes nobody
+        # registered — the opposite of the fail-closed contract. Short-circuiting
+        # keeps an unregistered route denied for every role and turns "forgot to
+        # map the route" into a loud log line instead of a silent grant.
+        #
+        # This sits inside the roles-table branch on purpose: the branch below is
+        # the explicit dev-mode escape hatch (ALLOW_WITHOUT_ROLES=true), where
+        # Cedar never runs at all, so there is no policy to fail open.
+        if cedar_action == _UNMAPPED_ACTION:
+            logger.warning(
+                "Unmapped route denied",
+                resource=resource_path,
+                method=http_method,
+                action=cedar_action,
+            )
+            emit_authorization_deny(action=cedar_action, reason="deny_all_unmapped_route")
+            return _build_policy(principal_id, "Deny", method_arn)
+
         # Cedar evaluation runs on every gated request. Same fail-fast
         # rationale as rrm_dao above.
         roles_dao = DynamoDBDAO(roles_table, region=region, config=sync_boto_config())
@@ -861,8 +924,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:  # noqa: ARG
             emit_authorizer_error(reason="cedar_evaluation_error", action=cedar_action)
         else:
             if not is_allowed:
-                deny_reason = "deny_all_unmapped_route" if cedar_action == "denyAll" else "cedar_deny"
-                emit_authorization_deny(action=cedar_action, reason=deny_reason)
+                emit_authorization_deny(action=cedar_action, reason="cedar_deny")
     else:
         # No roles table configured — deny unless explicitly opted in to dev mode
         if os.environ.get("ALLOW_WITHOUT_ROLES", "").lower() == "true":

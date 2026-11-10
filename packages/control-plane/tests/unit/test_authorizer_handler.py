@@ -58,6 +58,9 @@ def apigw_event() -> dict[str, Any]:
         "type": "TOKEN",
         "authorizationToken": "Bearer valid-jwt-token",
         "methodArn": "arn:aws:execute-api:us-east-1:123456789:api-id/stage/GET/namespaces",
+        "httpMethod": "GET",
+        "resource": "/namespaces",
+        "pathParameters": {},
     }
 
 
@@ -659,6 +662,14 @@ CONTROL_PLANE_ROUTES: list[tuple[str, str, str]] = [
     ("GET", "/namespaces/{namespaceId}/graph/object-property", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/graph/datatype-property", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/graph/statements", "viewNamespace"),
+    ("POST", "/namespaces/{namespaceId}/documents", "manageSource"),
+    ("GET", "/namespaces/{namespaceId}/documents", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/documents/{documentId}/chunks", "searchDocuments"),
+    ("GET", "/namespaces/{namespaceId}/candidates", "viewNamespace"),
+    ("POST", "/namespaces/{namespaceId}/candidates/{candidateId}/approve", "manageOntology"),
+    ("POST", "/namespaces/{namespaceId}/candidates/{candidateId}/reject", "manageOntology"),
+    ("GET", "/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}", "searchDocuments"),
+    ("POST", "/namespaces/{namespaceId}/embeddings/search", "searchDocuments"),
 ]
 
 
@@ -965,6 +976,7 @@ class TestEvaluateCedarResourceNamespace:
         roles = [{"role": "data-steward", "resourceUID": self.NS}]
         assert self._eval("manageSource", self.OTHER_NS, resource_roles=roles) is False
 
+
     def test_owner_can_manage_data_source(self):
         roles = [{"role": "namespace-owner", "resourceUID": self.NS}]
         assert self._eval("manageSource", self.NS, resource_roles=roles) is True
@@ -974,6 +986,70 @@ class TestEvaluateCedarResourceNamespace:
 
     def test_no_role_denied_manage(self):
         assert self._eval("manageSource", self.NS) is False
+
+
+class TestUnmappedRouteFailsClosed:
+    """An unmapped route must be denied before Cedar runs.
+
+    The seed policies for namespace-owner and namespace-maintainer are
+    unconstrained ``permit(principal, action, resource)`` grants — the action is
+    not narrowed — so sending ``denyAll`` into the engine let the namespace owner
+    through on any route that was never registered. That is the opposite of the
+    fail-closed intent documented on ``_map_request_to_cedar``.
+    """
+
+    NS = "11111111-1111-1111-1111-111111111111"
+
+    def _event(self, http_method: str, resource: str) -> dict[str, Any]:
+        return {
+            "type": "REQUEST",
+            "methodArn": f"arn:aws:execute-api:us-east-1:123456789:api-id/stage/{http_method}{resource}",
+            "httpMethod": http_method,
+            "resource": resource,
+            "pathParameters": {"namespaceId": self.NS},
+            "headers": {"Authorization": "Bearer valid-jwt-token"},
+        }
+
+    @pytest.mark.parametrize(
+        ("http_method", "resource"),
+        [
+            ("GET", "/namespaces/{namespaceId}/brand-new-endpoint"),
+            ("POST", "/namespaces/{namespaceId}/documents/{documentId}/restore"),
+        ],
+    )
+    @patch("coa_control_plane.authorization.handler.emit_authorization_deny")
+    @patch("coa_control_plane.authorization.handler._check_cache_version")
+    @patch(
+        "coa_control_plane.authorization.handler._resolve_roles",
+        return_value=([], [{"role": "namespace-owner", "resourceUID": NS}]),
+    )
+    @patch("coa_control_plane.authorization.handler.DynamoDBDAO")
+    def test_unmapped_route_denies_namespace_owner(
+        self,
+        mock_dao_cls,
+        mock_resolve,
+        mock_cache_check,
+        mock_emit_deny,
+        http_method,
+        resource,
+        env_vars,
+        valid_result,
+    ):
+        from coa_control_plane.authorization.handler import handler
+
+        # Real Cedar evaluation against the on-disk seed policies: the owner
+        # permit genuinely matches any action, which is what made this fail open.
+        mock_dao_cls.return_value = _FakeRolesDao()
+
+        with patch("coa_control_plane.authorization.handler._get_token_authorizer") as mock_get_auth:
+            mock_authorizer = MagicMock()
+            mock_authorizer.validate.return_value = valid_result
+            mock_get_auth.return_value = mock_authorizer
+
+            result = handler(self._event(http_method, resource), None)
+
+        assert result["policyDocument"]["Statement"][0]["Effect"] == "Deny"
+        assert mock_emit_deny.call_args.kwargs["reason"] == "deny_all_unmapped_route"
 
 
 class TestEvaluateCedarArchivedGuard:
