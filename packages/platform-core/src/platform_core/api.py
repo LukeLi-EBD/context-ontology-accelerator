@@ -6790,4 +6790,29 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # --- P8 ingestion runs (F17/F18) ---
     ingestion_api.register_ingestion_routes(app, runtime)
 
+    # --- G7 quota routes ---
+    g7_register(app, runtime)
+
     return app
+
+
+# --- G7 quota routes ---
+def g7_register(app: FastAPI, runtime: Runtime) -> None:
+    """C2 quota routes (design 87 §6).
+
+    Appended block, one registration point: ``create_app`` calls it before
+    ``return app``; tests call it directly. Reads ``runtime.quota`` only, so
+    off/simple/full never change this shape.
+    """
+
+    def _g7_scope(value: str | None) -> str:
+        text = (value or runtime.config.quota.default_scope or "global").strip()
+        return text or "global"
+
+    @app.get("/quota/status")
+    def quota_status(scope: str | None = Query(default=None, max_length=64)) -> dict[str, Any]:
+        """Daily usage vs. limits for one scope (UTC day window)."""
+        return runtime.quota.status(_g7_scope(scope))
+
+
+# --- end G7 ---

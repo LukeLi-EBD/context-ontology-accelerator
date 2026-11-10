@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-SUPPORTED_SCHEMA_VERSION = 49
+SUPPORTED_SCHEMA_VERSION = 50
 
 MIGRATIONS: list[tuple[int, str, str]] = [
     (1, "V1__s0.sql", "S0 skeleton: blob/blob_ref/blob_bytea"),
@@ -96,6 +96,9 @@ MIGRATIONS: list[tuple[int, str, str]] = [
     # gapless against MAX(version) (see doc/coa-x/14-契约批次设计.md §8.4).
     (48, "V48__dictionary_storage.sql", "P4 dictionary storage: namespace-scoped snapshot + idempotent refresh runs"),
     (49, "V49__import_failed_feed_index.sql", "P8 ingestion runs: partial index for the namespace-scoped failure feed"),
+    # C2 quota landed after V49: 35 is retired forever (see below), so the
+    # daily ledger takes the next free number instead of its original V35.
+    (50, "V50__quota_usage.sql", "C2-1 quota ledger: daily token/request counters per scope"),
 ]
 
 # Retired migration numbers, kept permanently empty.

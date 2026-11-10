@@ -103,6 +103,14 @@ extraction:
 datagen:
   allow_official_schema: false  # 测试环境才可置 true；上线真实数据前必须恢复 false
 
+quota:
+  provider: off               # off=全放行不记账（默认） / simple=C2-1 每日计数 / full=C2-2 未装配
+  daily_token_limit: 0        # 0=不限；simple 下仍计数，超限走 on_exceed
+  daily_request_limit: 0      # 0=不限；按 LLM 调用计一次请求
+  on_exceed: degrade          # degrade=跳过 LLM、保留检索/规则结果；reject=请求失败
+  default_scope: global       # 记账维度；full 才按用户/租户扩展
+  chars_per_token: 4          # 调用前 token 预估；记账优先用 provider 回报的 usage
+
 llm:
   provider: ark               # 密钥不写在此文件，由 .env 的 PLATFORM__LLM__API_KEY 注入
   base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"  # 必须用 coding 端点

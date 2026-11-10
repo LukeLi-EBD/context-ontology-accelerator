@@ -352,6 +352,64 @@ class EntityViewConfig(_Strict):
     )
 
 
+# --- G7 quota config ---
+class QuotaConfig(_Strict):
+    """C2 budget guardrail (design 87). provider is decided at assembly time.
+
+    Same Q8-a split as graph/canvas: every known provider name is accepted by
+    the schema, then _g7_apply_quota_semantics rejects unknown values with
+    E_PROVIDER_INVALID and known-but-unassembled values with
+    E_PROVIDER_NOT_IMPLEMENTED. ``full`` stays a skeleton in C2-1.
+    """
+
+    provider: str = "off"
+    # 0 = unlimited; the simple implementation still counts when a limit is 0.
+    daily_token_limit: int = Field(default=0, ge=0)
+    daily_request_limit: int = Field(default=0, ge=0)
+    # What callers may do when the limit is reached: skip the LLM call and keep
+    # the retrieval/rules path (degrade), or fail the request (reject).
+    on_exceed: Literal["degrade", "reject"] = "degrade"
+    # Scope key used by assembled consumers (full will key by user/tenant).
+    default_scope: str = Field(default="global", min_length=1, max_length=64)
+    # Pre-call token estimate for the gate (chars per token); the recorded value
+    # is the provider's reported usage when available (see LlmClient.last_usage).
+    chars_per_token: int = Field(default=4, ge=1, le=16)
+
+
+def _g7_apply_quota_semantics(model: PlatformConfig, warnings: list[str]) -> None:
+    known = ("off", "simple", "full")
+    implemented = ("off", "simple")
+    if model.quota.provider not in known:
+        raise _config_error(
+            "E_PROVIDER_INVALID",
+            (
+                f"quota.provider={model.quota.provider!r} is not a known provider; "
+                f"known values: {', '.join(known)}"
+            ),
+            key="quota.provider",
+            hint="fix the name; unknown names are configuration errors, not missing adapters",
+        )
+    if model.quota.provider not in implemented:
+        raise _config_error(
+            "E_PROVIDER_NOT_IMPLEMENTED",
+            (
+                f"quota.provider={model.quota.provider} is a known provider but no adapter "
+                "is assembled (C2-2 full stays behind this switch)"
+            ),
+            key="quota.provider",
+            hint="use quota.provider=simple, or quota.provider=off to disable counting",
+        )
+    if (
+        model.quota.provider == "simple"
+        and model.quota.daily_token_limit == 0
+        and model.quota.daily_request_limit == 0
+    ):
+        warnings.append(
+            "quota.provider=simple with both daily limits 0: usage is counted but nothing is enforced"
+        )
+# --- end G7 quota config ---
+
+
 class PlatformConfig(_Strict):
     mode: Literal["dev", "single", "test"] = "single"
     config_version: int = 1
@@ -375,6 +433,9 @@ class PlatformConfig(_Strict):
     entity_view: EntityViewConfig = Field(default_factory=EntityViewConfig)
     extraction: ExtractionConfig = Field(default_factory=ExtractionConfig)
     datagen: DatagenConfig = Field(default_factory=DatagenConfig)
+    # --- G7 quota config ---
+    quota: QuotaConfig = Field(default_factory=QuotaConfig)
+    # --- end G7 quota config ---
     # --- G8 terms gate config ---
     terms: TermsConfig = Field(default_factory=TermsConfig)
     # --- end G8 terms gate config ---
@@ -895,5 +956,7 @@ def _apply_semantics(model: PlatformConfig, merged: dict[str, Any]) -> list[str]
     if model.terms.gate == "off":
         warnings.append("terms.gate=off: terminology check is skipped at publish")
     # --- end G8 terms gate config ---
+
+    _g7_apply_quota_semantics(model, warnings)
 
     return warnings

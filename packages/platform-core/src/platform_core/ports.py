@@ -95,6 +95,64 @@ class CanvasPort(Protocol):
     ) -> dict[str, Any]: ...
 
 
+@dataclass
+class QuotaDecision:
+    """Result of ``QuotaPort.check`` (design 87 §3).
+
+    ``allowed=False`` always carries a ``reason`` code; ``action`` tells the
+    caller what it may do instead: ``degrade`` keeps the non-LLM path
+    (retrieval/rules), ``reject`` fails the request.
+    """
+
+    allowed: bool
+    action: str
+    reason: str | None
+    provider: str
+    scope: str
+    units: int = 0
+    used_tokens: int = 0
+    used_requests: int = 0
+    limit_tokens: int | None = None
+    limit_requests: int | None = None
+    remaining_tokens: int | None = None
+    remaining_requests: int | None = None
+    day: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "allowed": self.allowed,
+            "action": self.action,
+            "reason": self.reason,
+            "provider": self.provider,
+            "scope": self.scope,
+            "units": self.units,
+            "usedTokens": self.used_tokens,
+            "usedRequests": self.used_requests,
+            "limitTokens": self.limit_tokens,
+            "limitRequests": self.limit_requests,
+            "remainingTokens": self.remaining_tokens,
+            "remainingRequests": self.remaining_requests,
+            "day": self.day,
+        }
+
+
+class QuotaPort(Protocol):
+    """C2 budget guardrail (design 87): one surface for off/simple/full.
+
+    ``off`` allows everything and never counts; ``simple`` counts per day/scope
+    in PostgreSQL and enforces optional daily token/request limits; ``full`` is
+    a skeleton whose methods raise ``E_PROVIDER_NOT_IMPLEMENTED``.
+    """
+
+    def manifest(self) -> Manifest: ...
+
+    def check(self, scope: str, units: int = 1) -> QuotaDecision: ...
+
+    def record(self, scope: str, units: int, cost: float = 0.0) -> None: ...
+
+    def status(self, scope: str) -> dict[str, Any]: ...
+
+
 class MetadataStorePort(Protocol):
     def migrate(self) -> dict[str, Any]: ...
     def query(self, sql: str, params: tuple | list = ()) -> list[dict[str, Any]]: ...
