@@ -587,8 +587,8 @@ class G2MetricsCoreTest(unittest.TestCase):
         )
 
     def test_19_v34_reentrant(self) -> None:
-        sql = files("platform_core").joinpath(
-            "sql/V34__metrics_core_m01_m06.sql"
+        sql = files("coa_control_plane.platform_db").joinpath(
+            "migrations/V34__metrics_core_m01_m06.sql"
         ).read_text(encoding="utf-8")
         statements = split_sql_statements(sql)
 
@@ -667,8 +667,8 @@ class G2MetricsCoreTest(unittest.TestCase):
         # The seed statement itself must already carry the correction, so a raw
         # V25 binding replay (without migrate) cannot rewind anything. Only the
         # binding INSERT is replayed: the rest of V25 belongs to older rulings.
-        sql = files("platform_core").joinpath(
-            "sql/V25__fact_model_v7.sql"
+        sql = files("coa_control_plane.platform_db").joinpath(
+            "migrations/V25__fact_model_v7.sql"
         ).read_text(encoding="utf-8")
         binding_inserts = [
             statement

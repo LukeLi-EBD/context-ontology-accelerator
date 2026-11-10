@@ -276,7 +276,7 @@ class MetricCompilerV7Test(unittest.TestCase):
             return tuple(tuple(sorted(r.items())) for r in rows), bindings[0]["n"]
 
         sql = "".join(
-            files("platform_core").joinpath(f"sql/{name}").read_text(encoding="utf-8")
+            files("coa_control_plane.platform_db").joinpath(f"migrations/{name}").read_text(encoding="utf-8")
             for name in ("V23__metric_quartet_v7.sql", "V24__metric_decisions_v8.sql",
                          "V25__fact_model_v7.sql", "V30__metric_decisions_v9.sql",
                          "V41__metric_semantics.sql")

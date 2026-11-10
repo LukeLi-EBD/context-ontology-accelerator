@@ -15,6 +15,7 @@ from unittest import mock
 sys.path.insert(0, "/app/src")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from coa_control_plane.platform_db import MIGRATIONS_DIR
 from platform_core.adapters import metadata_pg
 from platform_core.adapters.metadata_pg import (
     MIGRATION_GAP_HINT,
@@ -89,7 +90,8 @@ REGISTERED = [row[0] for row in metadata_pg.MIGRATIONS]
 
 class MigrationGapTest(unittest.TestCase):
     def test_registered_migration_files_exist(self) -> None:
-        sql_dir = Path(metadata_pg.__file__).resolve().parent.parent / "sql"
+        # R1 moved the SQL files into coa_control_plane.platform_db/migrations.
+        sql_dir = Path(str(MIGRATIONS_DIR))
         for version, filename, _description in metadata_pg.MIGRATIONS:
             self.assertTrue((sql_dir / filename).is_file(), f"V{version}: {filename}")
 

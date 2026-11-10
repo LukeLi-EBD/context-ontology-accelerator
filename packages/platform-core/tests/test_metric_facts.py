@@ -111,7 +111,7 @@ class MetricFactsTest(unittest.TestCase):
     def _apply_v41(cls) -> None:
         """Re-apply V41 (idempotent) so this suite never depends on whether
         the shared database migrated before the file last changed."""
-        sql = files("platform_core").joinpath("sql/V41__metric_semantics.sql").read_text(
+        sql = files("coa_control_plane.platform_db").joinpath("migrations/V41__metric_semantics.sql").read_text(
             encoding="utf-8"
         )
         for statement in split_sql_statements(sql):
@@ -121,7 +121,7 @@ class MetricFactsTest(unittest.TestCase):
     def test_v20_migration_is_reentrant(self) -> None:
         # V25 added the v7 fact model; later migrations may raise the ceiling.
         self.assertGreaterEqual(SUPPORTED_SCHEMA_VERSION, 25)
-        sql = files("platform_core").joinpath("sql/V20__metric_entities.sql").read_text(
+        sql = files("coa_control_plane.platform_db").joinpath("migrations/V20__metric_entities.sql").read_text(
             encoding="utf-8"
         )
         statements = split_sql_statements(sql)
