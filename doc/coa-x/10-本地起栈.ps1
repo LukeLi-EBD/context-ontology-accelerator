@@ -215,6 +215,10 @@ $env:COA_PROVIDER_ONTOLOGY_EMBEDDING = "http"
 $env:COA_CONTROL_PLANE_PG_DSN      = "postgresql://platform:platform_dev@127.0.0.1:5444/platform"
 $env:DYNAMODB_TABLE                = "coa-local-ontologies"
 $env:NDB_GRAPH_URI_BASE            = "https://coa.local/graph"
+# F58/F59 的术语 lexicon 图落在本地 A-Box 基址下，图适配器默认白名单只有
+# urn:platform:。这里显式放宽给本地栈使用：
+# 本地放宽，生产不放宽；该前缀不得进入生产白名单。
+$env:COA_LOCAL_GRAPH_ALLOWED_EXTRA_PREFIXES = "$($env:NDB_GRAPH_URI_BASE)"
 # P3 reasoning: the demo A-Box graph, named <base>/<namespace>/<encoded IRI>.
 # The kernel's materialize body rejects non-urn IRIs by design, so the local
 # composition root injects the graph on the assembled config instead.

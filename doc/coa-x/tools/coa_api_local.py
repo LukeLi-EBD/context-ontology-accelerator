@@ -876,15 +876,26 @@ def _lifecycle_app() -> Any:
     if local_abox:
         bundle.config.reasoning.abox_graphs = [local_abox]
     runtime = assemble(bundle)
-    # The lexicon folio (F58/F59) is seeded under the local A-Box base
-    # https://coa.local/graph/<namespace>/..., which sits outside the adapter's
-    # production write-safety whitelist (urn:platform:). Reading terms needs that
-    # base in the allow-list; this widens nothing else because the adapter only
-    # uses the list to reject graph names in incoming SPARQL.
-    prefixes = tuple(getattr(runtime.graph, "_allowed_prefixes", ()))
-    abox_base = os.environ.get("NDB_GRAPH_URI_BASE", "https://coa.local/graph")
-    if abox_base and abox_base not in prefixes:
-        runtime.graph._allowed_prefixes = (*prefixes, abox_base)
+    # F58/F59 read the lexicon folio from the namespace A-Box base
+    # (https://coa.local/graph/...), which sits outside the adapter's production
+    # write-safety whitelist (urn:platform:). The widening is opt-in so it can
+    # never be inherited by a production deployment:
+    #   COA_LOCAL_GRAPH_ALLOWED_EXTRA_PREFIXES = comma-separated prefixes,
+    #   default empty (nothing widened).
+    # 本地放宽，生产不放宽；该前缀不得进入生产白名单。
+    extra_prefixes = tuple(
+        item.strip()
+        for item in os.environ.get(
+            "COA_LOCAL_GRAPH_ALLOWED_EXTRA_PREFIXES", ""
+        ).split(",")
+        if item.strip()
+    )
+    if extra_prefixes:
+        prefixes = tuple(getattr(runtime.graph, "_allowed_prefixes", ()))
+        runtime.graph._allowed_prefixes = (
+            *prefixes,
+            *(prefix for prefix in extra_prefixes if prefix not in prefixes),
+        )
     # The CLI's self-check normally opens the pool; without it every DB route
     # answers 503 E_DB_UNAVAILABLE.  No HTTP server means no lifespan either.
     runtime.metadata.open(retry_seconds=30.0)
