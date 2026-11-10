@@ -117,6 +117,11 @@ export const MESSAGES_JA = {
   Rationale: "根拠",
   "Query endpoint not configured. Add serveRuntimeArn to runtime-config.json.":
     "クエリエンドポイントが設定されていません。runtime-config.json に serveRuntimeArn を追加してください。",
+  "Local mode · non-streaming": "ローカルモード・非ストリーミング",
+  "No sample prompts are published for this namespace.":
+    "この名前空間にはサンプル質問が公開されていません。",
+  "Could not load sample prompts.":
+    "サンプル質問を読み込めませんでした。",
   "No namespace selected. Choose one from the top navigation.":
     "名前空間が選択されていません。上部ナビゲーションから選択してください。",
   "Previous session history may not have loaded":

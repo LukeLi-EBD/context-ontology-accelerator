@@ -32,6 +32,7 @@ import {
 } from "@components/Chat";
 import { RationalePanel } from "@components/Chat/RationalePanel";
 import { usePlaygroundChatSSE } from "@api-hooks/use-playground-chat-sse";
+import { usePlaygroundChatLocal } from "@api-hooks/use-playground-chat-local";
 import { useExampleQuestions } from "@api-hooks/use-example-questions";
 import type { ChatMessage as ChatMessageType, ExecutionMode } from "@app-types";
 import { HomeHelpPanel } from "./HomeHelpPanel";
@@ -78,6 +79,27 @@ export const Playground: React.FC = () => {
   const { openPanel, closePanel } = useSplitPanel();
   const { registerDrawer, unregisterDrawer } = useToolsPanel();
 
+  // No published ARN is a legitimate local deployment, not a misconfiguration:
+  // the page then queries the local bridge (single response) instead of
+  // AgentCore's streaming serve. When an ARN is published this branch is off
+  // and the streaming path is used unchanged.
+  const isLocalMode = !runtimeContext?.serveRuntimeArn;
+
+  const streamingChat = usePlaygroundChatSSE({
+    queryEndpoint: isLocalMode
+      ? undefined
+      : buildQueryEndpoint(runtimeContext),
+    oidcConfig: runtimeContext?.oidcConfig,
+    namespaceId,
+  });
+  const localChat = usePlaygroundChatLocal({
+    namespaceId,
+    enabled: isLocalMode,
+  });
+  // Both hooks are mounted so the hook order stays stable; only the active one
+  // ever sends a request.
+  const chat = isLocalMode ? localChat : streamingChat;
+
   const {
     state,
     sessionId,
@@ -92,13 +114,12 @@ export const Playground: React.FC = () => {
     hasMoreHistory,
     isLoadingOlderHistory,
     requestOlderHistory,
-  } = usePlaygroundChatSSE({
-    queryEndpoint: buildQueryEndpoint(runtimeContext),
-    oidcConfig: runtimeContext?.oidcConfig,
-    namespaceId,
-  });
+  } = chat;
 
-  const exampleQuestions = useExampleQuestions(namespaceId);
+  const {
+    questions: exampleQuestions,
+    status: exampleQuestionsStatus,
+  } = useExampleQuestions(namespaceId);
 
   // Auto-load older history when sentinel scrolls into view.
   // onChange fires only on visibility TRANSITIONS (not while staying visible),
@@ -248,11 +269,9 @@ export const Playground: React.FC = () => {
         {t("Playground")}
       </Header>
 
-      {!runtimeContext?.serveRuntimeArn && (
-        <StatusIndicator type="warning">
-          {t(
-            "Query endpoint not configured. Add serveRuntimeArn to runtime-config.json.",
-          )}
+      {isLocalMode && (
+        <StatusIndicator type="info">
+          {t("Local mode · non-streaming")}
         </StatusIndicator>
       )}
       {!namespaceId && (
@@ -293,6 +312,7 @@ export const Playground: React.FC = () => {
             emptyStateContent={
               <SamplePrompts
                 questions={exampleQuestions}
+                status={exampleQuestionsStatus}
                 onSelect={handleSamplePrompt}
                 disabled={!isReady || !namespaceId}
               />

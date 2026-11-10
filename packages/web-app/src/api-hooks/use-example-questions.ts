@@ -20,44 +20,69 @@ interface QuestionsFile {
 }
 
 /**
- * Loads per-namespace sample prompts published to the UI origin at
- * `/questions/{namespaceId}.json` (same CloudFront origin that serves
- * `runtime-config.json`). The file is optional: if it is absent (404) or
- * malformed, this returns an empty list and the playground simply shows no
- * sample prompts.
+ * `missing` means the namespace has no published questions file (404) — a
+ * legitimate state the UI renders as an explicit hint, not as "no prompts
+ * exist anywhere". `error` means the file exists but could not be read or
+ * parsed; the UI says so instead of showing an empty list.
  */
-export function useExampleQuestions(namespaceId: string): ExampleQuestion[] {
-  const [questions, setQuestions] = useState<ExampleQuestion[]>([]);
+export type ExampleQuestionsStatus = "loading" | "ready" | "missing" | "error";
+
+export interface ExampleQuestionsState {
+  questions: ExampleQuestion[];
+  status: ExampleQuestionsStatus;
+}
+
+/**
+ * Loads per-namespace sample prompts published to the UI origin at
+ * `/questions/{namespaceId}.json` (same origin that serves
+ * `runtime-config.json`).
+ */
+export function useExampleQuestions(namespaceId: string): ExampleQuestionsState {
+  const [state, setState] = useState<ExampleQuestionsState>({
+    questions: [],
+    status: "loading",
+  });
 
   useEffect(() => {
     if (!namespaceId) {
-      setQuestions([]);
+      setState({ questions: [], status: "loading" });
       return;
     }
     let cancelled = false;
     fetch(`/questions/${encodeURIComponent(namespaceId)}.json`, {
       headers: { Accept: "application/json" },
     })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: QuestionsFile | null) => {
-        if (cancelled || !data || !Array.isArray(data.questions)) {
-          if (!cancelled) setQuestions([]);
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.status === 404) {
+          setState({ questions: [], status: "missing" });
           return;
         }
-        setQuestions(
-          data.questions.filter(
+        if (!res.ok) {
+          setState({ questions: [], status: "error" });
+          return;
+        }
+        const data = (await res.json()) as QuestionsFile | null;
+        if (cancelled) return;
+        if (!data || !Array.isArray(data.questions)) {
+          setState({ questions: [], status: "error" });
+          return;
+        }
+        setState({
+          questions: data.questions.filter(
             (q): q is ExampleQuestion =>
               typeof q?.question === "string" && q.question.length > 0,
           ),
-        );
+          status: "ready",
+        });
       })
       .catch(() => {
-        if (!cancelled) setQuestions([]);
+        if (!cancelled) setState({ questions: [], status: "error" });
       });
     return () => {
       cancelled = true;
     };
   }, [namespaceId]);
 
-  return questions;
+  return state;
 }

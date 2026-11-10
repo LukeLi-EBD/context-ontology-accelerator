@@ -1,0 +1,16 @@
+{
+  "questions": [
+    {
+      "label": "Agreement 的形态",
+      "question": "FS-LDM 中 Agreement 协议实体包含哪些具体形态？"
+    },
+    {
+      "label": "角色关联",
+      "question": "为什么资产与协议、当事人的连接必须建模为角色关联（RoleAssignment）？"
+    },
+    {
+      "label": "PARTY 单一视图",
+      "question": "FS-LDM 为什么把客户和员工统一建模为 PARTY？"
+    }
+  ]
+}

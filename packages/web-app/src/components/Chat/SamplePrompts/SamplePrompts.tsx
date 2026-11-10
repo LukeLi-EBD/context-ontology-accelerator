@@ -3,11 +3,20 @@
 
 import React from "react";
 import { Box, Button, SpaceBetween } from "@cloudscape-design/components";
-import type { ExampleQuestion } from "@api-hooks/use-example-questions";
+import type {
+  ExampleQuestion,
+  ExampleQuestionsStatus,
+} from "@api-hooks/use-example-questions";
 import { useAppI18n } from "../../../i18n/LocaleProvider";
 
 export interface SamplePromptsProps {
   questions: ExampleQuestion[];
+  /**
+   * Why the list may be empty. `missing` (no questions file for this namespace)
+   * and `error` (file unreadable) each get their own hint so an absent file is
+   * not silently rendered as "nothing to show".
+   */
+  status?: ExampleQuestionsStatus;
   onSelect: (question: string) => void;
   disabled?: boolean;
 }
@@ -19,15 +28,26 @@ export interface SamplePromptsProps {
  */
 export const SamplePrompts: React.FC<SamplePromptsProps> = ({
   questions,
+  status = "ready",
   onSelect,
   disabled = false,
 }) => {
   const { t } = useAppI18n();
 
+  if (status === "loading") {
+    return null;
+  }
+
   if (questions.length === 0) {
+    const hint =
+      status === "missing"
+        ? t("No sample prompts are published for this namespace.")
+        : status === "error"
+          ? t("Could not load sample prompts.")
+          : t("Ask a question against the governed surface...");
     return (
       <Box textAlign="center" color="text-body-secondary" padding="xl">
-        {t("Ask a question against the governed surface...")}
+        {hint}
       </Box>
     );
   }
