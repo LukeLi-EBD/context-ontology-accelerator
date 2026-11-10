@@ -141,16 +141,21 @@ class ImportRunLedgerTests(unittest.TestCase):
 
     # ---- helpers -------------------------------------------------------
 
-    def _importer(self, documents=None, metadata=None):
+    def _importer(self, documents=None, metadata=None, search=None):
         runtime = SimpleNamespace(
             metadata=metadata or self.meta,
             documents=documents or _Documents(self.meta, self._shas),
-            search=SimpleNamespace(
+            search=search
+            or SimpleNamespace(
                 index_document=lambda document_id: {"embedded": 1, "degraded": False}
             ),
             vectors=SimpleNamespace(pointer=lambda: {"model": MODEL}),
             config=SimpleNamespace(
-                storage=SimpleNamespace(root=str(self._tmp / "_data")),
+                data_dir=str(self._tmp / "_data"),
+                storage=SimpleNamespace(
+                    root=str(self._tmp / "_data"),
+                    tmp_dir=str(self._tmp / "_data" / "tmp"),
+                ),
                 documents=SimpleNamespace(max_upload_bytes=10 * 1024 * 1024),
             ),
         )
@@ -189,6 +194,80 @@ class ImportRunLedgerTests(unittest.TestCase):
                 (self._root(),),
             )[0]["n"]
         )
+
+    # ---- 0) fresh host --------------------------------------------------
+
+    def test_import_creates_missing_storage_dirs(self):
+        """The import CLI skips the serve-time IO self-check.
+
+        Without creating these dirs first, the staging write
+        (tmp_dir/ingest-*.part) raises FileNotFoundError and every item lands
+        as E_IMPORT_UNEXPECTED, so a first import on a fresh host cannot run.
+        """
+        self._write_doc()
+        data_root = self._tmp / "_data"
+        self.assertFalse(data_root.exists())
+        result = self._importer().run(str(self._tmp), namespace_id=NAMESPACE)
+        self._batch_ids.add(result["batchId"])
+        self.assertEqual(result["indexed"], 1)
+        self.assertEqual(result["failed"], 0)
+        for path in (data_root, data_root / "blobs", data_root / "tmp"):
+            self.assertTrue(path.is_dir(), f"{path} not created")
+
+    # ---- 2) recovery ----------------------------------------------------
+
+    def test_retried_file_drops_stale_failure_code(self):
+        """A recovered file must not keep reporting its old failure reason.
+
+        Readers filter and export `import_item.failure_code`; leaving it set
+        after a successful retry reports a healthy document as failed.
+        """
+        sha = self._write_doc()
+        degraded = SimpleNamespace(
+            index_document=lambda document_id: {
+                "embedded": 0,
+                "degraded": True,
+                "failureCode": "E_EMBED_UNAVAILABLE",
+                "reasons": ["E_EMBED_UNAVAILABLE"],
+            }
+        )
+        first = self._importer(search=degraded).run(
+            str(self._tmp), namespace_id=NAMESPACE
+        )
+        self._batch_ids.add(first["batchId"])
+        self.assertEqual(first["failedThisRun"], 1)
+        batch_id = uuid.UUID(first["batchId"])
+        before = self.meta.query(
+            "SELECT status, attempts, failure_code FROM platform.import_item "
+            "WHERE batch_id = %s",
+            (batch_id,),
+        )[0]
+        self.assertEqual(before["status"], "failed")
+        self.assertEqual(before["attempts"], 1)
+        self.assertEqual(before["failure_code"], "E_EMBED_UNAVAILABLE")
+
+        # The failed embed left no vector behind; drop the stub's placeholder so
+        # the retry must index for real instead of passing the done-check.
+        self.meta.execute(
+            "DELETE FROM platform.chunk_embedding WHERE chunk_id IN "
+            "(SELECT chunk_id FROM platform.document_chunk WHERE document_id = %s)",
+            (sha,),
+        )
+
+        second = self._importer().run(
+            str(self._tmp), namespace_id=NAMESPACE, retry_failed=True
+        )
+        self.assertEqual(second["batchId"], first["batchId"])
+        self.assertEqual(second["indexed"], 1)
+        after = self.meta.query(
+            "SELECT status, attempts, failure_code, failure_message "
+            "FROM platform.import_item WHERE batch_id = %s",
+            (batch_id,),
+        )[0]
+        self.assertEqual(after["status"], "indexed")
+        self.assertEqual(after["attempts"], 2)
+        self.assertIsNone(after["failure_code"])
+        self.assertIsNone(after["failure_message"])
 
     # ---- 1) ghost batch ------------------------------------------------
 
