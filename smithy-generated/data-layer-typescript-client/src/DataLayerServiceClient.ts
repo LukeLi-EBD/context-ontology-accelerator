@@ -62,10 +62,12 @@ import {
   defaultDataLayerServiceHttpAuthSchemeParametersProvider,
   resolveHttpAuthSchemeConfig,
 } from "./auth/httpAuthSchemeProvider";
+import type { CheckAnswerableCommandInput, CheckAnswerableCommandOutput } from "./commands/CheckAnswerableCommand";
 import type { DescribeSchemaCommandInput, DescribeSchemaCommandOutput } from "./commands/DescribeSchemaCommand";
 import type { GraphTraverseCommandInput, GraphTraverseCommandOutput } from "./commands/GraphTraverseCommand";
 import type { KBSearchCommandInput, KBSearchCommandOutput } from "./commands/KBSearchCommand";
 import type { QueryCommandInput, QueryCommandOutput } from "./commands/QueryCommand";
+import type { RunSparqlCommandInput, RunSparqlCommandOutput } from "./commands/RunSparqlCommand";
 import type { TranslateSPARQLCommandInput, TranslateSPARQLCommandOutput } from "./commands/TranslateSPARQLCommand";
 import {
   type ClientInputEndpointParameters,
@@ -82,20 +84,24 @@ export { __Client };
  * @public
  */
 export type ServiceInputTypes =
+  | CheckAnswerableCommandInput
   | DescribeSchemaCommandInput
   | GraphTraverseCommandInput
   | KBSearchCommandInput
   | QueryCommandInput
+  | RunSparqlCommandInput
   | TranslateSPARQLCommandInput;
 
 /**
  * @public
  */
 export type ServiceOutputTypes =
+  | CheckAnswerableCommandOutput
   | DescribeSchemaCommandOutput
   | GraphTraverseCommandOutput
   | KBSearchCommandOutput
   | QueryCommandOutput
+  | RunSparqlCommandOutput
   | TranslateSPARQLCommandOutput;
 
 /**

@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { ReviewSourceColumnInput, ReviewSourceColumnOutput } from "../models/models_0";
+import type { ReviewSourceColumnInput, ReviewSourceColumnOutput } from "../models/models_1";
 import { ReviewSourceColumn$ } from "../schemas/schemas_0";
 
 /**

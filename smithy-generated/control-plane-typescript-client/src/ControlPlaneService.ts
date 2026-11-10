@@ -114,6 +114,21 @@ import {
   GetCanvasSubgraphCommand,
 } from "./commands/GetCanvasSubgraphCommand";
 import {
+  type GetDictionaryCommandInput,
+  type GetDictionaryCommandOutput,
+  GetDictionaryCommand,
+} from "./commands/GetDictionaryCommand";
+import {
+  type GetDictionaryCommentCoverageCommandInput,
+  type GetDictionaryCommentCoverageCommandOutput,
+  GetDictionaryCommentCoverageCommand,
+} from "./commands/GetDictionaryCommentCoverageCommand";
+import {
+  type GetDictionaryViewCommandInput,
+  type GetDictionaryViewCommandOutput,
+  GetDictionaryViewCommand,
+} from "./commands/GetDictionaryViewCommand";
+import {
   type GetEntityEmbeddingsCommandInput,
   type GetEntityEmbeddingsCommandOutput,
   GetEntityEmbeddingsCommand,
@@ -154,6 +169,16 @@ import {
   GetIngestStatusCommand,
 } from "./commands/GetIngestStatusCommand";
 import { type GetMetricCommandInput, type GetMetricCommandOutput, GetMetricCommand } from "./commands/GetMetricCommand";
+import {
+  type GetMetricFamilyCommandInput,
+  type GetMetricFamilyCommandOutput,
+  GetMetricFamilyCommand,
+} from "./commands/GetMetricFamilyCommand";
+import {
+  type GetMetricReportManifestCommandInput,
+  type GetMetricReportManifestCommandOutput,
+  GetMetricReportManifestCommand,
+} from "./commands/GetMetricReportManifestCommand";
 import {
   type GetNamespaceCommandInput,
   type GetNamespaceCommandOutput,
@@ -262,6 +287,11 @@ import {
   KeepRescanRemovalCommand,
 } from "./commands/KeepRescanRemovalCommand";
 import {
+  type ListDictionariesCommandInput,
+  type ListDictionariesCommandOutput,
+  ListDictionariesCommand,
+} from "./commands/ListDictionariesCommand";
+import {
   type ListDocumentChunksCommandInput,
   type ListDocumentChunksCommandOutput,
   ListDocumentChunksCommand,
@@ -291,6 +321,11 @@ import {
   type ListInductionJobsCommandOutput,
   ListInductionJobsCommand,
 } from "./commands/ListInductionJobsCommand";
+import {
+  type ListIngestionRunsCommandInput,
+  type ListIngestionRunsCommandOutput,
+  ListIngestionRunsCommand,
+} from "./commands/ListIngestionRunsCommand";
 import {
   type ListMetricsCommandInput,
   type ListMetricsCommandOutput,
@@ -356,6 +391,7 @@ import {
   type ListStatementsCommandOutput,
   ListStatementsCommand,
 } from "./commands/ListStatementsCommand";
+import { type ListTermsCommandInput, type ListTermsCommandOutput, ListTermsCommand } from "./commands/ListTermsCommand";
 import {
   type LoadFoundationalOntologyCommandInput,
   type LoadFoundationalOntologyCommandOutput,
@@ -376,6 +412,11 @@ import {
   type PutSourceRescanScheduleCommandOutput,
   PutSourceRescanScheduleCommand,
 } from "./commands/PutSourceRescanScheduleCommand";
+import {
+  type RefreshDictionariesCommandInput,
+  type RefreshDictionariesCommandOutput,
+  RefreshDictionariesCommand,
+} from "./commands/RefreshDictionariesCommand";
 import {
   type RejectFactCandidateCommandInput,
   type RejectFactCandidateCommandOutput,
@@ -497,6 +538,7 @@ import { paginateListDocuments } from "./pagination/ListDocumentsPaginator";
 import { paginateListFactCandidates } from "./pagination/ListFactCandidatesPaginator";
 import { paginateListInducedDatasources } from "./pagination/ListInducedDatasourcesPaginator";
 import { paginateListInductionJobs } from "./pagination/ListInductionJobsPaginator";
+import { paginateListIngestionRuns } from "./pagination/ListIngestionRunsPaginator";
 import { paginateListMetrics } from "./pagination/ListMetricsPaginator";
 import { paginateListNamespaceGrants } from "./pagination/ListNamespaceGrantsPaginator";
 import { paginateListNamespaces } from "./pagination/ListNamespacesPaginator";
@@ -511,6 +553,12 @@ import { paginateListSourceTables } from "./pagination/ListSourceTablesPaginator
 const commands = {
   GetSystemHealthCommand,
   HealthCheckCommand,
+  GetDictionaryCommand,
+  GetDictionaryCommentCoverageCommand,
+  GetDictionaryViewCommand,
+  ListDictionariesCommand,
+  ListTermsCommand,
+  RefreshDictionariesCommand,
   ApproveFactCandidateCommand,
   ListDocumentChunksCommand,
   ListDocumentsCommand,
@@ -527,6 +575,7 @@ const commands = {
   ListNamespaceGrantsCommand,
   ListPlatformGrantsCommand,
   ListPrincipalGrantsCommand,
+  ListIngestionRunsCommand,
   BulkDeleteMetricsCommand,
   CreateMetricCommand,
   DeleteMetricCommand,
@@ -538,6 +587,8 @@ const commands = {
   ListMetricsCommand,
   UpdateMetricCommand,
   ValidateMetricCommand,
+  GetMetricFamilyCommand,
+  GetMetricReportManifestCommand,
   CreateNamespaceCommand,
   DeleteNamespaceCommand,
   GetNamespaceCommand,
@@ -618,6 +669,7 @@ const paginators = {
   paginateListNamespaceGrants,
   paginateListPlatformGrants,
   paginateListPrincipalGrants,
+  paginateListIngestionRuns,
   paginateListMetrics,
   paginateListNamespaces,
   paginateListOntologies,
@@ -664,6 +716,108 @@ export interface ControlPlaneService {
     args: HealthCheckCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: HealthCheckCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetDictionaryCommand}
+   */
+  getDictionary(
+    args: GetDictionaryCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetDictionaryCommandOutput>;
+  getDictionary(
+    args: GetDictionaryCommandInput,
+    cb: (err: any, data?: GetDictionaryCommandOutput) => void
+  ): void;
+  getDictionary(
+    args: GetDictionaryCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetDictionaryCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetDictionaryCommentCoverageCommand}
+   */
+  getDictionaryCommentCoverage(
+    args: GetDictionaryCommentCoverageCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetDictionaryCommentCoverageCommandOutput>;
+  getDictionaryCommentCoverage(
+    args: GetDictionaryCommentCoverageCommandInput,
+    cb: (err: any, data?: GetDictionaryCommentCoverageCommandOutput) => void
+  ): void;
+  getDictionaryCommentCoverage(
+    args: GetDictionaryCommentCoverageCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetDictionaryCommentCoverageCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetDictionaryViewCommand}
+   */
+  getDictionaryView(
+    args: GetDictionaryViewCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetDictionaryViewCommandOutput>;
+  getDictionaryView(
+    args: GetDictionaryViewCommandInput,
+    cb: (err: any, data?: GetDictionaryViewCommandOutput) => void
+  ): void;
+  getDictionaryView(
+    args: GetDictionaryViewCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetDictionaryViewCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListDictionariesCommand}
+   */
+  listDictionaries(
+    args: ListDictionariesCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListDictionariesCommandOutput>;
+  listDictionaries(
+    args: ListDictionariesCommandInput,
+    cb: (err: any, data?: ListDictionariesCommandOutput) => void
+  ): void;
+  listDictionaries(
+    args: ListDictionariesCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListDictionariesCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link ListTermsCommand}
+   */
+  listTerms(
+    args: ListTermsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListTermsCommandOutput>;
+  listTerms(
+    args: ListTermsCommandInput,
+    cb: (err: any, data?: ListTermsCommandOutput) => void
+  ): void;
+  listTerms(
+    args: ListTermsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListTermsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link RefreshDictionariesCommand}
+   */
+  refreshDictionaries(
+    args: RefreshDictionariesCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RefreshDictionariesCommandOutput>;
+  refreshDictionaries(
+    args: RefreshDictionariesCommandInput,
+    cb: (err: any, data?: RefreshDictionariesCommandOutput) => void
+  ): void;
+  refreshDictionaries(
+    args: RefreshDictionariesCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RefreshDictionariesCommandOutput) => void
   ): void;
 
   /**
@@ -940,6 +1094,23 @@ export interface ControlPlaneService {
   ): void;
 
   /**
+   * @see {@link ListIngestionRunsCommand}
+   */
+  listIngestionRuns(
+    args: ListIngestionRunsCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<ListIngestionRunsCommandOutput>;
+  listIngestionRuns(
+    args: ListIngestionRunsCommandInput,
+    cb: (err: any, data?: ListIngestionRunsCommandOutput) => void
+  ): void;
+  listIngestionRuns(
+    args: ListIngestionRunsCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: ListIngestionRunsCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link BulkDeleteMetricsCommand}
    */
   bulkDeleteMetrics(
@@ -1124,6 +1295,40 @@ export interface ControlPlaneService {
     args: ValidateMetricCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ValidateMetricCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetMetricFamilyCommand}
+   */
+  getMetricFamily(
+    args: GetMetricFamilyCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetMetricFamilyCommandOutput>;
+  getMetricFamily(
+    args: GetMetricFamilyCommandInput,
+    cb: (err: any, data?: GetMetricFamilyCommandOutput) => void
+  ): void;
+  getMetricFamily(
+    args: GetMetricFamilyCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetMetricFamilyCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetMetricReportManifestCommand}
+   */
+  getMetricReportManifest(
+    args: GetMetricReportManifestCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetMetricReportManifestCommandOutput>;
+  getMetricReportManifest(
+    args: GetMetricReportManifestCommandInput,
+    cb: (err: any, data?: GetMetricReportManifestCommandOutput) => void
+  ): void;
+  getMetricReportManifest(
+    args: GetMetricReportManifestCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetMetricReportManifestCommandOutput) => void
   ): void;
 
   /**
@@ -2417,6 +2622,17 @@ export interface ControlPlaneService {
     args: ListPrincipalGrantsCommandInput,
     paginationConfig?: Omit<PaginationConfiguration, "client">
   ): Paginator<ListPrincipalGrantsCommandOutput>;
+
+  /**
+   * @see {@link ListIngestionRunsCommand}
+   * @param args - command input.
+   * @param paginationConfig - optional pagination config.
+   * @returns AsyncIterable of {@link ListIngestionRunsCommandOutput}.
+   */
+  paginateListIngestionRuns(
+    args: ListIngestionRunsCommandInput,
+    paginationConfig?: Omit<PaginationConfiguration, "client">
+  ): Paginator<ListIngestionRunsCommandOutput>;
 
   /**
    * @see {@link ListMetricsCommand}

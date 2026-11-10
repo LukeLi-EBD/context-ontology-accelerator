@@ -6,6 +6,7 @@ export * from "./ListFactCandidatesPaginator";
 export * from "./ListNamespaceGrantsPaginator";
 export * from "./ListPlatformGrantsPaginator";
 export * from "./ListPrincipalGrantsPaginator";
+export * from "./ListIngestionRunsPaginator";
 export * from "./ListMetricsPaginator";
 export * from "./ListNamespacesPaginator";
 export * from "./ListOntologiesPaginator";

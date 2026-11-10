@@ -5,6 +5,342 @@
         "version": "2025-05-01"
     },
     "paths": {
+        "/namespaces/{namespaceId}/answerable": {
+            "post": {
+                "description": "Pre-check whether an ontology can answer a question, reporting coverage for\neach of the four layers (ontology, terms, metrics, facts) and, for every\ngap, what is missing and how to fix it.\n\nRead-only. A layer whose inputs are not available reports status\n`unavailable` (or `not_applicable`) and no coverage value; it is never\nsilently reported as zero coverage.",
+                "operationId": "CheckAnswerable",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CheckAnswerableRequestContent"
+                            },
+                            "examples": {
+                                "CheckAnswerable_example1": {
+                                    "summary": "A value question that is fully covered",
+                                    "description": "",
+                                    "value": {
+                                        "query": "\u4e0a\u4e2a\u6708\u534e\u4e1c\u533a\u7684\u9500\u552e\u989d\u662f\u591a\u5c11\uff1f"
+                                    }
+                                },
+                                "CheckAnswerable_example2": {
+                                    "summary": "A question with gaps in the ontology and facts layers",
+                                    "description": "",
+                                    "value": {
+                                        "query": "\u4e0a\u4e2a\u5b63\u5ea6\u4f9b\u5e94\u5546\u4ea4\u8d27\u53ca\u65f6\u7387\u662f\u591a\u5c11\uff1f"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace the question is asked in.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace the question is asked in."
+                        },
+                        "required": true,
+                        "examples": {
+                            "CheckAnswerable_example1": {
+                                "summary": "A value question that is fully covered",
+                                "description": "",
+                                "value": "ed70a15c-2d42-4dc9-8c61-33b2584f05fd"
+                            },
+                            "CheckAnswerable_example2": {
+                                "summary": "A question with gaps in the ontology and facts layers",
+                                "description": "",
+                                "value": "ed70a15c-2d42-4dc9-8c61-33b2584f05fd"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "CheckAnswerable 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CheckAnswerableResponseContent"
+                                },
+                                "examples": {
+                                    "CheckAnswerable_example1": {
+                                        "summary": "A value question that is fully covered",
+                                        "description": "",
+                                        "value": {
+                                            "query": "\u4e0a\u4e2a\u6708\u534e\u4e1c\u533a\u7684\u9500\u552e\u989d\u662f\u591a\u5c11\uff1f",
+                                            "answerable": true,
+                                            "valueAnswerable": true,
+                                            "answerMode": "value",
+                                            "intent": "value",
+                                            "degraded": false,
+                                            "coverage": 0.92,
+                                            "threshold": 0.8,
+                                            "coverageChars": {
+                                                "covered": 23,
+                                                "total": 25
+                                            },
+                                            "ontologyVersion": "v3",
+                                            "ontologyGraph": "https://coa.local/graph/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/urn%3Acoa%3Aontology%3Av3",
+                                            "termSource": "skos(prefLabel/altLabel) when present + rdfs:label baseline",
+                                            "termCount": 148,
+                                            "matchedTerms": [
+                                                {
+                                                    "term": "urn:coa:metric:sales_amount",
+                                                    "label": "\u9500\u552e\u989d",
+                                                    "span": [
+                                                        0,
+                                                        3
+                                                    ]
+                                                }
+                                            ],
+                                            "layers": [
+                                                {
+                                                    "layer": "ontology",
+                                                    "status": "covered",
+                                                    "coverage": 0.92,
+                                                    "matched": [
+                                                        {
+                                                            "id": "urn:coa:metric:sales_amount",
+                                                            "label": "\u9500\u552e\u989d",
+                                                            "source": "rdfs:label"
+                                                        }
+                                                    ],
+                                                    "missing": []
+                                                },
+                                                {
+                                                    "layer": "terms",
+                                                    "status": "covered",
+                                                    "coverage": 1.0,
+                                                    "matched": [
+                                                        {
+                                                            "id": "urn:coa:term:east_china",
+                                                            "label": "\u534e\u4e1c\u533a",
+                                                            "source": "skos"
+                                                        }
+                                                    ],
+                                                    "missing": []
+                                                },
+                                                {
+                                                    "layer": "metrics",
+                                                    "status": "covered",
+                                                    "coverage": 1.0,
+                                                    "matched": [
+                                                        {
+                                                            "id": "sales_amount",
+                                                            "label": "\u9500\u552e\u989d",
+                                                            "score": 0.98
+                                                        }
+                                                    ],
+                                                    "missing": []
+                                                },
+                                                {
+                                                    "layer": "facts",
+                                                    "status": "covered",
+                                                    "coverage": 1.0,
+                                                    "matched": [
+                                                        {
+                                                            "metricId": "sales_amount",
+                                                            "status": "covered",
+                                                            "code": "FACT_COVERED",
+                                                            "observationRows": 12
+                                                        }
+                                                    ],
+                                                    "missing": []
+                                                }
+                                            ],
+                                            "missing": [],
+                                            "candidates": [
+                                                {
+                                                    "layer": "metrics",
+                                                    "id": "sales_amount",
+                                                    "label": "\u9500\u552e\u989d",
+                                                    "reason": "exact_name",
+                                                    "score": 0.98
+                                                }
+                                            ],
+                                            "reasons": [],
+                                            "timings": {
+                                                "termsMs": 12,
+                                                "metricMs": 3,
+                                                "factsMs": 41
+                                            }
+                                        }
+                                    },
+                                    "CheckAnswerable_example2": {
+                                        "summary": "A question with gaps in the ontology and facts layers",
+                                        "description": "",
+                                        "value": {
+                                            "query": "\u4e0a\u4e2a\u5b63\u5ea6\u4f9b\u5e94\u5546\u4ea4\u8d27\u53ca\u65f6\u7387\u662f\u591a\u5c11\uff1f",
+                                            "answerable": false,
+                                            "valueAnswerable": false,
+                                            "answerMode": "none",
+                                            "intent": "value",
+                                            "degraded": true,
+                                            "coverage": 0.55,
+                                            "threshold": 0.8,
+                                            "coverageChars": {
+                                                "covered": 11,
+                                                "total": 20
+                                            },
+                                            "ontologyVersion": "v3",
+                                            "ontologyGraph": "https://coa.local/graph/ed70a15c-2d42-4dc9-8c61-33b2584f05fd/urn%3Acoa%3Aontology%3Av3",
+                                            "termSource": "skos(prefLabel/altLabel) when present + rdfs:label baseline",
+                                            "termCount": 148,
+                                            "matchedTerms": [],
+                                            "layers": [
+                                                {
+                                                    "layer": "ontology",
+                                                    "status": "partial",
+                                                    "coverage": 0.55,
+                                                    "matched": [],
+                                                    "missing": [
+                                                        "\u4f9b\u5e94\u5546"
+                                                    ]
+                                                },
+                                                {
+                                                    "layer": "terms",
+                                                    "status": "missing",
+                                                    "coverage": 0.0,
+                                                    "matched": [],
+                                                    "missing": [
+                                                        "\u4ea4\u8d27\u53ca\u65f6\u7387"
+                                                    ]
+                                                },
+                                                {
+                                                    "layer": "metrics",
+                                                    "status": "missing",
+                                                    "coverage": 0.0,
+                                                    "matched": [],
+                                                    "missing": [
+                                                        "on_time_delivery_rate"
+                                                    ]
+                                                },
+                                                {
+                                                    "layer": "facts",
+                                                    "status": "not_applicable",
+                                                    "matched": [],
+                                                    "missing": []
+                                                }
+                                            ],
+                                            "missing": [
+                                                {
+                                                    "layer": "ontology",
+                                                    "code": "E_LAYER_ONTOLOGY_GAP",
+                                                    "text": "\u4f9b\u5e94\u5546",
+                                                    "span": [
+                                                        8,
+                                                        11
+                                                    ],
+                                                    "what": "\u672c\u4f53\u672a\u58f0\u660e\u300c\u4f9b\u5e94\u5546\u300d",
+                                                    "howToFix": "\u8865\u5145 rdfs:label / skos:prefLabel\uff0c\u6216\u6536\u7a84\u95ee\u9898\u8303\u56f4",
+                                                    "nearbyTerms": [
+                                                        {
+                                                            "term": "urn:coa:party:supplier",
+                                                            "label": "\u4f9b\u8d27\u65b9",
+                                                            "similarity": 0.67
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "layer": "metrics",
+                                                    "code": "E_LAYER_METRICS_GAP",
+                                                    "what": "\u672a\u5339\u914d\u5230\u53ef\u6c42\u503c\u53e3\u5f84\u6307\u6807",
+                                                    "howToFix": "\u6307\u5b9a metricId\uff0c\u6216\u8865\u5145\u6307\u6807\u540d\u79f0/\u522b\u540d",
+                                                    "candidates": [
+                                                        {
+                                                            "id": "on_time_delivery_rate",
+                                                            "label": "\u4ea4\u8d27\u53ca\u65f6\u7387",
+                                                            "score": 0.71
+                                                        }
+                                                    ]
+                                                }
+                                            ],
+                                            "candidates": [
+                                                {
+                                                    "layer": "metrics",
+                                                    "id": "on_time_delivery_rate",
+                                                    "label": "\u4ea4\u8d27\u53ca\u65f6\u7387",
+                                                    "reason": "fuzzy_name",
+                                                    "score": 0.71
+                                                }
+                                            ],
+                                            "reasons": [
+                                                "facts layer has no metric to evaluate"
+                                            ],
+                                            "reasonCode": "E_ANSWER_METRIC_NOT_FOUND",
+                                            "hint": "\u672c\u4f53\u672a\u8986\u76d6\u95ee\u9898\u4e2d\u7684\u8fd9\u4e9b\u6982\u5ff5\uff1a\u4f9b\u5e94\u5546\uff1b\u8bf7\u5148\u8865\u5145\u672f\u8bed\uff08T-Box\uff09\u6216\u7f29\u5c0f\u95ee\u9898\u8303\u56f4",
+                                            "timings": {
+                                                "termsMs": 9,
+                                                "metricMs": 2,
+                                                "factsMs": 0
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/namespaces/{namespaceId}/graph/traverse": {
             "post": {
                 "description": "Traverse the knowledge graph outward from a starting entity URI, following\nrelationships up to a maximum depth in the requested direction.",
@@ -647,6 +983,201 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/sparql": {
+            "post": {
+                "description": "Runs one SPARQL SELECT or ASK in the SPARQL console.\n\nThe query is confined to the namespace's own graphs: they form the default\ngraph and each stays addressable as a named graph. The statement is refused\nwhen it carries `FROM` / `FROM NAMED`, uses `SERVICE` or `LOAD`, names a graph\noutside the namespace, is not SELECT/ASK, runs longer than 10 seconds, or\nproduces more than 4 MiB. At most 5,000 rows are returned; `truncated` says\nwhether the provider produced more.",
+                "operationId": "RunSparql",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RunSparqlRequestContent"
+                            },
+                            "examples": {
+                                "RunSparql_example1": {
+                                    "summary": "List five subjects in the namespace",
+                                    "description": "",
+                                    "value": {
+                                        "sparql": "SELECT ?s WHERE { ?s ?p ?o } LIMIT 5"
+                                    }
+                                },
+                                "RunSparql_example2": {
+                                    "summary": "Ask whether any triple exists",
+                                    "description": "",
+                                    "value": {
+                                        "sparql": "ASK { ?s ?p ?o }"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "The namespace whose graphs the query may read.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "minLength": 1,
+                            "description": "The namespace whose graphs the query may read."
+                        },
+                        "required": true,
+                        "examples": {
+                            "RunSparql_example1": {
+                                "summary": "List five subjects in the namespace",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            },
+                            "RunSparql_example2": {
+                                "summary": "Ask whether any triple exists",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RunSparql 200 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RunSparqlResponseContent"
+                                },
+                                "examples": {
+                                    "RunSparql_example1": {
+                                        "summary": "List five subjects in the namespace",
+                                        "description": "",
+                                        "value": {
+                                            "form": "SELECT",
+                                            "variables": [
+                                                "s"
+                                            ],
+                                            "rows": [
+                                                [
+                                                    "https://coa.local/entity/customer-42"
+                                                ]
+                                            ],
+                                            "rowCount": 1,
+                                            "returnedRows": 1,
+                                            "truncated": false,
+                                            "graphCount": 2,
+                                            "elapsedMs": 37
+                                        }
+                                    },
+                                    "RunSparql_example2": {
+                                        "summary": "Ask whether any triple exists",
+                                        "description": "",
+                                        "value": {
+                                            "form": "ASK",
+                                            "answer": true,
+                                            "rowCount": 0,
+                                            "returnedRows": 0,
+                                            "truncated": false,
+                                            "graphCount": 2,
+                                            "elapsedMs": 12
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "AccessDeniedError 403 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AccessDeniedErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NamespaceNotFoundError 404 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NamespaceNotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "SparqlResultTooLargeError 413 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SparqlResultTooLargeErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "RateLimitExceededError 429 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RateLimitExceededErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "SparqlProviderError 502 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SparqlProviderErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "SparqlTimeoutError 504 response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SparqlTimeoutErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/namespaces/{namespaceId}/translate": {
             "post": {
                 "description": "Translate a natural-language question into SPARQL against the namespace's\nontology without executing it. Useful for previewing or debugging the query\nthe resolver would run.",
@@ -813,6 +1344,217 @@
                     "message"
                 ]
             },
+            "AnswerCandidate": {
+                "type": "object",
+                "description": "A ranked candidate for the question as a whole.",
+                "properties": {
+                    "layer": {
+                        "type": "string",
+                        "description": "Layer the candidate belongs to."
+                    },
+                    "id": {
+                        "type": "string",
+                        "description": "Candidate identifier."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Why the candidate matched."
+                    },
+                    "score": {
+                        "type": "number",
+                        "description": "Match score in 0..1.",
+                        "format": "float"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "layer",
+                    "reason",
+                    "score"
+                ]
+            },
+            "AnswerTimings": {
+                "type": "object",
+                "description": "Per-layer evaluation timings.",
+                "properties": {
+                    "termsMs": {
+                        "type": "number",
+                        "description": "Ontology/term layer duration in milliseconds."
+                    },
+                    "metricMs": {
+                        "type": "number",
+                        "description": "Metric matching duration in milliseconds."
+                    },
+                    "factsMs": {
+                        "type": "number",
+                        "description": "Fact layer duration in milliseconds."
+                    }
+                },
+                "required": [
+                    "factsMs",
+                    "metricMs",
+                    "termsMs"
+                ]
+            },
+            "CheckAnswerableRequestContent": {
+                "type": "object",
+                "description": "Input for CheckAnswerable.",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "minLength": 1,
+                        "description": "The natural-language question to pre-check."
+                    },
+                    "ontologyVersion": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "minLength": 1,
+                        "description": "Ontology version to check against; defaults to the published current one."
+                    },
+                    "minCoverage": {
+                        "type": "number",
+                        "maximum": 1.0,
+                        "minimum": 0.0,
+                        "description": "Minimum term coverage (0..1) required for `answerable: true`.",
+                        "format": "float"
+                    }
+                },
+                "required": [
+                    "query"
+                ]
+            },
+            "CheckAnswerableResponseContent": {
+                "type": "object",
+                "description": "Result of an answerability pre-check.",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Echo of the checked question."
+                    },
+                    "answerable": {
+                        "type": "boolean",
+                        "description": "True when the question can be answered: term coverage meets the\nthreshold, or an exact metric match supports a definition answer even\nwhen no fact rows are available."
+                    },
+                    "valueAnswerable": {
+                        "type": "boolean",
+                        "description": "True when a concrete numeric value can be produced (facts layer covered)."
+                    },
+                    "answerMode": {
+                        "type": "string",
+                        "description": "How the question can be answered: `value`, `definition` or `none`."
+                    },
+                    "intent": {
+                        "type": "string",
+                        "description": "Detected question intent: `value` or `definition`."
+                    },
+                    "degraded": {
+                        "type": "boolean",
+                        "description": "True when any layer is degraded or unavailable."
+                    },
+                    "coverage": {
+                        "type": "number",
+                        "description": "Character coverage of the ontology/term layer (0..1).",
+                        "format": "float"
+                    },
+                    "threshold": {
+                        "type": "number",
+                        "description": "Threshold used to decide `answerable`.",
+                        "format": "float"
+                    },
+                    "coverageChars": {
+                        "$ref": "#/components/schemas/CoverageChars"
+                    },
+                    "ontologyVersion": {
+                        "type": "string",
+                        "description": "Ontology version the check ran against."
+                    },
+                    "ontologyGraph": {
+                        "type": "string",
+                        "description": "Named graph URI of that version."
+                    },
+                    "termSource": {
+                        "type": "string",
+                        "description": "Human-readable description of the term source used."
+                    },
+                    "termCount": {
+                        "type": "number",
+                        "description": "Number of distinct terms considered."
+                    },
+                    "matchedTerms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MatchedTerm"
+                        },
+                        "description": "Terms that matched the question."
+                    },
+                    "layers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CoverageLayer"
+                        },
+                        "description": "Exactly four layers, in order: ontology, terms, metrics, facts."
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MissingGap"
+                        },
+                        "description": "One entry per gap, each carrying what is missing and how to fix it (F79)."
+                    },
+                    "candidates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/AnswerCandidate"
+                        },
+                        "description": "Ranked candidates that could close the gaps."
+                    },
+                    "reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Machine-readable reasons collected while evaluating."
+                    },
+                    "reasonCode": {
+                        "type": "string",
+                        "description": "Machine-readable reason when `answerable` is false."
+                    },
+                    "hint": {
+                        "type": "string",
+                        "description": "Operator-facing next step when `answerable` is false."
+                    },
+                    "timings": {
+                        "$ref": "#/components/schemas/AnswerTimings"
+                    }
+                },
+                "required": [
+                    "answerMode",
+                    "answerable",
+                    "candidates",
+                    "coverage",
+                    "coverageChars",
+                    "degraded",
+                    "intent",
+                    "layers",
+                    "matchedTerms",
+                    "missing",
+                    "ontologyGraph",
+                    "ontologyVersion",
+                    "query",
+                    "reasons",
+                    "termCount",
+                    "termSource",
+                    "threshold",
+                    "timings",
+                    "valueAnswerable"
+                ]
+            },
             "ConfidenceScore": {
                 "type": "object",
                 "description": "A confidence score in [0, 1] for a query result, with an optional rationale\nexplaining how it was derived.",
@@ -852,6 +1594,63 @@
                     "message",
                     "row",
                     "shape"
+                ]
+            },
+            "CoverageChars": {
+                "type": "object",
+                "description": "Character accounting behind the ontology/term coverage ratio.",
+                "properties": {
+                    "covered": {
+                        "type": "number",
+                        "description": "Number of content characters covered by a matched term."
+                    },
+                    "total": {
+                        "type": "number",
+                        "description": "Number of content characters in the question (stopwords/punctuation removed)."
+                    }
+                },
+                "required": [
+                    "covered",
+                    "total"
+                ]
+            },
+            "CoverageLayer": {
+                "type": "object",
+                "description": "One of the four answerability layers.",
+                "properties": {
+                    "layer": {
+                        "type": "string",
+                        "description": "Layer name: `ontology` | `terms` | `metrics` | `facts`."
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "`covered` | `partial` | `missing` | `degraded` | `unavailable` | `not_applicable`."
+                    },
+                    "coverage": {
+                        "type": "number",
+                        "description": "Layer coverage in 0..1. Absent when the layer cannot be computed;\nclients must render that as \"unavailable\", never as 0.",
+                        "format": "float"
+                    },
+                    "matched": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/LayerMatch"
+                        },
+                        "description": "Evidence that matched in this layer. Fields are layer-specific: ontology\nand term matches carry id/label/predicate/source, metrics carry\nid/label/score, facts carry metricId/status/code/observationRows."
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Short human-readable descriptions of what this layer lacks."
+                    }
+                },
+                "required": [
+                    "layer",
+                    "matched",
+                    "missing",
+                    "status"
                 ]
             },
             "DataSourceUnavailableErrorResponseContent": {
@@ -944,6 +1743,30 @@
                 "required": [
                     "label",
                     "uri"
+                ]
+            },
+            "GapCandidate": {
+                "type": "object",
+                "description": "A ranked candidate that may close a gap.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Candidate identifier (metric id)."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label."
+                    },
+                    "score": {
+                        "type": "number",
+                        "description": "Match score in 0..1.",
+                        "format": "float"
+                    }
+                },
+                "required": [
+                    "id",
+                    "label",
+                    "score"
                 ]
             },
             "GraphContext": {
@@ -1126,6 +1949,134 @@
                     "trace"
                 ]
             },
+            "LayerMatch": {
+                "type": "object",
+                "description": "Layer-specific evidence for one match.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Matched identifier (term IRI or metric id)."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "description": "Predicate that produced the match (ontology layer)."
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Source of the label: `rdfs:label` or `skos`."
+                    },
+                    "score": {
+                        "type": "number",
+                        "description": "Match score (metrics layer).",
+                        "format": "float"
+                    },
+                    "metricId": {
+                        "type": "string",
+                        "description": "Metric this evidence belongs to (facts layer)."
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Fact coverage status for that metric."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Stable machine-readable status code."
+                    },
+                    "observationRows": {
+                        "type": "number",
+                        "description": "Number of fact rows backing the metric."
+                    },
+                    "factFunction": {
+                        "type": "string",
+                        "description": "Fact function declared by the metric."
+                    }
+                }
+            },
+            "MatchedTerm": {
+                "type": "object",
+                "description": "A term that matched part of the question.",
+                "properties": {
+                    "term": {
+                        "type": "string",
+                        "description": "Term IRI."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label."
+                    },
+                    "span": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        },
+                        "description": "Inclusive-exclusive [start, end) character span in the normalized question."
+                    }
+                },
+                "required": [
+                    "label",
+                    "span",
+                    "term"
+                ]
+            },
+            "MissingGap": {
+                "type": "object",
+                "description": "A gap: what is missing, in which layer, and how to fix it (F79).",
+                "properties": {
+                    "layer": {
+                        "type": "string",
+                        "description": "Layer the gap belongs to: `ontology` | `terms` | `metrics` | `facts`."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Stable machine-readable code, e.g. `E_LAYER_ONTOLOGY_GAP`."
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "The question fragment that could not be covered (ontology layer)."
+                    },
+                    "span": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        },
+                        "description": "Inclusive-exclusive [start, end) span of that fragment, when known."
+                    },
+                    "what": {
+                        "type": "string",
+                        "description": "What exactly is missing, phrased as an operator action target."
+                    },
+                    "howToFix": {
+                        "type": "string",
+                        "description": "How to close the gap."
+                    },
+                    "metricId": {
+                        "type": "string",
+                        "description": "Metric this gap belongs to (facts layer)."
+                    },
+                    "nearbyTerms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/NearbyTerm"
+                        },
+                        "description": "Lexically nearby terms that may be the intended concept."
+                    },
+                    "candidates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GapCandidate"
+                        },
+                        "description": "Ranked candidates that may close this gap."
+                    }
+                },
+                "required": [
+                    "code",
+                    "layer"
+                ]
+            },
             "NamespaceNotFoundErrorResponseContent": {
                 "type": "object",
                 "description": "Returned with HTTP 404 when the target namespace does not exist or is not\nvisible to the caller.",
@@ -1141,6 +2092,30 @@
                 },
                 "required": [
                     "message"
+                ]
+            },
+            "NearbyTerm": {
+                "type": "object",
+                "description": "A lexically similar term offered for an uncovered fragment.",
+                "properties": {
+                    "term": {
+                        "type": "string",
+                        "description": "Term IRI."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Human-readable label."
+                    },
+                    "similarity": {
+                        "type": "number",
+                        "description": "Lexical similarity in 0..1.",
+                        "format": "float"
+                    }
+                },
+                "required": [
+                    "label",
+                    "similarity",
+                    "term"
                 ]
             },
             "NoResultErrorResponseContent": {
@@ -1420,6 +2395,82 @@
                     "description": "Customer data returned by or sent to a query: result cell values, knowledge-base\nchunk text, synthesized answers, generated SQL/SPARQL, and dimension filter\nvalues. Marked sensitive so generated clients keep it out of logs."
                 }
             },
+            "RunSparqlRequestContent": {
+                "type": "object",
+                "description": "The namespace and the statement to run.",
+                "properties": {
+                    "sparql": {
+                        "type": "string",
+                        "maxLength": 6000,
+                        "minLength": 1,
+                        "description": "SPARQL text: one SELECT or ASK statement."
+                    }
+                },
+                "required": [
+                    "sparql"
+                ]
+            },
+            "RunSparqlResponseContent": {
+                "type": "object",
+                "description": "One executed statement: its form, the ASK answer, or the SELECT columns and rows.",
+                "properties": {
+                    "form": {
+                        "type": "string",
+                        "description": "The executed form: `SELECT` or `ASK`."
+                    },
+                    "answer": {
+                        "type": "boolean",
+                        "description": "The ASK answer; present only when `form` is `ASK`."
+                    },
+                    "variables": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "One variable name, without the leading `?`."
+                        },
+                        "description": "Column names, in the provider's order (SELECT only)."
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "description": "One RDF term: an IRI as-is, a literal with its language/datatype suffix,\nor a blank node as `_:id`."
+                            },
+                            "description": "One result row aligned to `variables`."
+                        },
+                        "description": "Rows, each aligned to `variables` (SELECT only)."
+                    },
+                    "rowCount": {
+                        "type": "number",
+                        "description": "Rows the provider produced before the 5,000-row display cap (SELECT only)."
+                    },
+                    "returnedRows": {
+                        "type": "number",
+                        "description": "Rows actually returned in `rows` (SELECT only; at most 5,000)."
+                    },
+                    "truncated": {
+                        "type": "boolean",
+                        "description": "True when the provider produced more than 5,000 rows and `rows` was cut."
+                    },
+                    "graphCount": {
+                        "type": "number",
+                        "description": "Number of namespace graphs the query was confined to."
+                    },
+                    "elapsedMs": {
+                        "type": "number",
+                        "description": "Server-side execution time in milliseconds."
+                    }
+                },
+                "required": [
+                    "form",
+                    "graphCount",
+                    "returnedRows",
+                    "rowCount",
+                    "truncated"
+                ]
+            },
             "SchemaClass": {
                 "type": "object",
                 "description": "A class in the namespace's queryable schema, with its IRI, label, optional\ndescription, properties, and parent class.",
@@ -1489,6 +2540,68 @@
                     }
                 },
                 "required": [
+                    "message"
+                ]
+            },
+            "SparqlProviderErrorResponseContent": {
+                "type": "object",
+                "description": "The provider could not execute the statement.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the provider failure."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Stable machine code: `E_SPARQL_PROVIDER_ERROR` or `E_SPARQL_PROVIDER_REJECTED`."
+                    },
+                    "providerCode": {
+                        "type": "string",
+                        "description": "The provider's own code, e.g. `HTTP_400`."
+                    },
+                    "providerMessage": {
+                        "type": "string",
+                        "description": "The provider's own message, truncated for display."
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ]
+            },
+            "SparqlResultTooLargeErrorResponseContent": {
+                "type": "object",
+                "description": "The result exceeded the 4 MiB response cap.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the size refusal."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Stable machine code: `E_SPARQL_RESULT_TOO_LARGE`."
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ]
+            },
+            "SparqlTimeoutErrorResponseContent": {
+                "type": "object",
+                "description": "The statement exceeded the 10 second limit.",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "Human-readable description of the timeout."
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Stable machine code: `E_SPARQL_TIMEOUT`."
+                    }
+                },
+                "required": [
+                    "code",
                     "message"
                 ]
             },

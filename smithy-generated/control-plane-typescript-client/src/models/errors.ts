@@ -71,26 +71,6 @@ export class ValidationError extends __BaseException {
 }
 
 /**
- * Returned with HTTP 409 when a request conflicts with the current state of the resource, such as a duplicate.
- * @public
- */
-export class ConflictError extends __BaseException {
-  readonly name = "ConflictError" as const;
-  readonly $fault = "client" as const;
-  /**
-   * @internal
-   */
-  constructor(opts: __ExceptionOptionType<ConflictError, __BaseException>) {
-    super({
-      name: "ConflictError",
-      $fault: "client",
-      ...opts,
-    });
-    Object.setPrototypeOf(this, ConflictError.prototype);
-  }
-}
-
-/**
  * Returned with HTTP 404 when the requested resource does not exist.
  * @public
  */
@@ -107,6 +87,26 @@ export class NotFoundError extends __BaseException {
       ...opts,
     });
     Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+/**
+ * Returned with HTTP 409 when a request conflicts with the current state of the resource, such as a duplicate.
+ * @public
+ */
+export class ConflictError extends __BaseException {
+  readonly name = "ConflictError" as const;
+  readonly $fault = "client" as const;
+  /**
+   * @internal
+   */
+  constructor(opts: __ExceptionOptionType<ConflictError, __BaseException>) {
+    super({
+      name: "ConflictError",
+      $fault: "client",
+      ...opts,
+    });
+    Object.setPrototypeOf(this, ConflictError.prototype);
   }
 }
 
