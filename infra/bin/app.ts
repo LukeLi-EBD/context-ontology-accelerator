@@ -387,6 +387,7 @@ async function deploy(): Promise<void> {
       "/namespaces/{namespaceId}/graph/class": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/graph/object-property": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/graph/datatype-property": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/statements": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/ontologies": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/ontologies/{ontologyId}": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/ontologies/{ontologyId}/download": `/${prefix}/ontology-engine/api-fn-arn`,
