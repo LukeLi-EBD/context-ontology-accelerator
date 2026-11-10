@@ -15,6 +15,9 @@ enum AnswerQualityStrategy {
     /// Lexical retrieval only.
     lexical
 
+    /// Vector (embedding) retrieval only.
+    vector
+
     /// Hybrid lexical + vector retrieval.
     hybrid
 }
