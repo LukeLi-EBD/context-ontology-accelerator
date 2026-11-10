@@ -154,6 +154,21 @@ describe("GraphSearchPage — Explorer tabs", () => {
     expect(view.queryByTestId("inducted-sources")).toBeNull();
   });
 
+  it("offers exactly three View options and defaults to List", async () => {
+    const view = renderPage();
+
+    await waitFor(() => expect(activeTabLabel(view)).toBe("Classes"));
+    // Cloudscape stamps each SegmentedControl segment with data-testid = option
+    // id and aria-pressed = whether it is selected. Asserting by id (not by
+    // visible text) catches a dropped or renamed option, and avoids the
+    // narrow-viewport Select fallback that duplicates the labels.
+    expect(view.getByTestId("list")).toHaveAttribute("aria-pressed", "true");
+    expect(view.getByTestId("graph")).toHaveAttribute("aria-pressed", "false");
+    expect(view.getByTestId("tree")).toHaveAttribute("aria-pressed", "false");
+    // The default body is the list browser, not the graph canvas.
+    expect(view.queryByTestId("graph-flow")).toBeNull();
+  });
+
   it("opens the Ontologies tab from a ?tab=ontologies deep link", async () => {
     const view = renderPage("?tab=ontologies");
 
