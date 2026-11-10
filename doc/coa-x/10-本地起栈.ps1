@@ -3,21 +3,26 @@
   COA 原版本地栈一键启停。
 
 .DESCRIPTION
-  本脚本只管理下面五个东西（其余一律不碰）：
+  本脚本只管理下面六个东西（其余一律不碰）：
 
     容器 coa-local-pg        127.0.0.1:5444  pgvector/pgvector:pg18-trixie，库 platform + serve_local
     容器 coa-local-oxigraph  127.0.0.1:7878  oxigraph/oxigraph:0.5.7，数据卷 coa-local-oxigraph-data
     进程 coa-api-local       127.0.0.1:8099  doc/coa-x/tools/coa_api_local.py
     进程 coa-ontology-local  127.0.0.1:8101  doc/coa-x/tools/coa_ontology_local.py
     进程 coa-serve-local     127.0.0.1:8091  run_local.py context-manager（Query / KBSearch 的上游）
+    进程 coa-web-5173        127.0.0.1:5173  vite --config vite.dev-local.config.mjs（packages/web-app）
+
+  5173 **必须**用 packages/web-app/vite.dev-local.config.mjs 起（@auth 别名到
+  .dev-local/auth-stub，给固定本地 token）。默认 vite.config.ts 走真实 OIDC，
+  本地没有 IdP 时前端会报 "Auth token is empty."，所有 apiClient 页面全空。
 
   本体生命周期（versions/proposals/publish/rollback）不再单独占端口：8099
   进程内直接装配 platform_core 的 ASGI 应用，见 coa_api_local.py 的 KERNEL。
 
-  不管理：8080/8082 验收栈、5173 前端 dev server、8081 BGE 嵌入服务（只读复用）。
+  不管理：8080/8082 验收栈、8081 BGE 嵌入服务（只读复用）。
 
 .PARAMETER Stop
-  停止本脚本管理的三个进程（按端口 + 命令行双重确认），并 docker stop 两个容器。
+  停止本脚本管理的四个进程（按端口 + 命令行双重确认），并 docker stop 两个容器。
   容器数据在命名卷里，不会丢；下次启动原样回来。
 
 .PARAMETER Seed
@@ -51,6 +56,9 @@ $ErrorActionPreference = "Stop"
 $Repo    = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $Tools   = Join-Path $Repo "doc\coa-x\tools"
 $Python  = Join-Path $Repo ".venv-coa-local\Scripts\python.exe"
+$WebApp  = Join-Path $Repo "packages\web-app"
+$ViteJs  = Join-Path $WebApp "node_modules\vite\bin\vite.js"
+$ViteCfg = Join-Path $WebApp "vite.dev-local.config.mjs"
 $RunDir  = Join-Path $env:TEMP "coa-local-stack"
 $PidFile = Join-Path $RunDir "pids.json"
 $PgName  = "coa-local-pg"
@@ -119,6 +127,7 @@ if ($Stop) {
     Stop-PortOwner 8099 "coa_api_local.py"
     Stop-PortOwner 8101 "coa_ontology_local.py"
     Stop-PortOwner 8091 "run_local.py"
+    Stop-PortOwner 5173 "vite"
     if (Test-Path $PidFile) { Remove-Item $PidFile -Force }
     if (-not $KeepContainers) {
         foreach ($name in @($PgName, $OxiName)) {
@@ -332,6 +341,27 @@ if (Test-PortListening 8091) {
     }
 }
 
+# 6) frontend dev server — always the local config, never the default one.
+# vite.config.ts wires @auth to the real OIDC provider; with no IdP the app
+# throws "Auth token is empty." and every apiClient page renders empty. There is
+# deliberately no fallback here: a missing local config must fail the stack
+# rather than silently start the wrong server.
+if (Test-PortListening 5173) {
+    Write-Host "  [ok] coa-web-5173 already listening on :5173 (not restarted)"
+} else {
+    if (-not (Test-Path $ViteCfg)) { throw "missing $ViteCfg — 本地前端必须用 dev-local 配置，见 10-本地起栈.md" }
+    if (-not (Test-Path $ViteJs))  { throw "vite not installed under packages/web-app/node_modules — run pnpm install" }
+    $out = Join-Path $Tools "web-5173.log"
+    $err = Join-Path $Tools "web-5173.err.log"
+    $p = Start-Process -FilePath "node" `
+        -ArgumentList @($ViteJs, "--config", $ViteCfg) `
+        -WorkingDirectory $WebApp -WindowStyle Hidden -PassThru `
+        -RedirectStandardOutput $out -RedirectStandardError $err
+    $started["web"] = $p.Id
+    Write-Host ("  [start] coa-web-5173 pid={0} config=vite.dev-local.config.mjs log={1}" -f $p.Id, $out)
+    Wait-Port 5173 "coa-web-5173" 60
+}
+
 if ($started.Count -gt 0) {
     $json = $started | ConvertTo-Json
     [System.IO.File]::WriteAllText($PidFile, $json, (New-Object System.Text.UTF8Encoding($false)))
@@ -366,8 +396,8 @@ Write-Host "Stack is up:"
 Write-Host "  8099  coa-api-local      (bridge -> 8101 for /ontology/*, lifecycle in-process, -> 8091 for /query|/kb/search)"
 Write-Host "  8101  coa-ontology-local (Oxigraph 7878, PG registry 5444)"
 Write-Host "  8091  coa-serve-local    (context-manager, serve_local DB)"
+Write-Host "  5173  coa-web-5173       (vite --config vite.dev-local.config.mjs)"
 Write-Host "  5444  coa-local-pg      (platform = control plane, serve_local = query chain)"
 Write-Host "  7878  coa-local-oxigraph"
 Write-Host ""
-Write-Host "Frontend: run the 5173 dev server separately (local-only vite config)."
 Write-Host "Stop:     powershell -ExecutionPolicy Bypass -File .\10-本地起栈.ps1 -Stop"

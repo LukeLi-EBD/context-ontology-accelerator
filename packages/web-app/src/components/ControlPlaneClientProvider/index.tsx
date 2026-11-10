@@ -46,11 +46,6 @@ export const ControlPlaneClientProvider: React.FC<PropsWithChildren> = ({
   const apiEndpoint = runtimeContext?.apiEndpoint;
   const oidcConfig = runtimeContext?.oidcConfig;
 
-  // Same gate as Auth's local-mode bypass: import.meta.env.DEV is tree-shaken
-  // to `false` in production builds, so the branch below is eliminated there.
-  const isDevBypass =
-    import.meta.env.DEV && !!oidcConfig?.authority?.includes("LOCAL");
-
   const client = useMemo(() => {
     if (!apiEndpoint || !oidcConfig) return undefined;
     const provider = OIDCProvider.build(oidcConfig);
@@ -58,10 +53,6 @@ export const ControlPlaneClientProvider: React.FC<PropsWithChildren> = ({
     const created = new ControlPlaneServiceClient({
       endpoint: apiEndpoint.replace(/\/$/, ""),
       token: async () => {
-        // Dev bypass: there is no OIDC session to read a token from, and the
-        // local bridge (8099) does not verify Authorization — send a fixed
-        // local token instead of throwing "Auth token is empty."
-        if (isDevBypass) return { token: "local-dev-bypass" };
         const token = await provider.getIdToken();
         if (!token) throw new Error("Failed to retrieve authentication token");
         // Return the token's own expiry. The smithy httpBearerAuth client wraps
@@ -92,7 +83,7 @@ export const ControlPlaneClientProvider: React.FC<PropsWithChildren> = ({
       { step: "initialize", name: "coaServiceSentence" },
     );
     return created;
-  }, [apiEndpoint, oidcConfig, isDevBypass]);
+  }, [apiEndpoint, oidcConfig]);
 
   return (
     <ControlPlaneClientContext.Provider value={client}>
