@@ -18,10 +18,13 @@ This table reflects every operation registered on the **`ControlPlaneService`**
 Smithy service — the only API behind the Lambda authorizer
 (`packages/control-plane/.../authorization/handler.py`). `/health` is
 unauthenticated (`@optionalAuth`) and is not listed. Any route not listed here
-falls through to `denyAll` (fail-closed) — a dedicated test
-(`test_no_secured_smithy_operation_is_left_unmapped`) parses the tracked
-Smithy sources and fails if a new `@http` operation ships without an entry
-here, so this table cannot silently drift out of sync with the service again.
+maps to the `denyAll` sentinel, which the handler rejects **before** Cedar runs —
+so an unregistered route is denied for every role, including namespace owners
+whose seed policy constrains no action. Two tests guard this table:
+`test_no_secured_smithy_operation_is_left_unmapped` parses the tracked Smithy
+sources and fails if a new `@http` operation ships without an entry, and
+`TestUnmappedRouteFailsClosed` pins the Deny on a route that has none, so this
+table cannot silently drift out of sync with the service again.
 
 ### Namespace, roles & grants
 
@@ -65,6 +68,29 @@ here, so this table cannot silently drift out of sync with the service again.
 | `…/tables/{tableId}/columns/{columnName}/review` | PUT | `manageSource` | Source |
 | `…/tables/{tableId}/columns/{columnName}/metadata` | PATCH | `manageSource` | Source |
 | `/namespaces/{namespaceId}/sources/{sourceId}/tables/{tableId}/keys` | PATCH | `manageSource` | Source |
+
+### Documents, fact candidates & embeddings
+
+| API Endpoint | Method | Cedar Action | Resource Type |
+|---|---|---|---|
+| `/namespaces/{namespaceId}/documents` | POST | `manageSource` | Source |
+| `/namespaces/{namespaceId}/documents` | GET | `viewNamespace` | Source |
+| `/namespaces/{namespaceId}/documents/{documentId}/chunks` | GET | `searchDocuments` | Source |
+| `/namespaces/{namespaceId}/candidates` | GET | `viewNamespace` | Namespace |
+| `/namespaces/{namespaceId}/candidates/{candidateId}/approve` | POST | `manageOntology` | Namespace |
+| `/namespaces/{namespaceId}/candidates/{candidateId}/reject` | POST | `manageOntology` | Namespace |
+| `/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}` | GET | `searchDocuments` | Source |
+| `/namespaces/{namespaceId}/embeddings/search` | POST | `searchDocuments` | Source |
+
+There is no `Document` / `FactCandidate` entity or dedicated action in the Cedar
+schema, so these reuse the closest existing pair instead of widening it. Reads and
+writes share no action: uploading bytes is `manageSource` (the same power as
+`POST /sources`), while approving or rejecting a fact candidate writes a fact row
+plus an A-Box triple and is gated as `manageOntology` — deliberately **not**
+`manageSource`, so document upload and fact governance stay separately grantable.
+Chunk text and entity embeddings are document content, hence `searchDocuments`;
+`POST /embeddings/search` is a **read** (it persists nothing) and must not be
+mistaken for a `manage*` write because of the verb.
 
 ### Metric service
 
@@ -136,6 +162,17 @@ Two judgement calls worth surfacing:
   (see below) where `viewNamespace` would not — intended for the writes above,
   but a real behavioural consequence of the choice.
 
+### Data layer (serve) routes
+
+The same authorizer fronts the data-layer operations the web app proxies, so these
+are mapped here too — `traverseGraph` is listed in the ontology table above.
+
+| API Endpoint | Method | Cedar Action | Resource Type |
+|---|---|---|---|
+| `/namespaces/{namespaceId}/query` | POST | `query` | Namespace |
+| `/namespaces/{namespaceId}/translate` | POST | `translateQuery` | Namespace |
+| `/namespaces/{namespaceId}/kb/search` | POST | `searchDocuments` | Namespace |
+
 ### Platform-scoped (no `{namespaceId}`)
 
 | API Endpoint | Method | Cedar Action | Resource Type |
@@ -149,14 +186,16 @@ which `default.cedar` already permits for every authenticated principal (the
 same basis `GET /namespaces` and `GET /roles` stand on), rather than to a new
 platform-only gate.
 
-!!! note "`query` and `searchDocuments`"
-    The `query` and `searchDocuments` Cedar actions are **not** invoked by the
-    control-plane API authorizer — no `ControlPlaneService` route maps to them.
-    They are evaluated on the serve / context-manager path (the Playground/agent
-    runtime), which uses its own JWT authorizer. They remain in the schema and
-    seed policies because that path shares the same role model.
+!!! note "`query`, `translateQuery`, `searchDocuments`, `traverseGraph`"
+    All four are mapped by the control-plane authorizer on the data-layer routes
+    it fronts: `POST /namespaces/{namespaceId}/query` → `query`, `/translate` →
+    `translateQuery`, `/kb/search` → `searchDocuments`, `/graph/traverse` →
+    `traverseGraph`; the document-chunk, by-entity embedding, and embedding k-NN
+    routes above also use `searchDocuments`. They are therefore **shared** with
+    the serve / context-manager path, which evaluates the same actions with its
+    own JWT authorizer — changing one of them affects both sides.
 
-    On that path, `query` is evaluated by the **namespace admission gate** at the
+    On the serve path, `query` is evaluated by the **namespace admission gate** at the
     top of the runtime entrypoint — before any dispatch, and for every
     namespace-scoped surface (the Tier-1/2/3 query path plus the isolated
     `translate` / `kbSearch` / `graphTraverse` operations) — and again at SQL

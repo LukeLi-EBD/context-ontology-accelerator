@@ -85,6 +85,24 @@ describe("ApiStack authorizer — ARCHIVED guard wiring", () => {
     });
   });
 
+  it("always carries ROLES_TABLE_NAME and never the ALLOW_WITHOUT_ROLES dev bypass", () => {
+    // The authorizer reads ALLOW_WITHOUT_ROLES only when ROLES_TABLE_NAME is
+    // unset, so the deployed function must always carry the table and must
+    // never carry the opt-in — together that keeps the dev bypass out of prod
+    // (mirrors the serve-stack assertion for the same variable). Without the
+    // table the bypass would also skip the unmapped-route Deny.
+    const fns = template.findResources("AWS::Lambda::Function");
+    const authorizers = Object.values(fns).filter((fn) =>
+      String(fn.Properties?.FunctionName ?? "").endsWith("authorizer"),
+    );
+    expect(authorizers.length).toBeGreaterThan(0);
+    for (const fn of authorizers) {
+      const variables = fn.Properties.Environment.Variables;
+      expect(variables).toHaveProperty("ROLES_TABLE_NAME");
+      expect(variables).not.toHaveProperty("ALLOW_WITHOUT_ROLES");
+    }
+  });
+
   it("resolves GROUP_CLAIM_NAME from SSM (not a hardcoded Cognito default)", () => {
     // Regression: this used to be a hardcoded DEFAULT_GROUP_CLAIM
     // ("cognito:groups") passed from app.ts regardless of idpType, which

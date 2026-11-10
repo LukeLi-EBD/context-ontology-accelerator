@@ -515,6 +515,35 @@ class TestDevModeDenial:
 
         assert result["policyDocument"]["Statement"][0]["Effect"] == "Allow"
 
+    @patch("coa_control_plane.authorization.handler._check_cache_version")
+    @patch("coa_control_plane.authorization.handler._evaluate_cedar", return_value=False)
+    @patch("coa_control_plane.authorization.handler._resolve_roles", return_value=([], []))
+    @patch("coa_control_plane.authorization.handler.DynamoDBDAO")
+    def test_allow_without_roles_is_inert_when_roles_table_is_configured(
+        self, mock_dao_cls, mock_resolve, mock_cedar, mock_cache_check, env_vars, valid_result, apigw_event, monkeypatch
+    ):
+        """The dev bypass is a two-key switch: a configured Roles table wins.
+
+        ``ALLOW_WITHOUT_ROLES`` is only read in the ``else`` of
+        ``if roles_table:``, so a deployed authorizer that always carries
+        ROLES_TABLE_NAME ignores it entirely. Pinning that keeps the bypass from
+        growing into a second fail-open entry that also skips the unmapped-route
+        short-circuit (which lives inside the same branch).
+        """
+        monkeypatch.setenv("ALLOW_WITHOUT_ROLES", "true")
+
+        from coa_control_plane.authorization.handler import handler
+
+        with patch("coa_control_plane.authorization.handler._get_token_authorizer") as mock_get_auth:
+            mock_authorizer = MagicMock()
+            mock_authorizer.validate.return_value = valid_result
+            mock_get_auth.return_value = mock_authorizer
+
+            result = handler(apigw_event, None)
+
+        assert result["policyDocument"]["Statement"][0]["Effect"] == "Deny"
+        mock_cedar.assert_called_once()
+
 
 class TestRoleResolutionErrorHandling:
     @patch("coa_control_plane.authorization.handler._check_cache_version")
