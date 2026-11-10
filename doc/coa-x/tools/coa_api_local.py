@@ -535,6 +535,8 @@ ROUTES: list[tuple[str, str]] = [
     # GraphTraverse (DataLayerService). Implemented in the data-layer handler
     # from the start, but never routed locally, so it had never actually run.
     ("/namespaces/{namespaceId}/graph/traverse", DATA_LAYER),
+    # RunSparql (DataLayerService, P6 F72–F74): the console behind /ontology/graph.
+    ("/namespaces/{namespaceId}/sparql", DATA_LAYER),
     ("/namespaces/{namespaceId}/metrics", METRICS),
     ("/namespaces/{namespaceId}/metrics/{name}", METRICS),
     ("/namespaces/{namespaceId}/metrics/validate", METRICS),

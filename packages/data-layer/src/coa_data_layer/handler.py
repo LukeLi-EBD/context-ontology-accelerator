@@ -190,6 +190,7 @@ def _invoke_context_manager_via_port(payload: dict, token: str) -> dict:
             "statusCode": _PORT_ERROR_STATUS.get(str(exc.code), 500),
             "message": exc.message,
             "error": exc.provider_code or str(exc.code),
+            "details": dict(exc.details),
         }
     return dict(response.body)
 
@@ -557,6 +558,53 @@ def _handle_kb_search(namespace: str, event: dict) -> dict:
     )
 
 
+def _handle_run_sparql(namespace: str, event: dict) -> dict:
+    """Run one console SELECT/ASK (F72–F74), preserving the peer's code and provider code."""
+    body = _parse_body(event) or {}
+    sparql = body.get("sparql")
+    if not isinstance(sparql, str) or not sparql.strip():
+        return _error_response(400, "sparql is required", code="E_SPARQL_EMPTY")
+
+    payload = {
+        "action": "runSparql",
+        "namespace": namespace,
+        "profile": _get_caller_profile(event),
+        "options": {"sparql": sparql},
+    }
+    result = _invoke_context_manager(payload, _get_bearer_token(event))
+
+    status_code = result.get("statusCode", 200)
+    status_code = status_code if isinstance(status_code, int) else 200
+    details = result.get("details") if isinstance(result.get("details"), dict) else {}
+    effective = details.get("statusCode") if isinstance(details.get("statusCode"), int) else status_code
+    if effective >= 400:
+        extra: dict = {"code": str(result.get("error") or "E_SPARQL_INTERNAL")}
+        if details.get("providerCode"):
+            extra["providerCode"] = str(details["providerCode"])
+        if details.get("providerMessage"):
+            extra["providerMessage"] = str(details["providerMessage"])
+        return _error_response(
+            effective,
+            str(result.get("message") or "SPARQL execution failed"),
+            **extra,
+        )
+
+    return _success_response(
+        200,
+        {
+            "form": result.get("form"),
+            "answer": result.get("answer"),
+            "variables": result.get("variables") or [],
+            "rows": result.get("rows") or [],
+            "rowCount": result.get("rowCount") or 0,
+            "returnedRows": result.get("returnedRows") or 0,
+            "truncated": bool(result.get("truncated", False)),
+            "graphCount": result.get("graphCount") or 0,
+            "elapsedMs": result.get("elapsedMs"),
+        },
+    )
+
+
 def _handle_graph_traverse(namespace: str, event: dict) -> dict:
     body = _parse_body(event) or {}
     try:
@@ -706,6 +754,24 @@ _CONTEXT_MANAGER_ERROR_TYPES = frozenset(
         "QueryTranslationError",
         "TimeoutError",
         "ValidationError",
+        "E_SPARQL_SYNTAX",
+        "E_SPARQL_STATEMENT_NOT_ALLOWED",
+        "E_SPARQL_FEDERATED",
+        "E_SPARQL_DATASET_FORBIDDEN",
+        "E_SPARQL_GRAPH_FORBIDDEN",
+        "E_SPARQL_LOAD_NOT_ALLOWED",
+        "E_SPARQL_TOO_LONG",
+        "E_SPARQL_EMPTY",
+        "E_SPARQL_BAD_NAMESPACE",
+        "E_SPARQL_TIMEOUT",
+        "E_SPARQL_RESULT_TOO_LARGE",
+        "E_SPARQL_RESULT_BOUND",
+        "E_SPARQL_SCOPE_TOO_LARGE",
+        "E_SPARQL_SCOPE_EMPTY",
+        "E_SPARQL_PROVIDER_REJECTED",
+        "E_SPARQL_PROVIDER_ERROR",
+        "E_SPARQL_BACKEND_NOT_CONFIGURED",
+        "E_SPARQL_INTERNAL",
     }
 )
 _UPSTREAM_MESSAGE_MAX_CHARS = 500
@@ -736,6 +802,7 @@ _ROUTE_MAP = {
     ("POST", "/namespaces/{namespaceId}/translate"): _handle_translate,
     ("POST", "/namespaces/{namespaceId}/kb/search"): _handle_kb_search,
     ("POST", "/namespaces/{namespaceId}/graph/traverse"): _handle_graph_traverse,
+    ("POST", "/namespaces/{namespaceId}/sparql"): _handle_run_sparql,
     ("GET", "/namespaces/{namespaceId}/schema"): _handle_describe_schema,
 }
 

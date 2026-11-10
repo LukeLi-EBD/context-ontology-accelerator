@@ -2572,4 +2572,34 @@ export const MESSAGES_JA = {
     "ティア {tier} · サポートチャンク {chunks} 件",
   'Must be an absolute http(s) IRI without spaces or any of < > " { } | \\ ^ `.':
     '空白および < > " { } | \\ ^ ` のいずれも含まない、絶対 http(s) IRI を指定してください。',
+  SPARQL: "SPARQL",
+  "SPARQL console": "SPARQL コンソール",
+  "SPARQL query": "SPARQL クエリ",
+  "Run one SPARQL SELECT or ASK against this namespace's graphs. FROM, SERVICE and LOAD are refused; results stop at 5,000 rows or 10 seconds.":
+    "この名前空間のグラフに対して SPARQL の SELECT または ASK を 1 件実行します。FROM、SERVICE、LOAD は拒否され、結果は 5,000 行または 10 秒で打ち切られます。",
+  "Running query…": "クエリを実行しています…",
+  "Ctrl+Enter also runs the query.":
+    "Ctrl+Enter でもクエリを実行できます。",
+  "Only the graphs of this namespace are readable. The T-Box and inferred graphs are out of scope in this version.":
+    "読み取り可能なのはこの名前空間のグラフだけです。このバージョンでは T-Box と推論グラフは対象外です。",
+  "Query rejected": "クエリが拒否されました",
+  "HTTP status": "HTTP ステータス",
+  "Error code": "エラーコード",
+  "Provider code": "プロバイダーコード",
+  "Provider message": "プロバイダーメッセージ",
+  Message: "メッセージ",
+  "ASK answer": "ASK の回答",
+  "true": "true",
+  "false": "false",
+  "Namespace graphs in scope: {count}":
+    "対象の名前空間グラフ: {count} 件",
+  "Executed in {ms} ms": "{ms} ミリ秒で実行",
+  Rows: "行数",
+  "Result truncated": "結果が切り捨てられました",
+  "The provider produced {total} rows. Only the first {limit} are shown; narrow the query to see the rest.":
+    "プロバイダーは {total} 行を返しました。表示されるのは最初の {limit} 行のみです。残りを見るにはクエリを絞り込んでください。",
+  "Returned {returned} of {total} rows.":
+    "{total} 行のうち {returned} 行を返しました。",
+  Result: "結果",
+  "No rows returned.": "行が返されませんでした。",
 } as const;
