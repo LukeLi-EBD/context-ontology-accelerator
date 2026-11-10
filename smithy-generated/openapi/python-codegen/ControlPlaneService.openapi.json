@@ -5324,6 +5324,341 @@
                 }
             }
         },
+        "/namespaces/{namespaceId}/graph/canvas": {
+            "get": {
+                "description": "One page of canvas nodes and edges, optionally filtered.\n\nUnlike the vertex lookup, this does not start from a single IRI: it scans\nthe namespace's named graphs in backend index order and shapes the triples\ninto drawable nodes and edges. Paging is offset-based; pass the previous\npage's ``nextOffset`` back to continue. ``truncated`` says whether another\npage exists, so the UI can stop without guessing.",
+                "operationId": "GetCanvasSubgraph",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetCanvasSubgraph_example1": {
+                                "summary": "List the first page of every kind",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            },
+                            "GetCanvasSubgraph_example2": {
+                                "summary": "Filter one named graph to classes only",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "kinds",
+                        "in": "query",
+                        "description": "Comma-separated node kinds to keep: ``class``,\n``object-property``, ``datatype-property``. Omit for every kind.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 120,
+                            "description": "Comma-separated node kinds to keep: ``class``,\n``object-property``, ``datatype-property``. Omit for every kind."
+                        },
+                        "examples": {
+                            "GetCanvasSubgraph_example2": {
+                                "summary": "Filter one named graph to classes only",
+                                "description": "",
+                                "value": "class"
+                            }
+                        }
+                    },
+                    {
+                        "name": "graph",
+                        "in": "query",
+                        "description": "Only read triples from this named graph (an IRI inside the\nnamespace). Omit to read every graph in the namespace.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "description": "Only read triples from this named graph (an IRI inside the\nnamespace). Omit to read every graph in the namespace."
+                        },
+                        "examples": {
+                            "GetCanvasSubgraph_example2": {
+                                "summary": "Filter one named graph to classes only",
+                                "description": "",
+                                "value": "http://coa.amazon.com/onto/sales-crm"
+                            }
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Page size. The manifest's ``maxPageSize`` is the ceiling.",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "description": "Page size. The manifest's ``maxPageSize`` is the ceiling."
+                        },
+                        "examples": {
+                            "GetCanvasSubgraph_example1": {
+                                "summary": "List the first page of every kind",
+                                "description": "",
+                                "value": 2
+                            },
+                            "GetCanvasSubgraph_example2": {
+                                "summary": "Filter one named graph to classes only",
+                                "description": "",
+                                "value": 50
+                            }
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "description": "Backend index offset. Pass the previous page's ``nextOffset``.",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 1000000,
+                            "minimum": 0,
+                            "description": "Backend index offset. Pass the previous page's ``nextOffset``."
+                        },
+                        "examples": {
+                            "GetCanvasSubgraph_example1": {
+                                "summary": "List the first page of every kind",
+                                "description": "",
+                                "value": 0
+                            },
+                            "GetCanvasSubgraph_example2": {
+                                "summary": "Filter one named graph to classes only",
+                                "description": "",
+                                "value": 0
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetCanvasSubgraph 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetCanvasSubgraphResponseContent"
+                                },
+                                "examples": {
+                                    "GetCanvasSubgraph_example1": {
+                                        "summary": "List the first page of every kind",
+                                        "description": "",
+                                        "value": {
+                                            "nodes": [
+                                                {
+                                                    "uri": "http://example.com/onto#Customer",
+                                                    "label": "Customer",
+                                                    "kind": "class"
+                                                },
+                                                {
+                                                    "uri": "http://example.com/onto#Place",
+                                                    "label": "Place",
+                                                    "kind": "class"
+                                                }
+                                            ],
+                                            "edges": [
+                                                {
+                                                    "source": "http://example.com/onto#Customer",
+                                                    "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                                                    "predicateLabel": "subClassOf",
+                                                    "target": "http://example.com/onto#Place",
+                                                    "graph": "http://coa.amazon.com/onto/sales-crm",
+                                                    "direction": "outgoing"
+                                                }
+                                            ],
+                                            "truncated": true,
+                                            "nodeCount": 2,
+                                            "edgeCount": 1,
+                                            "nextOffset": 2
+                                        }
+                                    },
+                                    "GetCanvasSubgraph_example2": {
+                                        "summary": "Filter one named graph to classes only",
+                                        "description": "",
+                                        "value": {
+                                            "nodes": [
+                                                {
+                                                    "uri": "http://example.com/onto#Customer",
+                                                    "label": "Customer",
+                                                    "kind": "class"
+                                                }
+                                            ],
+                                            "edges": [],
+                                            "truncated": false,
+                                            "nodeCount": 1,
+                                            "edgeCount": 0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphCanvas",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetCanvasSubgraph_example1": {
+                                "summary": "List the first page of every kind",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            },
+                            "GetCanvasSubgraph_example2": {
+                                "summary": "Filter one named graph to classes only",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
         "/namespaces/{namespaceId}/graph/canvas/manifest": {
             "get": {
                 "description": "Discover what the canvas can render, and its hard limits.\n\nThe canvas reads this before requesting a subgraph so it can disable the\ncontrols the backend cannot honour and label a capped result honestly,\ninstead of guessing the limits on the client.",
@@ -6570,6 +6905,308 @@
                         "examples": {
                             "GetOntologyOverview_example1": {
                                 "summary": "Enumerate the classes and properties in an ontology's graph",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/graph/path": {
+            "get": {
+                "description": "Find simple paths between two IRIs, up to a bounded hop count.\n\nRead-only: the graph is never written. ``maxHops`` and ``limit`` are\nclamped by the backend's published canvas limits; when the enumeration\nhits the cap, ``truncated`` says so rather than silently returning a\npartial answer as if it were complete.",
+                "operationId": "FindGraphPath",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "FindGraphPath_example1": {
+                                "summary": "Find paths from a customer to a place",
+                                "description": "",
+                                "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+                            }
+                        }
+                    },
+                    {
+                        "name": "start",
+                        "in": "query",
+                        "description": "IRI to start from.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "description": "IRI to start from."
+                        },
+                        "required": true,
+                        "examples": {
+                            "FindGraphPath_example1": {
+                                "summary": "Find paths from a customer to a place",
+                                "description": "",
+                                "value": "http://example.com/onto#Customer"
+                            }
+                        }
+                    },
+                    {
+                        "name": "end",
+                        "in": "query",
+                        "description": "IRI to reach.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 2048,
+                            "description": "IRI to reach."
+                        },
+                        "required": true,
+                        "examples": {
+                            "FindGraphPath_example1": {
+                                "summary": "Find paths from a customer to a place",
+                                "description": "",
+                                "value": "http://example.com/onto#Place"
+                            }
+                        }
+                    },
+                    {
+                        "name": "max_hops",
+                        "in": "query",
+                        "description": "Maximum edges in a path (1\u20136).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 6,
+                            "minimum": 1,
+                            "description": "Maximum edges in a path (1\u20136)."
+                        },
+                        "examples": {
+                            "FindGraphPath_example1": {
+                                "summary": "Find paths from a customer to a place",
+                                "description": "",
+                                "value": 3
+                            }
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Maximum number of paths returned (1\u201320).",
+                        "schema": {
+                            "type": "number",
+                            "maximum": 20,
+                            "minimum": 1,
+                            "description": "Maximum number of paths returned (1\u201320)."
+                        },
+                        "examples": {
+                            "FindGraphPath_example1": {
+                                "summary": "Find paths from a customer to a place",
+                                "description": "",
+                                "value": 5
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "FindGraphPath 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FindGraphPathResponseContent"
+                                },
+                                "examples": {
+                                    "FindGraphPath_example1": {
+                                        "summary": "Find paths from a customer to a place",
+                                        "description": "",
+                                        "value": {
+                                            "paths": [
+                                                {
+                                                    "nodes": [
+                                                        {
+                                                            "uri": "http://example.com/onto#Customer",
+                                                            "label": "Customer",
+                                                            "kind": "class"
+                                                        },
+                                                        {
+                                                            "uri": "http://example.com/onto#Place",
+                                                            "label": "Place",
+                                                            "kind": "class"
+                                                        }
+                                                    ],
+                                                    "edges": [
+                                                        {
+                                                            "source": "http://example.com/onto#Customer",
+                                                            "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                                                            "predicateLabel": "subClassOf",
+                                                            "target": "http://example.com/onto#Place",
+                                                            "graph": "http://coa.amazon.com/onto/sales-crm",
+                                                            "direction": "outgoing"
+                                                        }
+                                                    ],
+                                                    "hops": 1
+                                                }
+                                            ],
+                                            "truncated": false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidGraphPath",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "UUID v4 identifier.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "UUID v4 identifier."
+                        },
+                        "required": true,
+                        "examples": {
+                            "FindGraphPath_example1": {
+                                "summary": "Find paths from a customer to a place",
                                 "description": "",
                                 "value": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
                             }
@@ -25093,6 +25730,41 @@
                     "status"
                 ]
             },
+            "CanvasEdge": {
+                "type": "object",
+                "description": "A drawable edge. ``direction`` is ``outgoing`` for canvas pages and may be\n``incoming`` on a path, where an edge is traversed against its assertion.",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "Subject IRI."
+                    },
+                    "predicate": {
+                        "type": "string",
+                        "description": "Predicate IRI."
+                    },
+                    "predicateLabel": {
+                        "type": "string",
+                        "description": "Local name of the predicate, for display."
+                    },
+                    "target": {
+                        "type": "string",
+                        "description": "Object IRI."
+                    },
+                    "graph": {
+                        "type": "string",
+                        "description": "Named graph the triple lives in."
+                    },
+                    "direction": {
+                        "type": "string",
+                        "description": "``outgoing`` or ``incoming``."
+                    }
+                },
+                "required": [
+                    "predicate",
+                    "source",
+                    "target"
+                ]
+            },
             "CanvasLimits": {
                 "type": "object",
                 "description": "Hard ceilings the canvas subgraph endpoint enforces. Published so the UI\nstops paging at the boundary instead of learning it from a 400.",
@@ -25114,6 +25786,27 @@
                     "maxEdges",
                     "maxNodes",
                     "maxPageSize"
+                ]
+            },
+            "CanvasNode": {
+                "type": "object",
+                "description": "A drawable node: an IRI with an optional label and coarse kind.",
+                "properties": {
+                    "uri": {
+                        "type": "string",
+                        "description": "Full IRI of the node."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "``rdfs:label`` when one appears in the scanned page."
+                    },
+                    "kind": {
+                        "type": "string",
+                        "description": "``class``, ``object-property``, ``datatype-property``, or ``resource``\nwhen the page's ``rdf:type`` triple does not name one of those."
+                    }
+                },
+                "required": [
+                    "uri"
                 ]
             },
             "ColumnDenylist": {
@@ -26390,6 +27083,26 @@
                     "result"
                 ]
             },
+            "FindGraphPathResponseContent": {
+                "type": "object",
+                "properties": {
+                    "paths": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/GraphPath"
+                        },
+                        "description": "Shortest paths first; each carries the nodes and edges to draw it."
+                    },
+                    "truncated": {
+                        "type": "boolean",
+                        "description": "True when more paths exist than ``limit`` (or the search cap hit)."
+                    }
+                },
+                "required": [
+                    "paths",
+                    "truncated"
+                ]
+            },
             "ForeignKeyInput": {
                 "type": "object",
                 "description": "Steward-supplied foreign key relationship. Stored with\nsource = STEWARD_SPECIFIED.",
@@ -26527,6 +27240,48 @@
                 "required": [
                     "capabilities",
                     "limits"
+                ]
+            },
+            "GetCanvasSubgraphResponseContent": {
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CanvasNode"
+                        },
+                        "description": "Nodes touched by this page's triples."
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CanvasEdge"
+                        },
+                        "description": "Edges whose object is an IRI (literals are kept as node labels,\nnever drawn as edges)."
+                    },
+                    "truncated": {
+                        "type": "boolean",
+                        "description": "True when another page exists beyond this window."
+                    },
+                    "nodeCount": {
+                        "type": "number",
+                        "description": "Number of nodes in this page (not the whole graph)."
+                    },
+                    "edgeCount": {
+                        "type": "number",
+                        "description": "Number of edges in this page (not the whole graph)."
+                    },
+                    "nextOffset": {
+                        "type": "number",
+                        "description": "Offset of the next page; present only when ``truncated`` is true."
+                    }
+                },
+                "required": [
+                    "edgeCount",
+                    "edges",
+                    "nodeCount",
+                    "nodes",
+                    "truncated"
                 ]
             },
             "GetEntityEmbeddingsResponseContent": {
@@ -27671,6 +28426,35 @@
                 "required": [
                     "kind",
                     "uri"
+                ]
+            },
+            "GraphPath": {
+                "type": "object",
+                "description": "One simple path: no node repeats, ``hops == edges.size()``.",
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CanvasNode"
+                        },
+                        "description": "Nodes visited by the path, in traversal order."
+                    },
+                    "edges": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CanvasEdge"
+                        },
+                        "description": "Edges followed, one per hop; direction records assertion vs traversal."
+                    },
+                    "hops": {
+                        "type": "number",
+                        "description": "Number of edges in the path."
+                    }
+                },
+                "required": [
+                    "edges",
+                    "hops",
+                    "nodes"
                 ]
             },
             "GraphSearchHit": {

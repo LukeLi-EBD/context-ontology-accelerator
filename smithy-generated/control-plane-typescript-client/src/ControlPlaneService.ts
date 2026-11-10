@@ -99,10 +99,20 @@ import {
   FetchOntologyCommand,
 } from "./commands/FetchOntologyCommand";
 import {
+  type FindGraphPathCommandInput,
+  type FindGraphPathCommandOutput,
+  FindGraphPathCommand,
+} from "./commands/FindGraphPathCommand";
+import {
   type GetCanvasManifestCommandInput,
   type GetCanvasManifestCommandOutput,
   GetCanvasManifestCommand,
 } from "./commands/GetCanvasManifestCommand";
+import {
+  type GetCanvasSubgraphCommandInput,
+  type GetCanvasSubgraphCommandOutput,
+  GetCanvasSubgraphCommand,
+} from "./commands/GetCanvasSubgraphCommand";
 import {
   type GetEntityEmbeddingsCommandInput,
   type GetEntityEmbeddingsCommandOutput,
@@ -506,7 +516,9 @@ const commands = {
   DeleteOntologyCommand,
   DownloadOntologyCommand,
   FetchOntologyCommand,
+  FindGraphPathCommand,
   GetCanvasManifestCommand,
+  GetCanvasSubgraphCommand,
   GetGraphClassCommand,
   GetGraphDatatypePropertyCommand,
   GetGraphObjectPropertyCommand,
@@ -1216,6 +1228,23 @@ export interface ControlPlaneService {
   ): void;
 
   /**
+   * @see {@link FindGraphPathCommand}
+   */
+  findGraphPath(
+    args: FindGraphPathCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<FindGraphPathCommandOutput>;
+  findGraphPath(
+    args: FindGraphPathCommandInput,
+    cb: (err: any, data?: FindGraphPathCommandOutput) => void
+  ): void;
+  findGraphPath(
+    args: FindGraphPathCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: FindGraphPathCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link GetCanvasManifestCommand}
    */
   getCanvasManifest(
@@ -1230,6 +1259,23 @@ export interface ControlPlaneService {
     args: GetCanvasManifestCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: GetCanvasManifestCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetCanvasSubgraphCommand}
+   */
+  getCanvasSubgraph(
+    args: GetCanvasSubgraphCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetCanvasSubgraphCommandOutput>;
+  getCanvasSubgraph(
+    args: GetCanvasSubgraphCommandInput,
+    cb: (err: any, data?: GetCanvasSubgraphCommandOutput) => void
+  ): void;
+  getCanvasSubgraph(
+    args: GetCanvasSubgraphCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetCanvasSubgraphCommandOutput) => void
   ): void;
 
   /**

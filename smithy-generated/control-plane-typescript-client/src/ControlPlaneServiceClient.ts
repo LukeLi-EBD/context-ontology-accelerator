@@ -97,10 +97,15 @@ import type { DeleteSourceCommandInput, DeleteSourceCommandOutput } from "./comm
 import type { DownloadOntologyCommandInput, DownloadOntologyCommandOutput } from "./commands/DownloadOntologyCommand";
 import type { ExportOsiCommandInput, ExportOsiCommandOutput } from "./commands/ExportOsiCommand";
 import type { FetchOntologyCommandInput, FetchOntologyCommandOutput } from "./commands/FetchOntologyCommand";
+import type { FindGraphPathCommandInput, FindGraphPathCommandOutput } from "./commands/FindGraphPathCommand";
 import type {
   GetCanvasManifestCommandInput,
   GetCanvasManifestCommandOutput,
 } from "./commands/GetCanvasManifestCommand";
+import type {
+  GetCanvasSubgraphCommandInput,
+  GetCanvasSubgraphCommandOutput,
+} from "./commands/GetCanvasSubgraphCommand";
 import type {
   GetEntityEmbeddingsCommandInput,
   GetEntityEmbeddingsCommandOutput,
@@ -310,7 +315,9 @@ export type ServiceInputTypes =
   | DownloadOntologyCommandInput
   | ExportOsiCommandInput
   | FetchOntologyCommandInput
+  | FindGraphPathCommandInput
   | GetCanvasManifestCommandInput
+  | GetCanvasSubgraphCommandInput
   | GetEntityEmbeddingsCommandInput
   | GetGraphClassCommandInput
   | GetGraphDatatypePropertyCommandInput
@@ -408,7 +415,9 @@ export type ServiceOutputTypes =
   | DownloadOntologyCommandOutput
   | ExportOsiCommandOutput
   | FetchOntologyCommandOutput
+  | FindGraphPathCommandOutput
   | GetCanvasManifestCommandOutput
+  | GetCanvasSubgraphCommandOutput
   | GetEntityEmbeddingsCommandOutput
   | GetGraphClassCommandOutput
   | GetGraphDatatypePropertyCommandOutput

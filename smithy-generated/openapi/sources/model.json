@@ -217,7 +217,13 @@
                     "target": "com.amazon.semanticcontext.ontologygraph#FetchOntology"
                 },
                 {
+                    "target": "com.amazon.semanticcontext.ontologygraph#FindGraphPath"
+                },
+                {
                     "target": "com.amazon.semanticcontext.ontologygraph#GetCanvasManifest"
+                },
+                {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraph"
                 },
                 {
                     "target": "com.amazon.semanticcontext.ontologygraph#GetGraphClass"
@@ -7509,6 +7515,59 @@
                 "target": "smithy.api#String"
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#CanvasEdge": {
+            "type": "structure",
+            "members": {
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Subject IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "predicate": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Predicate IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "predicateLabel": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Local name of the predicate, for display."
+                    }
+                },
+                "target": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Object IRI.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "graph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Named graph the triple lives in."
+                    }
+                },
+                "direction": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "``outgoing`` or ``incoming``."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A drawable edge. ``direction`` is ``outgoing`` for canvas pages and may be\n``incoming`` on a path, where an edge is traversed against its assertion."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#CanvasEdgeList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologygraph#CanvasEdge"
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#CanvasLimits": {
             "type": "structure",
             "members": {
@@ -7536,6 +7595,39 @@
             },
             "traits": {
                 "smithy.api#documentation": "Hard ceilings the canvas subgraph endpoint enforces. Published so the UI\nstops paging at the boundary instead of learning it from a 400."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#CanvasNode": {
+            "type": "structure",
+            "members": {
+                "uri": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Full IRI of the node.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "``rdfs:label`` when one appears in the scanned page."
+                    }
+                },
+                "kind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "``class``, ``object-property``, ``datatype-property``, or ``resource``\nwhen the page's ``rdf:type`` triple does not name one of those."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "A drawable node: an IRI with an optional label and coarse kind."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#CanvasNodeList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologygraph#CanvasNode"
             }
         },
         "com.amazon.semanticcontext.ontologygraph#DeleteOntology": {
@@ -7747,6 +7839,147 @@
                 "smithy.api#output": {}
             }
         },
+        "com.amazon.semanticcontext.ontologygraph#FindGraphPath": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#FindGraphPathInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#FindGraphPathOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "Find simple paths between two IRIs, up to a bounded hop count.\n\nRead-only: the graph is never written. ``maxHops`` and ``limit`` are\nclamped by the backend's published canvas limits; when the enumeration\nhits the cap, ``truncated`` says so rather than silently returning a\npartial answer as if it were complete.",
+                "smithy.api#examples": [
+                    {
+                        "title": "Find paths from a customer to a place",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "start": "http://example.com/onto#Customer",
+                            "end": "http://example.com/onto#Place",
+                            "maxHops": 3,
+                            "limit": 5
+                        },
+                        "output": {
+                            "paths": [
+                                {
+                                    "nodes": [
+                                        {
+                                            "uri": "http://example.com/onto#Customer",
+                                            "label": "Customer",
+                                            "kind": "class"
+                                        },
+                                        {
+                                            "uri": "http://example.com/onto#Place",
+                                            "label": "Place",
+                                            "kind": "class"
+                                        }
+                                    ],
+                                    "edges": [
+                                        {
+                                            "source": "http://example.com/onto#Customer",
+                                            "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                                            "predicateLabel": "subClassOf",
+                                            "target": "http://example.com/onto#Place",
+                                            "graph": "http://coa.amazon.com/onto/sales-crm",
+                                            "direction": "outgoing"
+                                        }
+                                    ],
+                                    "hops": 1
+                                }
+                            ],
+                            "truncated": false
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/graph/path",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#FindGraphPathInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "start": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "IRI to start from.",
+                        "smithy.api#httpQuery": "start",
+                        "smithy.api#length": {
+                            "max": 2048
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "end": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "IRI to reach.",
+                        "smithy.api#httpQuery": "end",
+                        "smithy.api#length": {
+                            "max": 2048
+                        },
+                        "smithy.api#required": {}
+                    }
+                },
+                "maxHops": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum edges in a path (1–6).",
+                        "smithy.api#httpQuery": "max_hops",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 6
+                        }
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Maximum number of paths returned (1–20).",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 20
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#FindGraphPathOutput": {
+            "type": "structure",
+            "members": {
+                "paths": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#GraphPathList",
+                    "traits": {
+                        "smithy.api#documentation": "Shortest paths first; each carries the nodes and edges to draw it.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "truncated": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when more paths exist than ``limit`` (or the search cap hit).",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
         "com.amazon.semanticcontext.ontologygraph#GetCanvasManifest": {
             "type": "operation",
             "input": {
@@ -7815,6 +8048,191 @@
                     "traits": {
                         "smithy.api#documentation": "Hard limits enforced by the backend.",
                         "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraph": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraphInput"
+            },
+            "output": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraphOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "One page of canvas nodes and edges, optionally filtered.\n\nUnlike the vertex lookup, this does not start from a single IRI: it scans\nthe namespace's named graphs in backend index order and shapes the triples\ninto drawable nodes and edges. Paging is offset-based; pass the previous\npage's ``nextOffset`` back to continue. ``truncated`` says whether another\npage exists, so the UI can stop without guessing.",
+                "smithy.api#examples": [
+                    {
+                        "title": "List the first page of every kind",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "limit": 2,
+                            "offset": 0
+                        },
+                        "output": {
+                            "nodes": [
+                                {
+                                    "uri": "http://example.com/onto#Customer",
+                                    "label": "Customer",
+                                    "kind": "class"
+                                },
+                                {
+                                    "uri": "http://example.com/onto#Place",
+                                    "label": "Place",
+                                    "kind": "class"
+                                }
+                            ],
+                            "edges": [
+                                {
+                                    "source": "http://example.com/onto#Customer",
+                                    "predicate": "http://www.w3.org/2000/01/rdf-schema#subClassOf",
+                                    "predicateLabel": "subClassOf",
+                                    "target": "http://example.com/onto#Place",
+                                    "graph": "http://coa.amazon.com/onto/sales-crm",
+                                    "direction": "outgoing"
+                                }
+                            ],
+                            "truncated": true,
+                            "nodeCount": 2,
+                            "edgeCount": 1,
+                            "nextOffset": 2
+                        }
+                    },
+                    {
+                        "title": "Filter one named graph to classes only",
+                        "input": {
+                            "namespaceId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+                            "kinds": "class",
+                            "graph": "http://coa.amazon.com/onto/sales-crm",
+                            "limit": 50,
+                            "offset": 0
+                        },
+                        "output": {
+                            "nodes": [
+                                {
+                                    "uri": "http://example.com/onto#Customer",
+                                    "label": "Customer",
+                                    "kind": "class"
+                                }
+                            ],
+                            "edges": [],
+                            "truncated": false,
+                            "nodeCount": 1,
+                            "edgeCount": 0
+                        }
+                    }
+                ],
+                "smithy.api#http": {
+                    "method": "GET",
+                    "uri": "/namespaces/{namespaceId}/graph/canvas",
+                    "code": 200
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraphInput": {
+            "type": "structure",
+            "members": {
+                "namespaceId": {
+                    "target": "com.amazon.semanticcontext.common#Uuid",
+                    "traits": {
+                        "smithy.api#httpLabel": {},
+                        "smithy.api#required": {}
+                    }
+                },
+                "kinds": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Comma-separated node kinds to keep: ``class``,\n``object-property``, ``datatype-property``. Omit for every kind.",
+                        "smithy.api#httpQuery": "kinds",
+                        "smithy.api#length": {
+                            "max": 120
+                        }
+                    }
+                },
+                "graph": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Only read triples from this named graph (an IRI inside the\nnamespace). Omit to read every graph in the namespace.",
+                        "smithy.api#httpQuery": "graph",
+                        "smithy.api#length": {
+                            "max": 2048
+                        }
+                    }
+                },
+                "limit": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Page size. The manifest's ``maxPageSize`` is the ceiling.",
+                        "smithy.api#httpQuery": "limit",
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 100
+                        }
+                    }
+                },
+                "offset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Backend index offset. Pass the previous page's ``nextOffset``.",
+                        "smithy.api#httpQuery": "offset",
+                        "smithy.api#range": {
+                            "min": 0,
+                            "max": 1000000
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraphOutput": {
+            "type": "structure",
+            "members": {
+                "nodes": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#CanvasNodeList",
+                    "traits": {
+                        "smithy.api#documentation": "Nodes touched by this page's triples.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "edges": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#CanvasEdgeList",
+                    "traits": {
+                        "smithy.api#documentation": "Edges whose object is an IRI (literals are kept as node labels,\nnever drawn as edges).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "truncated": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when another page exists beyond this window.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "nodeCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of nodes in this page (not the whole graph).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "edgeCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of edges in this page (not the whole graph).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "nextOffset": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Offset of the next page; present only when ``truncated`` is true."
                     }
                 }
             },
@@ -8538,6 +8956,41 @@
             },
             "traits": {
                 "smithy.api#documentation": "A neighboring vertex reached by traversing an edge, identified by its IRI,\nlabel, and kind."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GraphPath": {
+            "type": "structure",
+            "members": {
+                "nodes": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#CanvasNodeList",
+                    "traits": {
+                        "smithy.api#documentation": "Nodes visited by the path, in traversal order.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "edges": {
+                    "target": "com.amazon.semanticcontext.ontologygraph#CanvasEdgeList",
+                    "traits": {
+                        "smithy.api#documentation": "Edges followed, one per hop; direction records assertion vs traversal.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "hops": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of edges in the path.",
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One simple path: no node repeats, ``hops == edges.size()``."
+            }
+        },
+        "com.amazon.semanticcontext.ontologygraph#GraphPathList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.ontologygraph#GraphPath"
             }
         },
         "com.amazon.semanticcontext.ontologygraph#GraphSearch": {

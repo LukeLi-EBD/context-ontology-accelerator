@@ -46,7 +46,9 @@ use com.amazon.semanticcontext.namespace#UpdateNamespaceStatus
 use com.amazon.semanticcontext.ontologygraph#DeleteOntology
 use com.amazon.semanticcontext.ontologygraph#DownloadOntology
 use com.amazon.semanticcontext.ontologygraph#FetchOntology
+use com.amazon.semanticcontext.ontologygraph#FindGraphPath
 use com.amazon.semanticcontext.ontologygraph#GetCanvasManifest
+use com.amazon.semanticcontext.ontologygraph#GetCanvasSubgraph
 use com.amazon.semanticcontext.ontologygraph#GetGraphClass
 use com.amazon.semanticcontext.ontologygraph#GetGraphDatatypeProperty
 use com.amazon.semanticcontext.ontologygraph#GetGraphObjectProperty
@@ -236,6 +238,8 @@ service ControlPlaneService {
         GraphSearch
         ListStatements
         GetCanvasManifest
+        GetCanvasSubgraph
+        FindGraphPath
         GetGraphClass
         GetGraphObjectProperty
         GetGraphDatatypeProperty

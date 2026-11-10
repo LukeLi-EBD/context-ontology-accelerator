@@ -2544,6 +2544,150 @@ export interface FetchOntologyOutput {
 /**
  * @public
  */
+export interface FindGraphPathInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * IRI to start from.
+   * @public
+   */
+  start: string | undefined;
+
+  /**
+   * IRI to reach.
+   * @public
+   */
+  end: string | undefined;
+
+  /**
+   * Maximum edges in a path (1–6).
+   * @public
+   */
+  maxHops?: number | undefined;
+
+  /**
+   * Maximum number of paths returned (1–20).
+   * @public
+   */
+  limit?: number | undefined;
+}
+
+/**
+ * A drawable edge. ``direction`` is ``outgoing`` for canvas pages and may be
+ * ``incoming`` on a path, where an edge is traversed against its assertion.
+ * @public
+ */
+export interface CanvasEdge {
+  /**
+   * Subject IRI.
+   * @public
+   */
+  source: string | undefined;
+
+  /**
+   * Predicate IRI.
+   * @public
+   */
+  predicate: string | undefined;
+
+  /**
+   * Local name of the predicate, for display.
+   * @public
+   */
+  predicateLabel?: string | undefined;
+
+  /**
+   * Object IRI.
+   * @public
+   */
+  target: string | undefined;
+
+  /**
+   * Named graph the triple lives in.
+   * @public
+   */
+  graph?: string | undefined;
+
+  /**
+   * ``outgoing`` or ``incoming``.
+   * @public
+   */
+  direction?: string | undefined;
+}
+
+/**
+ * A drawable node: an IRI with an optional label and coarse kind.
+ * @public
+ */
+export interface CanvasNode {
+  /**
+   * Full IRI of the node.
+   * @public
+   */
+  uri: string | undefined;
+
+  /**
+   * ``rdfs:label`` when one appears in the scanned page.
+   * @public
+   */
+  label?: string | undefined;
+
+  /**
+   * ``class``, ``object-property``, ``datatype-property``, or ``resource``
+   * when the page's ``rdf:type`` triple does not name one of those.
+   * @public
+   */
+  kind?: string | undefined;
+}
+
+/**
+ * One simple path: no node repeats, ``hops == edges.size()``.
+ * @public
+ */
+export interface GraphPath {
+  /**
+   * Nodes visited by the path, in traversal order.
+   * @public
+   */
+  nodes: CanvasNode[] | undefined;
+
+  /**
+   * Edges followed, one per hop; direction records assertion vs traversal.
+   * @public
+   */
+  edges: CanvasEdge[] | undefined;
+
+  /**
+   * Number of edges in the path.
+   * @public
+   */
+  hops: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface FindGraphPathOutput {
+  /**
+   * Shortest paths first; each carries the nodes and edges to draw it.
+   * @public
+   */
+  paths: GraphPath[] | undefined;
+
+  /**
+   * True when more paths exist than ``limit`` (or the search cap hit).
+   * @public
+   */
+  truncated: boolean | undefined;
+}
+
+/**
+ * @public
+ */
 export interface GetCanvasManifestInput {
   /**
    * UUID v4 identifier.
@@ -2595,6 +2739,85 @@ export interface GetCanvasManifestOutput {
    * @public
    */
   limits: CanvasLimits | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetCanvasSubgraphInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Comma-separated node kinds to keep: ``class``,
+   * ``object-property``, ``datatype-property``. Omit for every kind.
+   * @public
+   */
+  kinds?: string | undefined;
+
+  /**
+   * Only read triples from this named graph (an IRI inside the
+   * namespace). Omit to read every graph in the namespace.
+   * @public
+   */
+  graph?: string | undefined;
+
+  /**
+   * Page size. The manifest's ``maxPageSize`` is the ceiling.
+   * @public
+   */
+  limit?: number | undefined;
+
+  /**
+   * Backend index offset. Pass the previous page's ``nextOffset``.
+   * @public
+   */
+  offset?: number | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetCanvasSubgraphOutput {
+  /**
+   * Nodes touched by this page's triples.
+   * @public
+   */
+  nodes: CanvasNode[] | undefined;
+
+  /**
+   * Edges whose object is an IRI (literals are kept as node labels,
+   * never drawn as edges).
+   * @public
+   */
+  edges: CanvasEdge[] | undefined;
+
+  /**
+   * True when another page exists beyond this window.
+   * @public
+   */
+  truncated: boolean | undefined;
+
+  /**
+   * Number of nodes in this page (not the whole graph).
+   * @public
+   */
+  nodeCount: number | undefined;
+
+  /**
+   * Number of edges in this page (not the whole graph).
+   * @public
+   */
+  edgeCount: number | undefined;
+
+  /**
+   * Offset of the next page; present only when ``truncated`` is true.
+   * @public
+   */
+  nextOffset?: number | undefined;
 }
 
 /**

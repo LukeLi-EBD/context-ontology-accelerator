@@ -276,3 +276,92 @@ apply GetCanvasManifest @examples([
         }
     }
 ])
+
+apply GetCanvasSubgraph @examples([
+    {
+        title: "List the first page of every kind"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", limit: 2, offset: 0 }
+        output: {
+            nodes: [
+                {
+                    uri: "http://example.com/onto#Customer"
+                    label: "Customer"
+                    kind: "class"
+                }
+                {
+                    uri: "http://example.com/onto#Place"
+                    label: "Place"
+                    kind: "class"
+                }
+            ]
+            edges: [
+                {
+                    source: "http://example.com/onto#Customer"
+                    predicate: "http://www.w3.org/2000/01/rdf-schema#subClassOf"
+                    predicateLabel: "subClassOf"
+                    target: "http://example.com/onto#Place"
+                    graph: "http://coa.amazon.com/onto/sales-crm"
+                    direction: "outgoing"
+                }
+            ]
+            truncated: true
+            nodeCount: 2
+            edgeCount: 1
+            nextOffset: 2
+        }
+    }
+    {
+        title: "Filter one named graph to classes only"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", kinds: "class", graph: "http://coa.amazon.com/onto/sales-crm", limit: 50, offset: 0 }
+        output: {
+            nodes: [
+                {
+                    uri: "http://example.com/onto#Customer"
+                    label: "Customer"
+                    kind: "class"
+                }
+            ]
+            edges: []
+            truncated: false
+            nodeCount: 1
+            edgeCount: 0
+        }
+    }
+])
+
+apply FindGraphPath @examples([
+    {
+        title: "Find paths from a customer to a place"
+        input: { namespaceId: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", start: "http://example.com/onto#Customer", end: "http://example.com/onto#Place", maxHops: 3, limit: 5 }
+        output: {
+            paths: [
+                {
+                    nodes: [
+                        {
+                            uri: "http://example.com/onto#Customer"
+                            label: "Customer"
+                            kind: "class"
+                        }
+                        {
+                            uri: "http://example.com/onto#Place"
+                            label: "Place"
+                            kind: "class"
+                        }
+                    ]
+                    edges: [
+                        {
+                            source: "http://example.com/onto#Customer"
+                            predicate: "http://www.w3.org/2000/01/rdf-schema#subClassOf"
+                            predicateLabel: "subClassOf"
+                            target: "http://example.com/onto#Place"
+                            graph: "http://coa.amazon.com/onto/sales-crm"
+                            direction: "outgoing"
+                        }
+                    ]
+                    hops: 1
+                }
+            ]
+            truncated: false
+        }
+    }
+])

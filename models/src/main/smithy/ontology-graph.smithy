@@ -864,6 +864,185 @@ structure CanvasLimits {
     maxPageSize: Integer
 }
 
+/// One page of canvas nodes and edges, optionally filtered.
+///
+/// Unlike the vertex lookup, this does not start from a single IRI: it scans
+/// the namespace's named graphs in backend index order and shapes the triples
+/// into drawable nodes and edges. Paging is offset-based; pass the previous
+/// page's ``nextOffset`` back to continue. ``truncated`` says whether another
+/// page exists, so the UI can stop without guessing.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/canvas", code: 200)
+operation GetCanvasSubgraph {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// Comma-separated node kinds to keep: ``class``,
+        /// ``object-property``, ``datatype-property``. Omit for every kind.
+        @httpQuery("kinds")
+        @length(max: 120)
+        kinds: String
+
+        /// Only read triples from this named graph (an IRI inside the
+        /// namespace). Omit to read every graph in the namespace.
+        @httpQuery("graph")
+        @length(max: 2048)
+        graph: String
+
+        /// Page size. The manifest's ``maxPageSize`` is the ceiling.
+        @httpQuery("limit")
+        @range(min: 1, max: 100)
+        limit: Integer
+
+        /// Backend index offset. Pass the previous page's ``nextOffset``.
+        @httpQuery("offset")
+        @range(min: 0, max: 1000000)
+        offset: Integer
+    }
+
+    output := {
+        /// Nodes touched by this page's triples.
+        @required
+        nodes: CanvasNodeList
+
+        /// Edges whose object is an IRI (literals are kept as node labels,
+        /// never drawn as edges).
+        @required
+        edges: CanvasEdgeList
+
+        /// True when another page exists beyond this window.
+        @required
+        truncated: Boolean
+
+        /// Number of nodes in this page (not the whole graph).
+        @required
+        nodeCount: Integer
+
+        /// Number of edges in this page (not the whole graph).
+        @required
+        edgeCount: Integer
+
+        /// Offset of the next page; present only when ``truncated`` is true.
+        nextOffset: Integer
+    }
+}
+
+/// A drawable node: an IRI with an optional label and coarse kind.
+structure CanvasNode {
+    /// Full IRI of the node.
+    @required
+    uri: String
+
+    /// ``rdfs:label`` when one appears in the scanned page.
+    label: String
+
+    /// ``class``, ``object-property``, ``datatype-property``, or ``resource``
+    /// when the page's ``rdf:type`` triple does not name one of those.
+    kind: String
+}
+
+list CanvasNodeList {
+    member: CanvasNode
+}
+
+/// A drawable edge. ``direction`` is ``outgoing`` for canvas pages and may be
+/// ``incoming`` on a path, where an edge is traversed against its assertion.
+structure CanvasEdge {
+    /// Subject IRI.
+    @required
+    source: String
+
+    /// Predicate IRI.
+    @required
+    predicate: String
+
+    /// Local name of the predicate, for display.
+    predicateLabel: String
+
+    /// Object IRI.
+    @required
+    target: String
+
+    /// Named graph the triple lives in.
+    graph: String
+
+    /// ``outgoing`` or ``incoming``.
+    direction: String
+}
+
+list CanvasEdgeList {
+    member: CanvasEdge
+}
+
+/// Find simple paths between two IRIs, up to a bounded hop count.
+///
+/// Read-only: the graph is never written. ``maxHops`` and ``limit`` are
+/// clamped by the backend's published canvas limits; when the enumeration
+/// hits the cap, ``truncated`` says so rather than silently returning a
+/// partial answer as if it were complete.
+@readonly
+@http(method: "GET", uri: "/namespaces/{namespaceId}/graph/path", code: 200)
+operation FindGraphPath {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// IRI to start from.
+        @required
+        @httpQuery("start")
+        @length(max: 2048)
+        start: String
+
+        /// IRI to reach.
+        @required
+        @httpQuery("end")
+        @length(max: 2048)
+        end: String
+
+        /// Maximum edges in a path (1–6).
+        @httpQuery("max_hops")
+        @range(min: 1, max: 6)
+        maxHops: Integer
+
+        /// Maximum number of paths returned (1–20).
+        @httpQuery("limit")
+        @range(min: 1, max: 20)
+        limit: Integer
+    }
+
+    output := {
+        /// Shortest paths first; each carries the nodes and edges to draw it.
+        @required
+        paths: GraphPathList
+
+        /// True when more paths exist than ``limit`` (or the search cap hit).
+        @required
+        truncated: Boolean
+    }
+}
+
+/// One simple path: no node repeats, ``hops == edges.size()``.
+structure GraphPath {
+    /// Nodes visited by the path, in traversal order.
+    @required
+    nodes: CanvasNodeList
+
+    /// Edges followed, one per hop; direction records assertion vs traversal.
+    @required
+    edges: CanvasEdgeList
+
+    /// Number of edges in the path.
+    @required
+    hops: Integer
+}
+
+list GraphPathList {
+    member: GraphPath
+}
+
 /// Look up a class vertex by IRI.
 ///
 /// The IRI is passed as a query parameter (``?uri=…``) rather than a
