@@ -20,7 +20,13 @@
   用例 2 是关键：先鉴权、后校验 id，未认证的调用方不能探测 id 合法性。
   用例 1/3/4 防止修复顺序时把别的分支改坏。
 
-  脚本退出码 0 表示四个用例全过；非 0 表示至少一条失败，并打印实际状态与 body。
+  跨命名空间用例（P0-14 第五条）：第二个 dev 用户只有 NS_A 的 namespace-owner
+  授权（直接写一条 ResourceRoleMappings 行，形状与 POST /grants 相同），验证：
+
+    5. 有 token（NS_A owner）+ NS_A  → 不是 401/403/503（授权放行，进入业务链）
+    6. 有 token（NS_A owner）+ NS_B  → 403 E_FORBIDDEN，action=manageSource
+
+  脚本退出码 0 表示全部用例过；非 0 表示至少一条失败，并打印实际状态与 body。
   默认结束时会停掉桥与容器；-KeepRunning 保留容器便于排查。
 
 .EXAMPLE
@@ -43,6 +49,7 @@ $Repo   = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $Tools  = Join-Path $Repo "doc\coa-x\tools"
 $Bridge = Join-Path $Tools "coa_api_local.py"
 $Bootstrap = Join-Path $Tools "local_bootstrap.py"
+$SeedScript = Join-Path $Tools "seed_namespace_grant.py"
 
 $Python = $null
 foreach ($candidate in @(
@@ -55,6 +62,7 @@ if (-not $Python) {
     throw "venv python not found; expected .venv-coa-local in the repo or in ..\..\coa"
 }
 if (-not (Test-Path $Bridge)) { throw "bridge not found: $Bridge" }
+if (-not (Test-Path $SeedScript)) { throw "seed helper not found: $SeedScript" }
 
 # Refuse to reuse an occupied port: this script must never talk to (or kill) a
 # shared 8099/8599 instance belonging to another parallel line.
@@ -117,11 +125,13 @@ $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 $env:COA_LOCAL_API_PORT = "$BridgePort"
 $env:COA_LOCAL_DEV_AUTH = "on"
-$env:COA_LOCAL_DEV_USERS = "local-dev@example.invalid"
+$env:COA_LOCAL_DEV_USERS = "local-dev@example.invalid,local-viewer@example.invalid"
 $env:COA_LOCAL_DEV_ADMIN_USER = "local-dev@example.invalid"
 $env:COA_LOCAL_AUTH_MODE = "enforce"
 $env:COA_CONTROL_PLANE_PG_DSN = $PlatformDsn
 $env:PLATFORM__DATABASE__URL = $ServeDsn
+$env:RESOURCE_ROLE_MAPPINGS_TABLE = "coa-local-resource-role-mappings"
+$env:AWS_REGION = "us-east-1"
 
 $outLog = Join-Path $env:TEMP "coa-authz-order-$BridgePort.out.log"
 $errLog = Join-Path $env:TEMP "coa-authz-order-$BridgePort.err.log"
@@ -147,17 +157,15 @@ if (-not $ready) {
     throw "bridge did not become healthy on $base"
 }
 
-function Invoke-Probe([string]$Name, [string]$Path, [string]$Token) {
+function Invoke-Probe([string]$Name, [string]$Path, [string]$Token, [string]$Method = "GET", [string]$Body = "") {
     $tmp = [IO.Path]::GetTempFileName()
-    if ($Token) {
-        $code = & curl.exe -s --max-time 15 -o $tmp -w "%{http_code}" `
-            -H "Authorization: Bearer $Token" "$base$Path"
-    } else {
-        $code = & curl.exe -s --max-time 15 -o $tmp -w "%{http_code}" "$base$Path"
-    }
-    $body = Get-Content -Raw $tmp
+    $arguments = @("-s", "--max-time", "15", "-o", $tmp, "-w", "%{http_code}", "-X", $Method)
+    if ($Token) { $arguments += @("-H", "Authorization: Bearer $Token") }
+    if ($Body) { $arguments += @("-H", "Content-Type: application/json", "-d", $Body) }
+    $code = & curl.exe @arguments "$base$Path"
+    $respBody = Get-Content -Raw $tmp
     Remove-Item $tmp -Force -ErrorAction SilentlyContinue
-    [pscustomobject]@{ Name = $Name; Status = [int]$code; Body = $body }
+    [pscustomobject]@{ Name = $Name; Status = [int]$code; Body = $respBody }
 }
 
 try {
@@ -169,11 +177,25 @@ try {
     $validUuid = "11111111-1111-4111-8111-111111111111"
     $invalidUuid = "not-a-uuid"
 
+    # Cross-namespace (P0-14): a second dev user holds namespace-owner on NS_A
+    # only. Seeded as a normal ResourceRoleMappings row (same shape as POST
+    # /grants); no namespace or role rows are created.
+    $otherUuid = "22222222-2222-4222-8222-222222222222"
+    $viewerResp = & curl.exe -s --max-time 10 -X POST "$base/local/auth/token" `
+        -H "Content-Type: application/json" -d '{\"email\":\"local-viewer@example.invalid\"}'
+    $viewerToken = ($viewerResp | ConvertFrom-Json).token
+    if (-not $viewerToken) { throw "viewer token mint failed: $viewerResp" }
+
+    & $Python $SeedScript $validUuid "local-viewer@example.invalid" "namespace-owner" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "seeding the NS_A namespace-owner grant failed" }
+
     $results = @(
-        (Invoke-Probe "1 no token + valid UUID"   "/namespaces/$validUuid/sources"   $null),
-        (Invoke-Probe "2 no token + invalid UUID" "/namespaces/$invalidUuid/sources" $null),
-        (Invoke-Probe "3 token + invalid UUID"    "/namespaces/$invalidUuid/sources" $token),
-        (Invoke-Probe "4 token + valid UUID"      "/namespaces/$validUuid/sources"   $token)
+        (Invoke-Probe "1 no token + valid UUID"    "/namespaces/$validUuid/sources"   $null),
+        (Invoke-Probe "2 no token + invalid UUID"  "/namespaces/$invalidUuid/sources" $null),
+        (Invoke-Probe "3 token + invalid UUID"     "/namespaces/$invalidUuid/sources" $token),
+        (Invoke-Probe "4 token + valid UUID"       "/namespaces/$validUuid/sources"   $token),
+        (Invoke-Probe "5 NS_A owner + own NS"      "/namespaces/$validUuid/sources"   $viewerToken "POST" '{\"name\":\"authz-smoke\"}'),
+        (Invoke-Probe "6 NS_A owner + other NS"    "/namespaces/$otherUuid/sources"   $viewerToken "POST" '{\"name\":\"authz-smoke\"}')
     )
 
     $failures = @()
@@ -190,6 +212,15 @@ try {
     if ($results[3].Status -in @(400, 401, 503)) {
         $failures += "case 4 expected the normal chain, got $($results[3].Status)"
     }
+    # Positive control: the same principal must pass authz inside its own namespace.
+    if ($results[4].Status -in @(401, 403, 503)) {
+        $failures += "case 5 expected authz to pass in the owner's namespace, got $($results[4].Status)"
+    }
+    # The cross-namespace case: only NS_A is granted, so NS_B must be denied by
+    # the policy, not by a UUID-format check (both ids are well-formed UUIDs).
+    if ($results[5].Status -ne 403 -or $results[5].Body -notmatch "E_FORBIDDEN" -or $results[5].Body -notmatch "manageSource") {
+        $failures += "case 6 expected 403 E_FORBIDDEN (manageSource) for a cross-namespace write, got $($results[5].Status)"
+    }
 
     Write-Host ""
     Write-Host "gate order: _match -> authz(401) -> namespaceId UUID(400) -> KERNEL/handler"
@@ -205,7 +236,7 @@ try {
         foreach ($f in $failures) { Write-Host "[FAIL] $f" -ForegroundColor Red }
         exit 1
     }
-    Write-Host "[PASS] 4/4 gate-order cases" -ForegroundColor Green
+    Write-Host "[PASS] $($results.Count)/$($results.Count) gate-order and cross-namespace cases" -ForegroundColor Green
     exit 0
 }
 finally {
