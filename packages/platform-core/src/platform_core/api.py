@@ -958,6 +958,25 @@ def _qa_answerable(
     return payload
 
 
+def _check_answerable_payload(result: dict[str, Any]) -> dict[str, Any]:
+    """Shape ``_qa_answerable`` for the CheckAnswerable contract.
+
+    The contract is explicit that a layer which cannot be computed carries no
+    coverage value. ``_qa_answerable`` keeps a numeric 0 next to the status so
+    ``/answerable`` stays wire-compatible; here the un-computable cases become
+    ``None`` (JSON null), which the UI renders as "unavailable", never as 0.
+    """
+    layers: list[dict[str, Any]] = []
+    for layer in result.get("layers") or []:
+        entry = dict(layer)
+        if str(entry.get("status") or "") in ("unavailable", "not_applicable"):
+            entry["coverage"] = None
+        layers.append(entry)
+    payload = dict(result)
+    payload["layers"] = layers
+    return payload
+
+
 def _qa_retrieve(
     runtime: Runtime, query: str, top_k: int, strategy: str
 ) -> dict[str, Any]:
@@ -2005,6 +2024,36 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             intent_hint=body.get("intent"),
             include_layers=bool(body.get("layers", True)),
         )
+
+    # ---- F76/F79: contract-backed CheckAnswerable ------------------------
+    #
+    # Same four-layer evaluation as /answerable, served on the contract path
+    # (namespaceId is the Cedar/API-Gateway resource). Two differences on
+    # purpose: the namespace must be a UUID, and a layer that cannot be
+    # computed reports no coverage value instead of a numeric zero.
+    @app.post("/namespaces/{namespaceId}/answerable")
+    def namespaced_answerable(
+        namespaceId: str, body: dict[str, Any] = Body(...)
+    ) -> dict[str, Any]:
+        try:
+            uuid.UUID(namespaceId)
+        except ValueError as exc:
+            raise PortError(
+                code="InvalidArgument",
+                message="namespaceId must be a UUID",
+                provider="platform",
+                provider_code="E_NAMESPACE_ID",
+                details={"namespaceId": namespaceId},
+            ) from exc
+        query = _qa_query(body)
+        result = _qa_answerable(
+            runtime,
+            query,
+            ontology_version=body.get("ontologyVersion"),
+            min_coverage=body.get("minCoverage"),
+            include_layers=True,
+        )
+        return _check_answerable_payload(result)
 
     @app.get("/answer")
     def answer_get(

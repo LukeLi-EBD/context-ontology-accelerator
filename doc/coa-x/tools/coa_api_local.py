@@ -651,6 +651,10 @@ ROUTES: list[tuple[str, str]] = [
     ("/metrics/{metricId}", KERNEL),
     # GetAnswerQuality (F86–F89): golden-set rerun, read-only.
     ("/answer/quality", KERNEL),
+    # CheckAnswerable (F76/F79): four-layer coverage and gaps/fixes. Same
+    # platform-core evaluation as /answerable; the namespace segment is the
+    # contract path, not a partition key in this local deployment.
+    ("/namespaces/{namespaceId}/answerable", KERNEL),
     ("/system-health", ONTOLOGY),
 ]
 
@@ -1069,6 +1073,16 @@ def _kernel_translate(
 
     if template == "/namespaces/{namespaceId}/graph/reasoning":
         return "GET", "/reasoning/status", None
+
+    if template == "/namespaces/{namespaceId}/answerable":
+        if method != "POST":
+            raise ValueError(f"no kernel mapping for {method} {template}")
+        namespace_id = quote(path_params.get("namespaceId", ""), safe="")
+        return (
+            "POST",
+            f"/namespaces/{namespace_id}/answerable",
+            json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        )
 
     if "/facts" in template:
         fact_id = path_params.get("factId", "")
