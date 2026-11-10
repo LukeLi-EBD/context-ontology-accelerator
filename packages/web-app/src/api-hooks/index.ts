@@ -44,6 +44,7 @@ export { useUpdateSourceColumnMetadata } from "./use-update-source-column-metada
 export { useListMetrics, useImportOsi, useExportOsi } from "./use-metrics";
 export { useListDocuments } from "./use-list-documents";
 export { useListIngestionRuns } from "./use-list-ingestion-runs";
+export { useGetIngestionRun } from "./use-get-ingestion-run";
 export { useListDocumentChunks } from "./use-list-document-chunks";
 export { useListFactCandidates } from "./use-list-fact-candidates";
 export type { FactCandidateFilters } from "./use-list-fact-candidates";

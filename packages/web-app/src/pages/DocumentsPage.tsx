@@ -387,9 +387,18 @@ export default function DocumentsPage() {
               cell: (item) => (
                 <SpaceBetween size="xxs">
                   <Box>{item.root || "—"}</Box>
-                  <Box variant="small" color="text-body-secondary">
-                    {item.runId}
-                  </Box>
+                  <Link
+                    href={`/namespaces/${namespaceId}/ingestion-runs/${item.runId}`}
+                    fontSize="body-s"
+                    onFollow={(event) => {
+                      event.preventDefault();
+                      navigate(
+                        `/namespaces/${namespaceId}/ingestion-runs/${item.runId}`,
+                      );
+                    }}
+                  >
+                    {item.runId || "—"}
+                  </Link>
                 </SpaceBetween>
               ),
               minWidth: 260,

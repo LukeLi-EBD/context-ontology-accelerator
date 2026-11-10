@@ -1426,3 +1426,107 @@ def ingestion_runs(
         "failures": failure_feed,
         "nextToken": _encode_offset(offset + max_results) if has_more else None,
     }
+
+
+_INGESTION_RUN_ITEM_LIMIT = 1000
+
+
+def get_ingestion_run(
+    runtime: Runtime, namespace_id: str, run_id: str
+) -> dict[str, Any]:
+    """F17: one import batch with its latest invocation and per-item rows.
+
+    Read-only, with the same isolation rule as :func:`ingestion_runs`: stale
+    convergence stays with the import worker. ``runId`` is the batch id that
+    ``ListIngestionRuns`` returns in ``items[].runId``.
+    """
+    try:
+        ns = uuid.UUID(namespace_id)
+    except ValueError as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespaceId is not a UUID: {namespace_id!r}",
+            provider="platform",
+            provider_code="E_NAMESPACE_ID_INVALID",
+        ) from exc
+    try:
+        batch_id = uuid.UUID(run_id)
+    except ValueError as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"runId is not a UUID: {run_id!r}",
+            provider="platform",
+            provider_code="E_INGESTION_RUN_ID_INVALID",
+        ) from exc
+
+    rows = runtime.metadata.query(
+        """
+        SELECT b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+               b.finished_at,
+               COUNT(i.rel_path) AS total,
+               COUNT(i.rel_path) FILTER (
+                   WHERE i.status IN ('indexed', 'failed')) AS completed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'indexed') AS indexed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'failed') AS failed,
+               COUNT(i.rel_path) FILTER (WHERE i.degraded) AS degraded
+          FROM platform.import_batch b
+          LEFT JOIN platform.import_item i ON i.batch_id = b.batch_id
+         WHERE b.batch_id = %s AND b.namespace_id = %s
+         GROUP BY b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+                  b.finished_at
+        """,
+        (batch_id, ns),
+    )
+    if not rows:
+        raise PortError(
+            code="NotFound",
+            message=(
+                f"ingestion run {run_id} was not found in namespace {namespace_id}"
+            ),
+            provider="platform",
+            provider_code="E_INGESTION_RUN_NOT_FOUND",
+        )
+    row = rows[0]
+
+    item_rows = runtime.metadata.query(
+        """
+        SELECT rel_path, status, attempts, failure_code, failure_message,
+               updated_at
+          FROM platform.import_item
+         WHERE batch_id = %s
+         ORDER BY rel_path
+         LIMIT %s
+        """,
+        (batch_id, _INGESTION_RUN_ITEM_LIMIT),
+    )
+    last_run = _last_runs(runtime, [row["batch_id"]]).get(row["batch_id"])
+
+    return {
+        "runId": str(row["batch_id"]),
+        "root": row["root_path"],
+        "status": row["status"].upper(),
+        "stale": row["status"] == "stale",
+        "staleReason": "E_BATCH_TIMEOUT" if row["status"] == "stale" else None,
+        "total": int(row["total"]),
+        "completed": int(row["completed"]),
+        "indexed": int(row["indexed"]),
+        "failed": int(row["failed"]),
+        "degraded": int(row["degraded"]),
+        "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
+        "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
+        "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+        "lastRun": _run_view(last_run),
+        "items": [
+            {
+                "relPath": item["rel_path"],
+                "status": item["status"],
+                "attempts": int(item["attempts"]),
+                "failureCode": item["failure_code"],
+                "failureMessage": item["failure_message"],
+                "updatedAt": (
+                    item["updated_at"].isoformat() if item["updated_at"] else None
+                ),
+            }
+            for item in item_rows
+        ],
+    }

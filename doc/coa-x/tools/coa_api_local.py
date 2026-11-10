@@ -123,6 +123,9 @@ _LOCAL_AUTHZ_EXTENSIONS: dict[str, dict[str, tuple[str, str]]] = {
         "GET": ("viewNamespace", "Namespace"),
         "POST": ("manageSource", "Namespace"),
     },
+    "/namespaces/{namespaceId}/ingestion-runs/{runId}": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
     "/namespaces/{namespaceId}/sparql": {"POST": ("query", "Namespace")},
     "/namespaces/{namespaceId}/metrics/report/manifest": {"GET": ("readMetric", "Namespace")},
     "/namespaces/{namespaceId}/metrics/families/{familyId}": {"GET": ("readMetric", "Namespace")},
@@ -982,6 +985,7 @@ ROUTES: list[tuple[str, str]] = [
     # P8 ingestion runs (F17/F18). Read-only, served by the in-process
     # platform_core kernel from platform.import_batch/import_item.
     ("/namespaces/{namespaceId}/ingestion-runs", KERNEL),
+    ("/namespaces/{namespaceId}/ingestion-runs/{runId}", KERNEL),
     ("/namespaces/{namespaceId}/documents", SOURCES),
     ("/namespaces/{namespaceId}/documents/{documentId}/chunks", SOURCES),
     ("/namespaces/{namespaceId}/candidates", SOURCES),

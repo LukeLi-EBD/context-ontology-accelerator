@@ -42,6 +42,7 @@ import { FactsPage } from "./pages/facts/FactsPage";
 import { MetricList } from "./pages/MetricList";
 import DocumentsPage from "./pages/DocumentsPage";
 import DocumentDetailPage from "./pages/DocumentDetailPage";
+import IngestionRunDetailPage from "./pages/IngestionRunDetailPage";
 import CandidatesPage from "./pages/CandidatesPage";
 import RetrievalPage from "./pages/RetrievalPage";
 import { IdentityPage } from "./pages/IdentityPage";
@@ -699,6 +700,10 @@ function AppShell() {
               <Route
                 path="/namespaces/:namespaceId/documents/:documentId"
                 element={<DocumentDetailPage />}
+              />
+              <Route
+                path="/namespaces/:namespaceId/ingestion-runs/:runId"
+                element={<IngestionRunDetailPage />}
               />
               <Route
                 path="/namespaces/:namespaceId/candidates"
