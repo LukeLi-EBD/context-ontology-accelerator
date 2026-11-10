@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAppI18n } from "../../i18n/LocaleProvider";
 import Alert from "@cloudscape-design/components/alert";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
@@ -73,6 +74,7 @@ export default function EntityPage() {
   }>();
   const api = useApiClient();
   const navigate = useNavigate();
+  const { t } = useAppI18n();
   const [iriInput, setIriInput] = useState(entityId ?? "");
   const [detail, setDetail] = useState<EntityDetail | null>(null);
   const [prov, setProv] = useState<EntityProvenanceReport | null>(null);
@@ -265,6 +267,27 @@ export default function EntityPage() {
                 header: "推导",
                 cell: (item) => (item.inferredOnly ? "仅推理" : "显式"),
               },
+              {
+                // F92: entity → ontology tree. The Explorer opens this exact
+                // class in its detail panel via the ?uri deep link.
+                id: "explorer",
+                header: "",
+                cell: (item) => (
+                  <Button
+                    variant="inline-link"
+                    onClick={() => {
+                      if (!namespaceId) return;
+                      navigate(
+                        `/namespaces/${namespaceId}/ontology/graph?tab=classes&uri=${encodeURIComponent(
+                          item.iri,
+                        )}`,
+                      );
+                    }}
+                  >
+                    {t("Ontology tree")}
+                  </Button>
+                ),
+              },
             ]}
             empty={<Box textAlign="center">没有类型声明</Box>}
           />
@@ -367,7 +390,23 @@ export default function EntityPage() {
               {
                 id: "metricId",
                 header: "指标",
-                cell: (item) => <Box variant="code">{item.metricId}</Box>,
+                // F92: entity → metric detail. `metricId` is the name GetMetric
+                // resolves on the metric page, so no extra lookup is needed.
+                cell: (item) => (
+                  <Button
+                    variant="inline-link"
+                    onClick={() => {
+                      if (!namespaceId) return;
+                      navigate(
+                        `/namespaces/${namespaceId}/metrics/${encodeURIComponent(
+                          item.metricId,
+                        )}`,
+                      );
+                    }}
+                  >
+                    {item.metricId}
+                  </Button>
+                ),
               },
               { id: "name", header: "名称", cell: (item) => item.nameZh ?? "-" },
               { id: "domain", header: "领域", cell: (item) => item.domain ?? "-" },

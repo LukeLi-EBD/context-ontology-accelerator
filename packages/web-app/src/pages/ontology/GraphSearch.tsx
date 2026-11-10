@@ -1474,6 +1474,22 @@ export function GraphSearchPage() {
     }
   };
 
+  // F92: the entity page links a class IRI here as "?uri=…". Open that class's
+  // detail panel once, in the List view, so the jump lands on a concrete class
+  // instead of dumping the user at the Explorer root.
+  const uriDeepLinkHandled = useRef(false);
+  const requestedUri = searchParams.get("uri");
+  useEffect(() => {
+    if (uriDeepLinkHandled.current || !requestedUri || !namespaceId) return;
+    if (tab !== "classes") return;
+    uriDeepLinkHandled.current = true;
+    setView("list");
+    void handleClassRowClick(requestedUri);
+    // handleClassRowClick is recreated per render; the latch above makes this
+    // a one-shot, so it must not re-run on every dependency change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedUri, namespaceId, tab]);
+
   // "Graph view" link from the detail panel: switch to the graph view and
   // run a graph search for this class's name, so it opens centred on the class
   // with its neighbourhood. The selected class stays selected, so the
