@@ -11,7 +11,8 @@ and ASK are admitted.
 Limits, all enforced here rather than trusted to the engine:
 
 * query text ≤ 6,000 bytes;
-* wall clock ≤ 10 s (the HTTP client gets the same budget);
+* wall clock ≤ 10 s, enforced by ``asyncio.wait_for`` only — the HTTP client gets
+  a longer budget so the outer limit always fires first and the status is 504;
 * response body ≤ 4 MiB while it streams;
 * at most 5,000 rows returned; the query is sent with ``LIMIT 5001`` so one extra
   row proves truncation;
@@ -50,6 +51,12 @@ logger = structlog.get_logger(__name__)
 MAX_ROWS = 5_000
 MAX_QUERY_BYTES = 6_000
 TIMEOUT_S = 10.0
+# The HTTP transport budget is TIMEOUT_S + 2 on purpose. Both limits were 10 s
+# once, so a slow connect could make ``httpx.ReadTimeout`` win the race against
+# ``asyncio.wait_for`` and the response flipped from 504 to 502. The transport
+# budget must stay strictly larger than the outer limit; that keeps
+# ``asyncio.wait_for`` the single authority and "too slow" always maps to 504
+# ``E_SPARQL_TIMEOUT``.
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 MAX_GRAPHS = 200
 GRAPHS_TTL_S = 60.0
@@ -107,6 +114,10 @@ class _ProviderRejected(Exception):
 
 class _ProviderUnavailable(Exception):
     pass
+
+
+class _ProviderTimedOut(Exception):
+    """The transport gave up on its own; still a 504, never a 502."""
 
 
 class SparqlBackend(Protocol):
@@ -168,7 +179,10 @@ class OxigraphBackend:
             "Accept": "application/sparql-results+json",
         }
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(TIMEOUT_S, connect=2.0)) as client:
+            # TIMEOUT_S + 2 keeps this strictly coarser than the caller's
+            # wait_for(TIMEOUT_S); see the note at TIMEOUT_S.
+            timeout = httpx.Timeout(TIMEOUT_S + 2.0, connect=2.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 async with client.stream("POST", f"{self._url}/query", content=query.encode(), headers=headers) as resp:
                     if resp.status_code >= 400:
                         raw = bytearray()
@@ -190,7 +204,7 @@ class OxigraphBackend:
                         if len(body) > MAX_RESPONSE_BYTES:
                             raise _TooLarge
         except httpx.TimeoutException as exc:
-            raise _ProviderUnavailable(f"provider timed out: {type(exc).__name__}") from exc
+            raise _ProviderTimedOut(f"provider timed out: {type(exc).__name__}") from exc
         except httpx.HTTPError as exc:
             raise _ProviderUnavailable(f"provider unreachable: {type(exc).__name__}") from exc
         try:
@@ -364,6 +378,16 @@ class SparqlConsole:
                     "E_SPARQL_TIMEOUT",
                     f"SPARQL execution exceeded the {int(TIMEOUT_S)} s limit",
                 ) from exc
+            except (_ProviderTimedOut, httpx.TimeoutException) as exc:
+                # A transport-level timeout (ReadTimeout / ConnectTimeout /
+                # WriteTimeout / PoolTimeout) still means "too slow", so it keeps
+                # the 504 code instead of degrading to 502 E_SPARQL_PROVIDER_ERROR.
+                logger.warning("sparql_console_transport_timeout", namespace=namespace, error=type(exc).__name__)
+                raise SparqlConsoleError(
+                    504,
+                    "E_SPARQL_TIMEOUT",
+                    f"SPARQL execution exceeded the {int(TIMEOUT_S)} s limit",
+                ) from exc
             except _TooLarge as exc:
                 raise SparqlConsoleError(
                     413,
@@ -440,6 +464,10 @@ class SparqlConsole:
         try:
             graphs = await asyncio.wait_for(self._backend.list_graphs(namespace), TIMEOUT_S)
         except asyncio.TimeoutError as exc:
+            raise SparqlConsoleError(
+                504, "E_SPARQL_TIMEOUT", f"Resolving the namespace graphs exceeded the {int(TIMEOUT_S)} s limit"
+            ) from exc
+        except (_ProviderTimedOut, httpx.TimeoutException) as exc:
             raise SparqlConsoleError(
                 504, "E_SPARQL_TIMEOUT", f"Resolving the namespace graphs exceeded the {int(TIMEOUT_S)} s limit"
             ) from exc

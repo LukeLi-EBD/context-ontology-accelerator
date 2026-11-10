@@ -3,9 +3,10 @@
 //
 // SPARQL console (P6 F72–F74) — self-contained shapes and one operation.
 //
-// MERGE NOTE — when this file reaches the mainline, add exactly this line to the
-// `operations: [...]` list of `service DataLayerService` in
-// `models/src/main/smithy/data-layer.smithy`, after the `DescribeSchema` entry:
+// MERGE NOTE — when this file reaches the mainline, append exactly this line to
+// the end of the `operations: [...]` list of `service DataLayerService` in
+// `models/src/main/smithy/data-layer.smithy`, after the last existing entry
+// (the list order carries no meaning):
 //
 //     RunSparql
 //

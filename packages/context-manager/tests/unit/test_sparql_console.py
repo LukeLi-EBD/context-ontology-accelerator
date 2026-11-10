@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 
+import httpx
 import pytest
 
 from coa_serve.tier2.sparql import console
@@ -168,16 +169,6 @@ class TestBounds:
     def test_a_bad_namespace_is_refused(self):
         _rejected(_Backend(), "SELECT ?s WHERE { ?s ?p ?o }", "E_SPARQL_BAD_NAMESPACE", 400, namespace="../etc")
 
-    def test_a_timeout_is_reported_as_504(self, monkeypatch):
-        monkeypatch.setattr(console, "TIMEOUT_S", 0.05)
-
-        class _Slow(_Backend):
-            async def select(self, sparql):
-                await asyncio.sleep(1.0)
-                return [], []
-
-        _rejected(_Slow(), "SELECT ?s WHERE { ?s ?p ?o }", "E_SPARQL_TIMEOUT", 504)
-
     def test_extra_rows_mark_the_result_truncated(self):
         rows = [[f"<http://example.org/{i}>"] for i in range(console.MAX_ROWS + 1)]
         result = _run(_Backend(rows=rows), "SELECT ?s WHERE { ?s ?p ?o }")
@@ -191,6 +182,31 @@ class TestBounds:
         result = _run(_Backend(rows=rows), "SELECT ?s WHERE { ?s ?p ?o }")
         assert result.truncated is False
         assert result.returned_rows == console.MAX_ROWS
+
+
+class TestTimeoutSemantics:
+    """10 s is the caller-side limit; every slower path must report 504, never 502."""
+
+    def test_a_backend_slower_than_the_limit_maps_to_504(self, monkeypatch):
+        monkeypatch.setattr(console, "TIMEOUT_S", 0.05)
+
+        class _Slow(_Backend):
+            async def select(self, sparql):
+                await asyncio.sleep(1.0)  # far longer than the 0.05 s limit
+                return ["s"], []
+
+        error = _rejected(_Slow(), "SELECT ?s WHERE { ?s ?p ?o }", "E_SPARQL_TIMEOUT", 504)
+        assert error.status != 502
+
+    @pytest.mark.parametrize("failure", [httpx.ReadTimeout, httpx.ConnectTimeout])
+    def test_a_transport_timeout_maps_to_504_not_502(self, failure):
+        error = _rejected(
+            _Backend(fail=failure("transport timed out")),
+            "SELECT ?s WHERE { ?s ?p ?o }",
+            "E_SPARQL_TIMEOUT",
+            504,
+        )
+        assert error.code != "E_SPARQL_PROVIDER_ERROR"
 
 
 class TestProviderErrors:
