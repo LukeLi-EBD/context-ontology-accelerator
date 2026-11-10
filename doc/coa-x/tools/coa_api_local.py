@@ -108,6 +108,10 @@ def _configure_environment() -> None:
         "IDEMPOTENCY_TABLE": "coa-local-idempotency",
         "SOURCE_SCAN_JOBS_TABLE": "coa-local-source-scan-jobs",
         "ONTOLOGIES_TABLE": "coa-local-ontologies",
+        # Async OSI import job records (GetImportJob reads them directly from
+        # DynamoDB upstream; locally they live in the PostgreSQL item table).
+        "IMPORT_JOBS_TABLE": "coa-local-metric-import-jobs",
+        "COA_PROVIDER_METRIC_IMPORT_JOBS": "postgres",
         # DataZone project ids are minted by the local project store.
         "DATAZONE_DOMAIN_ID": "local-domain",
         "SMUS_DOMAIN_ID": "local-domain",
@@ -172,6 +176,12 @@ def _configure_environment() -> None:
         )
     if not os.environ.get("COA_CONTROL_PLANE_PG_DSN"):
         sys.exit("refusing to start: COA_CONTROL_PLANE_PG_DSN is required")
+    import_jobs_provider = os.environ["COA_PROVIDER_METRIC_IMPORT_JOBS"]
+    if import_jobs_provider != "postgres":
+        sys.exit(
+            f"refusing to start: COA_PROVIDER_METRIC_IMPORT_JOBS={import_jobs_provider!r} "
+            "is not implemented locally (use 'postgres')"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +200,17 @@ def _install_pg_store() -> None:
     dynamodb_module.DynamoDBDAO = PgDatastoreDAO  # type: ignore[assignment]
     coa_common.dao.DynamoDBDAO = PgDatastoreDAO  # type: ignore[assignment]
     coa_common.DynamoDBDAO = PgDatastoreDAO  # type: ignore[attr-defined]
+
+
+def _install_local_import_jobs() -> None:
+    """Point the metric import-job store at PostgreSQL.
+
+    ``import_job_store`` builds a boto3 DynamoDB table itself, so the DAO
+    substitution above never reached it and ``GetImportJob`` answered 500.
+    """
+    from coa_local_providers.metric_jobs_pg import install_metric_import_jobs
+
+    install_metric_import_jobs()
 
 
 def _install_local_metadata_store() -> None:
@@ -1719,6 +1740,7 @@ def _make_app() -> Any:
 def main() -> None:
     _configure_environment()
     _install_pg_store()
+    _install_local_import_jobs()
     _install_local_metadata_store()
     _install_local_catalog()
     _install_local_object_store()
