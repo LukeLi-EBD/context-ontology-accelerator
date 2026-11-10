@@ -96,6 +96,13 @@ interface QualityValidation {
   sampledAt: string;
 }
 
+interface ReasoningStageReport {
+  triples?: number;
+  conforms?: boolean;
+  violations?: number;
+  ms?: number;
+}
+
 interface ReasoningStatus {
   available: boolean;
   engine?: string | null;
@@ -103,6 +110,20 @@ interface ReasoningStatus {
   detail?: string | null;
   source: string;
   sampledAt: string;
+  inferredTriples?: number | null;
+  lastJob?: {
+    jobId: string;
+    state: string;
+    inferred?: number | null;
+    consistent?: boolean | null;
+    finishedAt?: string | null;
+    skipped?: boolean;
+    stages?: {
+      rdfs?: ReasoningStageReport;
+      owl?: ReasoningStageReport;
+      shacl?: ReasoningStageReport;
+    };
+  } | null;
 }
 
 interface TripleExample {
@@ -570,7 +591,7 @@ export function SystemHealthPage() {
 
       <Container
         header={
-          <Header variant="h3" description="产品有、本地没接的能力标「待本地化」，不折算成 0，也不记成「不适用」">
+          <Header variant="h3" description="推理读 platform.reasoning_job 的真实作业；读不到的项显示「—」并写明原因，不折算成 0，也不记成「不适用」">
             F127 质量与推理
           </Header>
         }
@@ -596,21 +617,38 @@ export function SystemHealthPage() {
                       detail: quality.unlabeledClasses.detail ?? "",
                     },
                     {
+                      // The materialization gate runs the deployment's shapes,
+                      // so its verdict beats /graph/validate's "no shapes in
+                      // this namespace": showing 待本地化 next to a gate that
+                      // just ran would hide the result. Only fall back to the
+                      // validate reading when no gate has run.
                       name: "SHACL",
                       value:
-                        quality.shacl.status === "skipped"
-                          ? "待本地化（本地无 shapes）"
-                          : quality.shacl.status,
-                      detail: quality.shacl.detail ?? "",
+                        reasoning?.lastJob?.stages?.shacl?.conforms !== undefined
+                          ? reasoning.lastJob.stages.shacl.conforms
+                            ? "通过（0 违规）"
+                            : `${reasoning.lastJob.stages.shacl.violations ?? "?"} 违规`
+                          : quality.shacl.status === "skipped"
+                            ? "待本地化（本地无 shapes）"
+                            : quality.shacl.status,
+                      detail:
+                        reasoning?.lastJob?.stages?.shacl?.conforms !== undefined
+                          ? `物化闸门 · job ${reasoning.lastJob.jobId}`
+                          : (quality.shacl.detail ?? ""),
                     },
                     {
+                      // Read straight from platform.reasoning_job via
+                      // /graph/reasoning. The `/graph/validate` payload still
+                      // carries an `inferenceFailures` placeholder that this
+                      // service cannot observe, so it is deliberately unused
+                      // here: a placeholder zero must never look like a pass.
                       name: "推理失败",
-                      value: quality.inferenceFailures.count,
+                      value: reasoning ? reasoning.failures.count : "—",
                       detail: !reasoning
-                        ? (quality.inferenceFailures.detail ?? "推理状态不可读")
+                        ? "推理状态不可读（GET /graph/reasoning 无响应）"
                         : reasoning.available
-                          ? `推理引擎 ${reasoning.engine ?? "unknown"}`
-                          : "待本地化（本地未接 reasoner）",
+                          ? [reasoning.engine, reasoning.detail].filter(Boolean).join("；")
+                          : (reasoning.detail ?? "推理引擎不可用"),
                     },
                   ]
                 : []
@@ -805,7 +843,16 @@ export function SystemHealthPage() {
           items={[
             { block: "组件探活", source: "GetSystemHealth：8099 逐项探活（PG / Oxigraph / 8101 / 8091 / 对象存储）" },
             { block: "覆盖率", source: snapshot?.source ?? "—" },
-            { block: "质量与推理", source: quality?.source ?? "—" },
+            {
+              block: "质量与推理",
+              // The validate call cannot see the deployment's shapes, so its
+              // source line claims none are configured. Say where the SHACL
+              // verdict actually came from once a gate has run.
+              source:
+                reasoning?.lastJob?.stages?.shacl?.conforms !== undefined
+                  ? `${quality?.source ?? "—"}（SHACL 改读物化闸门 job ${reasoning.lastJob.jobId}；/graph/validate 看不到部署默认 shapes）`
+                  : (quality?.source ?? "—"),
+            },
             { block: "推理状态", source: reasoning?.source ?? "—" },
             { block: "迁移一致性", source: health?.schemaVersion?.source ?? "—" },
             {

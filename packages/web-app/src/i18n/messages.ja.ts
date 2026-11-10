@@ -2572,4 +2572,18 @@ export const MESSAGES_JA = {
     "ティア {tier} · サポートチャンク {chunks} 件",
   'Must be an absolute http(s) IRI without spaces or any of < > " { } | \\ ^ `.':
     '空白および < > " { } | \\ ^ ` のいずれも含まない、絶対 http(s) IRI を指定してください。',
+  "Run materialization": "物化を実行",
+  "Materialization result": "物化結果",
+  "Materialization skipped: inputs unchanged.":
+    "物化をスキップしました: 入力に変更はありません。",
+  "Materialization finished: {count} inferred triples.":
+    "物化が完了しました: 推論トリプル {count} 件。",
+  "Materialization failed: {message}": "物化に失敗しました: {message}",
+  "Job ID": "ジョブ ID",
+  "Inferred triples": "推論トリプル",
+  Consistent: "整合性",
+  Result: "結果",
+  triples: "トリプル",
+  conforms: "適合",
+  violations: "違反",
 } as const;
