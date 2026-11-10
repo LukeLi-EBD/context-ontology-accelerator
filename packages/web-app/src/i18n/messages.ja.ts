@@ -2648,4 +2648,26 @@ export const MESSAGES_JA = {
   Open: "開く",
   "No field bindings recorded for this metric version.":
     "このメトリクスバージョンにはフィールドバインディングが登録されていません。",
+  "Answer coverage": "回答可能性",
+  "Check coverage": "カバレッジを確認",
+  "Checks the ontology, terms, metrics and facts layers for the current question.":
+    "現在の質問について、オントロジー・用語・指標・ファクトの4層を確認します。",
+  "Enter a question to check coverage.":
+    "カバレッジを確認する質問を入力してください。",
+  "Coverage check failed": "カバレッジ確認に失敗しました",
+  "No namespace selected.": "名前空間が選択されていません。",
+  Answerable: "回答可能",
+  "Not answerable": "回答不可",
+  "Layer coverage": "レイヤーカバレッジ",
+  threshold: "しきい値",
+  Facts: "ファクト",
+  Terms: "用語",
+  Missing: "欠落",
+  Covered: "カバー済み",
+  Partial: "部分的",
+  "Not applicable": "対象外",
+  "Gaps and fixes": "欠落と修正方法",
+  "No gaps found.": "欠落はありません。",
+  Fix: "修正",
+  "Nearby terms": "近い用語",
 } as const;

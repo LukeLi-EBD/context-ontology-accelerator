@@ -31,6 +31,7 @@ import {
   SamplePrompts,
 } from "@components/Chat";
 import { RationalePanel } from "@components/Chat/RationalePanel";
+import { AnswerableCoverage } from "@components/AnswerableCoverage";
 import { usePlaygroundChatSSE } from "@api-hooks/use-playground-chat-sse";
 import { usePlaygroundChatLocal } from "@api-hooks/use-playground-chat-local";
 import { useExampleQuestions } from "@api-hooks/use-example-questions";
@@ -278,6 +279,10 @@ export const Playground: React.FC = () => {
           {t("No namespace selected. Choose one from the top navigation.")}
         </StatusIndicator>
       )}
+
+      <div style={{ marginTop: "16px" }}>
+        <AnswerableCoverage namespaceId={namespaceId} query={inputValue} />
+      </div>
 
       <div
         style={{
