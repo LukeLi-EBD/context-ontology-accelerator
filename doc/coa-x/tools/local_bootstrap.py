@@ -26,10 +26,15 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path
 
-REPO = r"D:\agentABC\coa"
+# Resolve the repository root from this file, never hard-code the main tree:
+# a worktree must migrate with its own ``platform_core`` (its own migration
+# registry), otherwise the branch's V48 is never applied and the run silently
+# reuses main's version.
+REPO = str(Path(__file__).resolve().parents[3])
 for _rel in ("packages/platform-core/src", "libs/common/src"):
-    _path = f"{REPO}/{_rel}"
+    _path = str(Path(REPO) / _rel)
     if _path not in sys.path:
         sys.path.insert(0, _path)
 

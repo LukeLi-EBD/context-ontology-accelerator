@@ -1,4 +1,9 @@
--- V46: P4 dictionary storage, namespace scoped.
+-- V48: P4 dictionary storage, namespace scoped.
+--
+-- Originally written as V46. Main advanced to V47 (V47__import_batch_namespace)
+-- before this branch merged, and V46 never landed in any database, so the file
+-- was renumbered to V48 to keep the registry gapless (see the note in
+-- doc/coa-x/11-D组缺口评审.md).
 --
 -- Two additive tables. The legacy platform.data_dictionary table is left
 -- untouched: it has no namespace column and cannot be made multi-tenant

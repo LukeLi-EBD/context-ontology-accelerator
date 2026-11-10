@@ -1,6 +1,6 @@
 """Dictionary storage provider (PostgreSQL), namespace scoped.
 
-Storage for F60-F66 (P4). Two tables, both created by V46:
+Storage for F60-F66 (P4). Two tables, both created by V48:
 
 * ``platform.dictionary_refresh_run`` - one row per introspection attempt.
   ``(namespace_id, source_id, idempotency_key)`` is unique, which is what makes
