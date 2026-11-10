@@ -124,6 +124,10 @@ export function OntologyVersionsPage() {
   } | null>(null);
   const [ackBreaking, setAckBreaking] = useState(false);
   const [publishReason, setPublishReason] = useState("");
+  // F112/F114: re-activate an existing (superseded) version. Off by default;
+  // while off the field is not sent at all, so the server keeps its original
+  // semantics instead of receiving a hard-coded `false`.
+  const [publishExisting, setPublishExisting] = useState(false);
   const [events, setEvents] = useState<OntologyEvent[]>([]);
   const [eventsBusy, setEventsBusy] = useState(false);
   const [auditVersionId, setAuditVersionId] = useState<string | null>(null);
@@ -274,27 +278,31 @@ export function OntologyVersionsPage() {
     });
 
   const publish = (version: OntologyVersion) =>
-    run(`publish-${version.id}`, "④ 发布", async () => {
+    run(`publish-${version.id}`, publishExisting ? "④ 发布既有版本（publishExisting）" : "④ 发布", async () => {
       const operator = requireActor();
       const approved = proposals.find(
         (p) => p.versionId === version.id && p.status === "approved",
       );
-      if (!approved) {
+      // Plain publish needs an approved proposal; re-activating an existing
+      // version does not, and attaching a non-approved proposal would make the
+      // kernel refuse it.
+      if (!publishExisting && !approved) {
         throw new Error("该版本还没有已通过的提案，先执行 ②③");
       }
       try {
         const res = await publishOntologyVersion(api, namespaceId!, appliedOntologyId, {
           versionId: version.id,
-          proposalId: approved.proposalId,
+          ...(approved ? { proposalId: approved.proposalId } : {}),
           expectedVersionId: pointer,
           actor: operator,
-          reason: "UI publish",
+          reason: publishExisting ? "UI publish existing version" : "UI publish",
+          ...(publishExisting ? { publishExisting: true } : {}),
         });
         setGate(null);
         setAckBreaking(false);
         setPublishReason("");
         await loadEvents(version.id);
-        return `publishedVersion=${res.publishedVersion} semver=${res.semver}`;
+        return `publishedVersion=${res.publishedVersion} semver=${res.semver} mode=${res.mode ?? "-"}`;
       } catch (err) {
         // The bridge wraps platform errors as {"error":{"providerCode":...}},
         // so ApiError.code may be UNKNOWN_ERROR. The 409 plus the provider code
@@ -315,7 +323,7 @@ export function OntologyVersionsPage() {
               api,
               namespaceId!,
               appliedOntologyId,
-              approved.proposalId,
+              approved?.proposalId ?? "",
             );
           } catch {
             // The gate still has to open: the 409 is authoritative even if the
@@ -323,7 +331,7 @@ export function OntologyVersionsPage() {
           }
           setGate({
             version,
-            proposalId: approved.proposalId,
+            proposalId: approved?.proposalId ?? "",
             diff: loaded?.diff ?? { breaking: true },
           });
           setAckBreaking(false);
@@ -359,12 +367,13 @@ export function OntologyVersionsPage() {
         acknowledgeBreaking: ackBreaking,
         actor: operator,
         reason: publishReason.trim() || "UI publish (breaking acknowledged)",
+        ...(publishExisting ? { publishExisting: true } : {}),
       });
       setGate(null);
       setAckBreaking(false);
       setPublishReason("");
       await loadEvents(target.version.id);
-      return `publishedVersion=${res.publishedVersion} semver=${res.semver} acknowledgeBreaking=${ackBreaking}`;
+      return `publishedVersion=${res.publishedVersion} semver=${res.semver} mode=${res.mode ?? "-"} acknowledgeBreaking=${ackBreaking}`;
     });
   };
 
@@ -390,11 +399,13 @@ export function OntologyVersionsPage() {
         versionId: version.id,
         proposalId: approved?.proposalId,
         planOnly: true,
+        ...(publishExisting ? { publishExisting: true } : {}),
       });
       setPublishPlan({ version, result: res });
       const blockers = (res.blockers ?? []).map((b) => `${b.gate}:${b.code}`);
       return (
         `dryRun=${String(res.dryRun)} wouldPublish=${String(res.wouldPublish)} ` +
+        `publishExisting=${String(res.publishExisting ?? false)} ` +
         `gates=${Object.keys(res.gates ?? {}).length} ` +
         `blockers=${blockers.length > 0 ? blockers.join(",") : "无"}`
       );
@@ -663,6 +674,33 @@ export function OntologyVersionsPage() {
         </SpaceBetween>
       </Container>
 
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description="F112 / F114：把已存在（superseded）的版本重新激活为当前版本"
+          >
+            发布选项
+          </Header>
+        }
+      >
+        <SpaceBetween size="s">
+          <Checkbox
+            checked={publishExisting}
+            onChange={({ detail }) => setPublishExisting(detail.checked)}
+            description="勾上后 ④ 发布与 ④a 预检都会带 publishExisting=true（服务端 mode=activate_existing）；不勾则不发送该字段，走原发布语义。"
+          >
+            发布既有版本（publishExisting）
+          </Checkbox>
+          {publishExisting && (
+            <Alert type="info">
+              已勾选 publishExisting：下表只有 superseded 版本可发布，内容不变、只移动版本指针。该勾选同时作用于
+              ④a dry-run，结果里的 publishExisting 会回显 true。
+            </Alert>
+          )}
+        </SpaceBetween>
+      </Container>
+
       <Table
         header={
           <Header
@@ -750,11 +788,11 @@ export function OntologyVersionsPage() {
                   ② 发起提案
                 </Button>
                 <Button
-                  disabled={v.status !== "approved"}
+                  disabled={publishExisting ? v.status !== "superseded" : v.status !== "approved"}
                   loading={busy === `publish-${v.id}`}
                   onClick={() => void publish(v)}
                 >
-                  ④ 发布
+                  {publishExisting ? "④ 发布既有版本" : "④ 发布"}
                 </Button>
                 <Button
                   disabled={v.id === pointer}
@@ -1000,6 +1038,10 @@ export function OntologyVersionsPage() {
                 {
                   label: "breaking",
                   value: String(publishPlan.result.breaking ?? false),
+                },
+                {
+                  label: "publishExisting",
+                  value: String(publishPlan.result.publishExisting ?? false),
                 },
               ]}
             />

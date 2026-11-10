@@ -311,6 +311,7 @@ export interface PublishResult {
   publishedAt?: string;
   unchanged?: boolean;
   idempotent?: boolean;
+  mode?: string;
   governed?: boolean;
   implicit?: boolean;
   breaking?: boolean;
@@ -329,6 +330,8 @@ export async function publishOntologyVersion(
     proposalId?: string;
     expectedVersionId?: string;
     acknowledgeBreaking?: boolean;
+    /** F112/F114: re-activate an already registered version (omit when false). */
+    publishExisting?: boolean;
     /** F113: run the gates and return the plan without publishing. */
     planOnly?: boolean;
     actor?: string;
