@@ -19,6 +19,13 @@ Configuration (no default provider — startup fails closed):
     COA_ONTOLOGY_OXIGRAPH_URL     base URL for ``oxigraph`` (required for it)
     COA_ONTOLOGY_OXIGRAPH_TIMEOUT request timeout in seconds (default 30)
 
+The client timeout only stops *waiting*; Oxigraph keeps evaluating the query
+after the socket closes (measured: ~1 core held for as long as the query runs).
+The container must therefore also be started with ``serve --timeout-s N``: that
+is the server-side deadline, and it is the only mechanism that actually stops a
+runaway query. It reports cancellation as a truncated 200 (not an HTTP error),
+which :func:`sparql_query` turns into ``GraphQueryCancelled``.
+
 ``neptune`` leaves the engine untouched: it keeps its SigV4-signed AWS path
 and still requires ``NDB_ENDPOINT`` from the deployment.
 """
@@ -32,6 +39,14 @@ from urllib.parse import quote
 import httpx
 
 _PROVIDERS = ("oxigraph", "neptune")
+
+# Oxigraph appends this notice to the response body when ``--timeout-s`` fires.
+# The response is still HTTP 200 and the JSON is truncated mid-stream, so it has
+# to be recognised before the body is parsed.
+_CANCELLED_NOTICE = "The SPARQL operation has been cancelled"
+_CANCELLED_BYTES = _CANCELLED_NOTICE.encode()
+# A few bytes for a trailing newline; the body itself may be megabytes of rows.
+_CANCELLED_WINDOW = len(_CANCELLED_BYTES) + 8
 
 
 def _provider() -> str:
@@ -64,6 +79,25 @@ def _fail(op: str, r: httpx.Response) -> None:
     raise RuntimeError(f"oxigraph {op} failed ({r.status_code}): {snippet}")
 
 
+def _cancelled(r: httpx.Response) -> bool:
+    """Whether Oxigraph cancelled this operation at its server-side deadline.
+
+    The response is HTTP 200 with the partial payload followed by the notice, so
+    every operation that writes or parses a body has to ask this first: a caller
+    that only looks at the status code would report a cancelled request as a
+    success.
+    """
+    return r.content[-_CANCELLED_WINDOW:].rstrip().endswith(_CANCELLED_BYTES)
+
+
+def _raise_cancelled() -> None:
+    from coa_ontology.stores.base import GraphQueryCancelled
+
+    raise GraphQueryCancelled(
+        "oxigraph cancelled the operation at its server-side deadline; it is no longer running"
+    )
+
+
 def sparql_query(query: str) -> dict[str, Any]:
     """SPARQL SELECT/ASK → SPARQL 1.1 JSON results (same shape Neptune returns)."""
     url = f"{_base_url()}/query"
@@ -78,6 +112,11 @@ def sparql_query(query: str) -> dict[str, Any]:
     )
     if r.status_code >= 400:
         _fail("query", r)
+    if _cancelled(r):
+        # Before parsing, not only when parsing fails: a body cut after the last
+        # complete row can still be valid JSON, and partial rows must never look
+        # like a complete answer.
+        _raise_cancelled()
     return r.json()
 
 
@@ -91,6 +130,10 @@ def sparql_update(update: str) -> None:
     )
     if r.status_code >= 400:
         _fail("update", r)
+    if _cancelled(r):
+        # A cancelled update is a partial write, not a success; survivorship of
+        # the container is not evidence that the whole update applied.
+        _raise_cancelled()
 
 
 def gsp_post_turtle(graph_uri: str, turtle: str) -> dict[str, Any]:
