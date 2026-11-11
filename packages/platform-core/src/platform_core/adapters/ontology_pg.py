@@ -174,6 +174,30 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+OWNER_SOURCE_PLATFORM = "platform"
+
+
+def _owner_namespace_id(namespace_id: str | None) -> str | None:
+    """Normalise the owning namespace (V52 `ontology_version.namespace_id`).
+
+    The column is a uuid and NULL is a valid value ("not attributed yet"), so an
+    absent namespace stays absent instead of being invented. A value that is
+    present but not a uuid is a caller bug and fails loudly: silently storing
+    NULL would make "no namespace" indistinguishable from "wrong namespace".
+    """
+    if namespace_id is None or not str(namespace_id).strip():
+        return None
+    try:
+        return str(uuid.UUID(str(namespace_id).strip()))
+    except (TypeError, ValueError) as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespaceId must be a UUID, got {namespace_id!r}",
+            provider="platform",
+            provider_code="E_ONTOLOGY_BAD_NAMESPACE_ID",
+        ) from exc
+
+
 def ontology_event_body(
     event_id: int,
     version_id: str,
@@ -1036,6 +1060,7 @@ def publish_import(
     purpose_verified: bool | None = None,
     purpose_status: str | None = None,
     remote_addr: str | None = None,
+    namespace_id: str | None = None,
 ) -> dict[str, Any]:
     """G-01 publish: dry-run diff/impact, then a governed version publish.
 
@@ -1054,6 +1079,10 @@ def publish_import(
         )
 
     staging = record["staging_graph"]
+    # Only an explicit uuid is stored. `record["target_namespace"]` is the
+    # ontology id/IRI the staging request named, not a namespace uuid, so it is
+    # never converted into one here.
+    owner_namespace = _owner_namespace_id(namespace_id)
     version_id = _import_version_id(import_id)
     tbox_graph = f"{IMPORT_TBOX_PREFIX}{version_id}"
     pointer = registry.current()
@@ -1365,12 +1394,15 @@ def publish_import(
                         """
                         INSERT INTO platform.ontology_version
                           (version_id, semver, status, content_hash, triple_count,
-                           source_format, source_key, graph_iri, label)
-                        VALUES (%s, '0.0.0', 'draft', %s, %s, 'turtle', %s, %s, %s)
+                           source_format, source_key, graph_iri, label,
+                           namespace_id, attribution_source)
+                        VALUES (%s, '0.0.0', 'draft', %s, %s, 'turtle', %s, %s, %s, %s, %s)
                         """,
                         (
                             version_id, content_hash, len(triples), source_key,
                             tbox_graph, f"G-01 import {import_id}",
+                            owner_namespace,
+                            OWNER_SOURCE_PLATFORM if owner_namespace else None,
                         ),
                     )
                     registry._append_event(
@@ -1562,7 +1594,8 @@ class OntologyRegistry:
         rows = self._meta.query(
             """
             SELECT version_id, semver, status, content_hash, triple_count, source_format,
-                   source_key, graph_iri, rollback_of, label, created_at, published_at
+                   source_key, graph_iri, rollback_of, label, created_at, published_at,
+                   namespace_id, attribution_source
               FROM platform.ontology_version
              WHERE version_id = %s
             """,
@@ -1888,6 +1921,7 @@ class OntologyRegistry:
         rdf_format: str | None = None,
         on_conflict: str = "reject",
         graph_iri: str | None = None,
+        namespace_id: str | None = None,
     ) -> dict[str, Any]:
         if not SEMVER_RE.match(semver or ""):
             raise self._error(
@@ -1912,6 +1946,7 @@ class OntologyRegistry:
             except PortError as exc:
                 raise self._error("E_ONTOLOGY_PARSE", exc.message, key="file") from exc
         content_hash = _content_hash(triples)
+        owner_namespace = _owner_namespace_id(namespace_id)
 
         # S16: an archived (deprecated) version is never revived implicitly by a
         # re-import; only a live version with the same content may be reused.
@@ -2005,12 +2040,14 @@ class OntologyRegistry:
                 """
                 INSERT INTO platform.ontology_version
                   (version_id, semver, status, content_hash, triple_count, source_format,
-                   source_key, graph_iri, label)
-                VALUES (%s, %s, 'draft', %s, %s, %s, %s, %s, %s)
+                   source_key, graph_iri, label, namespace_id, attribution_source)
+                VALUES (%s, %s, 'draft', %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     version_id, semver, content_hash, len(triples), detected_format,
                     source_key, target_graph, label,
+                    owner_namespace,
+                    OWNER_SOURCE_PLATFORM if owner_namespace else None,
                 ),
             )
             self._append_event(
@@ -2065,6 +2102,7 @@ class OntologyRegistry:
         on_conflict: str = "reject",
         graph_iri: str | None = None,
         namespace: str | None = None,
+        namespace_id: str | None = None,
         validate_shacl: bool = True,
         check_consistency: bool = True,
     ) -> dict[str, Any]:
@@ -2131,6 +2169,7 @@ class OntologyRegistry:
             )
 
         namespace = namespace or self._detect_namespace(graph)
+        owner_namespace = _owner_namespace_id(namespace_id)
         data_nt = graph.serialize(format="nt").encode("utf-8")
 
         shacl: dict[str, Any] = {
@@ -2302,12 +2341,14 @@ class OntologyRegistry:
                 """
                 INSERT INTO platform.ontology_version
                   (version_id, semver, status, content_hash, triple_count, source_format,
-                   source_key, graph_iri, label)
-                VALUES (%s, %s, 'draft', %s, %s, 'turtle', %s, %s, %s)
+                   source_key, graph_iri, label, namespace_id, attribution_source)
+                VALUES (%s, %s, 'draft', %s, %s, 'turtle', %s, %s, %s, %s, %s)
                 """,
                 (
                     version_id, semver, content_hash, len(triples),
                     source_key, target_graph, label,
+                    owner_namespace,
+                    OWNER_SOURCE_PLATFORM if owner_namespace else None,
                 ),
             )
             self._append_event(tx, version_id, None, "imported", actor, None, payload)
@@ -3026,6 +3067,48 @@ class OntologyRegistry:
             "emptyAboxReason": empty_reason,
             **evidence,
         }
+
+    def claim_namespace(self, version_id: str, namespace_id: str) -> dict[str, Any]:
+        """Attach the publisher's namespace to a version that has no owner yet.
+
+        Rows written before V52 (and drafts registered by callers that could not
+        name a namespace) carry NULL. Publishing is the moment the caller states
+        which namespace the version belongs to, so the claim is recorded there.
+        An existing owner is never overwritten: a different one is a conflict.
+        """
+        owner = _owner_namespace_id(namespace_id)
+        if owner is None:
+            raise PortError(
+                code="InvalidArgument",
+                message="namespaceId is required to claim a version",
+                provider="platform",
+                provider_code="E_ONTOLOGY_BAD_NAMESPACE_ID",
+            )
+        row = self._require(version_id)
+        current = row.get("namespace_id")
+        if current is not None:
+            if str(current) != owner:
+                raise PortError(
+                    code="Conflict",
+                    message=(
+                        f"version {version_id} already belongs to namespace {current}; "
+                        f"refusing to reassign it to {owner}"
+                    ),
+                    provider="platform",
+                    provider_code="E_ONTOLOGY_NAMESPACE_CONFLICT",
+                    details={"namespaceId": str(current), "requested": owner},
+                )
+            return {"versionId": version_id, "namespaceId": str(current), "claimed": False}
+        with self._meta.tx() as tx:
+            tx.execute(
+                """
+                UPDATE platform.ontology_version
+                   SET namespace_id = %s, attribution_source = %s
+                 WHERE version_id = %s AND namespace_id IS NULL
+                """,
+                (owner, OWNER_SOURCE_PLATFORM, version_id),
+            )
+        return {"versionId": version_id, "namespaceId": owner, "claimed": True}
 
     def publish(
         self,
@@ -4228,8 +4311,16 @@ class OntologyRegistry:
             "content": content,
         }
 
-    def rollback(self, to_version_id: str) -> dict[str, Any]:
+    def rollback(self, to_version_id: str, namespace_id: str | None = None) -> dict[str, Any]:
         target = self._require(to_version_id)
+        # The new row restores the target's content, so it belongs to the same
+        # namespace. Inheriting is the only honest default: a legacy target with
+        # no owner stays unowned instead of being guessed into one.
+        owner_namespace = _owner_namespace_id(namespace_id)
+        owner_source = OWNER_SOURCE_PLATFORM if owner_namespace else None
+        if not owner_namespace:
+            owner_namespace = target.get("namespace_id")
+            owner_source = target.get("attribution_source")
         # Target content must still be in the graph; reload from CAS if not.
         if self._graph.count_graph(target["graph_iri"]) != target["triple_count"]:
             self._load_graph(target)
@@ -4248,13 +4339,15 @@ class OntologyRegistry:
                 """
                 INSERT INTO platform.ontology_version
                   (version_id, semver, status, content_hash, triple_count, source_format,
-                   source_key, graph_iri, rollback_of, label, published_at)
-                VALUES (%s, %s, 'published', %s, %s, %s, %s, %s, %s, %s, now())
+                   source_key, graph_iri, rollback_of, label, published_at,
+                   namespace_id, attribution_source)
+                VALUES (%s, %s, 'published', %s, %s, %s, %s, %s, %s, %s, now(), %s, %s)
                 """,
                 (
                     new_id, semver, target["content_hash"], target["triple_count"],
                     target["source_format"], target["source_key"], target["graph_iri"],
                     to_version_id, f"rollback of {to_version_id}",
+                    owner_namespace, owner_source,
                 ),
             )
             current = tx.query(

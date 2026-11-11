@@ -39,6 +39,7 @@ def _run_ontology(runtime, args) -> int:
         result = runtime.ontology.import_source(
             args.file, args.semver, args.label, import_format,
             on_conflict=args.on_conflict, graph_iri=args.graph_iri,
+            namespace_id=args.namespace_id,
         )
     elif action == "propose":
         if not args.version:
@@ -214,6 +215,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--on-conflict", dest="on_conflict", choices=["reject", "new_version", "ignore"], default="reject"
     )
     ontology.add_argument("--graph-iri", dest="graph_iri", default=None)
+    ontology.add_argument(
+        "--namespace-id", dest="namespace_id", default=None,
+        help=(
+            "import: owning namespace uuid written to ontology_version.namespace_id "
+            "(V52); omitted leaves it NULL rather than guessing a namespace"
+        ),
+    )
     ontology.add_argument("--out", default=None, help="export output path")
     ontology.add_argument("--batch", default=None, help="archive batch id recorded on events")
     ontology.add_argument("--ids-file", dest="ids_file", default=None, help="deprecate-batch: newline-separated version ids")

@@ -1322,7 +1322,8 @@ def _add_register_route(app: Any, runtime: Any) -> None:
         path.write_bytes(data)
         try:
             result = runtime.ontology.import_source(
-                str(path), semver, label=namespace, rdf_format=rdf_format
+                str(path), semver, label=namespace, rdf_format=rdf_format,
+                namespace_id=body.get("namespaceId"),
             )
         finally:
             path.unlink(missing_ok=True)
@@ -1772,6 +1773,11 @@ def _kernel_translate(
             "dryRun": plan_only,
             "publishExisting": publish_existing,
         }
+        # V52 ownership: publishing is where the namespace is asserted. The kernel
+        # only fills a row that has no owner yet; a conflicting owner is rejected.
+        namespace_id = path_params.get("namespaceId")
+        if namespace_id:
+            forwarded["namespaceId"] = namespace_id
         return "POST", "/governance/publish", json.dumps(forwarded).encode("utf-8")
 
     if template.endswith("/rollback"):
@@ -2073,6 +2079,11 @@ async def _kernel_register_version(
         if payload.get(key)
     }
     register["targetNamespace"] = payload.get("targetNamespace") or ontology_id
+    # V52 ownership: the namespace uuid is in the route, not in the body. Without
+    # forwarding it the kernel cannot attribute the version it is about to write.
+    namespace_id = path_params.get("namespaceId")
+    if namespace_id:
+        register["namespaceId"] = namespace_id
     status, content, ctype = await _kernel_call(
         "POST", "/local/ontology/register", json.dumps(register).encode("utf-8"), actor=actor
     )
