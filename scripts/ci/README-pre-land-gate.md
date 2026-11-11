@@ -12,6 +12,14 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/pre-land-gate.ps1
 ```
 
+本机 PATH 上是 Java 8、`python` 也未必带 psycopg 时，显式给解释器和 JDK：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/pre-land-gate.ps1 `
+  -JavaHome "D:\tools\IDEA\jbr" `
+  -Python "d:\agentABC\coa\.venv-coa-local\Scripts\python.exe"
+```
+
 | id | 检查内容 |
 | --- | --- |
 | `smithy` | 在临时目录干净重生成 smithy 产物，与提交的 `smithy-generated/` 逐文件比对，并校验 `.inputs.sha256` 指纹 |
