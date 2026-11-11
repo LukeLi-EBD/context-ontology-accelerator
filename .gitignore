@@ -272,3 +272,7 @@ doc/_backup/
 # 8ef79463（docs: auto-sync）每次都有内容可提交，来源就是这批日志。
 # 磁盘文件保留，仅移出版本控制；`*.log` 同时覆盖 `*.err.log`。
 doc/coa-x/tools/*.log
+
+# --- runbook 演示树本地运行配置：不入库（added 2026-11-11）---
+# 只忽略仓库根目录下的 .runbook（内含临时 DSN 与运行产物），不放宽到任意层级。
+/.runbook/
