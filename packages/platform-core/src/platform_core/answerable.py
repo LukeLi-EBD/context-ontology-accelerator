@@ -65,6 +65,29 @@ ENTITY_META_WORDS = (
 )
 ENTITY_META_CHARS = set("".join(ENTITY_META_WORDS))
 
+# Connectors used only to cut an unresolved fragment into candidate mentions:
+# "价值发生巨大变化时银行" must count as two missing entities, not one.
+# Categories, all from the Chinese question wording in the corpus:
+#   并列/选择  以及 或者 还是 及其 和 与 及 或 并 且 而
+#   结构助词    的 地 得 之
+#   介词/对象  对于 关于 针对 按照 根据 通过 对 在 把 被
+#   因果/条件  由于 因为 所以 如果 若是
+#   时间/处所  之后 之前 期间 时
+#   疑问/程度  如何 怎么 怎样 多少 多久 多大 多高 多长 什么 是否
+# Single chars that are common inside entity names (为/中/内/前/后/上/下/里)
+# stay out on purpose, so "上市公司" is not shredded.
+SEGMENT_CONNECTORS = (
+    "以及", "或者", "还是", "及其", "对于", "关于", "针对", "按照", "根据",
+    "通过", "由于", "因为", "所以", "如果", "若是", "之后", "之前", "期间",
+    "如何", "怎么", "怎样", "多少", "多久", "多大", "多高", "多长", "什么",
+    "是否", "和", "与", "及", "或", "并", "且", "而", "的", "地", "得", "之",
+    "对", "在", "把", "被", "时",
+)
+_SEGMENT_CONNECTORS_SORTED = tuple(
+    sorted(SEGMENT_CONNECTORS, key=len, reverse=True)
+)
+
+
 
 
 class AnswerabilityService:
@@ -335,6 +358,64 @@ class AnswerabilityService:
         return fragments
 
     @staticmethod
+    def _split_unresolved(text: str) -> list[tuple[str, int, int]]:
+        """Cut one unresolved fragment at connectors, keeping offsets.
+
+        Segments shorter than two characters are merged into a neighbour: a
+        lone char is almost always half of a word that merely contains a
+        connector character (利率对冲 -> 利率|冲), so merging keeps the rule
+        from shredding real terms. The rule can only add segments relative to
+        one-fragment-one-entity, never remove one, so it cannot loosen a
+        decision. Returns (surface, start, end) in fragment coordinates.
+        """
+        raw: list[tuple[int, int]] = []
+        start = 0
+        index = 0
+        while index < len(text):
+            connector = next(
+                (
+                    item
+                    for item in _SEGMENT_CONNECTORS_SORTED
+                    if text.startswith(item, index)
+                ),
+                None,
+            )
+            if connector is not None or text[index] in PUNCT:
+                if index > start:
+                    raw.append((start, index))
+                    index += len(connector) if connector else 1
+                    start = index
+                    continue
+                # Leading connector: keep it with the following text so
+                # "时速" is not reduced to "速".
+                index += len(connector) if connector else 1
+                continue
+            index += 1
+        if start < len(text):
+            raw.append((start, len(text)))
+
+        merged: list[tuple[int, int]] = []
+        carry: tuple[int, int] | None = None
+        for begin, end in raw:
+            if carry is not None:
+                begin, carry = carry[0], None
+            if end - begin < 2:
+                carry = (begin, end)
+                continue
+            merged.append((begin, end))
+        if carry is not None:
+            if merged:
+                merged[-1] = (merged[-1][0], carry[1])
+            else:
+                merged.append(carry)
+        if not merged and text:
+            # A fragment made only of connectors still counted as one entity
+            # before this rule; keep that so splitting never lowers the
+            # denominator on its own.
+            merged.append((0, len(text)))
+        return [(text[begin:end], begin, end) for begin, end in merged]
+
+    @staticmethod
     def _entities(
         normalized: str,
         mask: list[bool],
@@ -346,9 +427,10 @@ class AnswerabilityService:
 
         A known entity is one distinct ontology IRI hit by any of its labels
         (prefLabel/altLabel/rdfs:label alike). An unresolved entity is one
-        maximal uncovered content fragment; fragments made only of question
-        meta words (口径/处理/多久 ...) are not entities and stay out of the
-        denominator. Same surface mentioned twice counts once.
+        connector-delimited segment of an uncovered content fragment, so
+        several missing concepts glued together still count separately;
+        segments made only of question meta words (口径/处理/多久 ...) are not
+        entities and stay out of the denominator. Same surface counts once.
         """
         predicates: dict[str, set[str]] = {}
         for term in terms:
@@ -372,16 +454,17 @@ class AnswerabilityService:
 
         unknown: dict[str, dict[str, Any]] = {}
         for begin, end in AnswerabilityService._fragments(mask, taken):
-            text = normalized[begin:end]
-            if not text or all(char in ENTITY_META_CHARS for char in text):
-                continue
-            if text in unknown:
-                continue
-            unknown[text] = {
-                "text": text,
-                "span": [begin, end],
-                "kind": "unknown",
-            }
+            fragment = normalized[begin:end]
+            for text, offset, stop in AnswerabilityService._split_unresolved(fragment):
+                if not text or all(char in ENTITY_META_CHARS for char in text):
+                    continue
+                if text in unknown:
+                    continue
+                unknown[text] = {
+                    "text": text,
+                    "span": [begin + offset, begin + stop],
+                    "kind": "unknown",
+                }
 
         mentions = sorted(
             list(known.values()) + list(unknown.values()),

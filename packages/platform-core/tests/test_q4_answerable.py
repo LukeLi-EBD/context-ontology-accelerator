@@ -228,6 +228,51 @@ class EntityCoverageTests(unittest.TestCase):
         self.assertEqual(result["entityCoverage"], 1.0)
         self.assertTrue(result["answerable"], result)
 
+    def test_unresolved_fragments_split_on_connector(self):
+        # Without the split rule this was one glued 10-char fragment: 1/2.
+        # "时" is a connector and "处理" is a meta word, so the denominator
+        # must become 抵押物 + {价值发生巨大变化, 银行} = 3.
+        result = self.service.check("抵押物价值发生巨大变化时银行如何处理")
+        self.assertEqual(result["entityCount"], 3)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertAlmostEqual(result["entityCoverage"], 0.3333, places=4)
+        self.assertFalse(result["answerable"], result)
+        unknown = [
+            item["text"]
+            for item in result["entityMentions"]
+            if item["kind"] == "unknown"
+        ]
+        self.assertEqual(unknown, ["价值发生巨大变化", "银行"])
+
+    def test_mandated_query_counts_split_fragments(self):
+        # 事件金额 matched; 税务处理 and 合规口径 are two missing concepts,
+        # so coverage is 1/3, not 1/2.
+        result = self.service.check("事件金额的税务处理与合规口径")
+        self.assertEqual(result["entityCount"], 3)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertAlmostEqual(result["entityCoverage"], 0.3333, places=4)
+        self.assertFalse(result["answerable"], result)
+        unknown = [
+            item["text"]
+            for item in result["entityMentions"]
+            if item["kind"] == "unknown"
+        ]
+        self.assertEqual(unknown, ["税务处理", "合规口径"])
+
+    def test_meta_word_entity_match_is_not_swallowed(self):
+        # The meta filter only runs on unmatched fragments, so an ontology
+        # entity literally named 口径 is matched and counted normally.
+        bindings = self.bindings + [_binding("urn:term:caliber", SKOS_PREF, "口径")]
+        service = AnswerabilityService(
+            ContextConfig(), _StubRegistry(), _StubGraph(bindings)
+        )
+        result = service.check("口径")
+        self.assertEqual(result["entityCount"], 1)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertEqual(result["entityCoverage"], 1.0)
+        self.assertFalse(result["entityDegraded"])
+        self.assertTrue(result["answerable"], result)
+
     def test_character_diagnostics_are_unchanged(self):
         result = self.service.check("产品包的价格")
         self.assertEqual(result["coverageChars"], {"covered": 3, "total": 5})
