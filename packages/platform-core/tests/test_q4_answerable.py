@@ -125,5 +125,114 @@ class AnswerableTests(unittest.TestCase):
         self.assertIn("本体未覆盖", result["hint"])
 
 
+SKOS_PREF = "http://www.w3.org/2004/02/skos/core#prefLabel"
+SKOS_ALT = "http://www.w3.org/2004/02/skos/core#altLabel"
+
+
+def _binding(iri, predicate, label):
+    return {
+        "values": {
+            "s": {"kind": "iri", "iri": iri},
+            "p": {"kind": "iri", "iri": predicate},
+            "l": {"kind": "literal", "value": label},
+        }
+    }
+
+
+class _StubRegistry:
+    """Pinned version, no database."""
+
+    def current(self):
+        return {"versionId": "v-test", "graph": "urn:graph:test"}
+
+    def get(self, version_id):
+        return {"id": version_id, "graph": "urn:graph:test"}
+
+
+class _StubGraph:
+    def __init__(self, bindings):
+        self._bindings = bindings
+
+    def query(self, sparql, params=None):
+        return {"bindings": list(self._bindings)}
+
+
+class EntityCoverageTests(unittest.TestCase):
+    """Entity-level (1/n) coverage; runs offline against a stub T-Box."""
+
+    def setUp(self):
+        self.bindings = [
+            _binding("urn:term:package", SKOS_PREF, "产品包"),
+            _binding("urn:term:package", SKOS_ALT, "产品套餐"),
+            _binding("urn:term:feature", SKOS_PREF, "产品特性"),
+            _binding("urn:term:amount", SKOS_PREF, "事件金额"),
+            _binding("urn:term:number", SKOS_PREF, "事件编号"),
+            _binding("urn:term:collateral", SKOS_PREF, "抵押物"),
+        ]
+        self.service = AnswerabilityService(
+            ContextConfig(), _StubRegistry(), _StubGraph(self.bindings)
+        )
+
+    def test_synonym_surface_matches_same_entity(self):
+        result = self.service.check("产品套餐的产品特性是什么")
+        self.assertTrue(result["answerable"], result)
+        self.assertEqual(result["entityCoverage"], 1.0)
+        self.assertEqual(result["entityCount"], 2)
+        self.assertEqual(result["matchedEntityCount"], 2)
+        self.assertFalse(result["entityDegraded"])
+        surfaces = {item["text"] for item in result["entityMentions"]}
+        self.assertEqual(surfaces, {"产品套餐", "产品特性"})
+
+    def test_no_entity_degrades_to_zero_not_full(self):
+        result = self.service.check("量子计算机的制冷功率是多少")
+        self.assertFalse(result["answerable"], result)
+        self.assertEqual(result["entityCoverage"], 0.0)
+        self.assertNotEqual(result["entityCoverage"], 1.0)
+        self.assertEqual(result["matchedEntityCount"], 0)
+        self.assertEqual(result["entityCount"], 2)
+        self.assertTrue(result["entityDegraded"])
+        self.assertEqual(result["entityDegradeReason"], "no_ontology_entity")
+
+    def test_multi_entity_partial_is_one_over_n(self):
+        # 3 mentioned entities, 2 matched -> 2/3 >= 0.6
+        result = self.service.check("事件金额和事件编号的量子属性")
+        self.assertEqual(result["entityCount"], 3)
+        self.assertEqual(result["matchedEntityCount"], 2)
+        self.assertAlmostEqual(result["entityCoverage"], 0.6667, places=4)
+        self.assertTrue(result["answerable"], result)
+        # same ratio family, 1/3 -> below the 0.6 default
+        result = self.service.check("事件金额的量子属性与虫洞效应")
+        self.assertEqual(result["entityCount"], 3)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertAlmostEqual(result["entityCoverage"], 0.3333, places=4)
+        self.assertFalse(result["answerable"], result)
+
+    def test_negative_known_plus_unknown_is_not_answerable(self):
+        # Character coverage would be 3/5 = 0.6 and slip through; entity
+        # coverage is 1/2 = 0.5 and must refuse.
+        result = self.service.check("产品包的价格")
+        self.assertEqual(result["coverage"], 0.6)
+        self.assertEqual(result["entityCoverage"], 0.5)
+        self.assertFalse(result["answerable"], result)
+        self.assertFalse(result["entityDegraded"])
+        self.assertEqual(result["reasonCode"], "E_ANSWER_NOT_COVERED")
+        self.assertEqual(
+            [item["text"] for item in result["entityMentions"]],
+            ["产品包", "价格"],
+        )
+
+    def test_repeated_entity_counts_once_and_meta_words_excluded(self):
+        result = self.service.check("产品包和产品包的口径是什么")
+        self.assertEqual(result["entityCount"], 1)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertEqual(result["entityCoverage"], 1.0)
+        self.assertTrue(result["answerable"], result)
+
+    def test_character_diagnostics_are_unchanged(self):
+        result = self.service.check("产品包的价格")
+        self.assertEqual(result["coverageChars"], {"covered": 3, "total": 5})
+        self.assertEqual(result["coverage"], 0.6)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

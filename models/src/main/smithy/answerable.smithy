@@ -272,7 +272,7 @@ structure CheckAnswerableOutput {
     @required
     query: String
 
-    /// True when the question can be answered: term coverage meets the
+    /// True when the question can be answered: entity coverage meets the
     /// threshold, or an exact metric match supports a definition answer even
     /// when no fact rows are available.
     @required
@@ -305,6 +305,29 @@ structure CheckAnswerableOutput {
     /// Covered / total content characters behind `coverage`.
     @required
     coverageChars: CoverageChars
+
+    /// Entity-level coverage (0..1): distinct matched ontology entities divided
+    /// by distinct entity mentions in the question (1/n semantics). This drives
+    /// `answerable`; `coverage` above remains the character-level diagnostic.
+    entityCoverage: Float
+
+    /// Number of distinct entity mentions the question involves (matched plus
+    /// unresolved). Question meta words such as 口径/处理 are not entities.
+    entityCount: Integer
+
+    /// Number of distinct ontology entities among `entityCount`.
+    matchedEntityCount: Integer
+
+    /// Entity mentions in question order, both matched and unresolved.
+    entityMentions: EntityMentionList
+
+    /// True when entity coverage could not be evaluated against the ontology
+    /// (no entity recognised). `entityCoverage` is then 0, never 1.
+    entityDegraded: Boolean
+
+    /// Why entity coverage degraded: `no_ontology_entity` (content exists but
+    /// nothing matched) or `no_entity_mention` (only meta words).
+    entityDegradeReason: String
 
     /// Ontology version the check ran against.
     @required
@@ -382,6 +405,37 @@ structure MatchedTerm {
 /// Terms that matched the question.
 list MatchedTermList {
     member: MatchedTerm
+}
+
+/// One entity mention in the question: a matched ontology entity or an
+/// unresolved content fragment counted as one missing entity.
+structure EntityMention {
+    /// Surface text as it appears in the normalized question (known entities
+    /// use the matched label).
+    @required
+    text: String
+
+    /// Inclusive-exclusive [start, end) character span in the normalized question.
+    @required
+    span: Span
+
+    /// `ontology` when the mention matched a term, `unknown` otherwise.
+    @required
+    kind: String
+
+    /// Matched term IRI (ontology mentions only).
+    term: String
+
+    /// Matched label (ontology mentions only).
+    label: String
+
+    /// Label source of the match: `skos` or `rdfs:label`.
+    source: String
+}
+
+/// Entity mentions in question order.
+list EntityMentionList {
+    member: EntityMention
 }
 
 /// A character span in the normalized question.
