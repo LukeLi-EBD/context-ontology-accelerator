@@ -24,9 +24,37 @@ function assembly(files: Record<string, unknown>): string {
   return dir;
 }
 
+/**
+ * ``python3`` is not guaranteed to be a working interpreter: on Windows the
+ * name often resolves to the Microsoft Store app-execution alias, which exits
+ * with 9009 instead of running Python. Pick the first candidate that actually
+ * runs, and fail loudly when there is none, so a broken shim can never be
+ * mistaken for a passing check.
+ */
+let python: string | undefined;
+function interpreter(): string {
+  if (python) return python;
+  const candidates = [process.env.PYTHON, "python3", "python"].filter(
+    (candidate): candidate is string => Boolean(candidate),
+  );
+  for (const candidate of candidates) {
+    try {
+      execFileSync(candidate, ["-c", ""], { stdio: "ignore" });
+      python = candidate;
+      return candidate;
+    } catch {
+      // Not usable here; try the next name.
+    }
+  }
+  throw new Error(
+    `no usable Python interpreter (tried: ${candidates.join(", ")}); ` +
+      "install Python, or point PYTHON at one",
+  );
+}
+
 function check(dir: string): { status: number; output: string } {
   try {
-    const output = execFileSync("python3", ["-I", CHECK, dir], {
+    const output = execFileSync(interpreter(), ["-I", CHECK, dir], {
       encoding: "utf8",
       env: { PATH: process.env.PATH ?? "" },
       stdio: "pipe",

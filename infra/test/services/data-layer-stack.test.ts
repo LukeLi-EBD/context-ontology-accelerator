@@ -69,8 +69,10 @@ describe("DataLayerStack", () => {
     const opts = mockBundlePython.mock.calls[0][0] as {
       requirementsFile?: string;
     };
+    // ``path`` separators are OS-specific, so match either one instead of
+    // pinning POSIX slashes (this assertion used to fail on Windows only).
     expect(opts.requirementsFile).toMatch(
-      /packages\/data-layer\/requirements\.lock\.txt$/,
+      /[\\/]packages[\\/]data-layer[\\/]requirements\.lock\.txt$/,
     );
     const lock = fs.readFileSync(opts.requirementsFile ?? "", "utf-8");
     for (const dep of ["pydantic", "pydantic-settings", "structlog"]) {

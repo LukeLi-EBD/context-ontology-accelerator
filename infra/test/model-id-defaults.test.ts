@@ -114,12 +114,55 @@ describe("model-id defaults agree across TypeScript, Python and preflight", () =
  * preflight-deploy.sh re-implements the region → geographies and id → geo
  * prefix mapping in bash because it runs before anything is built. Run the
  * bash functions and compare with the TypeScript they mirror.
+ *
+ * The script calls ``node`` from inside the bash function. A bare ``bash`` on
+ * Windows usually resolves to WSL's /bin/bash, which neither sees the Windows
+ * ``node`` nor preserves quoted arguments across the interop boundary, so every
+ * comparison fails for reasons unrelated to the script. Prefer a bash that can
+ * run ``node`` (Git for Windows ships one) and fail with the reason when none
+ * is usable, instead of testing the wrong shell.
  */
+function resolveBash(): string {
+  const candidates: string[] = [];
+  if (process.env.BASH) candidates.push(process.env.BASH);
+  if (process.platform === "win32") {
+    try {
+      const execPath = execFileSync("git", ["--exec-path"], {
+        encoding: "utf8",
+      }).trim();
+      candidates.push(
+        path.resolve(execPath, "..", "..", "..", "bin", "bash.exe"),
+      );
+    } catch {
+      // No git on PATH; fall back to the default install location below.
+    }
+    if (process.env.ProgramFiles) {
+      candidates.push(
+        path.join(process.env.ProgramFiles, "Git", "bin", "bash.exe"),
+      );
+    }
+  }
+  candidates.push("bash");
+  for (const candidate of candidates) {
+    try {
+      execFileSync(candidate, ["-c", "command -v node"], { stdio: "ignore" });
+      return candidate;
+    } catch {
+      // Missing, or a WSL bash whose PATH has no node.
+    }
+  }
+  throw new Error(
+    `no bash with node on PATH (tried: ${candidates.join(", ")}); ` +
+      "install Git for Windows, or run this test on Linux/macOS",
+  );
+}
+
 describe("preflight's bash geography mapping mirrors model-region.ts", () => {
   const script = path.join(REPO, "scripts", "preflight-deploy.sh");
+  const bash = resolveBash();
   const callBash = (fn: string, arg: string): string =>
     execFileSync(
-      "bash",
+      bash,
       [
         "-c",
         // eval rather than `source <(...)`: macOS ships bash 3.2, where
