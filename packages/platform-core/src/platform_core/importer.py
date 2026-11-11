@@ -921,7 +921,10 @@ class Importer:
                 return
             self._mark(
                 batch_id, group, "indexed",
-                degraded=group.degraded or bool(indexed.get("degraded")),
+                # `degraded` promises missing vectors. Every chunk of this group
+                # was embedded on this pass, so a flag left by an earlier failed
+                # attempt (or by the document row it was resumed from) is stale.
+                degraded=False,
                 # A retried file that now succeeds must not keep the old
                 # failure reason: readers filter/export on failure_code and
                 # would report a healthy document as failed.
