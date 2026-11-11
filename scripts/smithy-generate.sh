@@ -285,8 +285,11 @@ if ! grep -q '^from coa_data_layer_server\.models\.' "$DATA_LAYER_PKG/__init__.p
 fi
 
 # ── Write pyproject.toml for the Data Layer Python server models ─────────────
-# The entire smithy-generated/ folder is gitignored, so this file must be
-# recreated on each generation. It allows uv to resolve this as a workspace member.
+# smithy-generated/ is version-controlled and must be committed. This run wipes
+# the whole directory first, so this file has to be recreated on each
+# generation. It allows uv to resolve this as a workspace member. The committed
+# copy is checked against the generator output by the drift gate in
+# .github/workflows/pr.yml.
 cat > "$GENERATED_DIR/data-layer-python-server/pyproject.toml" <<'PYPROJECT'
 [project]
 name = "coa-data-layer-server"

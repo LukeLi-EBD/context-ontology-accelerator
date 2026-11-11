@@ -98,10 +98,14 @@ if [ -n "$CONTAINER_ENGINE" ]; then
 fi
 
 # ── 4. Smithy-generated artifacts present AND current ────────────────────
-# smithy-generated/ is gitignored, so `git pull` leaves it at the previous
-# commit's output. Checking only that specs exist would ship handlers against a
-# stale generated model — e.g. a renamed enum member fails the Lambda at import.
-# Regenerate whenever any codegen input changed since the last generation.
+# smithy-generated/ is version-controlled and must be committed; CI's drift gate
+# (.github/workflows/pr.yml) checks the committed copy against the generator
+# output on PRs to main and the merge queue. A working tree can still carry
+# output produced before a model change (local runs, older checkouts, branch
+# switches, direct pushes that never ran that gate). Checking only that specs
+# exist would ship handlers against a stale generated model — e.g. a renamed
+# enum member fails the Lambda at import. Regenerate whenever any codegen input
+# changed since the last generation.
 FINGERPRINT="$REPO_ROOT/scripts/smithy-fingerprint.sh"
 SMITHY_STATE="$("$FINGERPRINT" state "$REPO_ROOT")"
 case "$SMITHY_STATE" in
