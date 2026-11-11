@@ -1,11 +1,14 @@
 [project]
 name = "coa-local-providers"
-version = "0.1.0"
+version = "0.3.9"
 description = "Provider implementations (local and AWS) for the COA-X ports"
 requires-python = ">=3.12"
 dependencies = [
     "boto3>=1.35.0",
     "coa-ports",
+    # Imported directly by control_plane_pg / metric_jobs_pg and, transitively,
+    # through platform_core's Postgres adapters.
+    "psycopg[binary,pool]>=3.2.3",
 ]
 
 [build-system]

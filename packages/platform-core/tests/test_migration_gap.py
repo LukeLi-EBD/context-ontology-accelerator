@@ -15,6 +15,7 @@ from unittest import mock
 sys.path.insert(0, "/app/src")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from coa_control_plane.platform_db import MIGRATIONS_DIR
 from platform_core.adapters import metadata_pg
 from platform_core.adapters.metadata_pg import (
     MIGRATION_GAP_HINT,
@@ -80,7 +81,9 @@ class _FakePool:
 
 def _meta(current: int, versions: list[int]) -> MetadataPg:
     meta = MetadataPg("postgresql://fake/db")
-    meta._pool = _FakePool(_FakeConn(current, versions))
+    # R2: the adapter forwards to platform_db.PgPool; the fake stands in for the
+    # psycopg pool inside it, so the version-gate branches stay the same.
+    meta._pool._pool = _FakePool(_FakeConn(current, versions))
     return meta
 
 
@@ -89,7 +92,8 @@ REGISTERED = [row[0] for row in metadata_pg.MIGRATIONS]
 
 class MigrationGapTest(unittest.TestCase):
     def test_registered_migration_files_exist(self) -> None:
-        sql_dir = Path(metadata_pg.__file__).resolve().parent.parent / "sql"
+        # R1 moved the SQL files into coa_control_plane.platform_db/migrations.
+        sql_dir = Path(str(MIGRATIONS_DIR))
         for version, filename, _description in metadata_pg.MIGRATIONS:
             self.assertTrue((sql_dir / filename).is_file(), f"V{version}: {filename}")
 
@@ -127,9 +131,10 @@ class MigrationGapTest(unittest.TestCase):
             (35, "V35__c2_quota.sql", "withdrawn C2 branch"),
             (36, "V36__unused.sql", "never used"),
         ]
-        history = [v for v in REGISTERED if v <= 45]
+        current = metadata_pg.SUPPORTED_SCHEMA_VERSION
+        history = [v for v in REGISTERED if v <= current]
         with mock.patch.object(metadata_pg, "MIGRATIONS", patched):
-            meta = _meta(current=45, versions=history)
+            meta = _meta(current=current, versions=history)
             result = meta.migrate()
         self.assertEqual(result["applied"], [])
 

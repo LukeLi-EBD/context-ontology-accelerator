@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from coa_metrics.metric_index import MetricIndexSync
 from coa_metrics.neptune_client import MetricAiContext, MetricDefinition, MetricDialect
+
+pytestmark = pytest.mark.unit
 
 
 class FakePort:

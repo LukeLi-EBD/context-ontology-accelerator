@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import { useNamespace } from "@api-hooks/use-namespace";
@@ -18,7 +18,15 @@ import Modal from "@cloudscape-design/components/modal";
 import Input from "@cloudscape-design/components/input";
 import FormField from "@cloudscape-design/components/form-field";
 import Spinner from "@cloudscape-design/components/spinner";
-import { useGetMetric, useDeleteMetric } from "../api-hooks/use-metrics";
+import Link from "@cloudscape-design/components/link";
+import {
+  useGetMetric,
+  useDeleteMetric,
+  useGetMetricCard,
+  useGetMetricFamily,
+  useOntologyClasses,
+} from "../api-hooks/use-metrics";
+import type { MetricFieldBinding } from "../api-hooks/use-metrics";
 import { useSourceNameById } from "../api-hooks/use-source-name-by-id";
 import { useAppI18n } from "../i18n/LocaleProvider";
 
@@ -50,6 +58,60 @@ export const MetricDetail: React.FC = () => {
 
   // Resolve dataSourceId -> human-readable source name
   const sourceNameById = useSourceNameById(namespaceId ?? "");
+
+  // F54/F56: platform card (bindings + external status) and F55: the family
+  // this metric belongs to, if it is a variant (or the family index itself).
+  const { data: card } = useGetMetricCard(metricName ?? "");
+  const { data: familyData } = useGetMetricFamily(
+    namespaceId ?? "",
+    card?.familyId ?? undefined,
+  );
+  const family = familyData?.family;
+  const { data: classData } = useOntologyClasses(namespaceId ?? "");
+
+  // F54 deliberately keeps this a weak association: metric_field_binding has no
+  // entity IRI, only a column name, so there is no real column -> class mapping
+  // to follow. We match the bound column / grain against the ontology class
+  // local name instead. When more than one class shares that local name the
+  // match is ambiguous and we show no link at all: a wrong entity page is worse
+  // than no entity page.
+  const classesByLocalName = useMemo(() => {
+    const map = new Map<string, Array<{ iri: string; label?: string }>>();
+    for (const cls of classData?.classes ?? []) {
+      const local = cls.iri.split(/[#/]/).filter(Boolean).pop() ?? "";
+      if (!local) continue;
+      const key = local.toLowerCase();
+      map.set(key, [...(map.get(key) ?? []), cls]);
+    }
+    return map;
+  }, [classData?.classes]);
+
+  const uniqueClassFor = (name?: string) => {
+    if (!name) return undefined;
+    const matches = classesByLocalName.get(name.toLowerCase()) ?? [];
+    return matches.length === 1 ? matches[0] : undefined;
+  };
+
+  const entityHref = (iri: string) =>
+    `/namespaces/${namespaceId}/ontology/entities/${encodeURIComponent(iri)}`;
+  const openEntity = (iri: string) => (event: CustomEvent) => {
+    event.preventDefault();
+    navigate(entityHref(iri));
+  };
+  const classForColumn = (column?: string) => uniqueClassFor(column);
+  const grainClass = uniqueClassFor(card?.grain ?? undefined);
+  const externalBadgeColor = (status?: string) => {
+    switch (status) {
+      case "external_candidate":
+        return "green" as const;
+      case "blocked":
+        return "red" as const;
+      case "unpublishable":
+        return "grey" as const;
+      default:
+        return "blue" as const;
+    }
+  };
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -131,6 +193,26 @@ export const MetricDetail: React.FC = () => {
           </Header>
         }
       >
+        {/* F56: binding + external status, straight off the platform card. */}
+        {card && (
+          <div style={{ marginBottom: "16px" }}>
+            <SpaceBetween direction="horizontal" size="xs">
+              <Badge color={card.bindingStatus === "bound" ? "green" : "grey"}>
+                {card.bindingStatus === "bound" ? t("Bound") : t("Unbound")}
+              </Badge>
+              {card.externalStatus && (
+                <Badge color={externalBadgeColor(card.externalStatus)}>
+                  {card.externalLabel ?? card.externalStatus}
+                </Badge>
+              )}
+              {card.externalReason && (
+                <Box color="text-body-secondary" variant="small">
+                  {card.externalReason}
+                </Box>
+              )}
+            </SpaceBetween>
+          </div>
+        )}
         <ColumnLayout columns={3} variant="text-grid">
           <div>
             <Box variant="awsui-key-label">{t("Name")}</Box>
@@ -166,6 +248,75 @@ export const MetricDetail: React.FC = () => {
           </div>
         </ColumnLayout>
       </Container>
+
+      {/* F55: family view — switch between variants that share an index. */}
+      {family && family.variants.length > 0 && (
+        <Container
+          header={
+            <Header
+              variant="h2"
+              description={t(
+                "Variants answer the same business question with a different formula, window or denominator.",
+              )}
+            >
+              {t("Family variants")}
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            <SpaceBetween direction="horizontal" size="xs">
+              {family.variants.map((variant) => (
+                <Button
+                  key={variant.metricId}
+                  variant={
+                    variant.metricId === metricName ? "primary" : "normal"
+                  }
+                  onClick={() =>
+                    navigate(
+                      `/namespaces/${namespaceId}/metrics/${variant.metricId}`,
+                    )
+                  }
+                >
+                  {variant.grain
+                    ? `${variant.metricId} · ${variant.grain}`
+                    : variant.metricId}
+                </Button>
+              ))}
+            </SpaceBetween>
+            {family.diffs.length > 0 && (
+              <Table
+                variant="embedded"
+                items={family.diffs}
+                columnDefinitions={[
+                  {
+                    id: "field",
+                    header: t("Field"),
+                    cell: (diff) => diff.label ?? diff.field,
+                    width: 180,
+                  },
+                  ...family.variants.map((variant) => ({
+                    id: variant.metricId,
+                    header: variant.grain ?? variant.metricId,
+                    cell: (diff: (typeof family.diffs)[number]) =>
+                      diff.values[variant.metricId] ?? "—",
+                  })),
+                  {
+                    id: "different",
+                    header: t("Differs"),
+                    cell: (diff) =>
+                      diff.different ? (
+                        <Badge color="red">{t("Yes")}</Badge>
+                      ) : (
+                        <Box color="text-status-inactive">{t("No")}</Box>
+                      ),
+                    width: 90,
+                  },
+                ]}
+              />
+            )}
+          </SpaceBetween>
+        </Container>
+      )}
 
       {/* Governance — COA-private provenance from the bundle's custom_extensions */}
       <Container header={<Header variant="h2">{t("Governance")}</Header>}>
@@ -206,6 +357,124 @@ export const MetricDetail: React.FC = () => {
             <div>{metric.defaultTimeGrain ?? "—"}</div>
           </div>
         </ColumnLayout>
+      </Container>
+
+      {/* F54: class + field bindings, with an entity-page hop per binding. */}
+      <Container
+        header={
+          <Header
+            variant="h2"
+            description={t(
+              "Field bindings come from the metric's physical binding. Bindings carry a column name, not an IRI, so the entity-page link resolves that column against an ontology class of the same name.",
+            )}
+          >
+            {t("Class and field bindings")}
+          </Header>
+        }
+      >
+        <SpaceBetween size="m">
+          <div>
+            <Box variant="awsui-key-label">{t("Class binding")}</Box>
+            {grainClass ? (
+              <SpaceBetween direction="horizontal" size="xs">
+                <Link
+                  href={entityHref(grainClass.iri)}
+                  onFollow={openEntity(grainClass.iri)}
+                >
+                  {grainClass.label || grainClass.iri}
+                </Link>
+                <Box color="text-body-secondary" variant="small">
+                  {card?.grain}
+                </Box>
+              </SpaceBetween>
+            ) : (
+              <Box color="text-status-inactive">
+                {t(
+                  "No ontology class matches this metric's grain ({grain}).",
+                  { grain: card?.grain ?? "—" },
+                )}
+              </Box>
+            )}
+          </div>
+          <div>
+            <Box variant="awsui-key-label">{t("Field bindings")}</Box>
+            {card?.fieldBindings && card.fieldBindings.length > 0 ? (
+              <Table
+                variant="embedded"
+                items={card.fieldBindings}
+                columnDefinitions={[
+                  {
+                    id: "role",
+                    header: t("Role"),
+                    cell: (binding: MetricFieldBinding) =>
+                      binding.role ? <Badge>{binding.role}</Badge> : "—",
+                    width: 120,
+                  },
+                  {
+                    id: "factTable",
+                    header: t("Fact table"),
+                    cell: (binding: MetricFieldBinding) =>
+                      binding.factTable ?? "—",
+                  },
+                  {
+                    id: "entityColumn",
+                    header: t("Entity column"),
+                    cell: (binding: MetricFieldBinding) =>
+                      binding.entityColumn ?? "—",
+                  },
+                  {
+                    id: "valueExpr",
+                    header: t("Value expression"),
+                    cell: (binding: MetricFieldBinding) =>
+                      binding.valueExpr ?? "—",
+                  },
+                  {
+                    id: "agg",
+                    header: t("Aggregate"),
+                    cell: (binding: MetricFieldBinding) => binding.agg ?? "—",
+                    width: 110,
+                  },
+                  {
+                    id: "filter",
+                    header: t("Filter"),
+                    cell: (binding: MetricFieldBinding) =>
+                      binding.filterSql ?? "—",
+                  },
+                  {
+                    id: "window",
+                    header: t("Window"),
+                    cell: (binding: MetricFieldBinding) =>
+                      binding.windowColumn
+                        ? `${binding.windowColumn} / ${binding.windowMode ?? "—"}`
+                        : "—",
+                  },
+                  {
+                    id: "entity",
+                    header: t("Entity page"),
+                    cell: (binding: MetricFieldBinding) => {
+                      const cls = classForColumn(binding.entityColumn);
+                      return cls ? (
+                        <Link
+                          href={entityHref(cls.iri)}
+                          onFollow={openEntity(cls.iri)}
+                        >
+                          {t("Open")}
+                        </Link>
+                      ) : (
+                        <Box color="text-status-inactive">—</Box>
+                      );
+                    },
+                    width: 110,
+                  },
+                ]}
+              />
+            ) : (
+              <Box color="text-status-inactive">
+                {t("No field bindings recorded for this metric version.")}
+              </Box>
+            )}
+          </div>
+        </SpaceBetween>
       </Container>
 
       {/* Expressions */}
@@ -281,7 +550,9 @@ export const MetricDetail: React.FC = () => {
         {metric.ontologyConcepts && metric.ontologyConcepts.length > 0 ? (
           <SpaceBetween direction="horizontal" size="xs">
             {metric.ontologyConcepts.map((c) => (
-              <Badge key={c}>{c}</Badge>
+              <Link key={c} href={entityHref(c)} onFollow={openEntity(c)}>
+                {c}
+              </Link>
             ))}
           </SpaceBetween>
         ) : (

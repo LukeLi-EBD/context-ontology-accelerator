@@ -264,7 +264,12 @@ def _http_error(exc: Exception) -> HTTPException:
     """Map a provider/backend failure onto a status that never looks like success."""
     from .conversation_store import SessionForbidden, SessionNotFound
     from .object_store import ObjectNotFound, ObjectStoreError, ObjectTooLarge, PreconditionFailed, UnsupportedOperation
+    from .sparql_http import SparqlOperationCancelled
 
+    if isinstance(exc, SparqlOperationCancelled):
+        # The endpoint stopped the query at its own deadline; that is a timeout,
+        # not an unavailable backend, and the rows it returned are partial.
+        return HTTPException(status_code=504, detail=f"SparqlOperationCancelled: {exc}")
     if isinstance(exc, ProviderNotConfigured):
         return HTTPException(status_code=503, detail=str(exc))
     if isinstance(exc, SessionNotFound):

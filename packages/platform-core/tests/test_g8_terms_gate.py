@@ -421,7 +421,7 @@ class PublishGateTests(unittest.TestCase):
         # the V40 DDL directly (idempotent) instead of bumping schema_version
         # under that older image; the next migrate() will pick V40 up normally.
         ddl = (
-            files("platform_core").joinpath("sql/V40__term_high_water.sql")
+            files("coa_control_plane.platform_db").joinpath("migrations/V40__term_high_water.sql")
             .read_text(encoding="utf-8")
         )
         for statement in split_sql_statements(ddl):

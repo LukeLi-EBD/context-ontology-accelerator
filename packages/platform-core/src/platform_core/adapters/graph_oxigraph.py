@@ -17,6 +17,11 @@ RDF_FORMATS = {"turtle": "turtle", "ttl": "turtle", "trig": "trig", "nt": "nt", 
 SERVICE_RE = re.compile(r"\bSERVICE\b", re.IGNORECASE)
 IRI_RE = re.compile(r"^[^<>\"{}|^`\\\s]+$")
 PROBE = "urn:platform:selfcheck:graph"
+# Oxigraph's ``serve --timeout-s`` answers a cancelled operation with HTTP 200:
+# the body stops mid-stream and this sentence is appended to it.
+_CANCELLED_NOTICE = "The SPARQL operation has been cancelled"
+_CANCELLED_BYTES = _CANCELLED_NOTICE.encode()
+_CANCELLED_WINDOW = len(_CANCELLED_BYTES) + 8
 
 # Q7-b: only platform-managed graphs may appear in a dataset clause or a
 # GRAPH <iri> pattern. Any other IRI (another product's store, an external
@@ -176,6 +181,20 @@ class OxigraphHttpStore:
                 provider="oxigraph-http",
                 provider_code="E_GRAPH_BAD_REQUEST",
                 details={"status": response.status_code, "body": body},
+            )
+        if response.content[-_CANCELLED_WINDOW:].rstrip().endswith(_CANCELLED_BYTES):
+            # ``--timeout-s`` is reported as a 200 whose payload stops mid-stream
+            # and is followed by the notice. Treating that as success hands the
+            # caller a truncated result (or a half-applied write); the status
+            # code alone cannot tell the difference.
+            raise PortError(
+                code="DeadlineExceeded",
+                message=(
+                    "oxigraph cancelled this operation at its server-side limit; "
+                    "the payload is partial and the operation did not complete"
+                ),
+                provider="oxigraph-http",
+                provider_code="E_GRAPH_TIMEOUT",
             )
         return response
 

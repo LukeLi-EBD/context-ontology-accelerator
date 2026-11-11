@@ -39,7 +39,7 @@ class MetricV9SeedTest(unittest.TestCase):
         cls.runtime.metadata.open(retry_seconds=15.0)
         cls.runtime.metadata.migrate()
         cls.meta = cls.runtime.metadata
-        cls.sql = files("platform_core").joinpath("sql/V30__metric_decisions_v9.sql").read_text(
+        cls.sql = files("coa_control_plane.platform_db").joinpath("migrations/V30__metric_decisions_v9.sql").read_text(
             encoding="utf-8"
         )
 

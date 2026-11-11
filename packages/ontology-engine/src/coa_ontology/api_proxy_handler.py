@@ -105,6 +105,8 @@ _PATH_MAP = {
     "/namespaces/{namespaceId}/graph/canvas/manifest": "/graph/canvas/manifest",
     "/namespaces/{namespaceId}/graph/canvas": "/graph/canvas",
     "/namespaces/{namespaceId}/graph/path": "/graph/path",
+    # FindLinks: bounded (<=3 hop) neighbourhood. Read-only, no query renames.
+    "/namespaces/{namespaceId}/graph/links": "/graph/links",
     "/namespaces/{namespaceId}/graph/snapshot": "/graph/snapshot",
     "/namespaces/{namespaceId}/graph/validate": "/graph/validate",
     "/namespaces/{namespaceId}/graph/reasoning": "/graph/reasoning",

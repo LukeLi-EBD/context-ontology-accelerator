@@ -52,6 +52,22 @@ _ERROR_CODES: Mapping[str, PortErrorCode] = {
     "TimeoutError": PortErrorCode.TIMEOUT,
     "QueryTranslationError": PortErrorCode.INTERNAL,
     "InternalError": PortErrorCode.INTERNAL,
+    "E_SPARQL_SYNTAX": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_STATEMENT_NOT_ALLOWED": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_FEDERATED": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_DATASET_FORBIDDEN": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_GRAPH_FORBIDDEN": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_LOAD_NOT_ALLOWED": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_TOO_LONG": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_EMPTY": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_BAD_NAMESPACE": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_TIMEOUT": PortErrorCode.TIMEOUT,
+    "E_SPARQL_PROVIDER_REJECTED": PortErrorCode.INVALID_ARGUMENT,
+    "E_SPARQL_PROVIDER_ERROR": PortErrorCode.UNAVAILABLE,
+    "E_SPARQL_SCOPE_TOO_LARGE": PortErrorCode.UNAVAILABLE,
+    "E_SPARQL_SCOPE_EMPTY": PortErrorCode.UNAVAILABLE,
+    "E_SPARQL_BACKEND_NOT_CONFIGURED": PortErrorCode.UNAVAILABLE,
+    "E_SPARQL_INTERNAL": PortErrorCode.INTERNAL,
 }
 
 
@@ -237,12 +253,19 @@ def _http_error(response: httpx.Response) -> PortError:
 def _in_band_error(body: Mapping[str, Any], status_code: int) -> PortError:
     name = body.get("error")
     name = name if isinstance(name, str) else ""
+    # providerCode/providerMessage are optional in the Smithy error contracts and the
+    # data-layer only forwards them when truthy, so omit them instead of emitting nulls.
+    details: dict[str, Any] = {"statusCode": status_code}
+    if isinstance(body.get("providerCode"), str):
+        details["providerCode"] = body["providerCode"]
+    if isinstance(body.get("providerMessage"), str):
+        details["providerMessage"] = body["providerMessage"]
     return PortError(
         _ERROR_CODES.get(name, PortErrorCode.INTERNAL),
         str(body.get("message") or f"context manager returned statusCode {status_code}"),
         provider=LocalHttpContextManager.provider,
         provider_code=name or str(status_code),
-        details={"statusCode": status_code},
+        details=details,
     )
 
 

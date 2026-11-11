@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { GetSourceTableInput, GetSourceTableOutput } from "../models/models_0";
+import type { GetSourceTableInput, GetSourceTableOutput } from "../models/models_1";
 import { GetSourceTable$ } from "../schemas/schemas_0";
 
 /**

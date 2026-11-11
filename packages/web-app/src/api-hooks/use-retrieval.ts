@@ -12,6 +12,13 @@ import {
 import { useDataLayerClient } from "@components/DataLayerClientProvider";
 
 /**
+ * The `topK` this UI requests. Exported so the Retrieval page can tell when a
+ * result set hit the cap (the contract has no explicit truncation flag, so the
+ * only honest signal is "returned as many chunks as we asked for").
+ */
+export const KB_SEARCH_TOP_K = 5;
+
+/**
  * Knowledge-base search (`KBSearch` op, `POST /namespaces/{ns}/kb/search`).
  * Returns ranked chunks with provenance — the retrieval primitive behind the
  * Retrieval page's "Knowledge-base search" panel.
@@ -22,7 +29,7 @@ export function useKbSearch(namespaceId: string) {
   return useMutation<KBSearchOutput, Error, string>({
     mutationFn: (query) =>
       client.send(
-        new KBSearchCommand({ namespaceId, query, topK: 5 }),
+        new KBSearchCommand({ namespaceId, query, topK: KB_SEARCH_TOP_K }),
       ),
   });
 }

@@ -12,6 +12,15 @@ import httpx
 
 SPARQL_RESULTS_JSON = "application/sparql-results+json"
 
+# Oxigraph's ``serve --timeout-s`` answers a cancelled query with HTTP 200: the
+# body stops mid-stream and this sentence is appended to it.
+CANCELLED_NOTICE = "The SPARQL operation has been cancelled"
+
+
+class SparqlOperationCancelled(RuntimeError):
+    """The endpoint cancelled the query at its own deadline; the rows are partial."""
+
+
 # The acceptance graph store keeps its data in named graphs, so a bare
 # ``?s ?p ?o`` default-graph ASK answers false on a store that is not empty.
 GRAPH_HAS_TRIPLES = "ASK { { ?s ?p ?o } UNION { GRAPH ?g { ?s ?p ?o } } }"
@@ -43,6 +52,12 @@ class SparqlHttpGraphClient:
                 headers={"Accept": SPARQL_RESULTS_JSON},
             )
             response.raise_for_status()
+            if response.content[-len(CANCELLED_NOTICE) - 8 :].rstrip().endswith(CANCELLED_NOTICE.encode()):
+                # The query was stopped at the endpoint's deadline; the body is a
+                # fragment and must not be read as a complete answer.
+                raise SparqlOperationCancelled(
+                    f"{self._endpoint} cancelled the query at its server limit; the result is partial"
+                )
             return response.json()
 
     async def query(self, sparql: str) -> list[dict[str, Any]]:

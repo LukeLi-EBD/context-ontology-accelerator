@@ -12,8 +12,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from coa_control_plane.platform_db.connection import PgPool
 from coa_ports import PortError, PortErrorCode
-from platform_core.adapters.metadata_pg import MetadataPg
 
 _READ_ONLY_PREFIXES = ("select", "with")
 
@@ -30,7 +30,7 @@ class PgWarehouseAdmin:
         pool_max: int = 4,
         open_timeout_seconds: float = 10.0,
     ) -> None:
-        self._meta = MetadataPg(dsn, pool_max=pool_max)
+        self._meta = PgPool(dsn, pool_max=pool_max)
         self._meta.open(retry_seconds=open_timeout_seconds)
 
     def create_workgroup(

@@ -267,3 +267,8 @@ doc/_review/
 doc/_qa-audit/
 # 本地回滚/撤回备份（如 ont-587cc7df09a5-2026-11-08）：只在宿主机留档，不入库（added 2026-11-08）
 doc/_backup/
+
+# --- coa-x 本地栈运行日志：不入库（added 2026-11-10）---
+# 8ef79463（docs: auto-sync）每次都有内容可提交，来源就是这批日志。
+# 磁盘文件保留，仅移出版本控制；`*.log` 同时覆盖 `*.err.log`。
+doc/coa-x/tools/*.log

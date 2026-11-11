@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { ApproveSourceInput, ApproveSourceOutput } from "../models/models_0";
+import type { ApproveSourceInput, ApproveSourceOutput } from "../models/models_1";
 import { ApproveSource$ } from "../schemas/schemas_0";
 
 /**

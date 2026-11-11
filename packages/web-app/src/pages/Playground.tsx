@@ -31,6 +31,7 @@ import {
   SamplePrompts,
 } from "@components/Chat";
 import { RationalePanel } from "@components/Chat/RationalePanel";
+import { AnswerableCoverage } from "@components/AnswerableCoverage";
 import { usePlaygroundChatSSE } from "@api-hooks/use-playground-chat-sse";
 import { usePlaygroundChatLocal } from "@api-hooks/use-playground-chat-local";
 import { useExampleQuestions } from "@api-hooks/use-example-questions";
@@ -279,6 +280,10 @@ export const Playground: React.FC = () => {
         </StatusIndicator>
       )}
 
+      <div style={{ marginTop: "16px" }}>
+        <AnswerableCoverage namespaceId={namespaceId} query={inputValue} />
+      </div>
+
       <div
         style={{
           flex: 1,
@@ -361,6 +366,7 @@ export const Playground: React.FC = () => {
                 >
                   <ChatMessage
                     role={msg.role}
+                    namespaceId={namespaceId}
                     messageId={msg.id}
                     state={
                       msg.isLoading

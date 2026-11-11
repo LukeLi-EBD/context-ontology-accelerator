@@ -10,11 +10,13 @@ $version: "2"
 namespace com.amazon.semanticcontext.ontologygraph
 
 use com.amazon.semanticcontext.common#ClientToken
+use com.amazon.semanticcontext.common#ConflictError
 use com.amazon.semanticcontext.common#NotFoundError
 use com.amazon.semanticcontext.common#OntologyId
 use com.amazon.semanticcontext.common#PaginatedOutput
 use com.amazon.semanticcontext.common#PaginationToken
 use com.amazon.semanticcontext.common#PresignedUrl
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 
@@ -144,8 +146,13 @@ list OntologyRecordList {
     member: OntologyRecord
 }
 
-list StringList {
-    member: String
+/// IRI of a `urn:platform:` named graph (the only graphs a namespace may ask
+/// the reasoner to read).
+@length(min: 1, max: 2048)
+string PlatformGraphIri
+
+list PlatformGraphIriList {
+    member: PlatformGraphIri
 }
 
 /// List ontologies registered in a namespace, one page at a time.
@@ -1225,7 +1232,180 @@ operation GetReasoningStatus {
         /// When the status was sampled (ISO-8601).
         @required
         sampledAt: String
+
+        /// Triples the recorded pointer holds; null until the first run.
+        inferredTriples: Integer
+
+        /// Last materialization job, with its per-stage results. Null before
+        /// the first run.
+        lastJob: ReasoningJobSummary
     }
+}
+
+/// What the last materialization job left behind.
+structure ReasoningJobSummary {
+    /// Row identifier in `platform.reasoning_job`.
+    @required
+    jobId: String
+
+    /// `queued`, `running`, `succeeded`, `skipped`, `failed` or `canceled`.
+    @required
+    state: String
+
+    /// Triples the run added.
+    inferred: Integer
+
+    /// Consistency verdict; false fails the run.
+    consistent: Boolean
+
+    /// When the run finished (ISO-8601).
+    finishedAt: String
+
+    /// True when the run short-circuited because the inputs were unchanged.
+    skipped: Boolean
+
+    /// Per-stage results, empty when nothing ran.
+    stages: ReasoningStages
+}
+
+/// One stage of a materialization run. Only the members the stage produces
+/// are set: `rdfs`/`owl` report triples added, `shacl` reports the gate.
+structure ReasoningStage {
+    /// Triples this stage added to the inferred graph.
+    triples: Integer
+
+    /// True when the SHACL gate ran and found no violations.
+    conforms: Boolean
+
+    /// Violations found by the SHACL gate.
+    violations: Integer
+
+    /// Wall time for this stage.
+    ms: Integer
+}
+
+/// Stages of a materialization run, in execution order.
+structure ReasoningStages {
+    /// RDFS closure (Jena `riot --rdfs`); skipped in `rdfs`-only mode.
+    rdfs: ReasoningStage
+
+    /// OWL EL materialization (ROBOT + ELK); absent in `rdfs`-only mode.
+    owl: ReasoningStage
+
+    /// SHACL gate; runs before any write, so a violation leaves the target
+    /// graph untouched.
+    shacl: ReasoningStage
+}
+
+/// Run inference over the published T-Box plus this namespace's A-Box graphs
+/// and replace the inferred graph for the published version.
+///
+/// The call is synchronous and can take a minute on a large A-Box. A second
+/// concurrent call for the same target answers 409. When the inputs hash the
+/// same as the recorded pointer and the target graph still holds exactly that
+/// many triples, the run is reported as `skipped` without writing.
+///
+/// The reported `inferred` count is what this run added; it is not the size
+/// of the inferred graph.
+@http(method: "POST", uri: "/namespaces/{namespaceId}/graph/reasoning/materialize", code: 200)
+@examples([
+    {
+        title: "Materialize with the default profile"
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11" }
+        output: {
+            jobId: "rsn-1a2b3c4d5e6f"
+            mode: "materialize"
+            profile: "EL"
+            ontologyVersion: "ont-7c6971e77b7d"
+            targetGraph: "urn:platform:inferred:ont-7c6971e77b7d"
+            inferred: 91052
+            skipped: false
+            consistent: true
+            inputHash: "7ef8727158b43f4ae92054670a79a28aa8c3199f877d11f0a07679f83b6196de"
+            ms: 72891
+            stages: {
+                rdfs: { triples: 53366, ms: 17342 }
+                owl: { triples: 37686, ms: 26234 }
+                shacl: { conforms: true, violations: 0, ms: 22484 }
+            }
+            warnings: []
+        }
+    }
+])
+operation MaterializeReasoning {
+    input := {
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// `EL` (default) or `OWL2EL`.
+        @length(min: 1, max: 32)
+        profile: String
+
+        /// Re-run even when the inputs are unchanged.
+        force: Boolean
+
+        /// A-Box graphs to reason over. Every IRI must be a `urn:platform:`
+        /// graph, so a namespace cannot read another namespace's graph. When
+        /// omitted the deployment's configured A-Box graphs are used.
+        @length(max: 64)
+        aboxGraphs: PlatformGraphIriList
+    }
+
+    output := {
+        /// Identifier of the row in `platform.reasoning_job`.
+        @required
+        jobId: String
+
+        /// `materialize` or `rdfs`.
+        @required
+        mode: String
+
+        /// Reasoning profile that was used.
+        @required
+        profile: String
+
+        /// Published ontology version the run read.
+        @required
+        ontologyVersion: String
+
+        /// Graph the run would replace (and did replace unless skipped).
+        @required
+        targetGraph: String
+
+        /// Triples this run added; 0 when skipped.
+        @required
+        inferred: Integer
+
+        /// True when the inputs were unchanged and nothing was written.
+        @required
+        skipped: Boolean
+
+        /// Consistency verdict from the reasoner. False fails the job and
+        /// leaves the target graph untouched.
+        @required
+        consistent: Boolean
+
+        /// Hash of (T-Box, A-Box, profile, mode) used to decide `skipped`.
+        inputHash: String
+
+        /// Wall time of the run.
+        @required
+        ms: Integer
+
+        /// Per-stage results, in execution order.
+        @required
+        stages: ReasoningStages
+
+        /// Non-fatal notes, for example axioms the EL profile ignores.
+        @required
+        warnings: StringList
+    }
+
+    errors: [
+        ConflictError
+        NotFoundError
+    ]
 }
 
 /// Compare two named graphs in the same namespace, read-only.

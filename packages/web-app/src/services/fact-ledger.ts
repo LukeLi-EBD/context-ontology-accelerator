@@ -201,15 +201,19 @@ export async function restoreFact(
 }
 
 export interface ResolveConflictInput {
-  subject: string;
-  predicate: string;
-  action: "keep" | "keep_both" | "merge";
+  /** Omitted for `batch`, where the scope replaces the single group key. */
+  subject?: string;
+  predicate?: string;
+  action: "keep" | "keep_both" | "merge" | "batch";
   actor: string;
   reason?: string;
   keep?: string;
   mergedObject?: string;
   mergedObjectKind?: string;
   graph?: string;
+  sourceDocumentId?: string;
+  /** `batch` only; the kernel previews unless this is explicitly false. */
+  dryRun?: boolean;
 }
 
 export async function resolveFactConflict(
@@ -218,6 +222,63 @@ export async function resolveFactConflict(
   input: ResolveConflictInput,
 ): Promise<Record<string, unknown>> {
   return client.post<Record<string, unknown>>(`${root(namespace)}/conflicts/resolve`, input);
+}
+
+export interface BatchKeepConflictInput {
+  /** Value the rule keeps; required. */
+  keep: string;
+  /** The scope. At least one member must be set, or the kernel refuses. */
+  predicate?: string;
+  subject?: string;
+  sourceDocumentId?: string;
+  actor: string;
+  reason?: string;
+  /** Defaults to true on the kernel, so an omitted flag can only preview. */
+  dryRun?: boolean;
+}
+
+export interface BatchKeepConflictRow {
+  subject: string;
+  predicate: string;
+  status: "would_keep" | "kept" | "skipped" | string;
+  retired?: number;
+  reason?: string;
+  values?: string[];
+}
+
+export interface BatchKeepConflictResult {
+  batchId: string;
+  dryRun: boolean;
+  keep: string;
+  matched: number;
+  kept: number;
+  skipped: number;
+  affectedFacts: number;
+  results?: BatchKeepConflictRow[];
+}
+
+/**
+ * Batch keep (F33): one `keep` value applied to every pending conflict group
+ * inside an explicit scope. The scope is the contract's guarantee — a batch
+ * never falls back to "whatever the current page filters", so a caller must
+ * name the predicate, subject or source it means.
+ */
+export async function batchKeepFactConflicts(
+  client: ApiClient,
+  namespace: string,
+  input: BatchKeepConflictInput,
+): Promise<BatchKeepConflictResult> {
+  const response = await resolveFactConflict(client, namespace, {
+    action: "batch",
+    keep: input.keep,
+    predicate: input.predicate,
+    subject: input.subject,
+    sourceDocumentId: input.sourceDocumentId,
+    actor: input.actor,
+    reason: input.reason,
+    dryRun: input.dryRun,
+  });
+  return response.batch as BatchKeepConflictResult;
 }
 
 export interface UndoConflictInput {

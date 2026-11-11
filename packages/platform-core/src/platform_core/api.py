@@ -7,6 +7,7 @@ codes so clients see provider codes instead of stack traces.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shutil
@@ -25,8 +26,12 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import __version__
+from . import dictionary_api
 from . import entity_view
 from . import healthboard
+from . import ingestion_api
+from . import metric_external
+from . import term_api
 from . import termgate
 from .adapters.ontology_pg import (
     build_import_document,
@@ -955,6 +960,25 @@ def _qa_answerable(
             "timings": timings,
         }
     )
+    return payload
+
+
+def _check_answerable_payload(result: dict[str, Any]) -> dict[str, Any]:
+    """Shape ``_qa_answerable`` for the CheckAnswerable contract.
+
+    The contract is explicit that a layer which cannot be computed carries no
+    coverage value. ``_qa_answerable`` keeps a numeric 0 next to the status so
+    ``/answerable`` stays wire-compatible; here the un-computable cases become
+    ``None`` (JSON null), which the UI renders as "unavailable", never as 0.
+    """
+    layers: list[dict[str, Any]] = []
+    for layer in result.get("layers") or []:
+        entry = dict(layer)
+        if str(entry.get("status") or "") in ("unavailable", "not_applicable"):
+            entry["coverage"] = None
+        layers.append(entry)
+    payload = dict(result)
+    payload["layers"] = layers
     return payload
 
 
@@ -2006,6 +2030,36 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             include_layers=bool(body.get("layers", True)),
         )
 
+    # ---- F76/F79: contract-backed CheckAnswerable ------------------------
+    #
+    # Same four-layer evaluation as /answerable, served on the contract path
+    # (namespaceId is the Cedar/API-Gateway resource). Two differences on
+    # purpose: the namespace must be a UUID, and a layer that cannot be
+    # computed reports no coverage value instead of a numeric zero.
+    @app.post("/namespaces/{namespaceId}/answerable")
+    def namespaced_answerable(
+        namespaceId: str, body: dict[str, Any] = Body(...)
+    ) -> dict[str, Any]:
+        try:
+            uuid.UUID(namespaceId)
+        except ValueError as exc:
+            raise PortError(
+                code="InvalidArgument",
+                message="namespaceId must be a UUID",
+                provider="platform",
+                provider_code="E_NAMESPACE_ID",
+                details={"namespaceId": namespaceId},
+            ) from exc
+        query = _qa_query(body)
+        result = _qa_answerable(
+            runtime,
+            query,
+            ontology_version=body.get("ontologyVersion"),
+            min_coverage=body.get("minCoverage"),
+            include_layers=True,
+        )
+        return _check_answerable_payload(result)
+
     @app.get("/answer")
     def answer_get(
         q: str = Query(min_length=1, max_length=2000),
@@ -2554,76 +2608,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.get("/browse/terms")
     def browse_terms() -> dict[str, Any]:
-        graph_iri = _current_graph(runtime)
-        if not graph_iri:
-            return {
-                "pointer": None,
-                "entries": [],
-                "classes": [],
-                "counts": {"anchorClasses": 0, "altLabels": 0, "evidenced": 0, "inferred": 0},
-            }
-        rows = runtime.graph.query(
-            f"""
-            SELECT ?e ?c ?classLabel ?label ?status ?confidence ?guard ?canonical ?suppressed
-              FROM <{graph_iri}> WHERE {{
-              ?e a <{_TERM}TermEntry> ;
-                 <{_TERM}forClass> ?c ;
-                 <{_TERM}label> ?label .
-              OPTIONAL {{ ?c <{_SKOS}prefLabel> ?classLabel }}
-              OPTIONAL {{ ?e <{_TERM}status> ?status }}
-              OPTIONAL {{ ?e <{_TERM}confidence> ?confidence }}
-              OPTIONAL {{ ?e <{_TERM}guardRegex> ?guard }}
-              OPTIONAL {{ ?c <{_TERM}canonicalFor> ?canonical }}
-              OPTIONAL {{ ?c <{_TERM}suppressedSurface> ?suppressed }}
-            }}
-            """
-        ).get("bindings", [])
-        entries: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            entry_iri = _binding(row, "e")
-            if not entry_iri:
-                continue
-            entry = entries.setdefault(
-                entry_iri,
-                {
-                    "entry": entry_iri,
-                    "classIri": _binding(row, "c"),
-                    "classLabel": _binding(row, "classLabel") or _local_name(_binding(row, "c")),
-                    "label": _binding(row, "label"),
-                    "status": _local_name(_binding(row, "status")),
-                    "confidence": _local_name(_binding(row, "confidence")),
-                    "guardRegex": _binding(row, "guard"),
-                    "canonicalFor": [],
-                    "suppressedSurface": [],
-                },
-            )
-            for field, key in (("canonical", "canonicalFor"), ("suppressed", "suppressedSurface")):
-                value = _binding(row, field)
-                if value and value not in entry[key]:
-                    entry[key].append(value)
-        items = sorted(entries.values(), key=lambda item: (item["classIri"] or "", item["label"] or ""))
-        classes: dict[str, dict[str, Any]] = {}
-        for entry in items:
-            class_iri = entry["classIri"]
-            if not class_iri:
-                continue
-            group = classes.setdefault(
-                class_iri,
-                {"iri": class_iri, "label": entry["classLabel"], "aliases": []},
-            )
-            group["aliases"].append(entry["label"])
-        evidenced = sum(1 for item in items if item["status"] == "evidenced")
-        inferred = sum(1 for item in items if item["status"] == "inferred")
+        result = term_api.load_terms(runtime, limit=100000)
         return {
-            "pointer": runtime.ontology.current(),
-            "entries": items,
-            "classes": sorted(classes.values(), key=lambda item: item["label"] or ""),
-            "counts": {
-                "anchorClasses": len(classes),
-                "altLabels": len(items),
-                "evidenced": evidenced,
-                "inferred": inferred,
-            },
+            "pointer": result["pointer"],
+            "entries": result["entries"],
+            "classes": result["classes"],
+            "counts": result["counts"],
         }
 
     # ---- B-06 data dictionary ---------------------------------------------
@@ -2796,6 +2786,30 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     @app.post("/facts/conflicts/resolve")
     def resolve_conflict(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        action = body.get("action")
+        # `batch` is the fourth adjudication on the same decision surface: one
+        # `keep` rule applied to every pending group inside an explicit scope.
+        # It lives here so the contract has one operation per decision, while
+        # `/facts/conflicts/batch` stays as the earliest callers' entry point.
+        if isinstance(action, str) and action.lower() == "batch":
+            outcome = runtime.facts.batch_keep(
+                keep=body.get("keep"),
+                predicate=body.get("predicate"),
+                subject=body.get("subject"),
+                source_document_id=body.get("sourceDocumentId"),
+                actor=body.get("actor", "operator"),
+                reason=body.get("reason"),
+                dry_run=bool(body.get("dryRun", True)),
+            )
+            # The scope members are optional on the wire: only echo the ones
+            # the caller actually supplied, so the response never carries an
+            # empty IRI (the contract types them as 1..2048 chars).
+            result: dict[str, Any] = {"action": "batch", "batch": outcome}
+            if body.get("subject"):
+                result["subject"] = body["subject"]
+            if body.get("predicate"):
+                result["predicate"] = body["predicate"]
+            return result
         missing = [
             key for key in ("subject", "predicate", "action")
             if not isinstance(body.get(key), str) or not body.get(key)
@@ -2940,7 +2954,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         fact_id: str,
         body: dict[str, Any] | None = Body(default=None),
     ) -> dict[str, Any]:
-        return runtime.facts.restore(fact_id, (body or {}).get("actor", "api"))
+        return runtime.facts.restore(
+            fact_id, (body or {}).get("actor", "api"), (body or {}).get("reason")
+        )
 
     @app.get("/facts/{fact_id}/events")
     def fact_events(
@@ -3181,17 +3197,63 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "current": runtime.ontology.current(),
         }
 
+    # Kernel-internal route, NOT the contract entrance. The contract path is
+    # GET /namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}
+    # (GetOntologyVersionProposal), served by the local bridge which rewrites to
+    # this route (doc/coa-x/tools/coa_api_local.py, `.../proposals/{proposalId}`
+    # -> /governance/proposals/{id}). Callers here: that bridge mapping, the
+    # kernel's own governance console (packages/platform-core/web/governance.js),
+    # and packages/platform-core/tests. The web app never calls this path.
     @app.get("/governance/proposals/{proposal_id}")
     def governance_get_proposal(proposal_id: str) -> dict[str, Any]:
+        from . import impact as impact_module
+
         proposal = runtime.ontology.get_proposal(proposal_id)
         version = runtime.ontology.get(proposal["versionId"])
+        # F107: the detail view carries the full O-03 checklist, not just the
+        # counts stored at propose time. When the analysis cannot run, the
+        # reason travels with the response — an empty block must never read as
+        # "nothing is affected".
+        impact: dict[str, Any] = dict(proposal.get("impact") or {})
+        try:
+            impact["analysis"] = impact_module.analyze(
+                runtime,
+                from_version=proposal.get("againstVersion"),
+                to_version=proposal["versionId"],
+            )
+            impact["analysisError"] = None
+        except PortError as exc:
+            impact["analysis"] = None
+            impact["analysisError"] = {
+                "code": exc.provider_code or exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            logging.getLogger(__name__).warning(
+                "proposal impact analysis unavailable: proposal=%s code=%s message=%s",
+                proposal_id,
+                impact["analysisError"]["code"],
+                exc.message,
+            )
+        except Exception as exc:  # the proposal view must stay readable
+            impact["analysis"] = None
+            impact["analysisError"] = {
+                "code": "E_IMPACT_ANALYSIS_FAILED",
+                "message": str(exc),
+                "details": {},
+            }
+            logging.getLogger(__name__).warning(
+                "proposal impact analysis crashed: proposal=%s error=%r",
+                proposal_id,
+                exc,
+            )
         return {
             "proposal": proposal,
             "version": version,
             "versionStatus": version["status"],
             "current": runtime.ontology.current(),
             "diff": proposal.get("diff") or {},
-            "impact": proposal.get("impact") or {},
+            "impact": impact,
         }
 
     @app.post("/governance/proposals/{proposal_id}/approve")
@@ -4423,7 +4485,7 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # M-05: E1 25 条行业公式（来源：doc/_fsldm/12-口径终裁-v9.md §1）。
     # 该清单只用于“声明核对”，不参与清单取数；清单仍逐条读库。
     _G3_E1_SOURCE = "doc/_fsldm/12-口径终裁-v9.md §1"
-    _G3_INDUSTRY_NOTICE = "内部基线、不外报"
+    _G3_INDUSTRY_NOTICE = metric_external.INDUSTRY_NOTICE
     _G3_E1_INDUSTRY_IDS = (
         "FIN-BANK-002",
         "FIN-BANK-005",
@@ -4461,29 +4523,9 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         return text or "口径未给出"
 
     def _g3_evidence(row: dict[str, Any]) -> dict[str, Any]:
-        basis = (row.get("evidence_basis") or "none").strip() or "none"
-        provenance = (row.get("provenance_label") or "").strip()
-        if basis == "regulatory":
-            return {
-                "code": basis,
-                "basisLabel": "监管原文",
-                "source": provenance or "监管原文",
-                "hasRegulatoryText": True,
-            }
-        if basis == "industry":
-            return {
-                "code": basis,
-                "basisLabel": "行业通行（未获监管原文）",
-                "source": provenance or "行业通行",
-                "hasRegulatoryText": False,
-                "notice": _G3_INDUSTRY_NOTICE,
-            }
-        return {
-            "code": basis,
-            "basisLabel": "无证据",
-            "source": provenance or "未给出",
-            "hasRegulatoryText": False,
-        }
+        # Shared with the metric card (platform_core.metric_external) so the
+        # manifest and the card can never disagree about evidence.
+        return metric_external.evidence(row)
 
     # 预检与执行共用同一个聚合集合（metrics._AGGREGATES），不另存副本：
     # count / count_distinct 在事实层已完成去重，compute 读取观测行时按实体内
@@ -4616,37 +4658,15 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     def _g3_metric_row(row: dict[str, Any]) -> dict[str, Any]:
         metric_id = str(row.get("metric_id") or "")
         tier = (row.get("computability_tier") or "unknown").strip() or "unknown"
-        evidence = _g3_evidence(row)
         publishable = bool(row.get("publishable"))
         formula = (row.get("formula_text") or "").strip() or (row.get("formula_expr") or "").strip()
-        external_eligible = bool(
-            publishable
-            and evidence["code"] == "regulatory"
-            and tier == "structurally_computable"
-        )
         execution = _g3_execution(row)
-        if external_eligible:
-            external_status = "external_candidate"
-            external_label = "对外可出数候选（需事实与观测）"
-            external_reason = (
-                "证据为监管原文、publishable=true、口径结构性可算；"
-                "资格判定未含观测与窗口，实际可执行性见 executionPath"
-                if execution["executable"]
-                else "证据为监管原文、publishable=true、口径结构性可算；"
-                f"但当前不可直接 compute（{execution['reasonCode']}）：{execution['reason']}"
-            )
-        elif evidence["code"] == "industry":
-            external_status = "internal_baseline"
-            external_label = _G3_INDUSTRY_NOTICE
-            external_reason = f"行业公式未获监管原文：{_G3_INDUSTRY_NOTICE}"
-        elif not publishable:
-            external_status = "unpublishable"
-            external_label = "不可发布"
-            external_reason = "publishable=false"
-        else:
-            external_status = "blocked"
-            external_label = "不可对外"
-            external_reason = f"口径未达结构性可算：{tier}"
+        judgement = metric_external.judgement(row, execution)
+        evidence = judgement["evidence"]
+        external_eligible = judgement["eligible"]
+        external_status = judgement["status"]
+        external_label = judgement["label"]
+        external_reason = judgement["reason"]
 
         missing = row.get("missing")
         if row.get("output_mode") == "index":
@@ -5227,6 +5247,22 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         "triple",
         "chunk",
     }
+    # Citation kind -> retrieval layer, used to aggregate one run's four-layer
+    # coverage. `chunk` is deliberately absent: a chunk citation is a document
+    # hit, not one of the four ontology/terms/metrics/facts layers, so counting
+    # it would inflate facts coverage.
+    _G4_LAYER_CITATION_MAP = {
+        "ontology": {"ontology-version", "triple"},
+        "terms": {"rdfs-term", "skos-term"},
+        "metrics": {"metric-definition", "formula", "rule-set"},
+        "facts": {
+            "fact-projection",
+            "fact-table",
+            "fact-table-field",
+            "fact-observation",
+            "value-source",
+        },
+    }
     # Frozen 24-query set from doc/_design/24 §5.2 and packages/platform-core/tests/term_eval.py.
     # It is deliberately duplicated here so the panel does not import a test
     # module; the strings and expected classes must stay byte-identical.
@@ -5726,13 +5762,40 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         """
         run_id = "aq-" + uuid.uuid4().hex[:12]
         summary = payload["summary"]
+        cases = payload.get("cases") or []
+        layer_coverage = []
+        for layer in _G4_LAYERS:
+            kinds = _G4_LAYER_CITATION_MAP[layer]
+            covered = sum(
+                1
+                for case in cases
+                if any(
+                    str(citation.get("kind") or "") in kinds
+                    for citation in (case.get("actual") or {}).get("citations") or []
+                )
+            )
+            layer_coverage.append(
+                {
+                    "layer": layer,
+                    "covered": covered,
+                    "evaluated": len(cases),
+                    "rate": round(covered / len(cases), 4) if cases else 0.0,
+                }
+            )
         detail = {
             "summary": summary,
+            "layerCoverage": layer_coverage,
             "citationCoverageByType": payload["citationCoverageByType"],
             "refusalsByType": payload["refusalsByType"],
             "refusalsByReason": payload["refusalsByReason"],
             "refusalsWithoutLayers": payload["refusalsWithoutLayers"],
             "brokenLinks": payload["brokenLinks"],
+            # Keep the denominator with the run: a later comparison is only
+            # meaningful when both runs evaluated the same number of cases.
+            "goldenSet": payload["goldenSet"],
+            "evaluatedCount": payload["evaluatedCount"],
+            "totalCount": payload["totalCount"],
+            "truncated": payload["truncated"],
         }
         try:
             runtime.metadata.query(
@@ -5932,8 +5995,16 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 "id": "r02-golden-10",
                 "count": len(_G4_GOLDEN_SET),
                 "evaluated": cases_total,
+                "available": len(golden),
                 "caseId": case_id,
             },
+            # A run may evaluate fewer cases than the golden set holds (the
+            # caller's `limit`, or a caseId drill-down). State that explicitly
+            # instead of letting a subset pass for the whole set: the pass rate
+            # below is computed over `evaluatedCount`, not `totalCount`.
+            "evaluatedCount": cases_total,
+            "totalCount": len(golden),
+            "truncated": cases_total < len(golden),
             "summary": {
                 "cases": cases_total,
                 "passed": sum(1 for item in cases if item["pass"]),
@@ -5993,6 +6064,89 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         payload["runId"] = _record_answer_quality_run(payload) if case_id is None else None
         payload["persisted"] = payload["runId"] is not None
         return payload
+
+    def _g4_answer_quality_runs(
+        limit: int, strategy: str | None, since: str | None
+    ) -> dict[str, Any]:
+        """Read stored golden-set runs, newest first.
+
+        This is the read half of F86: the rows are the same ones
+        `_record_answer_quality_run` writes, so every `runId` returned here can
+        be looked up in `platform.answer_quality_run`. Rows written before the
+        layer aggregation existed have no `layerCoverage` in `detail`; those
+        come back as `None` rather than a fabricated 0.
+        """
+        since_ts: datetime | None = None
+        if since:
+            try:
+                since_ts = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise PortError(
+                    code="InvalidArgument",
+                    message="since must be an ISO-8601 timestamp",
+                    provider="platform",
+                    provider_code="E_ANSWER_QUALITY_SINCE_INVALID",
+                ) from exc
+            if since_ts.tzinfo is None:
+                since_ts = since_ts.replace(tzinfo=timezone.utc)
+        try:
+            rows = runtime.metadata.query(
+                """
+                SELECT run_id, ran_at, strategy, golden_set, evaluated, passed,
+                       failed, pass_rate, citation_coverage_rate,
+                       citation_resolvable_rate, broken_link_rate, regression,
+                       detail, COUNT(*) OVER () AS total_count
+                  FROM platform.answer_quality_run
+                 WHERE (%s::timestamptz IS NULL OR ran_at >= %s::timestamptz)
+                   AND (%s::text IS NULL OR strategy = %s)
+                 ORDER BY ran_at DESC, run_id DESC
+                 LIMIT %s
+                """,
+                (since_ts, since_ts, strategy, strategy, limit),
+            )
+        except Exception as exc:
+            raise PortError(
+                code="InternalError",
+                message="answer quality history is unavailable",
+                provider="platform",
+                provider_code="E_ANSWER_QUALITY_HISTORY_UNAVAILABLE",
+                details={"cause": str(exc)[:200]},
+            ) from exc
+        items = []
+        for row in rows or []:
+            detail = row.get("detail") or {}
+            if isinstance(detail, str):
+                detail = json.loads(detail)
+            ran_at = row.get("ran_at")
+            items.append(
+                {
+                    "runId": row["run_id"],
+                    "ranAt": ran_at.isoformat()
+                    if hasattr(ran_at, "isoformat")
+                    else str(ran_at),
+                    "strategy": row["strategy"],
+                    "goldenSet": row["golden_set"],
+                    "evaluated": int(row["evaluated"]),
+                    "passed": int(row["passed"]),
+                    "failed": int(row["failed"]),
+                    "passRate": float(row["pass_rate"]),
+                    "citationCoverageRate": float(row["citation_coverage_rate"]),
+                    "citationResolvableRate": float(
+                        row["citation_resolvable_rate"]
+                    ),
+                    "brokenLinkRate": float(row["broken_link_rate"]),
+                    "regression": bool(row["regression"]),
+                    "layerCoverage": detail.get("layerCoverage"),
+                }
+            )
+        return {
+            "items": items,
+            "totalCount": int(rows[0]["total_count"]) if rows else 0,
+            "limit": limit,
+            "strategy": strategy,
+            "since": since,
+            "readOnly": True,
+        }
 
     def _g4_provenance_fields(
         detail: dict[str, Any],
@@ -6344,7 +6498,11 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.get("/answer/quality")
     def g4_answer_quality(
         strategy: str = Query(default="lexical"),
-        limit: int = Query(default=10, ge=1, le=10),
+        # ``limit`` is the evaluation scope, not just a page size: it slices the
+        # golden set. The default matches the contract-wide page cap (200) and
+        # the service answers ``truncated``/``evaluatedCount``/``totalCount`` so
+        # a short run is never mistaken for the full set.
+        limit: int = Query(default=200, ge=1, le=200),
         caseId: str | None = Query(default=None, max_length=10),
     ) -> dict[str, Any]:
         if strategy not in ("lexical", "vector", "hybrid"):
@@ -6355,6 +6513,21 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
                 provider_code="E_ANSWER_STRATEGY_INVALID",
             )
         return _g4_answer_quality_data(strategy, limit, caseId)
+
+    @app.get("/answer/quality/runs")
+    def g4_answer_quality_runs(
+        limit: int = Query(default=20, ge=1, le=200),
+        strategy: str | None = Query(default=None, max_length=20),
+        since: str | None = Query(default=None, max_length=40),
+    ) -> dict[str, Any]:
+        if strategy and strategy not in ("lexical", "vector", "hybrid"):
+            raise PortError(
+                code="InvalidArgument",
+                message="strategy must be lexical/vector/hybrid",
+                provider="platform",
+                provider_code="E_ANSWER_STRATEGY_INVALID",
+            )
+        return _g4_answer_quality_runs(limit, strategy, since)
 
     @app.get("/entity/provenance")
     def g4_entity_provenance(
@@ -6610,4 +6783,36 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
 
     # --- end G10 ---
 
+    # --- P4 terms + data dictionary (F58-F66) ---
+    term_api.register_term_routes(app, runtime)
+    dictionary_api.register_dictionary_routes(app, runtime)
+
+    # --- P8 ingestion runs (F17/F18) ---
+    ingestion_api.register_ingestion_routes(app, runtime)
+
+    # --- G7 quota routes ---
+    g7_register(app, runtime)
+
     return app
+
+
+# --- G7 quota routes ---
+def g7_register(app: FastAPI, runtime: Runtime) -> None:
+    """C2 quota routes (design 87 §6).
+
+    Appended block, one registration point: ``create_app`` calls it before
+    ``return app``; tests call it directly. Reads ``runtime.quota`` only, so
+    off/simple/full never change this shape.
+    """
+
+    def _g7_scope(value: str | None) -> str:
+        text = (value or runtime.config.quota.default_scope or "global").strip()
+        return text or "global"
+
+    @app.get("/quota/status")
+    def quota_status(scope: str | None = Query(default=None, max_length=64)) -> dict[str, Any]:
+        """Daily usage vs. limits for one scope (UTC day window)."""
+        return runtime.quota.status(_g7_scope(scope))
+
+
+# --- end G7 ---

@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { GetSourceUploadUrlsInput, GetSourceUploadUrlsOutput } from "../models/models_0";
+import type { GetSourceUploadUrlsInput, GetSourceUploadUrlsOutput } from "../models/models_1";
 import { GetSourceUploadUrls$ } from "../schemas/schemas_0";
 
 /**

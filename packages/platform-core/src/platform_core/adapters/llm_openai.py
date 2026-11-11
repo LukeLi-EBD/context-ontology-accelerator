@@ -26,6 +26,9 @@ class LlmClient:
         self._config = config
         self._secrets = secrets
         self._http: httpx.Client | None = None
+        # C2: last reported token usage (None when the provider omits it). Read
+        # by quota_gate.QuotaAwareLlm to record real tokens instead of estimates.
+        self.last_usage: dict[str, Any] | None = None
 
     def manifest(self) -> Manifest:
         return Manifest(
@@ -214,6 +217,7 @@ class LlmClient:
             body = response.json()
             message = body["choices"][0]["message"]
             usage = body.get("usage") or {}
+            self.last_usage = dict(usage) if isinstance(usage, dict) else None
             log.info(
                 "llm completion",
                 extra={"event": {

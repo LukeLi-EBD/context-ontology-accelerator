@@ -41,7 +41,13 @@ from coa_common.constants import VOCAB_URI, StructuredBackend
 from coa_common.label_language import LabelPreference
 from coa_common.opensearch import retry_call
 
-from coa_ontology.stores.base import GraphStore
+from coa_ontology.stores.base import (
+    FilteredSearchTooLarge,
+    GraphQueryCancelled,
+    GraphScanTooLarge,
+    GraphStore,
+    SearchScopeTooLarge,
+)
 
 log = logging.getLogger(__name__)
 
@@ -150,6 +156,50 @@ _SAMPLE_MAX_DESCENDANTS = 50
 # callers that bypass the router, since the value reaches a SPARQL LIMIT clause.
 # Keep in sync with ``_MAX_SEARCH_LIMIT`` in catalog/routers/graph.py.
 _MAX_SEARCH_PAGE_SIZE = 500
+
+# Hard ceiling on the row scan an *unfiltered* search may perform. Without a
+# ``kind`` (and without a single ``ontology_id``) the search pattern degrades to
+# "every quad in the namespace": there is no type triple to bind ?s cheaply, so
+# the filter has to look at each quad. On a namespace with a large ABox that
+# outruns the SPARQL transport timeout and surfaces as a bare 500 with no
+# message. Rather than silently scanning the whole namespace, the store
+# measures it first (a cheap COUNT) and refuses past this budget; the router
+# turns that into a readable 422 telling the caller to pass ``kind`` or
+# ``ontology_id``. Deliberately a quad budget and not a timeout: a quad count is
+# stable and reportable, a timeout depends on machine load.
+_MAX_UNFILTERED_SEARCH_QUADS = 50_000
+
+# Neighbourhood (Links) limits. ``_MAX_LINK_HOPS`` is the hard 3-hop ceiling
+# the contract advertises; the API rejects deeper requests rather than silently
+# clamping, so a caller can never believe it saw a 4th hop. The frontier and
+# row-scan caps keep a hub node from turning one expansion into a full scan.
+_MAX_LINK_HOPS = 3
+_MAX_LINK_LIMIT = 500
+_MAX_LINK_FRONTIER = 200
+_MAX_LINK_ROW_SCAN = 2000
+
+# Same idea for the two whole-namespace reads that have no filter to bound them:
+# ``/graph/canvas`` pages over every triple, and ``/graph/path`` expands one
+# neighbourhood query per visited node. Measured on the synthetic A-Box at 4
+# quads/class: 50k quads answers in 5-8 s, 100k crosses the 28 s backend timeout,
+# so 50k is the largest budget that still fits inside one request.
+_MAX_CANVAS_QUADS = 50_000
+_MAX_PATH_QUADS = 50_000
+
+# A ``kind``-filtered search binds the subject set to one type, but the label
+# substring match and the ``ORDER BY`` still run over every entity of that type.
+# Measured boundary at 1 type triple/class: 12.5k entities (50k quads) answer in
+# 5-8 s, 25k entities (100k quads) cross the timeout. 20k sits between the two
+# with ~2x headroom to the backend's 28 s budget.
+_MAX_FILTERED_SEARCH_ENTITIES = 20_000
+
+# ``/graph/statements`` now sorts the matched quads so that OFFSET paging is
+# total-order stable. Oxigraph cannot serve that order from an index: ordering
+# by (s, p, o, g) costs 6.9 s at 100.9k quads and leading with ?g costs 12.6 s,
+# while 500k costs ~33 s. 120k keeps the 100k dataset (100,900 quads once the
+# metric graph is included) listable -- ~8 s -- with room under the 12 s server
+# deadline; bigger namespaces get a cheap 422 from the count that runs first.
+_MAX_STATEMENT_PAGE_QUADS = 120_000
 
 
 # ── SigV4 helper ────────────────────────────────────────────────────────
@@ -1487,6 +1537,115 @@ class NeptuneDBGraphStore(GraphStore):
           OPTIONAL {{ GRAPH ?g {{ ?s rdfs:label ?label . }} }}
           {text_filter}"""
 
+    def namespace_quad_count(self, namespace: str | None = None) -> int:
+        """Count quads across the namespace's named graphs.
+
+        A cheap aggregate, used as the pre-flight bound for an unfiltered
+        search: the substring scan that would follow has to look at every one
+        of these quads.
+        """
+        scope = self._graph_scope_filter(namespace, None, None)
+        sparql = f"""
+        SELECT (COUNT(*) AS ?n) WHERE {{
+          GRAPH ?g {{ ?s ?p ?o }}
+          {scope}
+        }}
+        """
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        if not bindings:
+            return 0
+        try:
+            return int(bindings[0].get("n", {}).get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _guard_unfiltered_search(
+        self, namespace: str | None, kind: str | None, ontology_id: str | None
+    ) -> None:
+        """Refuse a search that would scan the whole namespace unbounded.
+
+        A ``kind`` or an ``ontology_id`` bounds the pattern — type triples bind
+        ``?s`` directly, or a single graph is in scope — so those paths pass.
+        Without either, the only honest option is an explicit refusal: the scan
+        cannot be made cheap, and letting it run ends in a transport timeout
+        reported as a bare 500.
+        """
+        if kind or ontology_id:
+            return
+        quads = self.namespace_quad_count(namespace)
+        if quads > _MAX_UNFILTERED_SEARCH_QUADS:
+            scope = namespace or self._namespace
+            log.warning(
+                "refusing unfiltered entity search: %d quads exceeds the %d-quad budget (namespace=%s)",
+                quads,
+                _MAX_UNFILTERED_SEARCH_QUADS,
+                scope,
+            )
+            raise SearchScopeTooLarge(quads, _MAX_UNFILTERED_SEARCH_QUADS, scope)
+
+    def kind_subject_count(self, namespace: str | None, kind: str) -> int:
+        """How many subjects carry this ``kind``'s rdf:type in the namespace.
+
+        An index scan over type triples, used as the pre-flight bound for a
+        ``kind``-filtered search: the label scan and sort that follow touch one
+        row per counted subject.
+        """
+        type_uris = _KIND_TO_SPARQL_TYPES.get(kind) or ()
+        if not type_uris:
+            return 0
+        scope = self._graph_scope_filter(namespace, None, None)
+        type_values = " ".join(_iri(t) for t in type_uris)
+        sparql = f"""
+        SELECT (COUNT(DISTINCT ?s) AS ?n) WHERE {{
+          VALUES ?type {{ {type_values} }}
+          GRAPH ?g {{ ?s {_iri(RDF + "type")} ?type }}
+          {scope}
+        }}
+        """
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        if not bindings:
+            return 0
+        try:
+            return int(bindings[0].get("n", {}).get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+
+    def _guard_filtered_search(
+        self, namespace: str | None, kind: str | None, ontology_id: str | None
+    ) -> None:
+        """Refuse a ``kind``-filtered search whose subject set outruns the budget.
+
+        A single ``ontology_id`` already bounds the scan to one graph, so that
+        path keeps its own (unfiltered) guard.
+        """
+        if not kind or ontology_id:
+            return
+        entities = self.kind_subject_count(namespace, kind)
+        if entities > _MAX_FILTERED_SEARCH_ENTITIES:
+            scope = namespace or self._namespace
+            log.warning(
+                "refusing %s search: %d entities exceeds the %d-entity budget (namespace=%s)",
+                kind,
+                entities,
+                _MAX_FILTERED_SEARCH_ENTITIES,
+                scope,
+            )
+            raise FilteredSearchTooLarge(entities, _MAX_FILTERED_SEARCH_ENTITIES, kind, scope)
+
+    def _guard_graph_scan(self, namespace: str | None, operation: str, limit: int) -> None:
+        """Refuse a whole-namespace read whose scan would outrun one request."""
+        quads = self.namespace_quad_count(namespace)
+        if quads > limit:
+            scope = namespace or self._namespace
+            log.warning(
+                "refusing %s: %d quads exceeds the %d-quad budget (namespace=%s)",
+                operation,
+                quads,
+                limit,
+                scope,
+            )
+            raise GraphScanTooLarge(quads, limit, operation, scope)
+
     def count_entities(
         self,
         query: str,
@@ -1500,6 +1659,8 @@ class NeptuneDBGraphStore(GraphStore):
         Same match set as :meth:`search_entities` (independent of limit/offset),
         so a client can render a known page count. Returns 0 on an empty result.
         """
+        self._guard_unfiltered_search(namespace, kind, ontology_id)
+        self._guard_filtered_search(namespace, kind, ontology_id)
         where = self._search_where_clause(query, namespace, kind, ontology_id, exclude_ontology_id)
         sparql = f"""
         PREFIX rdfs: <{RDFS}>
@@ -1555,6 +1716,8 @@ class NeptuneDBGraphStore(GraphStore):
         Returns:
             List of dicts with keys: uri, label, kind, graph_uris.
         """
+        self._guard_unfiltered_search(namespace, kind, ontology_id)
+        self._guard_filtered_search(namespace, kind, ontology_id)
         preference = _preference(label_preference)
         where = self._search_where_clause(query, namespace, kind, ontology_id, exclude_ontology_id)
         safe_offset = max(0, offset)
@@ -1690,10 +1853,19 @@ class NeptuneDBGraphStore(GraphStore):
         safe_limit = max(1, min(limit, _MAX_SEARCH_PAGE_SIZE))
         safe_offset = max(0, offset)
         values = "\n          ".join(_iri(g) for g in graphs)
-        # No ORDER BY: sorting a namespace's full triple set costs seconds on a
-        # large A-Box (121k triples locally), and the page window only needs a
-        # stable scan. The named-graph index order this relies on is stable for
-        # a static graph, which is what a read-only browser pages over.
+
+        # A total order is required: OFFSET paging over an unordered scan emits
+        # rows in whatever order the store happens to produce them, so a client
+        # can see one quad twice and miss another between pages. A quad is
+        # uniquely identified by (s, p, o, g), so ordering by that is total too --
+        # and much cheaper than leading with ?g: measured 6.9 s vs 12.6 s at
+        # 100.9k quads (Oxigraph can walk the SPO index and merge graphs instead
+        # of materialising a graph-major sort). 500k still costs ~33 s, so the
+        # page is budgeted to what fits one request.
+        matched = self._count_statements(values, s_term, p_term, o_term, object_filter)
+        if matched > _MAX_STATEMENT_PAGE_QUADS:
+            raise GraphScanTooLarge(matched, _MAX_STATEMENT_PAGE_QUADS, "statement page", scope)
+
         sparql = f"""
         SELECT ?g ?s ?p ?o WHERE {{
           VALUES ?g {{
@@ -1701,6 +1873,7 @@ class NeptuneDBGraphStore(GraphStore):
           }}
           GRAPH ?g {{ {s_term} {p_term} {o_term} {object_filter} }}
         }}
+        ORDER BY ?s ?p ?o ?g
         LIMIT {safe_limit + 1} OFFSET {safe_offset}
         """
         bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
@@ -1716,6 +1889,26 @@ class NeptuneDBGraphStore(GraphStore):
         ]
         return {"statements": statements, "truncated": truncated}
 
+    def _count_statements(
+        self, values: str, s_term: str, p_term: str, o_term: str, object_filter: str
+    ) -> int:
+        """How many quads the page's filter matches, before sorting the page."""
+        sparql = f"""
+        SELECT (COUNT(*) AS ?n) WHERE {{
+          VALUES ?g {{
+          {values}
+          }}
+          GRAPH ?g {{ {s_term} {p_term} {o_term} {object_filter} }}
+        }}
+        """
+        bindings = _sparql_query(sparql).get("results", {}).get("bindings", [])
+        if not bindings:
+            return 0
+        try:
+            return int(bindings[0].get("n", {}).get("value", 0))
+        except (TypeError, ValueError):
+            return 0
+
     # ── Canvas subgraph / path ────────────────────────────────────────
 
     def get_canvas_subgraph(
@@ -1729,10 +1922,12 @@ class NeptuneDBGraphStore(GraphStore):
     ) -> dict:
         """Shape one triple page into drawable nodes and edges.
 
-        The page window comes from the same unsorted named-graph scan as
-        :meth:`list_statements`; nodes and edges are then derived from those
-        rows. A node kind filter pushes the ``rdf:type`` test into SPARQL so a
-        filtered page is still a full page, not a post-filtered fragment.
+        The page window comes from the same named-graph scan as
+        :meth:`list_statements`, but without its ORDER BY: a canvas page is a
+        single window, not a paged sequence, so scan order is enough and the
+        sort would cost seconds per page. A node kind filter pushes the
+        ``rdf:type`` test into SPARQL so a filtered page is still a full page,
+        not a post-filtered fragment.
         """
         scope = namespace or self._namespace
         graphs = _namespace_graphs(scope)
@@ -1741,6 +1936,8 @@ class NeptuneDBGraphStore(GraphStore):
         empty = {"nodes": [], "edges": [], "truncated": False, "nodeCount": 0, "edgeCount": 0}
         if not graphs:
             return empty
+
+        self._guard_graph_scan(namespace, "canvas page", _MAX_CANVAS_QUADS)
 
         safe_limit = max(1, min(limit, _MAX_SEARCH_PAGE_SIZE))
         safe_offset = max(0, offset)
@@ -1873,6 +2070,8 @@ class NeptuneDBGraphStore(GraphStore):
             node = self._path_nodes(scope, [start]).get(start, {"uri": start, "label": None, "kind": "resource"})
             return {"paths": [{"nodes": [node], "edges": [], "hops": 0}], "truncated": False}
 
+        self._guard_graph_scan(namespace, "path search", _MAX_PATH_QUADS)
+
         adjacency: dict[str, list[dict]] = {}
         expansions = 0
         expansion_cap = 400
@@ -2002,6 +2201,132 @@ class NeptuneDBGraphStore(GraphStore):
                 }
             )
         return {"paths": rendered, "truncated": capped}
+
+    def find_links(
+        self,
+        namespace: str | None = None,
+        *,
+        uri: str,
+        direction: str = "both",
+        max_hops: int = 3,
+        limit: int = 200,
+    ) -> dict:
+        """Bounded breadth-first neighbourhood around one IRI.
+
+        One SPARQL query per hop level (the whole frontier is bound with
+        ``VALUES``) rather than one per node, so a 3-hop expansion costs at
+        most three round trips per direction. Expansion never goes past
+        ``_MAX_LINK_HOPS``; ``truncated`` reports the edge cap instead of
+        silently shrinking the answer. An IRI with no adjacency — or one the
+        store cannot hold — returns empty lists, not an error.
+        """
+        scope = namespace or self._namespace
+        graphs = _namespace_graphs(scope)
+        if not graphs or not _is_storable_iri(uri):
+            return {"nodes": [], "edges": [], "truncated": False}
+        if direction not in ("outgoing", "incoming", "both"):
+            raise ValueError(f"unknown link direction: {direction!r}")
+
+        safe_hops = max(1, min(max_hops, _MAX_LINK_HOPS))
+        safe_limit = max(1, min(limit, _MAX_LINK_LIMIT))
+        values = "\n          ".join(_iri(g) for g in graphs)
+        include_outgoing = direction in ("outgoing", "both")
+        include_incoming = direction in ("incoming", "both")
+
+        hop_of: dict[str, int] = {uri: 0}
+        edges: list[dict] = []
+        seen: set[tuple[str, str, str, str]] = set()
+        truncated = False
+
+        def rows(frontier: list[str], outgoing: bool) -> list[dict]:
+            term = "?s" if outgoing else "?o"
+            query = f"""
+            SELECT ?s ?p ?o ?g WHERE {{
+              VALUES ?g {{
+              {values}
+              }}
+              VALUES {term} {{ {" ".join(_iri(n) for n in frontier)} }}
+              GRAPH ?g {{ ?s ?p ?o }}
+            }}
+            LIMIT {_MAX_LINK_ROW_SCAN}
+            """
+            return _sparql_query(query).get("results", {}).get("bindings", [])
+
+        for depth in range(1, safe_hops + 1):
+            frontier = [node for node, hop in hop_of.items() if hop == depth - 1]
+            if not frontier:
+                break
+            if len(frontier) > _MAX_LINK_FRONTIER:
+                frontier = frontier[:_MAX_LINK_FRONTIER]
+                truncated = True
+
+            batches: list[tuple[bool, list[dict]]] = []
+            if include_outgoing:
+                batches.append((True, rows(frontier, True)))
+            if include_incoming:
+                batches.append((False, rows(frontier, False)))
+
+            for outgoing, bindings in batches:
+                if len(bindings) >= _MAX_LINK_ROW_SCAN:
+                    # The scan cap, not the edge cap, cut this level.
+                    truncated = True
+                for row in bindings:
+                    if len(edges) >= safe_limit:
+                        # A row exists that we are not returning: say so rather
+                        # than presenting a capped answer as complete.
+                        truncated = True
+                        break
+                    s = row.get("s", {}).get("value", "")
+                    p = row.get("p", {}).get("value", "")
+                    o = row.get("o", {}).get("value", "")
+                    g = row.get("g", {}).get("value", "")
+                    if not s or not p or not o:
+                        continue
+                    if p in (RDF + "type", RDFS + "label", RDFS + "comment"):
+                        continue
+                    if not _is_storable_iri(s) or not _is_storable_iri(o):
+                        continue
+                    key = (s, p, o, g)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    neighbour = o if outgoing else s
+                    edges.append(
+                        {
+                            "source": s,
+                            "predicate": p,
+                            "predicateLabel": _local_name(p),
+                            "target": o,
+                            "graph": g,
+                            "direction": "outgoing" if outgoing else "incoming",
+                            "hops": depth,
+                        }
+                    )
+                    if neighbour not in hop_of:
+                        hop_of[neighbour] = depth
+                if truncated:
+                    break
+            if truncated:
+                break
+
+        # One batch lookup for every reached node; the seed itself is omitted
+        # from the node list (it is the subject of the caller's question, and a
+        # no-adjacency answer must stay visibly empty).
+        details = self._path_nodes(scope, list(hop_of))
+        nodes: list[dict] = []
+        for node_uri, hops in sorted(hop_of.items(), key=lambda item: (item[1], item[0])):
+            if hops == 0:
+                continue
+            detail = details.get(node_uri) or {}
+            nodes.append(
+                {
+                    "uri": node_uri,
+                    "label": detail.get("label"),
+                    "kind": detail.get("kind") or "resource",
+                    "hops": hops,
+                }
+            )
+        return {"nodes": nodes, "edges": edges, "truncated": truncated}
 
     def _node_details(self, namespace: str, uris: list[str]) -> dict[str, dict]:
         """Labels and kinds for a batch of nodes, in one round trip."""

@@ -51,7 +51,7 @@
 ontology_id（仅作图选择键） urn:coa:abox:platform-synthetic
 ```
 
-- 独立命名图，**不混** T-Box 图（`…/https%3A%2F%2Fw3id.org%2Ffsldm%2Fcodes`，2,675 三元组）和指标图（`urn:coa-metrics:`）。
+- 独立命名图，**不混** T-Box 图（`…/https%3A%2F%2Fw3id.org%2Ffsldm%2Fcodes`，3,624 三元组：merged 2,675 + terms 285 + metrics 664）和指标图（`urn:coa-metrics:`）。
 - **没有**给它写 registry 行：它不是本体，不冒充 `ListOntologies` 的一条。`ontology_id` 只用于 `GraphSearch?ontology_id=` 选中这张图。
 
 ### 5. 校验链（工具：`doc/coa-x/tools/coa_abox_local.py`）

@@ -1,0 +1,50 @@
+# Runtime dependencies for the one-command local stack image.
+#
+# This list is the union of what the bridge (coa_api_local.py) and the
+# ontology-engine (coa_ontology_local.py) import at start-up, with the versions
+# pinned to the set that already runs the host venv (/.venv-coa-local).
+# Deliberately excluded: pywin32 (Windows only), llama_cpp_python (gateway-only),
+# and dev/test tooling (pytest, moto, cfn-lint, responses, docker).
+fastapi==0.162.2
+uvicorn==0.48.0
+websockets==17.4
+pydantic==2.14.3
+pydantic-settings==2.16.2
+httpx==0.28.1
+rdflib==7.6.0
+psycopg[binary,pool]==3.3.8
+PyYAML==6.0.3
+python-multipart==0.0.33
+boto3==1.43.126
+structlog==26.1.0
+cedarpy==4.12.2
+PyJWT==2.15.1
+joserfc==1.8.0
+cryptography==50.0.2
+opensearch-py==3.0.0
+requests==2.34.2
+SQLAlchemy==2.0.57
+sqlglot==30.30.0
+python-ulid==4.1.0
+regex==2026.11.9
+sse-starlette==3.7.0
+starlette-context==0.5.1
+jsonpath-ng==1.16.0
+jsonschema==4.26.0
+pyshacl==0.40.2
+owlrl==7.6.2
+defusedxml==0.7.1
+html5rdf==1.2.1
+networkx==3.7
+numpy==2.5.4
+xmltodict==1.0.4
+aws-xray-sdk==2.16.0
+tenacity==9.2.1
+Werkzeug==3.1.9
+Jinja2==3.1.6
+python-dotenv==1.2.4
+graphql-core==3.3.2
+opentelemetry-api==1.45.2
+jsonpatch==1.44
+rfc3339-validator==0.1.4
+tzdata==2026.6

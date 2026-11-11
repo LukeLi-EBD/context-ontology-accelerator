@@ -35,6 +35,8 @@ export interface ChatBubbleProps {
   state: ChatBubbleState;
   content: string;
   timestamp: Date;
+  /** Namespace the answer was produced in — enables inline provenance lookups. */
+  namespaceId?: string;
   /** Message ID for memoization keys. */
   messageId?: string;
   response?: {
@@ -75,6 +77,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
   state,
   content,
   response,
+  namespaceId,
   errorMessage,
   errorDetails,
   messageId: _messageId,
@@ -224,6 +227,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = ({
       <EvidencePanel
         supportingContent={response.supportingContent}
         graphContext={response.graphContext}
+        namespaceId={namespaceId}
       />
 
       {(response.sparqlGenerated || response.queryUsed) && (

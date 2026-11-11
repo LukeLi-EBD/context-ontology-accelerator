@@ -25,8 +25,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
+from coa_control_plane.platform_db.connection import PgPool
 from coa_ports.dto import SessionMetadataRecord
-from platform_core.adapters.metadata_pg import MetadataPg
 from ulid import ULID
 
 logger = structlog.get_logger(__name__)
@@ -80,7 +80,7 @@ class SessionMetadataPg:
         open_timeout_seconds: float = 10.0,
     ) -> None:
         self._ttl_days = ttl_days
-        self._meta = MetadataPg(dsn, pool_max=pool_max)
+        self._meta = PgPool(dsn, pool_max=pool_max)
         self._meta.open(retry_seconds=open_timeout_seconds)
         with self._meta.tx() as tx:
             for statement in _SCHEMA:

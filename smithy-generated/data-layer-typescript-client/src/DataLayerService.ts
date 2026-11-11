@@ -3,10 +3,20 @@ import { createAggregatedClient } from "@smithy/smithy-client";
 import type { HttpHandlerOptions as __HttpHandlerOptions } from "@smithy/types";
 
 import {
+  type CheckAnswerableCommandInput,
+  type CheckAnswerableCommandOutput,
+  CheckAnswerableCommand,
+} from "./commands/CheckAnswerableCommand";
+import {
   type DescribeSchemaCommandInput,
   type DescribeSchemaCommandOutput,
   DescribeSchemaCommand,
 } from "./commands/DescribeSchemaCommand";
+import {
+  type DownloadDocumentCommandInput,
+  type DownloadDocumentCommandOutput,
+  DownloadDocumentCommand,
+} from "./commands/DownloadDocumentCommand";
 import {
   type GraphTraverseCommandInput,
   type GraphTraverseCommandOutput,
@@ -14,6 +24,7 @@ import {
 } from "./commands/GraphTraverseCommand";
 import { type KBSearchCommandInput, type KBSearchCommandOutput, KBSearchCommand } from "./commands/KBSearchCommand";
 import { type QueryCommandInput, type QueryCommandOutput, QueryCommand } from "./commands/QueryCommand";
+import { type RunSparqlCommandInput, type RunSparqlCommandOutput, RunSparqlCommand } from "./commands/RunSparqlCommand";
 import {
   type TranslateSPARQLCommandInput,
   type TranslateSPARQLCommandOutput,
@@ -22,14 +33,34 @@ import {
 import { DataLayerServiceClient } from "./DataLayerServiceClient";
 
 const commands = {
+  CheckAnswerableCommand,
   DescribeSchemaCommand,
   GraphTraverseCommand,
   KBSearchCommand,
   QueryCommand,
+  RunSparqlCommand,
   TranslateSPARQLCommand,
+  DownloadDocumentCommand,
 };
 
 export interface DataLayerService {
+  /**
+   * @see {@link CheckAnswerableCommand}
+   */
+  checkAnswerable(
+    args: CheckAnswerableCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<CheckAnswerableCommandOutput>;
+  checkAnswerable(
+    args: CheckAnswerableCommandInput,
+    cb: (err: any, data?: CheckAnswerableCommandOutput) => void
+  ): void;
+  checkAnswerable(
+    args: CheckAnswerableCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: CheckAnswerableCommandOutput) => void
+  ): void;
+
   /**
    * @see {@link DescribeSchemaCommand}
    */
@@ -99,6 +130,23 @@ export interface DataLayerService {
   ): void;
 
   /**
+   * @see {@link RunSparqlCommand}
+   */
+  runSparql(
+    args: RunSparqlCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<RunSparqlCommandOutput>;
+  runSparql(
+    args: RunSparqlCommandInput,
+    cb: (err: any, data?: RunSparqlCommandOutput) => void
+  ): void;
+  runSparql(
+    args: RunSparqlCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: RunSparqlCommandOutput) => void
+  ): void;
+
+  /**
    * @see {@link TranslateSPARQLCommand}
    */
   translateSPARQL(
@@ -113,6 +161,23 @@ export interface DataLayerService {
     args: TranslateSPARQLCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: TranslateSPARQLCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link DownloadDocumentCommand}
+   */
+  downloadDocument(
+    args: DownloadDocumentCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<DownloadDocumentCommandOutput>;
+  downloadDocument(
+    args: DownloadDocumentCommandInput,
+    cb: (err: any, data?: DownloadDocumentCommandOutput) => void
+  ): void;
+  downloadDocument(
+    args: DownloadDocumentCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: DownloadDocumentCommandOutput) => void
   ): void;
 }
 

@@ -9,7 +9,7 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { RejectProposalsInput, RejectProposalsOutput } from "../models/models_0";
+import type { RejectProposalsInput, RejectProposalsOutput } from "../models/models_1";
 import { RejectProposals$ } from "../schemas/schemas_0";
 
 /**

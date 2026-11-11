@@ -13,6 +13,7 @@ import {
 } from "@api-hooks";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
+import Container from "@cloudscape-design/components/container";
 import Flashbar from "@cloudscape-design/components/flashbar";
 import type { FlashbarProps } from "@cloudscape-design/components/flashbar";
 import FormField from "@cloudscape-design/components/form-field";
@@ -24,11 +25,17 @@ import SpaceBetween from "@cloudscape-design/components/space-between";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Table from "@cloudscape-design/components/table";
 import Textarea from "@cloudscape-design/components/textarea";
+import { useApiClient } from "@components";
 import { ControlPlaneServiceServiceException } from "@coa/control-plane-client";
 import type {
   FactCandidate,
   FactCandidateStatus,
 } from "@coa/control-plane-client";
+import {
+  materializeReasoning,
+  type MaterializationResult,
+  type MaterializationStage,
+} from "../services/reasoning";
 import { useAppI18n } from "../i18n/LocaleProvider";
 import type { AppMessage } from "../i18n/appMessages";
 
@@ -63,6 +70,10 @@ export default function CandidatesPage() {
   const [reasonError, setReasonError] = useState(false);
   const [busyId, setBusyId] = useState<string | undefined>();
   const [verifyingId, setVerifyingId] = useState<string | undefined>();
+  const [materializing, setMaterializing] = useState(false);
+  const [materialization, setMaterialization] =
+    useState<MaterializationResult>();
+  const client = useApiClient();
 
   useBreadcrumbTrail([
     { text: name, href: `/namespaces/${namespaceId}`, namespaceId },
@@ -179,6 +190,39 @@ export default function CandidatesPage() {
     );
   }
 
+  function runMaterialization() {
+    setMaterializing(true);
+    materializeReasoning(client, namespaceId)
+      .then((result) => {
+        setMaterialization(result);
+        setFlashItems([
+          {
+            type: result.skipped ? "info" : "success",
+            content: result.skipped
+              ? t("Materialization skipped: inputs unchanged.")
+              : t("Materialization finished: {count} inferred triples.", {
+                  count: result.inferred,
+                }),
+            dismissible: true,
+            id: "materialize-ok",
+          },
+        ]);
+      })
+      .catch((error) => {
+        setFlashItems([
+          {
+            type: "error",
+            content: t("Materialization failed: {message}", {
+              message: (error as Error).message,
+            }),
+            dismissible: true,
+            id: "materialize-error",
+          },
+        ]);
+      })
+      .finally(() => setMaterializing(false));
+  }
+
   function submitReject() {
     if (!rejecting) return;
     if (!reason.trim()) {
@@ -209,6 +253,20 @@ export default function CandidatesPage() {
     );
   }
 
+  function describeStage(stage: MaterializationStage): string {
+    const parts: string[] = [];
+    if (stage.triples !== undefined) parts.push(`${stage.triples} ${t("triples")}`);
+    if (stage.conforms !== undefined) {
+      parts.push(
+        stage.conforms
+          ? t("conforms")
+          : `${stage.violations ?? 0} ${t("violations")}`,
+      );
+    }
+    if (stage.ms !== undefined) parts.push(`${(stage.ms / 1000).toFixed(1)}s`);
+    return parts.join(" · ") || "—";
+  }
+
   return (
     <SpaceBetween size="l">
       <Flashbar items={flashItems} />
@@ -226,6 +284,9 @@ export default function CandidatesPage() {
             )}
             actions={
               <SpaceBetween direction="horizontal" size="xs">
+                <Button loading={materializing} onClick={runMaterialization}>
+                  {t("Run materialization")}
+                </Button>
                 <Button
                   iconName="refresh"
                   ariaLabel={t("Refresh")}
@@ -364,6 +425,47 @@ export default function CandidatesPage() {
           ) : null
         }
       />
+
+      {materialization && (
+        <Container
+          header={
+            <Header variant="h2" description={materialization.targetGraph}>
+              {t("Materialization result")}
+            </Header>
+          }
+        >
+          <SpaceBetween size="m">
+            <Box>
+              {[
+                `${t("Job ID")}: ${materialization.jobId}`,
+                `${t("Inferred triples")}: ${materialization.inferred}`,
+                `${t("Consistent")}: ${materialization.consistent ? "true" : "false"}`,
+                materialization.skipped ? t("Skipped") : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </Box>
+            <Table
+              variant="embedded"
+              items={Object.entries(materialization.stages ?? {}).map(
+                ([stage, value]) => ({ stage, value }),
+              )}
+              columnDefinitions={[
+                {
+                  id: "stage",
+                  header: t("Stage"),
+                  cell: (item) => item.stage.toUpperCase(),
+                },
+                {
+                  id: "result",
+                  header: t("Result"),
+                  cell: (item) => describeStage(item.value),
+                },
+              ]}
+            />
+          </SpaceBetween>
+        </Container>
+      )}
 
       <Modal
         visible={!!rejecting}

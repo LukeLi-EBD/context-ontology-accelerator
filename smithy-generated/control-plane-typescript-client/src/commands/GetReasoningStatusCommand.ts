@@ -55,6 +55,35 @@ export interface GetReasoningStatusCommandOutput extends GetReasoningStatusOutpu
  * //   detail: "STRING_VALUE",
  * //   source: "STRING_VALUE", // required
  * //   sampledAt: "STRING_VALUE", // required
+ * //   inferredTriples: Number("int"),
+ * //   lastJob: { // ReasoningJobSummary
+ * //     jobId: "STRING_VALUE", // required
+ * //     state: "STRING_VALUE", // required
+ * //     inferred: Number("int"),
+ * //     consistent: true || false,
+ * //     finishedAt: "STRING_VALUE",
+ * //     skipped: true || false,
+ * //     stages: { // ReasoningStages
+ * //       rdfs: { // ReasoningStage
+ * //         triples: Number("int"),
+ * //         conforms: true || false,
+ * //         violations: Number("int"),
+ * //         ms: Number("int"),
+ * //       },
+ * //       owl: {
+ * //         triples: Number("int"),
+ * //         conforms: true || false,
+ * //         violations: Number("int"),
+ * //         ms: Number("int"),
+ * //       },
+ * //       shacl: {
+ * //         triples: Number("int"),
+ * //         conforms: true || false,
+ * //         violations: Number("int"),
+ * //         ms: Number("int"),
+ * //       },
+ * //     },
+ * //   },
  * // };
  *
  * ```

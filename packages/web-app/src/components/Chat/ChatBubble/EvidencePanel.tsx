@@ -19,6 +19,8 @@ import { useAppI18n } from "../../../i18n/LocaleProvider";
 export interface EvidencePanelProps {
   supportingContent?: SupportingContentItem[];
   graphContext?: GraphContextItem | GraphContextEntity[];
+  /** Forwarded to the graph section so entities can look up provenance inline. */
+  namespaceId?: string;
 }
 
 /**
@@ -28,6 +30,7 @@ export interface EvidencePanelProps {
 export const EvidencePanel: React.FC<EvidencePanelProps> = ({
   supportingContent,
   graphContext,
+  namespaceId,
 }) => {
   const { t } = useAppI18n();
   const normalizedGraphContext = normalizeGraphContext(graphContext);
@@ -62,7 +65,10 @@ export const EvidencePanel: React.FC<EvidencePanelProps> = ({
           <EvidenceItem key={item.chunkId ?? `evidence-${index}`} item={item} />
         ))}
         {hasGraphContext && normalizedGraphContext && (
-          <GraphContextSection context={normalizedGraphContext} />
+          <GraphContextSection
+            context={normalizedGraphContext}
+            namespaceId={namespaceId}
+          />
         )}
       </SpaceBetween>
     </ExpandableSection>

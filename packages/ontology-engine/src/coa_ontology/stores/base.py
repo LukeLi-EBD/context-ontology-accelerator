@@ -23,6 +23,76 @@ from typing import Any, Protocol, runtime_checkable
 
 from coa_common.label_language import LabelPreference
 
+
+class SearchScopeTooLarge(RuntimeError):
+    """An entity search would scan more than the backend's row budget.
+
+    Raised *before* the scan starts, from a cheap aggregate pre-check, so the
+    caller can answer with an explicit, actionable error instead of letting a
+    whole-namespace substring scan time out into a bare 500.
+    """
+
+    def __init__(self, quads: int, limit: int, namespace: str | None = None):
+        self.quads = quads
+        self.limit = limit
+        self.namespace = namespace or ""
+        super().__init__(
+            f"unfiltered search over namespace {self.namespace or '(default)'} "
+            f"would scan {quads} quads, above the {limit}-quad budget"
+        )
+
+
+class FilteredSearchTooLarge(RuntimeError):
+    """A ``kind``-filtered search would evaluate more entities than budgeted.
+
+    The ``kind`` filter bounds the subject set to one type, but the substring
+    match and the ``ORDER BY`` still run over every subject of that type, so a
+    namespace with a very large class count outruns the transport timeout just
+    like an unfiltered search does. Measured before the scan from the type
+    triples, which are an index scan rather than a label scan.
+    """
+
+    def __init__(self, entities: int, limit: int, kind: str, namespace: str | None = None):
+        self.entities = entities
+        self.limit = limit
+        self.kind = kind
+        self.namespace = namespace or ""
+        super().__init__(
+            f"search over {entities} {kind} entities in namespace "
+            f"{self.namespace or '(default)'} exceeds the {limit}-entity budget"
+        )
+
+
+class GraphScanTooLarge(RuntimeError):
+    """A whole-namespace graph read (canvas page, path walk) exceeds its budget.
+
+    Both routes scan or expand over the namespace's full triple set, so their
+    cost is not bounded by the response page size. Refused up front rather than
+    left to the transport timeout, which would burn the graph store's CPU after
+    the caller has already given up.
+    """
+
+    def __init__(self, quads: int, limit: int, operation: str, namespace: str | None = None):
+        self.quads = quads
+        self.limit = limit
+        self.operation = operation
+        self.namespace = namespace or ""
+        super().__init__(
+            f"{operation} over namespace {self.namespace or '(default)'} would scan {quads} quads, "
+            f"above the {limit}-quad budget"
+        )
+
+
+class GraphQueryCancelled(RuntimeError):
+    """The graph store aborted the query at its own server-side deadline.
+
+    Distinct from a client timeout: the store has already stopped evaluating, so
+    the caller can answer 504 without leaving a query burning CPU behind it. The
+    local Oxigraph transport raises this from the store's cancellation notice,
+    which arrives as a truncated 200 response rather than an HTTP error.
+    """
+
+
 # ── Vector store ────────────────────────────────────────────────────────
 
 
@@ -479,6 +549,24 @@ class GraphStore(Protocol):
         """Simple paths between two IRIs, shortest first, within ``max_hops``.
 
         Returns ``{"paths": [{"nodes", "edges", "hops"}], "truncated": bool}``.
+        """
+        ...
+
+    def find_links(
+        self,
+        namespace: str | None = None,
+        *,
+        uri: str,
+        direction: str = "both",
+        max_hops: int = 3,
+        limit: int = 200,
+    ) -> dict:
+        """Bounded neighbourhood around ``uri``: nodes, edges and their hops.
+
+        ``direction`` is ``outgoing``, ``incoming`` or ``both``; ``max_hops``
+        never exceeds 3. An IRI with no adjacency returns empty lists rather
+        than raising. Returns ``{"nodes", "edges", "truncated"}`` where each
+        node and edge carries the hop that reached it.
         """
         ...
 

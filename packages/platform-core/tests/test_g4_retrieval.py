@@ -8,8 +8,10 @@ required. Run only this file:
 
 from __future__ import annotations
 
+import json
 import sys
 import unittest
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -45,6 +47,39 @@ class FakeOntology:
 
     def current(self):
         return self._pointer
+
+
+class _HistoryMetadata(FakeMetadata):
+    """FakeMetadata that answers the history SELECT with fixed rows."""
+
+    def __init__(self, rows):
+        super().__init__()
+        self.rows = rows
+
+    def query(self, sql, params=()):
+        self.calls.append((sql, params))
+        if "FROM platform.answer_quality_run" in sql and "INSERT" not in sql:
+            return self.rows
+        return []
+
+
+def _run_row(run_id, ran_at, detail):
+    return {
+        "run_id": run_id,
+        "ran_at": ran_at,
+        "strategy": "lexical",
+        "golden_set": "r02-golden-10",
+        "evaluated": 10,
+        "passed": 7,
+        "failed": 3,
+        "pass_rate": 0.7,
+        "citation_coverage_rate": 1.0,
+        "citation_resolvable_rate": 0.9,
+        "broken_link_rate": 0.1,
+        "regression": True,
+        "detail": detail,
+        "total_count": 2,
+    }
 
 
 def _client():
@@ -233,6 +268,20 @@ class AnswerQualityTests(unittest.TestCase):
             self.assertTrue(item["actual"]["missingLayers"])
         self.assertTrue(payload["refusalsByReason"])
 
+    def test_limit_is_an_evaluation_scope_and_truncation_is_explicit(self):
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with _client() as client:
+                full = client.get("/answer/quality").json()
+                page = client.get("/answer/quality", params={"limit": 5}).json()
+        self.assertEqual(full["evaluatedCount"], 10)
+        self.assertEqual(full["totalCount"], 10)
+        self.assertFalse(full["truncated"])
+        self.assertEqual(page["evaluatedCount"], 5)
+        self.assertEqual(page["totalCount"], 10)
+        self.assertTrue(page["truncated"])
+        self.assertEqual(page["summary"]["cases"], 5)
+        self.assertEqual(page["goldenSet"]["available"], 10)
+
     def test_case_id_drill_down(self):
         with patch.object(api_module, "_qa_answer", _fake_answer):
             with _client() as client:
@@ -358,6 +407,101 @@ class AnswerQualityTests(unittest.TestCase):
         self.assertEqual(inserts, [])
         self.assertFalse(payload["persisted"])
         self.assertIsNone(payload["runId"])
+
+    def test_full_run_stores_layer_coverage_in_detail(self):
+        runtime = SimpleNamespace(
+            metadata=FakeMetadata(),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+        )
+        with patch.object(api_module, "_qa_answer", _fake_answer):
+            with TestClient(api_module.create_app(runtime, [])) as client:
+                client.get("/answer/quality").json()
+        insert = next(
+            params
+            for sql, params in runtime.metadata.calls
+            if "INSERT INTO platform.answer_quality_run" in sql
+        )
+        detail = json.loads(insert[15])
+        layers = detail["layerCoverage"]
+        self.assertEqual(
+            [entry["layer"] for entry in layers],
+            ["ontology", "terms", "metrics", "facts"],
+        )
+        for entry in layers:
+            self.assertEqual(entry["evaluated"], 10)
+            self.assertLessEqual(entry["covered"], entry["evaluated"])
+
+    def test_history_reads_stored_rows_newest_first(self):
+        ran_at = datetime(2026, 11, 10, 12, 40, tzinfo=timezone.utc)
+        rows = [
+            _run_row(
+                "aq-new",
+                ran_at,
+                {
+                    "layerCoverage": [
+                        {
+                            "layer": "ontology",
+                            "covered": 9,
+                            "evaluated": 10,
+                            "rate": 0.9,
+                        }
+                    ]
+                },
+            ),
+            _run_row(
+                "aq-old",
+                datetime(2026, 11, 10, 12, 20, tzinfo=timezone.utc),
+                {},
+            ),
+        ]
+        runtime = SimpleNamespace(
+            metadata=_HistoryMetadata(rows),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+        )
+        with TestClient(api_module.create_app(runtime, [])) as client:
+            response = client.get("/answer/quality/runs")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIs(payload["readOnly"], True)
+        self.assertEqual(payload["totalCount"], 2)
+        self.assertEqual([item["runId"] for item in payload["items"]],
+                         ["aq-new", "aq-old"])
+        self.assertEqual(payload["items"][0]["ranAt"], "2026-11-10T12:40:00+00:00")
+        self.assertEqual(payload["items"][0]["layerCoverage"][0]["layer"], "ontology")
+        # Rows written before P14 have no aggregation: absent, not zero.
+        self.assertIsNone(payload["items"][1]["layerCoverage"])
+        sql, params = runtime.metadata.calls[-1]
+        self.assertIn("ORDER BY ran_at DESC", sql)
+        self.assertEqual(params, (None, None, None, None, 20))
+
+    def test_history_filters_and_rejects_bad_since(self):
+        runtime = SimpleNamespace(
+            metadata=_HistoryMetadata([]),
+            graph=FakeGraph(),
+            ontology=FakeOntology(None),
+        )
+        with TestClient(api_module.create_app(runtime, [])) as client:
+            filtered = client.get(
+                "/answer/quality/runs",
+                params={
+                    "limit": 5,
+                    "strategy": "hybrid",
+                    "since": "2026-11-10T00:00:00Z",
+                },
+            )
+            invalid = client.get(
+                "/answer/quality/runs", params={"since": "yesterday"}
+            )
+        self.assertEqual(filtered.status_code, 200)
+        self.assertEqual(filtered.json()["items"], [])
+        self.assertEqual(filtered.json()["totalCount"], 0)
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(
+            invalid.json()["error"]["providerCode"],
+            "E_ANSWER_QUALITY_SINCE_INVALID",
+        )
 
     def test_facts_data_source_comes_from_observation_row(self):
         row = {

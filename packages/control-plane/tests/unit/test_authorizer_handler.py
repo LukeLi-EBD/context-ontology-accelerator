@@ -634,6 +634,8 @@ CONTROL_PLANE_ROUTES: list[tuple[str, str, str]] = [
     ("GET", "/namespaces/{namespaceId}/sources/{sourceId}/tables", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/sources/{sourceId}/tables/{tableId}", "viewNamespace"),
     ("GET", "/namespaces/{namespaceId}/sources/{sourceId}/scan/{jobId}", "viewNamespace"),
+    # Ingestion job history (P8)
+    ("GET", "/namespaces/{namespaceId}/ingestion-runs", "viewNamespace"),
     # Unified sources — writes / management
     ("POST", "/namespaces/{namespaceId}/sources", "manageSource"),
     ("POST", "/namespaces/{namespaceId}/sources/upload-urls", "manageSource"),
@@ -662,6 +664,9 @@ CONTROL_PLANE_ROUTES: list[tuple[str, str, str]] = [
     ("GET", "/namespaces/{namespaceId}/metrics/{name}", "readMetric"),
     ("GET", "/namespaces/{namespaceId}/export-osi", "readMetric"),
     ("GET", "/namespaces/{namespaceId}/import-jobs/{jobId}", "readMetric"),
+    # Metric-card reads (P5): family rollup + report manifest
+    ("GET", "/namespaces/{namespaceId}/metrics/families/{familyId}", "readMetric"),
+    ("GET", "/namespaces/{namespaceId}/metrics/report/manifest", "readMetric"),
     # Metric service — authoring / writes
     ("POST", "/namespaces/{namespaceId}/metrics", "manageMetric"),
     ("PUT", "/namespaces/{namespaceId}/metrics/{name}", "manageMetric"),
@@ -702,6 +707,13 @@ CONTROL_PLANE_ROUTES: list[tuple[str, str, str]] = [
     ("POST", "/namespaces/{namespaceId}/candidates/{candidateId}/reject", "manageOntology"),
     ("GET", "/namespaces/{namespaceId}/embeddings/by-entity/{entityUri}", "searchDocuments"),
     ("POST", "/namespaces/{namespaceId}/embeddings/search", "searchDocuments"),
+    # Terms / dictionaries (P4)
+    ("GET", "/namespaces/{namespaceId}/terms", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/dictionaries", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/dictionaries/{sourceId}", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/dictionaries/{sourceId}/view", "viewNamespace"),
+    ("GET", "/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage", "viewNamespace"),
+    ("POST", "/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh", "manageSource"),
 ]
 
 

@@ -7,6 +7,7 @@ $version: "2"
 namespace com.amazon.semanticcontext.datalayer
 
 use com.amazon.semanticcontext.common#AccessDeniedError
+use com.amazon.semanticcontext.common#StringList
 use com.amazon.semanticcontext.common#Uuid
 use com.amazon.semanticcontext.common#ValidationError
 
@@ -211,10 +212,6 @@ structure SupportingContent {
 // They are not part of this contract; read `sourceDocumentId` / `sourceDocumentName`.
 list SupportingContentList {
     member: SupportingContent
-}
-
-list StringList {
-    member: String
 }
 
 /// A bounded, non-empty natural-language question or search query.

@@ -338,11 +338,22 @@ v1 建议：
 | R6 | 跨实例全局配额做不到 | 本地进程内；AWS 用 API Gateway 限流 | 多实例下实际额度会放大 | 接受 |
 | R7 | provider 错误消息可能带内部 URL/片段 | 只回传截断 500 字符的消息；日志只记 code | F74「原样展示」会打折扣 | 接受 |
 | R8 | 旧 `platform-core` 的 `/browse/sparql` 只有正则前置检查 | 不改造，明确不复用；如仍可达，单独立项收口 | 存在并行入口，审计会漏 | 记录，不在 P6 |
+| R9 | 10s 上限只约束调用方等待，不约束服务端计算 | 保持并发 2 + 客户端硬超时；M3b 再评估只读副本/CPU 限额 | Oxigraph 断开后仍在算，需重启容器；Neptune 也只保证调用方侧上限 | **已知限制，M3b 再议**（见 §8.1） |
 
 补充：
 
 - `platform-core/src/platform_core/api.py` 的 `/browse/sparql` 是 GET + 正则 `^(prefix|base)* (select|ask)` + 5000 字符上限，随后依赖适配器的字符串检查（`SERVICE`、`FROM/FROM NAMED <iri>`、`GRAPH <iri>`）。它**不是解析层**：`GRAPH ?g`、注释/转义等变体没有解析级保证；适配器默认 `allowed_graph_prefixes=("urn:platform:",)`，对本机 `https://coa.local/...` 数据图也不适用。**不能**作为 F72–F74 的实现基础。
 - 现有 `SPARQLFirewall` 的 F2 假设「一个 source 一个图 / 一个端点」。COA 是「一个实例多命名空间」，这个假设不成立，必须按 §3.4 扩展后再复用。
+
+### 8.1 已知限制（M3b 再议）：超时只切断等待，不中止服务端
+
+可直接贴台账：
+
+| 项 | 内容 |
+|---|---|
+| **现状** | 10s 是**调用方**硬上限：console 用 `asyncio.wait_for` 取消协程并关闭 HTTP 连接，返回 504 `E_SPARQL_TIMEOUT`；底层 httpx 的预算为 `TIMEOUT_S + 2s`，只负责让外层先触发，不构成第二道语义。Oxigraph 侧没有可依赖的 query timeout（`--timeout-s` 实测不中断，见 §1.2），连接断开后查询仍在计算，**需重启容器才能停**。Neptune 同理：客户端 `retry_timeouts=False`，10s 后调用方不再等待，但同样**不保证服务端已中止**。 |
+| **影响** | 单条慢查询可长期占住一个并发位（§7 并发 2），拖慢同实例其他请求；极端情况 CPU 被打满。返回码语义是确定的（慢 → 504），缺的是资源侧的硬中止，不是契约层面的不确定性。 |
+| **何时验** | M3b 再议。候选手段：只读副本 + CPU/内存限额；Oxigraph 前置反向代理强制断流；Neptune 注入 `queryTimeout` 的实测有效性（A16）。在拿到「服务端确实停止」的证据前，本条按**已知限制**登记，不按「已解决」登记。 |
 
 ## 9. 推荐实现顺序（只列顺序，不含代码）
 

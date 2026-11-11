@@ -21,7 +21,10 @@ import TreeView from "@cloudscape-design/components/tree-view";
 import { PendingReviewBanner } from "@components/ontology/PendingReviewBanner";
 import { InductedSourcesView } from "./explorer/InductedSourcesView";
 import { OntologyInventoryView } from "./explorer/OntologyInventoryView";
+import { SparqlConsoleView } from "./explorer/SparqlConsoleView";
 import { StatementBrowserView } from "./explorer/StatementBrowserView";
+import { LinksView } from "./explorer/LinksView";
+import { PathsView } from "./explorer/PathsView";
 import {
   buildClassTree,
   defaultExpandedIds,
@@ -37,6 +40,7 @@ import {
   type GraphSearchHit,
   type GraphVertex,
   type ListedOntology,
+  type OntologyOverviewResult,
 } from "../../services/ontology-engine";
 import {
   useGraphClasses,
@@ -65,6 +69,9 @@ const SEARCH_NEIGHBOR_HOPS = 1;
 
 /** Hard cap on nodes shown for a search so dense graphs stay readable. */
 const MAX_SEARCH_NODES = 60;
+
+/** Rows per page in the Properties tab's two tables (F133). */
+const PROPERTIES_PAGE_SIZE = 25;
 
 /**
  * Per-ontology cap on classes shown in the initial (no-search) graph seed. An
@@ -623,6 +630,85 @@ export type ClassRow = {
   induced: boolean;
 };
 
+/** One property row in the Explorer's Properties tab (F133). */
+export type ExplorerPropertyRow = {
+  uri: string;
+  label: string;
+  kind: "object" | "datatype";
+  /** Domain class IRI (empty when the ontology does not assert one). */
+  domain: string;
+  /** Range IRI — a class for object properties, a datatype for datatype ones. */
+  range: string;
+  ontologyName: string;
+};
+
+/**
+ * One named graph backing an ontology (F134). `graphUri` is the graph the
+ * ontology is stored in; ontologies that don't report one are omitted rather
+ * than shown with an invented IRI.
+ */
+export type ExplorerNamedGraphRow = {
+  ontologyId: string;
+  ontologyName: string;
+  graphUri: string;
+  classCount: number;
+};
+
+/**
+ * Build the Properties tab's rows from the per-ontology overviews already
+ * fetched for the List view. Object and datatype properties share the same
+ * envelope, so `kind` is the only distinction the tab needs.
+ */
+export function buildPropertyRows(
+  overviews: readonly { ontologyId: string; overview: OntologyOverviewResult | null }[],
+  ontologyById: Map<string, ListedOntology>,
+): ExplorerPropertyRow[] {
+  const rows: ExplorerPropertyRow[] = [];
+  for (const { ontologyId, overview } of overviews) {
+    if (!overview) continue;
+    const record = ontologyById.get(ontologyId);
+    const ontologyName = record?.title || ontologyId;
+    const push = (kind: "object" | "datatype") => {
+      const list =
+        (kind === "object"
+          ? overview.objectProperties
+          : overview.datatypeProperties) ?? [];
+      for (const p of list) {
+        rows.push({
+          uri: p.uri,
+          label: p.label || localName(p.uri),
+          kind,
+          domain: p.domain ?? "",
+          range: p.range ?? "",
+          ontologyName,
+        });
+      }
+    };
+    push("object");
+    push("datatype");
+  }
+  return rows;
+}
+
+/** Build the named-graph info rows (F134) from the same overviews. */
+export function buildNamedGraphRows(
+  overviews: readonly { ontologyId: string; overview: OntologyOverviewResult | null }[],
+  ontologyById: Map<string, ListedOntology>,
+): ExplorerNamedGraphRow[] {
+  const rows: ExplorerNamedGraphRow[] = [];
+  for (const { ontologyId, overview } of overviews) {
+    if (!overview?.graphUri) continue;
+    const record = ontologyById.get(ontologyId);
+    rows.push({
+      ontologyId,
+      ontologyName: record?.title || ontologyId,
+      graphUri: overview.graphUri,
+      classCount: overview.classes?.length ?? 0,
+    });
+  }
+  return rows;
+}
+
 /**
  * Build the List-view rows from class hits: attach each class's source
  * ontologies (all of them, via the registry — a class IRI can be asserted in
@@ -734,9 +820,13 @@ async function fetchVertexByKind(
 
 const EXPLORER_TABS = new Set([
   "classes",
+  "properties",
   "ontologies",
   "sources",
   "statements",
+  "links",
+  "paths",
+  "sparql",
 ]);
 
 export function GraphSearchPage() {
@@ -816,6 +906,16 @@ export function GraphSearchPage() {
   const [attrByClass, setAttrByClass] = useState<Map<string, GraphAttribute[]>>(
     new Map(),
   );
+
+  // F133/F134: the Properties tab and the named-graph info both read the same
+  // per-ontology overviews the List view already fetches — no extra round-trip.
+  const [propertyRows, setPropertyRows] = useState<ExplorerPropertyRow[]>([]);
+  const [namedGraphRows, setNamedGraphRows] = useState<
+    ExplorerNamedGraphRow[]
+  >([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [objectPropertiesPage, setObjectPropertiesPage] = useState(1);
+  const [datatypePropertiesPage, setDatatypePropertiesPage] = useState(1);
 
   const graphData = useMemo(
     () => buildGraphData(visibleUris, detailsMap, attrByClass),
@@ -906,17 +1006,20 @@ export function GraphSearchPage() {
     if (!namespaceId || ontologyById.size === 0) return;
     let cancelled = false;
     const ontologyIds = [...ontologyById.keys()];
+    setPropertiesLoading(true);
     Promise.all(
       ontologyIds.map((id) =>
-        getOntologyOverview(apiClient, namespaceId, id).catch(() => null),
+        getOntologyOverview(apiClient, namespaceId, id)
+          .then((overview) => ({ ontologyId: id, overview }))
+          .catch(() => ({ ontologyId: id, overview: null })),
       ),
     )
-      .then((overviews) => {
+      .then((results) => {
         if (cancelled) return;
         const descByUri = new Map<string, string>();
         const entries: ClassTreeEntry[] = [];
-        for (const ov of overviews) {
-          for (const c of ov?.classes ?? []) {
+        for (const { overview } of results) {
+          for (const c of overview?.classes ?? []) {
             if (c.comment) descByUri.set(c.uri, c.comment);
             entries.push({
               uri: c.uri,
@@ -927,9 +1030,13 @@ export function GraphSearchPage() {
         }
         setDescriptionByUri(descByUri);
         setClassTreeEntries(entries);
+        setPropertyRows(buildPropertyRows(results, ontologyById));
+        setNamedGraphRows(buildNamedGraphRows(results, ontologyById));
+        setPropertiesLoading(false);
       })
       .catch(() => {
         // Best-effort: descriptions enrich the List view but aren't required.
+        if (!cancelled) setPropertiesLoading(false);
       });
     return () => {
       cancelled = true;
@@ -939,6 +1046,32 @@ export function GraphSearchPage() {
   const classTree = useMemo(
     () => buildClassTree(classTreeEntries),
     [classTreeEntries],
+  );
+
+  // F133: split the overview-derived rows once so each table pages independently.
+  const objectPropertyRows = useMemo(
+    () => propertyRows.filter((row) => row.kind === "object"),
+    [propertyRows],
+  );
+  const datatypePropertyRows = useMemo(
+    () => propertyRows.filter((row) => row.kind === "datatype"),
+    [propertyRows],
+  );
+  const objectPropertiesPageRows = useMemo(
+    () =>
+      objectPropertyRows.slice(
+        (objectPropertiesPage - 1) * PROPERTIES_PAGE_SIZE,
+        objectPropertiesPage * PROPERTIES_PAGE_SIZE,
+      ),
+    [objectPropertyRows, objectPropertiesPage],
+  );
+  const datatypePropertiesPageRows = useMemo(
+    () =>
+      datatypePropertyRows.slice(
+        (datatypePropertiesPage - 1) * PROPERTIES_PAGE_SIZE,
+        datatypePropertiesPage * PROPERTIES_PAGE_SIZE,
+      ),
+    [datatypePropertyRows, datatypePropertiesPage],
   );
 
   useEffect(() => {
@@ -1347,6 +1480,22 @@ export function GraphSearchPage() {
     }
   };
 
+  // F92: the entity page links a class IRI here as "?uri=…". Open that class's
+  // detail panel once, in the List view, so the jump lands on a concrete class
+  // instead of dumping the user at the Explorer root.
+  const uriDeepLinkHandled = useRef(false);
+  const requestedUri = searchParams.get("uri");
+  useEffect(() => {
+    if (uriDeepLinkHandled.current || !requestedUri || !namespaceId) return;
+    if (tab !== "classes") return;
+    uriDeepLinkHandled.current = true;
+    setView("list");
+    void handleClassRowClick(requestedUri);
+    // handleClassRowClick is recreated per render; the latch above makes this
+    // a one-shot, so it must not re-run on every dependency change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedUri, namespaceId, tab]);
+
   // "Graph view" link from the detail panel: switch to the graph view and
   // run a graph search for this class's name, so it opens centred on the class
   // with its neighbourhood. The selected class stays selected, so the
@@ -1685,6 +1834,193 @@ export function GraphSearchPage() {
       return next;
     });
   };
+
+  // The Properties tab body (F133) plus the named-graph info block (F134).
+  // Both read the per-ontology overviews the List view already fetched, so
+  // opening this tab costs no additional round-trip.
+  const iriCell = (iri: string) =>
+    iri ? (
+      <span title={iri} style={{ wordBreak: "break-all" }}>
+        {localName(iri)}
+      </span>
+    ) : (
+      <Box color="text-status-inactive">—</Box>
+    );
+
+  const propertiesTab = (
+    <SpaceBetween size="l">
+      <Table
+        variant="embedded"
+        loading={propertiesLoading}
+        items={namedGraphRows}
+        header={
+          <Header
+            variant="h2"
+            counter={`(${namedGraphRows.length})`}
+            description={t(
+              "Named graph IRIs the ontologies in this namespace are stored in.",
+            )}
+          >
+            {t("Named graphs")}
+          </Header>
+        }
+        columnDefinitions={[
+          {
+            id: "ontology",
+            header: t("Ontology"),
+            cell: (row: ExplorerNamedGraphRow) => row.ontologyName,
+          },
+          {
+            id: "graph",
+            header: t("Graph IRI"),
+            cell: (row: ExplorerNamedGraphRow) => (
+              <span style={{ wordBreak: "break-all", fontFamily: "monospace" }}>
+                {row.graphUri}
+              </span>
+            ),
+          },
+          {
+            id: "classes",
+            header: t("Classes"),
+            cell: (row: ExplorerNamedGraphRow) => row.classCount,
+          },
+        ]}
+        empty={
+          <Box textAlign="center" color="inherit">
+            {t("No named graph was reported for these ontologies.")}
+          </Box>
+        }
+      />
+      <Table
+        variant="embedded"
+        loading={propertiesLoading}
+        items={objectPropertiesPageRows}
+        header={
+          <Header
+            variant="h2"
+            counter={`(${objectPropertyRows.length})`}
+            description={t(
+              "Object properties (class-to-class relationships) declared by the ontologies in this namespace.",
+            )}
+          >
+            {t("Object properties")}
+          </Header>
+        }
+        columnDefinitions={[
+          {
+            id: "property",
+            header: t("Property"),
+            cell: (row: ExplorerPropertyRow) => (
+              <div>
+                <div>{row.label}</div>
+                <Box variant="small" color="text-body-secondary">
+                  <span style={{ wordBreak: "break-all", fontFamily: "monospace" }}>
+                    {row.uri}
+                  </span>
+                </Box>
+              </div>
+            ),
+          },
+          {
+            id: "domain",
+            header: t("Domain"),
+            cell: (row: ExplorerPropertyRow) => iriCell(row.domain),
+          },
+          {
+            id: "range",
+            header: t("Range"),
+            cell: (row: ExplorerPropertyRow) => iriCell(row.range),
+          },
+          {
+            id: "ontology",
+            header: t("Ontology"),
+            cell: (row: ExplorerPropertyRow) => row.ontologyName,
+          },
+        ]}
+        pagination={
+          <Pagination
+            currentPageIndex={objectPropertiesPage}
+            onChange={({ detail }) =>
+              setObjectPropertiesPage(detail.currentPageIndex)
+            }
+            pagesCount={Math.max(
+              1,
+              Math.ceil(objectPropertyRows.length / PROPERTIES_PAGE_SIZE),
+            )}
+          />
+        }
+        empty={
+          <Box textAlign="center" color="inherit">
+            {t("No object properties were reported for these ontologies.")}
+          </Box>
+        }
+      />
+      <Table
+        variant="embedded"
+        loading={propertiesLoading}
+        items={datatypePropertiesPageRows}
+        header={
+          <Header
+            variant="h2"
+            counter={`(${datatypePropertyRows.length})`}
+            description={t(
+              "Datatype properties (class-to-literal attributes) declared by the ontologies in this namespace.",
+            )}
+          >
+            {t("Datatype properties")}
+          </Header>
+        }
+        columnDefinitions={[
+          {
+            id: "property",
+            header: t("Property"),
+            cell: (row: ExplorerPropertyRow) => (
+              <div>
+                <div>{row.label}</div>
+                <Box variant="small" color="text-body-secondary">
+                  <span style={{ wordBreak: "break-all", fontFamily: "monospace" }}>
+                    {row.uri}
+                  </span>
+                </Box>
+              </div>
+            ),
+          },
+          {
+            id: "domain",
+            header: t("Domain"),
+            cell: (row: ExplorerPropertyRow) => iriCell(row.domain),
+          },
+          {
+            id: "range",
+            header: t("Range"),
+            cell: (row: ExplorerPropertyRow) => iriCell(row.range),
+          },
+          {
+            id: "ontology",
+            header: t("Ontology"),
+            cell: (row: ExplorerPropertyRow) => row.ontologyName,
+          },
+        ]}
+        pagination={
+          <Pagination
+            currentPageIndex={datatypePropertiesPage}
+            onChange={({ detail }) =>
+              setDatatypePropertiesPage(detail.currentPageIndex)
+            }
+            pagesCount={Math.max(
+              1,
+              Math.ceil(datatypePropertyRows.length / PROPERTIES_PAGE_SIZE),
+            )}
+          />
+        }
+        empty={
+          <Box textAlign="center" color="inherit">
+            {t("No datatype properties were reported for these ontologies.")}
+          </Box>
+        }
+      />
+    </SpaceBetween>
+  );
 
   // The Classes tab body: the graph/list browse experience. Extracted as a
   // variable (not a component) so none of the surrounding state/effects change.
@@ -2073,6 +2409,20 @@ export function GraphSearchPage() {
                       >
                         {t("Graph view")}
                       </Link>
+                      {" | "}
+                      {/* F143: a search hit (class or instance IRI) can always be
+                          opened as an entity — GetEntity accepts any IRI, so no
+                          guessing or faked landing is involved. */}
+                      <Link
+                        variant="primary"
+                        onFollow={() =>
+                          navigate(
+                            `/namespaces/${namespaceId}/ontology/entities/${encodeURIComponent(selectedVertex.uri)}`,
+                          )
+                        }
+                      >
+                        {t("Entity page")}
+                      </Link>
                     </Box>
                   </SpaceBetween>
                 </Header>
@@ -2282,6 +2632,11 @@ export function GraphSearchPage() {
         tabs={[
           { id: "classes", label: t("Classes"), content: classesTab },
           {
+            id: "properties",
+            label: t("Properties"),
+            content: propertiesTab,
+          },
+          {
             id: "ontologies",
             label: t("Ontologies"),
             content: (
@@ -2309,6 +2664,25 @@ export function GraphSearchPage() {
                 apiClient={apiClient}
                 namespace={namespaceId}
               />
+            ),
+          },
+          {
+            id: "sparql",
+            label: t("SPARQL"),
+            content: <SparqlConsoleView namespace={namespaceId} />,
+          },
+          {
+            id: "links",
+            label: t("Links"),
+            content: (
+              <LinksView apiClient={apiClient} namespace={namespaceId} />
+            ),
+          },
+          {
+            id: "paths",
+            label: t("Paths"),
+            content: (
+              <PathsView apiClient={apiClient} namespace={namespaceId} />
             ),
           },
         ]}

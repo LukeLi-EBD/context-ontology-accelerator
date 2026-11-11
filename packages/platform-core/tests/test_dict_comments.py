@@ -21,8 +21,12 @@ from pathlib import Path
 sys.path.insert(0, "/app/src")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-SQL_PATH = Path(__file__).resolve().parents[1] / "src/platform_core/sql/V42__dict_column_comments.sql"
-BINDING_SQL_PATH = Path(__file__).resolve().parents[1] / "src/platform_core/sql/V39__dict_bindings.sql"
+CRM_SQL_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "control-plane/src/coa_control_plane/platform_db/migrations"
+)
+SQL_PATH = CRM_SQL_DIR / "V42__dict_column_comments.sql"
+BINDING_SQL_PATH = CRM_SQL_DIR / "V39__dict_bindings.sql"
 BASELINE_PATH = Path(__file__).resolve().parent / "data/dict_comments_baseline.json"
 BINDINGS_PATH = Path(__file__).resolve().parent / "data/dict_comments_bindings.json"
 DOC_PATH = Path(__file__).resolve().parents[2] / "doc/_design/61-字典列注释补齐.md"

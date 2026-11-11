@@ -216,6 +216,15 @@ class NeptuneGraphClient:
         ]
 
     @instrumented("neptune")
+    async def query_json(self, sparql: str) -> dict[str, Any]:
+        """Execute a read-only query and return the provider's SPARQL JSON body.
+
+        Unlike :meth:`query`, this keeps ``head.vars`` and each binding's type, which
+        the SPARQL console needs to render its columns faithfully.
+        """
+        self._validate_sparql(sparql)
+        return await self._sparql_post(sparql)
+
     async def ask(self, sparql: str) -> bool:
         """Execute a read-only SPARQL ASK query.
 

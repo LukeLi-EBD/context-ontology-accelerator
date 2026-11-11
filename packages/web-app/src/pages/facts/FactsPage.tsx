@@ -17,6 +17,7 @@ import Table from "@cloudscape-design/components/table";
 import { ApiError, useApiClient } from "../../components/ApiClientProvider";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import {
+  batchKeepFactConflicts,
   batchRetractFacts,
   getFact,
   listFactConflicts,
@@ -26,6 +27,7 @@ import {
   restoreFact,
   retractFact,
   undoFactConflict,
+  type BatchKeepConflictResult,
   type BatchRetractResult,
   type FactAdjudication,
   type FactConflict,
@@ -89,6 +91,14 @@ export function FactsPage() {
   const [conflicts, setConflicts] = useState<FactConflict[]>([]);
   const [adjudications, setAdjudications] = useState<FactAdjudication[]>([]);
   const [keepChoice, setKeepChoice] = useState<Record<string, string>>({});
+  const [mergeValue, setMergeValue] = useState<Record<string, string>>({});
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchActor, setBatchActor] = useState("");
+  const [batchPredicate, setBatchPredicate] = useState("");
+  const [batchKeepValue, setBatchKeepValue] = useState("");
+  const [batchPreview, setBatchPreview] = useState<BatchKeepConflictResult | null>(null);
+  const [batchPreviewBusy, setBatchPreviewBusy] = useState(false);
+  const [batchApplyBusy, setBatchApplyBusy] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FactRecord | null>(null);
   const [chain, setChain] = useState<FactEventPage | null>(null);
@@ -299,6 +309,98 @@ export function FactsPage() {
       setError(`裁决失败：${errorText(err)}`);
     } finally {
       setBusy(null);
+    }
+  };
+
+  // F31: merge retires every value of the group and writes one merged value.
+  // The target comes from the per-row input, falling back to the value already
+  // chosen in the keep picker so "these two are the same thing, keep this one"
+  // does not require typing.
+  const mergeConflict = async (conflict: FactConflict) => {
+    if (!namespaceId) return;
+    const key = `merge:${conflictKey(conflict)}`;
+    setBusy(key);
+    setError(null);
+    setNotice(null);
+    try {
+      const who = requireActor();
+      const mergedObject =
+        (mergeValue[conflictKey(conflict)] ?? "").trim() ||
+        keepChoice[conflictKey(conflict)] ||
+        "";
+      if (!mergedObject) {
+        throw new Error("合并需要一个目标值：填「合并为」，或先在左侧选一个取值");
+      }
+      await resolveFactConflict(api, namespaceId, {
+        subject: conflict.subject,
+        predicate: conflict.predicate,
+        action: "merge",
+        mergedObject,
+        actor: who,
+        reason: reason || undefined,
+      });
+      setMergeValue((prev) => ({ ...prev, [conflictKey(conflict)]: "" }));
+      setNotice(`已合并为 ${mergedObject}（actor=${who}），原断言已撤回，可撤销`);
+      await loadFacts();
+    } catch (err) {
+      setError(`合并失败：${errorText(err)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const previewBatchKeep = async () => {
+    if (!namespaceId) return;
+    setBatchPreviewBusy(true);
+    setError(null);
+    try {
+      const who = batchActor.trim();
+      if (!who) throw new Error("批量保留必须填写操作人");
+      const keep = batchKeepValue.trim();
+      if (!keep) throw new Error("批量保留需要填写要保留的取值");
+      if (!batchPredicate) throw new Error("批量保留需要一个明确的谓词范围");
+      setBatchPreview(
+        await batchKeepFactConflicts(api, namespaceId, {
+          keep,
+          predicate: batchPredicate,
+          actor: who,
+          reason: reason || undefined,
+          dryRun: true,
+        }),
+      );
+    } catch (err) {
+      setBatchPreview(null);
+      setError(`批量保留预览失败：${errorText(err)}`);
+    } finally {
+      setBatchPreviewBusy(false);
+    }
+  };
+
+  const applyBatchKeep = async () => {
+    if (!namespaceId || !batchPreview) return;
+    setBatchApplyBusy(true);
+    setError(null);
+    try {
+      const who = batchActor.trim();
+      if (!who) throw new Error("批量保留必须填写操作人");
+      const result = await batchKeepFactConflicts(api, namespaceId, {
+        keep: batchPreview.keep,
+        predicate: batchPredicate,
+        actor: who,
+        reason: reason || undefined,
+        dryRun: false,
+      });
+      setBatchOpen(false);
+      setBatchPreview(null);
+      setActor(who);
+      setNotice(
+        `批量保留完成：命中 ${result.matched} 组，保留 ${result.kept} 组，跳过 ${result.skipped} 组，撤回 ${result.affectedFacts} 条（batchId=${result.batchId}）`,
+      );
+      await loadFacts();
+    } catch (err) {
+      setError(`批量保留失败：${errorText(err)}`);
+    } finally {
+      setBatchApplyBusy(false);
     }
   };
 
@@ -600,7 +702,27 @@ export function FactsPage() {
 
       <Container
         header={
-          <Header variant="h2" description="同一主语+谓词下出现多个不同宾语即视为冲突">
+          <Header
+            variant="h2"
+            description="同一主语+谓词下出现多个不同宾语即视为冲突"
+            actions={
+              <Button
+                disabled={conflicts.length === 0}
+                onClick={() => {
+                  setBatchPreview(null);
+                  // Default to the first group's predicate: the scope stays
+                  // explicit (it is shown and editable) but most runs have one.
+                  setBatchPredicate(conflicts[0]?.predicate ?? "");
+                  setBatchKeepValue("");
+                  setBatchActor(actor);
+                  setError(null);
+                  setBatchOpen(true);
+                }}
+              >
+                按谓词批量保留
+              </Button>
+            }
+          >
             冲突分组（{conflicts.length}）
           </Header>
         }
@@ -656,21 +778,43 @@ export function FactsPage() {
               id: "actions",
               header: "裁决",
               cell: (item) => (
-                <SpaceBetween direction="horizontal" size="xs">
-                  <Button
-                    disabled={!item.pending}
-                    loading={busy === `decide:${conflictKey(item)}`}
-                    onClick={() => void decide("keep", item)}
-                  >
-                    保留所选
-                  </Button>
-                  <Button
-                    disabled={!item.pending}
-                    loading={busy === `decide:${conflictKey(item)}`}
-                    onClick={() => void decide("keep_both", item)}
-                  >
-                    都保留
-                  </Button>
+                <SpaceBetween size="xs">
+                  <SpaceBetween direction="horizontal" size="xs">
+                    <Input
+                      ariaLabel={`合并为 ${conflictKey(item)}`}
+                      placeholder="合并为（IRI，留空则用左侧所选）"
+                      value={mergeValue[conflictKey(item)] ?? ""}
+                      onChange={({ detail: change }) =>
+                        setMergeValue((prev) => ({
+                          ...prev,
+                          [conflictKey(item)]: change.value,
+                        }))
+                      }
+                    />
+                    <Button
+                      disabled={!item.pending}
+                      loading={busy === `merge:${conflictKey(item)}`}
+                      onClick={() => void mergeConflict(item)}
+                    >
+                      合并
+                    </Button>
+                  </SpaceBetween>
+                  <SpaceBetween direction="horizontal" size="xs">
+                    <Button
+                      disabled={!item.pending}
+                      loading={busy === `decide:${conflictKey(item)}`}
+                      onClick={() => void decide("keep", item)}
+                    >
+                      保留所选
+                    </Button>
+                    <Button
+                      disabled={!item.pending}
+                      loading={busy === `decide:${conflictKey(item)}`}
+                      onClick={() => void decide("keep_both", item)}
+                    >
+                      都保留
+                    </Button>
+                  </SpaceBetween>
                 </SpaceBetween>
               ),
             },
@@ -746,6 +890,83 @@ export function FactsPage() {
           empty={<Box textAlign="center">还没有裁决记录</Box>}
         />
       </Container>
+
+      <Modal
+        visible={batchOpen}
+        onDismiss={() => setBatchOpen(false)}
+        size="medium"
+        header="按谓词批量保留"
+        footer={
+          <Box float="right">
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button onClick={() => setBatchOpen(false)} disabled={batchApplyBusy}>
+                取消
+              </Button>
+              <Button loading={batchPreviewBusy} onClick={() => void previewBatchKeep()}>
+                预览影响
+              </Button>
+              <Button
+                variant="primary"
+                loading={batchApplyBusy}
+                disabled={!batchPreview || batchPreview.matched === 0}
+                onClick={() => void applyBatchKeep()}
+              >
+                确认执行
+              </Button>
+            </SpaceBetween>
+          </Box>
+        }
+      >
+        <SpaceBetween size="m">
+          <Box color="text-body-secondary">
+            一条规则作用在一个明确的谓词范围内：命中的待裁决分组保留该取值，其余断言撤回。
+            预览是默认行为，只有「确认执行」才会写账本。
+          </Box>
+          <FormField label="操作人（必填）">
+            <Input
+              ariaLabel="批量保留的操作人"
+              placeholder="operator"
+              value={batchActor}
+              onChange={({ detail: change }) => {
+                setBatchActor(change.value);
+                setBatchPreview(null);
+              }}
+            />
+          </FormField>
+          <FormField label="谓词范围（必填）">
+            <Select
+              ariaLabel="批量保留的谓词范围"
+              placeholder="选择谓词"
+              selectedOption={
+                batchPredicate ? { label: batchPredicate, value: batchPredicate } : null
+              }
+              options={Array.from(new Set(conflicts.map((item) => item.predicate)))
+                .sort()
+                .map((value) => ({ label: value, value }))}
+              onChange={({ detail: change }) => {
+                setBatchPredicate(change.selectedOption?.value ?? "");
+                setBatchPreview(null);
+              }}
+            />
+          </FormField>
+          <FormField label="要保留的取值（必填）">
+            <Input
+              ariaLabel="批量保留的取值"
+              placeholder="urn:coa:entity:…"
+              value={batchKeepValue}
+              onChange={({ detail: change }) => {
+                setBatchKeepValue(change.value);
+                setBatchPreview(null);
+              }}
+            />
+          </FormField>
+          {batchPreview ? (
+            <Alert type={batchPreview.matched === 0 ? "warning" : "info"}>
+              {`预览（dryRun=${batchPreview.dryRun}）：命中 ${batchPreview.matched} 组，保留 ${batchPreview.kept} 组，跳过 ${batchPreview.skipped} 组，将撤回 ${batchPreview.affectedFacts} 条断言。`}
+            </Alert>
+          ) : null}
+        </SpaceBetween>
+      </Modal>
 
       <Modal
         visible={preview !== null}

@@ -7,6 +7,7 @@ import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import { useNamespace } from "@api-hooks/use-namespace";
 import { useCollection } from "@cloudscape-design/collection-hooks";
 import Table from "@cloudscape-design/components/table";
+import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
 import Button from "@cloudscape-design/components/button";
 import SpaceBetween from "@cloudscape-design/components/space-between";
@@ -21,6 +22,8 @@ import RadioGroup from "@cloudscape-design/components/radio-group";
 import FileUpload from "@cloudscape-design/components/file-upload";
 import FormField from "@cloudscape-design/components/form-field";
 import Link from "@cloudscape-design/components/link";
+import Badge from "@cloudscape-design/components/badge";
+import Grid from "@cloudscape-design/components/grid";
 import type { CollectionPreferencesProps } from "@cloudscape-design/components/collection-preferences";
 import {
   useListMetrics,
@@ -28,6 +31,7 @@ import {
   useExportOsi,
   useGetImportJob,
   useBulkDeleteMetrics,
+  useGetMetricReportManifest,
 } from "../api-hooks/use-metrics";
 import type { MetricDefinition } from "../api-hooks/use-metrics";
 import { useSourceNameById } from "../api-hooks/use-source-name-by-id";
@@ -49,6 +53,7 @@ const COLUMNS: Array<{
 }> = [
   { id: "name", label: "Name", alwaysVisible: true },
   { id: "description", label: "Description" },
+  { id: "externalStatus", label: "External status" },
   { id: "dataSourceId", label: "Data source" },
   { id: "sourceTable", label: "Table" },
   { id: "defaultTimeGrain", label: "Time grain" },
@@ -266,6 +271,58 @@ export const MetricList: React.FC = () => {
     });
   }, [allMetrics]);
 
+  // F55/F57: family sidebar and manifest-backed external status. Both read the
+  // same report manifest the platform views use, so the badge here and the one
+  // on the metric card cannot disagree.
+  const { data: manifest } = useGetMetricReportManifest(namespaceId ?? "");
+  const [familyScope, setFamilyScope] = useState<string | null>(null);
+  const manifestByMetricId = useMemo(
+    () => new Map((manifest?.items ?? []).map((row) => [row.metricId, row])),
+    [manifest],
+  );
+  const families = useMemo(
+    () => (manifest?.items ?? []).filter((row) => row.outputMode === "index"),
+    [manifest],
+  );
+  const variantsByFamily = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const row of manifest?.items ?? []) {
+      if (!row.variantOf) continue;
+      map.set(row.variantOf, [
+        ...(map.get(row.variantOf) ?? []),
+        row.metricId,
+      ]);
+    }
+    return map;
+  }, [manifest]);
+  const scopedMetrics = useMemo(() => {
+    if (!familyScope) return allMetrics;
+    return allMetrics.filter((m) => {
+      const row = manifestByMetricId.get(m.name ?? "");
+      return m.name === familyScope || row?.variantOf === familyScope;
+    });
+  }, [allMetrics, familyScope, manifestByMetricId]);
+  const externalBadgeColor = (status?: string) => {
+    switch (status) {
+      case "external_candidate":
+        return "green" as const;
+      case "blocked":
+        return "red" as const;
+      case "unpublishable":
+        return "grey" as const;
+      default:
+        return "blue" as const;
+    }
+  };
+
+  // A family's rows can sit on a later server page; drain them so the scoped
+  // table is complete instead of silently showing a subset.
+  React.useEffect(() => {
+    if (familyScope && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [familyScope, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const {
     items,
     allPageItems,
@@ -273,7 +330,7 @@ export const MetricList: React.FC = () => {
     propertyFilterProps,
     paginationProps,
     filteredItemsCount,
-  } = useCollection(allMetrics, {
+  } = useCollection(scopedMetrics, {
     propertyFiltering: {
       filteringProperties,
       empty: (
@@ -676,7 +733,79 @@ export const MetricList: React.FC = () => {
         </Alert>
       )}
 
-      <Table
+      <Grid
+        gridDefinition={[
+          { colspan: { default: 12, xs: 3 } },
+          { colspan: { default: 12, xs: 9 } },
+        ]}
+      >
+        <div>
+          <Container
+            header={
+              <Header variant="h3" counter={`(${families.length})`}>
+                {t("Families")}
+              </Header>
+            }
+          >
+            <SpaceBetween size="xs">
+              <Button
+                variant={familyScope === null ? "primary" : "normal"}
+                onClick={() => setFamilyScope(null)}
+              >
+                {t("All metrics")}
+              </Button>
+              {families.map((family) => {
+                const variants = variantsByFamily.get(family.metricId) ?? [];
+                const externalCount = (manifest?.items ?? []).filter(
+                  (row) =>
+                    row.variantOf === family.metricId && row.externalEligible,
+                ).length;
+                return (
+                  <div key={family.metricId}>
+                    <Button
+                      variant={
+                        familyScope === family.metricId ? "primary" : "normal"
+                      }
+                      onClick={() => setFamilyScope(family.metricId)}
+                    >
+                      {family.nameZh || family.metricId}
+                    </Button>
+                    <Box variant="small" color="text-body-secondary">
+                      {family.metricId} ·{" "}
+                      {t("{count} variants", { count: variants.length })} ·{" "}
+                      {t("{count} external", { count: externalCount })}
+                    </Box>
+                    {familyScope === family.metricId && variants.length > 0 && (
+                      <SpaceBetween size="xxs">
+                        {variants.map((variantId) => (
+                          <Link
+                            key={variantId}
+                            href={`/namespaces/${namespaceId}/metrics/${variantId}`}
+                            onFollow={(event) => {
+                              event.preventDefault();
+                              navigate(
+                                `/namespaces/${namespaceId}/metrics/${variantId}`,
+                              );
+                            }}
+                          >
+                            {variantId}
+                          </Link>
+                        ))}
+                      </SpaceBetween>
+                    )}
+                  </div>
+                );
+              })}
+              {families.length === 0 && (
+                <Box color="text-status-inactive">
+                  {t("No metric families in this namespace.")}
+                </Box>
+              )}
+            </SpaceBetween>
+          </Container>
+        </div>
+
+        <Table
         {...collectionProps}
         loading={isLoading}
         loadingText={t("Loading metrics")}
@@ -730,6 +859,32 @@ export const MetricList: React.FC = () => {
             cell: (item: MetricDefinition) => item.description,
           },
           {
+            id: "externalStatus",
+            header: t("External status"),
+            // F57: the row-level manifest state, joined on the metric id (the
+            // list row's `name`). Absent from the manifest means the metric is
+            // not governed by the report, so show a dash rather than a guess.
+            cell: (item: MetricDefinition) => {
+              const row = manifestByMetricId.get(item.name ?? "");
+              if (!row) {
+                return <Box color="text-status-inactive">—</Box>;
+              }
+              return (
+                <SpaceBetween size="xxs">
+                  <Badge color={externalBadgeColor(row.externalStatus)}>
+                    {row.externalLabel ?? row.externalStatus ?? "—"}
+                  </Badge>
+                  {row.executionPath && (
+                    <Box variant="small" color="text-body-secondary">
+                      {t("Path: {path}", { path: row.executionPath })}
+                    </Box>
+                  )}
+                </SpaceBetween>
+              );
+            },
+            minWidth: 180,
+          },
+          {
             id: "dataSourceId",
             header: t("Data source"),
             cell: (item: MetricDefinition) =>
@@ -740,7 +895,16 @@ export const MetricList: React.FC = () => {
           {
             id: "sourceTable",
             header: t("Table"),
-            cell: (item: MetricDefinition) => item.sourceTable,
+            // ``bindingStatus`` is written by the metric graph; the generated
+            // client type predates it, so read it structurally. Records without
+            // a table are "unbound" rather than blank — blank reads as a bug.
+            cell: (item: MetricDefinition) =>
+              (item as MetricDefinition & { bindingStatus?: string }).bindingStatus === "unbound" ||
+              !item.sourceTable ? (
+                <Box color="text-status-inactive">{t("Unbound")}</Box>
+              ) : (
+                item.sourceTable
+              ),
           },
           {
             id: "dialects",
@@ -869,6 +1033,7 @@ export const MetricList: React.FC = () => {
           />
         }
       />
+      </Grid>
 
       {/* Bulk Delete Confirmation Modal */}
       <Modal

@@ -8,6 +8,7 @@ import httpx
 
 from coa_gateway.gateway import LocalGateway
 from coa_gateway.graph_oxigraph import OxigraphGraphClient
+from coa_gateway.sparql_http import SparqlOperationCancelled
 
 
 def _results(vars_: list[str], rows: list[dict[str, str]]) -> httpx.Response:
@@ -57,6 +58,42 @@ class OxigraphGraphClientTest(unittest.IsolatedAsyncioTestCase):
                 "metadata": False,
             },
         )
+
+    async def test_a_cancelled_query_is_an_error_not_a_partial_result(self) -> None:
+        # Oxigraph answers a query it cancelled at its own deadline with 200 and a
+        # truncated body followed by this notice; a status-code caller would treat
+        # it as a complete answer.
+        body = (
+            '{"head":{"vars":["s","p","o"]},"results":{"bindings":[{"s":{"type":"uri","value":"urn:a"}}]}}'
+            "The SPARQL operation has been cancelled"
+        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, text=body))
+        client = OxigraphGraphClient("http://oxigraph:7878", transport=transport)
+        with self.assertRaises(SparqlOperationCancelled):
+            await client.query("SELECT ?s ?p ?o WHERE { ?s ?p ?o }")
+
+    async def test_a_cancelled_ask_does_not_read_as_false(self) -> None:
+        transport = httpx.MockTransport(
+            lambda request: httpx.Response(200, text='{"boolean":true}The SPARQL operation has been cancelled')
+        )
+        client = OxigraphGraphClient("http://oxigraph:7878", transport=transport)
+        with self.assertRaises(SparqlOperationCancelled):
+            await client.ask("ASK { ?s ?p ?o }")
+
+    async def test_a_cancelled_health_check_reports_unhealthy(self) -> None:
+        transport = httpx.MockTransport(
+            lambda request: httpx.Response(200, text='{"boolean":true}The SPARQL operation has been cancelled')
+        )
+        health = await OxigraphGraphClient("http://oxigraph:7878", transport=transport).health_check()
+        self.assertFalse(health["ok"])
+        self.assertIn("cancelled", health["error"])
+
+
+class CancelledQueryMappingTest(unittest.TestCase):
+    def test_a_cancelled_query_is_a_504_not_a_success(self) -> None:
+        from coa_gateway.http_api import _http_error
+
+        self.assertEqual(_http_error(SparqlOperationCancelled("deadline")).status_code, 504)
 
 
 if __name__ == "__main__":

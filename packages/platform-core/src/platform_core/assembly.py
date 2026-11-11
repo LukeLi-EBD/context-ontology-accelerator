@@ -32,6 +32,7 @@ from .rules import RuleExecutor
 from .parsers import LocalDocumentParser
 from .ports import EnvSecretProvider, UnsupportedPort
 from .prov import ProvService
+from .quota_gate import QuotaAwareLlm, build_quota
 from .reasoning import ReasoningService
 from .search import SearchService
 from .shapes import ShapesRegistry
@@ -66,6 +67,8 @@ class Runtime:
     context: ContextResolver
     answerable: AnswerabilityService
     canvas: Any = None
+    # C2 quota: one port, three switch values (off/simple/full), design 87.
+    quota: Any = None
     placeholders: dict[str, UnsupportedPort] = field(default_factory=dict)
     degraded: list[str] = field(default_factory=list)
 
@@ -124,7 +127,18 @@ def assemble(bundle: ConfigBundle) -> Runtime:
     metrics = MetricService(metadata)
     rules = RuleExecutor(metadata)
     prov = ProvService(metadata, graph)
-    llm = LlmClient(cfg.llm, secrets)
+    # C2-1: quota.provider selects the assembled implementation; simple wraps
+    # the LLM client so an over-limit call is skipped and extraction keeps its
+    # rules path. off leaves the client untouched.
+    quota = build_quota(cfg.quota, metadata)
+    llm: Any = LlmClient(cfg.llm, secrets)
+    if cfg.quota.provider == "simple":
+        llm = QuotaAwareLlm(
+            llm,
+            quota,
+            scope=cfg.quota.default_scope,
+            chars_per_token=cfg.quota.chars_per_token,
+        )
     facts = FactLedger(metadata, graph)
     extraction = ExtractionService(cfg.extraction, metadata, graph, llm, facts)
     reasoner = ReasonerClient(cfg.reasoning)
@@ -221,6 +235,7 @@ def assemble(bundle: ConfigBundle) -> Runtime:
         context=context,
         answerable=answerable,
         canvas=canvas,
+        quota=quota,
         placeholders=placeholders,
         degraded=degraded,
     )

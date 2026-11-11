@@ -653,6 +653,9 @@ describe("ApiStack 501-stub guard", () => {
   const ALLOWED_STUBS = [
     "/health",
     "/namespaces/{namespaceId}/ontologies/{ontologyId}/upload",
+    // No deployed Lambda implements list_ingestion_runs yet; see the comment on
+    // INTENTIONALLY_STUBBED. Local bridge serves it from the platform-core kernel.
+    "/namespaces/{namespaceId}/ingestion-runs",
   ];
 
   it("keeps ALLOWED_STUBS in sync with the stack's own allowlist", () => {

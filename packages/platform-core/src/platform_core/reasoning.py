@@ -9,6 +9,7 @@ atomicity/idempotency/locking and records jobs + pointer (OQ-39).
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import time
 import uuid
@@ -251,7 +252,21 @@ class ReasoningService:
                 and self._graph.count_graph(target) == int(pointer["inferred"])
             ):
                 job_id = self._start_job(version_id, effective_profile, target, input_hash)
-                self._finish_job(job_id, "skipped", inferred=0, consistent=True)
+                self._finish_job(
+                    job_id,
+                    "skipped",
+                    inferred=0,
+                    consistent=True,
+                    result={
+                        "mode": mode,
+                        "profile": effective_profile,
+                        "inputHash": input_hash,
+                        "ms": 0,
+                        "stages": {},
+                        "warnings": [],
+                        "skipped": True,
+                    },
+                )
                 log.info(
                     "materialize skipped",
                     extra={"event": {"event": "reasoning.skipped", "target": target}},
@@ -392,7 +407,20 @@ class ReasoningService:
                 raise
 
             ms = int((time.monotonic() - started) * 1000)
-            self._finish_job(job_id, "succeeded", inferred=inferred_count, consistent=True)
+            self._finish_job(
+                job_id,
+                "succeeded",
+                inferred=inferred_count,
+                consistent=True,
+                result={
+                    "mode": mode,
+                    "profile": effective_profile,
+                    "inputHash": input_hash,
+                    "ms": ms,
+                    "stages": stages,
+                    "warnings": [],
+                },
+            )
             log.info(
                 "materialize finished",
                 extra={
@@ -519,12 +547,17 @@ class ReasoningService:
         inferred: int | None = None,
         consistent: bool | None = None,
         error: tuple[str, str] | None = None,
+        result: dict[str, Any] | None = None,
     ) -> None:
+        # result_summary keeps the per-stage numbers so a later status read can
+        # show what the run did without re-running it; COALESCE leaves an older
+        # summary alone when the caller has nothing newer to record.
         self._meta.execute(
             """
             UPDATE platform.reasoning_job
                SET state=%s, inferred=%s, consistent=%s, error_code=%s,
-                   error_message=%s, finished_at=now()
+                   error_message=%s, result_summary=COALESCE(%s::jsonb, result_summary),
+                   finished_at=now()
              WHERE job_id=%s
             """,
             (
@@ -533,6 +566,7 @@ class ReasoningService:
                 consistent,
                 error[0] if error else None,
                 error[1] if error else None,
+                json.dumps(result, ensure_ascii=False) if result is not None else None,
                 job_id,
             ),
         )
@@ -581,9 +615,14 @@ class ReasoningService:
         rows = self._meta.query(
             """
             SELECT job_id, kind, ontology_version, profile, target_graph, input_hash, state,
-                   inferred, consistent, error_code, error_message, started_at, finished_at
+                   inferred, consistent, error_code, error_message, result_summary,
+                   started_at, finished_at
               FROM platform.reasoning_job
-             ORDER BY started_at DESC LIMIT 1
+             -- A skipped run executed no stage, so reporting it as the last job
+             -- would drop the last gate verdict off the health board. Prefer the
+             -- newest job that actually ran; fall back to the newest skipped one
+             -- only when that is all there is.
+             ORDER BY (state = 'skipped') ASC, started_at DESC LIMIT 1
             """
         )
         if not rows:
@@ -601,9 +640,21 @@ class ReasoningService:
             "consistent": row["consistent"],
             "errorCode": row["error_code"],
             "errorMessage": row["error_message"],
+            "result": row["result_summary"] or {},
             "startedAt": row["started_at"].isoformat() if row["started_at"] else None,
             "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
         }
+
+    def failed_jobs(self) -> int:
+        """Failed materialization jobs; the health board's "推理失败数"."""
+        rows = self._meta.query(
+            """
+            SELECT COUNT(*) AS n
+              FROM platform.reasoning_job
+             WHERE state = 'failed' AND kind = 'materialize'
+            """
+        )
+        return int(rows[0]["n"]) if rows else 0
 
     def status(self) -> dict[str, Any]:
         pointer = self._pointer()
@@ -633,5 +684,6 @@ class ReasoningService:
             "shapesDir": self._config.shapes_dir,
             "pointer": pointer,
             "lastJob": self.last_job(),
+            "failedJobs": self.failed_jobs(),
             "inferredTriples": inferred_triples,
         }

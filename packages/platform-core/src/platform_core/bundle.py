@@ -21,10 +21,10 @@ from typing import Any, Iterable
 from urllib.parse import urlsplit, urlunsplit
 
 import psycopg
+from coa_control_plane.platform_db import SUPPORTED_SCHEMA_VERSION
 from psycopg.types.json import Jsonb
 from rdflib import Graph
 
-from .adapters.metadata_pg import SUPPORTED_SCHEMA_VERSION
 from .adapters.object_fs import FsCasBackend
 from .assembly import Runtime, assemble
 from .config import ConfigBundle

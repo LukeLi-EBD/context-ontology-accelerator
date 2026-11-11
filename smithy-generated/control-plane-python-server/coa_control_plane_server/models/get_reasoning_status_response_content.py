@@ -17,9 +17,10 @@ import pprint
 import re  # noqa: F401
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr
-from typing import Any, ClassVar, Dict, List, Optional
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr
+from typing import Any, ClassVar, Dict, List, Optional, Union
 from coa_control_plane_server.models.quality_count import QualityCount
+from coa_control_plane_server.models.reasoning_job_summary import ReasoningJobSummary
 from typing import Optional, Set
 from typing_extensions import Self
 
@@ -33,7 +34,9 @@ class GetReasoningStatusResponseContent(BaseModel):
     detail: Optional[StrictStr] = Field(default=None, description="Human-readable explanation of the state above.")
     source: StrictStr = Field(description="Where this status came from.")
     sampled_at: StrictStr = Field(description="When the status was sampled (ISO-8601).", alias="sampledAt")
-    __properties: ClassVar[List[str]] = ["available", "engine", "failures", "detail", "source", "sampledAt"]
+    inferred_triples: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Triples the recorded pointer holds; null until the first run.", alias="inferredTriples")
+    last_job: Optional[ReasoningJobSummary] = Field(default=None, alias="lastJob")
+    __properties: ClassVar[List[str]] = ["available", "engine", "failures", "detail", "source", "sampledAt", "inferredTriples", "lastJob"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -77,6 +80,9 @@ class GetReasoningStatusResponseContent(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of failures
         if self.failures:
             _dict['failures'] = self.failures.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of last_job
+        if self.last_job:
+            _dict['lastJob'] = self.last_job.to_dict()
         return _dict
 
     @classmethod
@@ -94,7 +100,9 @@ class GetReasoningStatusResponseContent(BaseModel):
             "failures": QualityCount.from_dict(obj["failures"]) if obj.get("failures") is not None else None,
             "detail": obj.get("detail"),
             "source": obj.get("source"),
-            "sampledAt": obj.get("sampledAt")
+            "sampledAt": obj.get("sampledAt"),
+            "inferredTriples": obj.get("inferredTriples"),
+            "lastJob": ReasoningJobSummary.from_dict(obj["lastJob"]) if obj.get("lastJob") is not None else None
         })
         return _obj
 

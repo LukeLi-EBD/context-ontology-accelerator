@@ -365,6 +365,19 @@ def test_get_import_job_404_does_not_echo_job_id() -> None:
     assert "a<b>" not in resp["body"]
 
 
+def test_get_import_job_store_failure_returns_readable_503() -> None:
+    with patch(
+        "coa_metrics.api.get_import_job.get_job",
+        side_effect=RuntimeError("Unable to locate credentials"),
+    ):
+        resp = metric_api_handler(
+            _event("GET", "/namespaces/{namespaceId}/import-jobs/{jobId}", path={"jobId": "job-1"}), None
+        )
+    assert resp["statusCode"] == 503
+    assert "Import job store is unavailable" in resp["body"]
+    assert "Unable to locate credentials" not in resp["body"]
+
+
 def test_upload_url_over_long_filename_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OSI_BUCKET_NAME", "bucket")
     filename = "f" * contract.FILENAME_MAX_LENGTH + ".yaml"

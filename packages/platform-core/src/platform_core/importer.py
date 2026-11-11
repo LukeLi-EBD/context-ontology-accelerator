@@ -7,6 +7,8 @@ SearchService. Nothing about parse or retrieval semantics changes.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import logging
 import os
@@ -176,17 +178,50 @@ def _group_entries(entries: Iterable[ScanEntry]) -> dict[str, list[ScanEntry]]:
     return groups
 
 
-def _existing_documents(runtime: Runtime, shas: Iterable[str]) -> set[str]:
+def _embedded_documents(runtime: Runtime, shas: Iterable[str]) -> set[str]:
+    """Documents whose every chunk has a vector in the active model partition.
+
+    A row in `platform.document` only proves the file was parsed. Uploads can
+    stop before embedding, and an embed failure leaves the document row behind,
+    so treating "document exists" as "indexed" would report success without
+    searchable vectors. Require at least one chunk and no un-embedded chunk.
+    """
     unique = [sha for sha in dict.fromkeys(shas) if sha]
-    found: set[str] = set()
     if not unique:
-        return found
+        return set()
+    model = str(runtime.vectors.pointer()["model"])
     rows = runtime.metadata.query(
-        "SELECT document_id FROM platform.document WHERE document_id = ANY(%s)", (unique,)
+        """
+        SELECT d.document_id
+          FROM platform.document d
+         WHERE d.document_id = ANY(%s)
+           AND EXISTS (
+                 SELECT 1 FROM platform.document_chunk c
+                  WHERE c.document_id = d.document_id)
+           AND NOT EXISTS (
+                 SELECT 1 FROM platform.document_chunk c
+                  WHERE c.document_id = d.document_id
+                    AND NOT EXISTS (
+                          SELECT 1 FROM platform.chunk_embedding e
+                           WHERE e.chunk_id = c.chunk_id AND e.model = %s))
+        """,
+        (unique, model),
     )
-    for row in rows:
-        found.add(str(row["document_id"]))
-    return found
+    return {str(row["document_id"]) for row in rows}
+
+
+def _coerce_namespace_id(value: str | uuid.UUID) -> uuid.UUID:
+    """Parse the caller-supplied namespace; never invent a default."""
+    try:
+        return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+    except (TypeError, ValueError) as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespace id is not a UUID: {value}",
+            provider="platform",
+            provider_code="E_NAMESPACE_ID_INVALID",
+            details={"namespaceId": str(value)},
+        ) from exc
 
 
 def _batch_items(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, dict[str, Any]]:
@@ -198,18 +233,49 @@ def _batch_items(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, dict[str, A
     return {str(row["rel_path"]): row for row in rows}
 
 
-def _get_or_create_batch(runtime: Runtime, root: Path, options: dict[str, Any]) -> uuid.UUID:
+def _get_or_create_batch(
+    runtime: Runtime, root: Path, options: dict[str, Any], namespace_id: uuid.UUID
+) -> uuid.UUID:
     from psycopg.types.json import Jsonb
 
+    previous = runtime.metadata.query(
+        "SELECT batch_id, namespace_id FROM platform.import_batch WHERE root_path = %s",
+        (str(root),),
+    )
+    if previous and previous[0]["namespace_id"] is not None:
+        current = str(previous[0]["namespace_id"])
+        # A directory belongs to the namespace that claimed it. Re-pointing an
+        # existing batch would silently move already-imported rows across a
+        # namespace boundary, so refuse instead of guessing.
+        if current != str(namespace_id):
+            raise PortError(
+                code="Conflict",
+                message=(
+                    f"import batch for {root} belongs to namespace {current}, "
+                    f"not {namespace_id}"
+                ),
+                provider="platform",
+                provider_code="E_IMPORT_NAMESPACE_MISMATCH",
+                details={
+                    "root": str(root),
+                    "batchId": str(previous[0]["batch_id"]),
+                    "namespaceId": current,
+                    "requestedNamespaceId": str(namespace_id),
+                },
+            )
     rows = runtime.metadata.query(
         """
-        INSERT INTO platform.import_batch (batch_id, root_path, status, options)
-        VALUES (gen_random_uuid(), %s, 'running', %s)
+        INSERT INTO platform.import_batch (batch_id, root_path, namespace_id, status, options)
+        VALUES (gen_random_uuid(), %s, %s, 'running', %s)
         ON CONFLICT (root_path) DO UPDATE
-           SET status = 'running', options = EXCLUDED.options, updated_at = now()
+           SET status = 'running',
+               namespace_id = COALESCE(platform.import_batch.namespace_id,
+                                       EXCLUDED.namespace_id),
+               options = EXCLUDED.options,
+               updated_at = now()
         RETURNING batch_id
         """,
-        (str(root), Jsonb(options)),
+        (str(root), namespace_id, Jsonb(options)),
     )
     return rows[0]["batch_id"]
 
@@ -219,6 +285,99 @@ def _find_batch(runtime: Runtime, root: Path) -> uuid.UUID | None:
         "SELECT batch_id FROM platform.import_batch WHERE root_path = %s", (str(root),)
     )
     return rows[0]["batch_id"] if rows else None
+
+
+def _start_run(
+    runtime: Runtime,
+    batch_id: uuid.UUID,
+    namespace_id: uuid.UUID,
+    options: dict[str, Any],
+) -> uuid.UUID:
+    """Open one ledger row for this invocation.
+
+    The batch advisory lock is already held, so any `running` row for the same
+    batch belongs to a process that died without finishing: close it as
+    interrupted instead of leaving a phantom run forever.
+    """
+    from psycopg.types.json import Jsonb
+
+    runtime.metadata.execute(
+        """
+        UPDATE platform.import_run
+           SET status = 'interrupted',
+               finished_at = now(),
+               error_code = COALESCE(error_code, 'E_RUN_ABANDONED'),
+               error_message = COALESCE(error_message, 'process exited without finishing')
+         WHERE batch_id = %s AND status = 'running'
+        """,
+        (batch_id,),
+    )
+    rows = runtime.metadata.query(
+        """
+        INSERT INTO platform.import_run (batch_id, namespace_id, status, options)
+        VALUES (%s, %s, 'running', %s)
+        RETURNING run_id
+        """,
+        (batch_id, namespace_id, Jsonb(options)),
+    )
+    return rows[0]["run_id"]
+
+
+def _finish_run(
+    runtime: Runtime,
+    run_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    *,
+    status: str,
+    counters: dict[str, Any],
+    exit_code: int | None,
+    error: BaseException | None = None,
+) -> None:
+    from psycopg.types.json import Jsonb
+
+    code = message = None
+    if error is not None:
+        code = (
+            getattr(error, "provider_code", None)
+            or getattr(error, "code", None)
+            or type(error).__name__
+        )
+        message = getattr(error, "message", None) or str(error)
+    # The ledger row and the batch state close together: a failed run must not
+    # leave the batch showing "running", or the page keeps reporting a live
+    # import that no longer exists and no stale pass can ever fire on it.
+    # `lastError` is written into options so the batch carries the reason; the
+    # next invocation rewrites options from scratch and clears it.
+    with runtime.metadata.tx() as tx:
+        tx.execute(
+            """
+            UPDATE platform.import_run
+               SET status = %s,
+                   finished_at = now(),
+                   exit_code = %s,
+                   counters = %s,
+                   error_code = %s,
+                   error_message = %s
+             WHERE run_id = %s
+            """,
+            (status, exit_code, Jsonb(counters), code, message, run_id),
+        )
+        if status == "failed":
+            tx.execute(
+                """
+                UPDATE platform.import_batch
+                   SET status = 'interrupted',
+                       finished_at = now(),
+                       updated_at = now(),
+                       options = options || jsonb_build_object(
+                           'lastError', jsonb_build_object(
+                               'code', %s::text,
+                               'message', %s::text,
+                               'at', now()))
+                 WHERE batch_id = %s AND status = 'running'
+                """,
+                (code, (message or "")[:2000], batch_id),
+            )
 
 
 def _upsert_items(
@@ -287,7 +446,7 @@ def dry_run(runtime: Runtime, directory: str) -> dict[str, Any]:
     cache = _batch_items(runtime, batch_id) if batch_id else {}
     scan = scan_directory(runtime, root, cache)
     groups = _group_entries(scan.entries)
-    existing = _existing_documents(runtime, groups.keys())
+    existing = _embedded_documents(runtime, groups.keys())
     to_import = {sha: rows for sha, rows in groups.items() if sha not in existing}
     duplicate_within = sum(len(rows) - 1 for rows in groups.values())
     duplicate_existing = sum(len(rows) for sha, rows in groups.items() if sha in existing)
@@ -483,7 +642,15 @@ class Importer:
         self._bump("processed", len(group.rows))
         log.warning(
             "import item failed",
-            extra={"event": {"event": "import_item_failed", "sha256": group.sha, "code": code}},
+            extra={
+                "event": {
+                    "event": "import_item_failed",
+                    "batchId": str(batch_id),
+                    "relPaths": list(group.rel_paths),
+                    "sha256": group.sha,
+                    "code": code,
+                }
+            },
         )
 
     def _pending_groups(self, batch_id: uuid.UUID) -> list[_Group]:
@@ -517,20 +684,32 @@ class Importer:
         groups.sort(key=lambda item: item.rel_paths[0])
         return groups
 
-    def run(self, directory: str, retry_failed: bool = False) -> dict[str, Any]:
+    def run(
+        self,
+        directory: str,
+        *,
+        namespace_id: str | uuid.UUID,
+        retry_failed: bool = False,
+    ) -> dict[str, Any]:
         root = _resolve_root(directory)
+        namespace = _coerce_namespace_id(namespace_id)
         started = time.monotonic()
         self._started = started
         options = {
             "parseConcurrency": self._parse_concurrency,
             "embedConcurrency": self._embed_concurrency,
             "retryFailed": retry_failed,
+            "namespaceId": str(namespace),
         }
-        batch_id = _get_or_create_batch(self._runtime, root, options)
         # Simple mutual exclusion convention (no scheduler): any CPU-heavy job
         # (import / reindex / benchmark) takes `platform:heavy` first, so two
         # heavy jobs never compete for the host or the local embedding service.
         # `docker builder prune` and full-disk scans must wait for this lock too.
+        #
+        # The batch row is written only after the heavy lock is held. Creating it
+        # first left a `running` batch behind every time a call was rejected with
+        # E_HEAVY_BUSY: no process was running, and each retry bumped updated_at,
+        # so a stale detector would never fire. Rejected calls now write nothing.
         with self._runtime.metadata.advisory_lock("platform:heavy", blocking=False) as heavy:
             if not heavy:
                 raise PortError(
@@ -539,6 +718,9 @@ class Importer:
                     provider="platform",
                     provider_code="E_HEAVY_BUSY",
                 )
+            # The context manager releases the lock in `finally`, so a failure
+            # while creating the batch cannot strand it either.
+            batch_id = _get_or_create_batch(self._runtime, root, options, namespace)
             with self._runtime.metadata.advisory_lock(
                 f"platform:import:{batch_id}", blocking=False
             ) as acquired:
@@ -549,10 +731,69 @@ class Importer:
                         provider="platform",
                         provider_code="E_IMPORT_BUSY",
                     )
-                return self._run_locked(root, batch_id, retry_failed, started)
+                run_id = _start_run(self._runtime, batch_id, namespace, options)
+                try:
+                    result = self._run_locked(root, batch_id, retry_failed, started)
+                except Exception as exc:  # noqa: BLE001 - ledger must not hide the failure
+                    _finish_run(
+                        self._runtime, run_id, batch_id, status="failed",
+                        counters={}, exit_code=None, error=exc,
+                    )
+                    raise
+                result["runId"] = str(run_id)
+                run_status = "interrupted" if result["interrupted"] else "completed"
+                _finish_run(
+                    self._runtime,
+                    run_id,
+                    batch_id,
+                    status=run_status,
+                    counters={
+                        "total": result["total"],
+                        "alreadyDone": result["alreadyDone"],
+                        "processed": result["processed"],
+                        "parsed": result["parsed"],
+                        "resumedChunked": result["resumedChunked"],
+                        "indexed": result["indexed"],
+                        "failedThisRun": result["failedThisRun"],
+                        "failedTotal": result["failed"],
+                        "documentsAdded": result["documentsAdded"],
+                        "remainingFiles": result["remainingFiles"],
+                        "interrupted": result["interrupted"],
+                        "skipped": result["skipped"],
+                        "elapsedSeconds": result["elapsedSeconds"],
+                    },
+                    exit_code=result["exitCode"],
+                )
+                # One structured line per invocation: the JSON goes to stdout,
+                # this is what survives in the log pipeline.
+                log.info(
+                    "import run finished",
+                    extra={
+                        "event": {
+                            "event": "import_run_finished",
+                            "runId": result["runId"],
+                            "batchId": result["batchId"],
+                            "namespaceId": str(namespace),
+                            "status": run_status,
+                            **{
+                                key: result[key]
+                                for key in (
+                                    "total", "alreadyDone", "processed", "indexed",
+                                    "failedThisRun", "failed", "remainingFiles",
+                                    "interrupted", "skipped", "elapsedSeconds", "exitCode",
+                                )
+                            },
+                        }
+                    },
+                )
+                return result
 
     def _run_locked(
-        self, root: Path, batch_id: uuid.UUID, retry_failed: bool, started: float
+        self,
+        root: Path,
+        batch_id: uuid.UUID,
+        retry_failed: bool,
+        started: float,
     ) -> dict[str, Any]:
         cache = _batch_items(self._runtime, batch_id)
         scan = scan_directory(self._runtime, root, cache)
@@ -564,7 +805,7 @@ class Importer:
                 (batch_id,),
             )
         }
-        existing = _existing_documents(self._runtime, _group_entries(scan.entries).keys())
+        existing = _embedded_documents(self._runtime, _group_entries(scan.entries).keys())
         _upsert_items(self._runtime, batch_id, scan, indexed_shas | existing)
 
         # Crash residue: a killed process leaves rows in `parsing`; they are
@@ -778,7 +1019,7 @@ class Importer:
         )
         with self._lock:
             counters = dict(self._counters)
-        return {
+        result = {
             "batchId": str(batch_id),
             "root": str(root),
             "dryRun": False,
@@ -812,6 +1053,7 @@ class Importer:
             "failures": failures,
             "exitCode": exit_code,
         }
+        return result
 
 
 def failure_items(
@@ -974,3 +1216,213 @@ def batches_overview(runtime: Runtime, limit: int = 5) -> dict[str, Any]:
     ]
     failures = failure_items(runtime, limit=20)
     return {"batches": batches, "failures": failures}
+
+
+_INGESTION_RUN_STATUSES = {"RUNNING", "COMPLETED", "INTERRUPTED", "STALE"}
+
+
+def _decode_offset(next_token: str | None) -> int:
+    if not next_token:
+        return 0
+    try:
+        raw = base64.urlsafe_b64decode(next_token.encode("ascii")).decode("ascii")
+        offset = int(raw)
+    except (ValueError, UnicodeError, binascii.Error) as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"nextToken is not a token issued by ListIngestionRuns: {next_token!r}",
+            provider="platform",
+            provider_code="E_INGESTION_TOKEN_INVALID",
+        ) from exc
+    if offset < 0:
+        raise PortError(
+            code="InvalidArgument",
+            message="nextToken points before the first page",
+            provider="platform",
+            provider_code="E_INGESTION_TOKEN_INVALID",
+        )
+    return offset
+
+
+def _encode_offset(offset: int) -> str:
+    return base64.urlsafe_b64encode(str(offset).encode("ascii")).decode("ascii")
+
+
+def _last_runs(runtime: Runtime, batch_ids: list[Any]) -> dict[Any, dict[str, Any]]:
+    """Latest ledger row per batch (one query, no N+1)."""
+    if not batch_ids:
+        return {}
+    rows = runtime.metadata.query(
+        """
+        SELECT DISTINCT ON (batch_id)
+               batch_id, run_id, status, started_at, finished_at, exit_code,
+               counters, error_code, error_message
+          FROM platform.import_run
+         WHERE batch_id = ANY(%s)
+         ORDER BY batch_id, started_at DESC
+        """,
+        (list(batch_ids),),
+    )
+    return {row["batch_id"]: row for row in rows}
+
+
+def _run_view(row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return {
+        "runId": str(row["run_id"]),
+        "status": row["status"].upper(),
+        "startedAt": row["started_at"].isoformat() if row["started_at"] else None,
+        "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+        "exitCode": row["exit_code"],
+        "counters": row["counters"] or None,
+        "errorCode": row["error_code"],
+        "errorMessage": row["error_message"],
+    }
+
+
+def ingestion_runs(
+    runtime: Runtime,
+    namespace_id: str,
+    *,
+    kind: str | None = None,
+    status: str | None = None,
+    max_results: int = 20,
+    next_token: str | None = None,
+) -> dict[str, Any]:
+    """F17/F18: namespace-scoped import batches with live per-item counters.
+
+    Reads only. Stale convergence stays with the import worker: a @readonly
+    operation must not write, so a dead `running` batch keeps reporting
+    `running` until the worker's recovery pass marks it stale.
+    """
+    try:
+        ns = uuid.UUID(namespace_id)
+    except ValueError as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespaceId is not a UUID: {namespace_id!r}",
+            provider="platform",
+            provider_code="E_NAMESPACE_ID_INVALID",
+        ) from exc
+
+    run_kind = (kind or "BATCH").upper()
+    if run_kind != "BATCH":
+        raise PortError(
+            code="InvalidArgument",
+            message=(
+                f"kind={run_kind} is not implemented; ListIngestionRuns only "
+                "serves kind=BATCH in this batch"
+            ),
+            provider="platform",
+            provider_code="E_INGESTION_KIND_UNSUPPORTED",
+        )
+
+    run_status = status.upper() if status else None
+    if run_status is not None and run_status not in _INGESTION_RUN_STATUSES:
+        raise PortError(
+            code="InvalidArgument",
+            message=(
+                f"status={status!r} is not one of "
+                f"{sorted(_INGESTION_RUN_STATUSES)}"
+            ),
+            provider="platform",
+            provider_code="E_INGESTION_STATUS_INVALID",
+        )
+    db_status = run_status.lower() if run_status else None
+
+    if max_results < 1 or max_results > 50:
+        raise PortError(
+            code="InvalidArgument",
+            message="maxResults must be between 1 and 50",
+            provider="platform",
+            provider_code="E_INGESTION_LIMIT_INVALID",
+        )
+    offset = _decode_offset(next_token)
+
+    where = "b.namespace_id = %s"
+    params: list[Any] = [ns]
+    if db_status is not None:
+        where += " AND b.status = %s"
+        params.append(db_status)
+
+    total_row = runtime.metadata.query(
+        f"SELECT count(*) AS n FROM platform.import_batch b WHERE {where}",
+        tuple(params),
+    )
+    total_count = int(total_row[0]["n"])
+
+    rows = runtime.metadata.query(
+        f"""
+        SELECT b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+               b.finished_at,
+               COUNT(i.rel_path) AS total,
+               COUNT(i.rel_path) FILTER (
+                   WHERE i.status IN ('indexed', 'failed')) AS completed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'indexed') AS indexed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'failed') AS failed,
+               COUNT(i.rel_path) FILTER (WHERE i.degraded) AS degraded
+          FROM platform.import_batch b
+          LEFT JOIN platform.import_item i ON i.batch_id = b.batch_id
+         WHERE {where}
+         GROUP BY b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+                  b.finished_at
+         ORDER BY b.updated_at DESC, b.batch_id
+         LIMIT %s OFFSET %s
+        """,
+        tuple(params) + (max_results + 1, offset),
+    )
+    has_more = len(rows) > max_results
+    rows = rows[:max_results]
+    last_runs = _last_runs(runtime, [row["batch_id"] for row in rows])
+
+    items = [
+        {
+            "runId": str(row["batch_id"]),
+            "root": row["root_path"],
+            "status": row["status"].upper(),
+            "stale": row["status"] == "stale",
+            "staleReason": "E_BATCH_TIMEOUT" if row["status"] == "stale" else None,
+            "total": int(row["total"]),
+            "completed": int(row["completed"]),
+            "indexed": int(row["indexed"]),
+            "failed": int(row["failed"]),
+            "degraded": int(row["degraded"]),
+            "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
+            "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
+            "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+            "lastRun": _run_view(last_runs.get(row["batch_id"])),
+        }
+        for row in rows
+    ]
+
+    failures = runtime.metadata.query(
+        """
+        SELECT i.batch_id, i.rel_path, i.attempts, i.failure_code,
+               i.failure_message, i.updated_at
+          FROM platform.import_item i
+          JOIN platform.import_batch b ON b.batch_id = i.batch_id
+         WHERE i.status = 'failed' AND b.namespace_id = %s
+         ORDER BY i.updated_at DESC
+         LIMIT 20
+        """,
+        (ns,),
+    )
+    failure_feed = [
+        {
+            "runId": str(row["batch_id"]),
+            "relPath": row["rel_path"],
+            "attempts": int(row["attempts"]),
+            "code": row["failure_code"],
+            "message": row["failure_message"],
+            "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
+        }
+        for row in failures
+    ]
+
+    return {
+        "items": items,
+        "totalCount": total_count,
+        "failures": failure_feed,
+        "nextToken": _encode_offset(offset + max_results) if has_more else None,
+    }

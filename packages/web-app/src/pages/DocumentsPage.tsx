@@ -5,7 +5,11 @@ import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import { useNamespace } from "@api-hooks/use-namespace";
-import { useListDocuments, useUploadDocument } from "@api-hooks";
+import {
+  useListDocuments,
+  useListIngestionRuns,
+  useUploadDocument,
+} from "@api-hooks";
 import Box from "@cloudscape-design/components/box";
 import Button from "@cloudscape-design/components/button";
 import Container from "@cloudscape-design/components/container";
@@ -28,6 +32,8 @@ import { ControlPlaneServiceServiceException } from "@coa/control-plane-client";
 import type {
   DocumentStatus,
   DocumentSummary,
+  IngestionRun,
+  IngestionRunStatus,
 } from "@coa/control-plane-client";
 import { formatTimestamp } from "@utils/helpers";
 import { useAppI18n } from "../i18n/LocaleProvider";
@@ -44,6 +50,19 @@ const STATUS_META: Record<
   PROCESSING: { type: "in-progress", label: "Processing" },
   INDEXED: { type: "success", label: "Indexed" },
   FAILED: { type: "error", label: "Failed" },
+};
+
+const RUN_STATUS_META: Record<
+  IngestionRunStatus,
+  {
+    type: "in-progress" | "success" | "warning" | "error";
+    label: AppMessage;
+  }
+> = {
+  RUNNING: { type: "in-progress", label: "Running" },
+  COMPLETED: { type: "success", label: "Completed" },
+  INTERRUPTED: { type: "warning", label: "Interrupted" },
+  STALE: { type: "error", label: "Stale" },
 };
 
 // The local ingestion worker extracts text from these types only. PDF is part
@@ -105,7 +124,27 @@ export default function DocumentsPage() {
   >([]);
 
   const documentsQuery = useListDocuments(namespaceId, statusFilter);
+  const runsQuery = useListIngestionRuns(namespaceId);
   const upload = useUploadDocument();
+
+  const runs = useMemo<IngestionRun[]>(
+    () => runsQuery.data?.items ?? [],
+    [runsQuery.data],
+  );
+  // One representative message per run: the newest failure for that batch.
+  const failureByRun = useMemo(() => {
+    const messages = new Map<string, string>();
+    for (const failure of runsQuery.data?.failures ?? []) {
+      const key = failure.runId ?? "";
+      if (key && !messages.has(key)) {
+        messages.set(
+          key,
+          failure.message || failure.code || failure.relPath || "",
+        );
+      }
+    }
+    return messages;
+  }, [runsQuery.data]);
 
   const statusOptions: SelectProps.Options = [
     { label: t("All statuses"), value: "all" },
@@ -314,6 +353,129 @@ export default function DocumentsPage() {
           </Box>
         }
       />
+
+      <Container
+        header={
+          <Header
+            variant="h2"
+            counter={`(${runs.length})`}
+            description={t("Import batch counts refresh on each request.")}
+            actions={
+              <Button
+                iconName="refresh"
+                ariaLabel={t("Refresh import batches")}
+                loading={runsQuery.isFetching}
+                onClick={() => runsQuery.refetch()}
+              >
+                {t("Refresh")}
+              </Button>
+            }
+          >
+            {t("Import batches")}
+          </Header>
+        }
+      >
+        <Table<IngestionRun>
+          variant="embedded"
+          loading={runsQuery.isLoading}
+          loadingText={t("Loading import batches")}
+          items={runs}
+          columnDefinitions={[
+            {
+              id: "root",
+              header: t("Batch root"),
+              cell: (item) => (
+                <SpaceBetween size="xxs">
+                  <Box>{item.root || "—"}</Box>
+                  <Box variant="small" color="text-body-secondary">
+                    {item.runId}
+                  </Box>
+                </SpaceBetween>
+              ),
+              minWidth: 260,
+            },
+            {
+              id: "status",
+              header: t("Status"),
+              cell: (item) => {
+                const meta = RUN_STATUS_META[item.status ?? "RUNNING"];
+                const failure = failureByRun.get(item.runId ?? "");
+                return (
+                  <SpaceBetween size="xxs">
+                    <StatusIndicator type={meta.type}>
+                      {t(meta.label)}
+                    </StatusIndicator>
+                    {item.stale && item.staleReason ? (
+                      <Box variant="small" color="text-status-error">
+                        {t("Stale: {reason}", { reason: item.staleReason })}
+                      </Box>
+                    ) : null}
+                    {failure ? (
+                      <Box variant="small" color="text-status-error">
+                        {failure}
+                      </Box>
+                    ) : null}
+                  </SpaceBetween>
+                );
+              },
+              minWidth: 220,
+            },
+            {
+              id: "total",
+              header: t("Total"),
+              cell: (item) => item.total ?? 0,
+              width: 90,
+            },
+            {
+              id: "completed",
+              header: t("Completed"),
+              cell: (item) => item.completed ?? 0,
+              width: 110,
+            },
+            {
+              id: "indexed",
+              header: t("Indexed"),
+              cell: (item) => item.indexed ?? 0,
+              width: 90,
+            },
+            {
+              id: "failed",
+              header: t("Failed"),
+              cell: (item) => item.failed ?? 0,
+              width: 90,
+            },
+            {
+              id: "degraded",
+              header: t("Degraded"),
+              cell: (item) => item.degraded ?? 0,
+              width: 100,
+            },
+            {
+              id: "started",
+              header: t("Started"),
+              cell: (item) => formatTimestamp(item.createdAt),
+              minWidth: 170,
+            },
+            {
+              id: "finished",
+              header: t("Finished"),
+              cell: (item) =>
+                item.finishedAt ? formatTimestamp(item.finishedAt) : "—",
+              minWidth: 170,
+            },
+          ]}
+          empty={
+            <Box textAlign="center" color="inherit">
+              <b>{t("No import batches")}</b>
+              <Box padding={{ bottom: "s" }} variant="p" color="inherit">
+                {t(
+                  "No directory imports have been recorded in this namespace yet.",
+                )}
+              </Box>
+            </Box>
+          }
+        />
+      </Container>
 
       <Modal
         visible={uploadVisible}
