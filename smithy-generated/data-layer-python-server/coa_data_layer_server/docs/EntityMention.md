@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **term** | **str** | Matched term IRI (ontology mentions only). | [optional] 
 **label** | **str** | Matched label (ontology mentions only). | [optional] 
 **source** | **str** | Label source of the match: &#x60;skos&#x60; or &#x60;rdfs:label&#x60;. | [optional] 
+**candidates** | **List[str]** | Every concept that declares the matched surface when more than one does; &#x60;term&#x60; is the deterministic primary. Absent when unambiguous. | [optional] 
 
 ## Example
 

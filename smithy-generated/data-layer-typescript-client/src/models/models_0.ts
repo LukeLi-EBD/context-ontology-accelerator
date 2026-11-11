@@ -151,6 +151,13 @@ export interface EntityMention {
    * @public
    */
   source?: string | undefined;
+
+  /**
+   * Every concept that declares the matched surface when more than one
+   * does; `term` is the deterministic primary. Absent when unambiguous.
+   * @public
+   */
+  candidates?: string[] | undefined;
 }
 
 /**
@@ -280,6 +287,22 @@ export interface MatchedTerm {
    * @public
    */
   span: number[] | undefined;
+
+  /**
+   * Surface that actually matched when it is an alias extracted from a
+   * bracketed label ("保单" from "保险合同（保单）"); absent when the whole
+   * label matched.
+   * @public
+   */
+  alias?: string | undefined;
+
+  /**
+   * Every concept that declares the matched surface when more than one
+   * does. `term` is then the deterministic primary (a real label outranks a
+   * derived alias, ties by IRI order); the others are not dropped silently.
+   * @public
+   */
+  candidates?: string[] | undefined;
 }
 
 /**

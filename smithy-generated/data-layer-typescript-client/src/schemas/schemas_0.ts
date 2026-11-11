@@ -85,6 +85,7 @@ const _VKGEE = "VKGExecutionError";
 const _XCS = "X-Content-Sha256";
 const _a = "answerable";
 const _aM = "answerMode";
+const _al = "alias";
 const _an = "answer";
 const _c = "client";
 const _cC = "coverageChars";
@@ -456,8 +457,8 @@ export var Entity$: StaticStructureSchema = [3, n1, _E,
 ];
 export var EntityMention$: StaticStructureSchema = [3, n1, _EM,
   0,
-  [_te, _sp, _k, _ter, _la, _so],
-  [0, 64 | 1, 0, 0, 0, 0], 3
+  [_te, _sp, _k, _ter, _la, _so, _ca],
+  [0, 64 | 1, 0, 0, 0, 0, 64 | 0], 3
 ];
 export var GapCandidate$: StaticStructureSchema = [3, n1, _GC,
   0,
@@ -496,8 +497,8 @@ export var LayerMatch$: StaticStructureSchema = [3, n1, _LM,
 ];
 export var MatchedTerm$: StaticStructureSchema = [3, n1, _MT,
   0,
-  [_ter, _la, _sp],
-  [0, 0, 64 | 1], 3
+  [_ter, _la, _sp, _al, _ca],
+  [0, 0, 64 | 1, 0, 64 | 0], 3
 ];
 export var MissingGap$: StaticStructureSchema = [3, n1, _MG,
   0,

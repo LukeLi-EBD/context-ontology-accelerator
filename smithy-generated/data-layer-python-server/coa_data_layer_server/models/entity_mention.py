@@ -32,7 +32,8 @@ class EntityMention(BaseModel):
     term: Optional[StrictStr] = Field(default=None, description="Matched term IRI (ontology mentions only).")
     label: Optional[StrictStr] = Field(default=None, description="Matched label (ontology mentions only).")
     source: Optional[StrictStr] = Field(default=None, description="Label source of the match: `skos` or `rdfs:label`.")
-    __properties: ClassVar[List[str]] = ["text", "span", "kind", "term", "label", "source"]
+    candidates: Optional[List[StrictStr]] = Field(default=None, description="Every concept that declares the matched surface when more than one does; `term` is the deterministic primary. Absent when unambiguous.")
+    __properties: ClassVar[List[str]] = ["text", "span", "kind", "term", "label", "source", "candidates"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -90,7 +91,8 @@ class EntityMention(BaseModel):
             "kind": obj.get("kind"),
             "term": obj.get("term"),
             "label": obj.get("label"),
-            "source": obj.get("source")
+            "source": obj.get("source"),
+            "candidates": obj.get("candidates")
         })
         return _obj
 
