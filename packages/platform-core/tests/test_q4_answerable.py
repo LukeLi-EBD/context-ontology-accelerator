@@ -168,6 +168,13 @@ class EntityCoverageTests(unittest.TestCase):
             _binding("urn:term:amount", SKOS_PREF, "事件金额"),
             _binding("urn:term:number", SKOS_PREF, "事件编号"),
             _binding("urn:term:collateral", SKOS_PREF, "抵押物"),
+            _binding("urn:term:contract", SKOS_PREF, "保险合同（保单）"),
+            _binding("urn:term:applicant", SKOS_PREF, "投保人(保单持有人、要保人)"),
+            _binding(
+                "urn:term:persistency",
+                SKOS_PREF,
+                "13个月继续率（有效保单件数）",
+            ),
         ]
         self.service = AnswerabilityService(
             ContextConfig(), _StubRegistry(), _StubGraph(self.bindings)
@@ -221,6 +228,41 @@ class EntityCoverageTests(unittest.TestCase):
             ["产品包", "价格"],
         )
 
+    def test_missing_concept_refuses_however_high_character_coverage(self):
+        """缺概念必须拒答，不能靠调松覆盖率阈值变绿。
+
+        旧口径（字符覆盖 >= 0.6）会放行这条问句：标签覆盖 12/16 个内容字，
+        覆盖率 0.75。但本体没有「价格」「库存」两个概念，实体覆盖只有
+        1/3，默认阈值下必须拒答；把 min_coverage 调松到 0.5 也仍然拒答
+        （1/3 < 0.5）。若有人为了让类似问句变绿而下调阈值或退回字符口径，
+        这条用例会失败。
+        """
+        query = "13个月继续率（有效保单件数）的价格与库存"
+        result = self.service.check(query)
+        self.assertGreaterEqual(result["coverage"], 0.75)
+        self.assertGreater(result["coverage"], result["threshold"])
+        self.assertEqual(result["entityCount"], 3)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertAlmostEqual(result["entityCoverage"], 0.3333, places=4)
+        self.assertFalse(result["answerable"], result)
+        self.assertEqual(result["reasonCode"], "E_ANSWER_NOT_COVERED")
+        unknown = [
+            item["text"]
+            for item in result["entityMentions"]
+            if item["kind"] == "unknown"
+        ]
+        self.assertEqual(unknown, ["价格", "库存"])
+
+        loose = self.service.check(query, min_coverage=0.5)
+        self.assertEqual(loose["threshold"], 0.5)
+        self.assertFalse(loose["answerable"], loose)
+
+        # 一个本体实体都没命中的问句，阈值即使调到 0 也必须拒答。
+        nothing = self.service.check("量子计算机的制冷功率是多少", min_coverage=0.0)
+        self.assertEqual(nothing["threshold"], 0.0)
+        self.assertEqual(nothing["matchedEntityCount"], 0)
+        self.assertFalse(nothing["answerable"], nothing)
+
     def test_repeated_entity_counts_once_and_meta_words_excluded(self):
         result = self.service.check("产品包和产品包的口径是什么")
         self.assertEqual(result["entityCount"], 1)
@@ -272,6 +314,97 @@ class EntityCoverageTests(unittest.TestCase):
         self.assertEqual(result["entityCoverage"], 1.0)
         self.assertFalse(result["entityDegraded"])
         self.assertTrue(result["answerable"], result)
+
+    def test_bracket_label_matches_outer_and_inner_surfaces(self):
+        outer = self.service.check("保险合同的保额是多少")
+        match = next(m for m in outer["matchedTerms"] if m["term"] == "urn:term:contract")
+        self.assertEqual(match["alias"], "保险合同")
+        self.assertEqual(match["label"], "保险合同（保单）")
+        self.assertFalse(outer["entityDegraded"])
+        self.assertEqual(
+            {item["text"] for item in outer["entityMentions"] if item["kind"] == "ontology"},
+            {"保险合同"},
+        )
+        self.assertEqual(outer["entityCount"], 2)
+        self.assertEqual(outer["matchedEntityCount"], 1)
+        self.assertFalse(outer["answerable"])
+
+        inner = self.service.check("保单的保额是多少")
+        match = next(m for m in inner["matchedTerms"] if m["term"] == "urn:term:contract")
+        self.assertEqual(match["alias"], "保单")
+        self.assertEqual(inner["matchedEntityCount"], 1)
+        self.assertFalse(inner["entityDegraded"])
+
+        # Bracket width in the question need not match the label: the alias
+        # still matches even when the label is full-width and the question is not.
+        mixed = self.service.check("保险合同(保单)的保额是多少")
+        self.assertEqual(mixed["matchedEntityCount"], 1)
+        self.assertFalse(mixed["entityDegraded"])
+        self.assertEqual(
+            {m["term"] for m in mixed["matchedTerms"]},
+            {"urn:term:contract"},
+        )
+
+    def test_halfwidth_bracket_alias_lists_are_split(self):
+        for query, alias in (
+            ("投保人的信息", "投保人"),
+            ("保单持有人的信息", "保单持有人"),
+            ("要保人的信息", "要保人"),
+        ):
+            result = self.service.check(query)
+            match = next(
+                m for m in result["matchedTerms"] if m["term"] == "urn:term:applicant"
+            )
+            self.assertEqual(match["alias"], alias, query)
+            self.assertFalse(result["entityDegraded"], query)
+            self.assertEqual(result["matchedEntityCount"], 1, query)
+
+    def test_alias_conflict_keeps_every_candidate(self):
+        bindings = self.bindings + [
+            _binding("urn:term:policy", SKOS_PREF, "保单（保险单）"),
+        ]
+        service = AnswerabilityService(
+            ContextConfig(), _StubRegistry(), _StubGraph(bindings)
+        )
+        result = service.check("保单的保额是多少")
+        matches = [m for m in result["matchedTerms"] if m["span"] == [0, 2]]
+        self.assertEqual(len(matches), 1, result["matchedTerms"])
+        self.assertEqual(
+            matches[0]["candidates"], ["urn:term:contract", "urn:term:policy"]
+        )
+        self.assertEqual(matches[0]["term"], "urn:term:contract")
+        ontology = [m for m in result["entityMentions"] if m["kind"] == "ontology"]
+        self.assertEqual(len(ontology), 1)
+        self.assertEqual(
+            ontology[0]["candidates"], ["urn:term:contract", "urn:term:policy"]
+        )
+        # One ambiguous surface is one mention, not two entities.
+        self.assertEqual(result["entityCount"], 2)
+        self.assertEqual(result["matchedEntityCount"], 1)
+
+    def test_bracket_aliases_are_whole_fragments_not_prefixes(self):
+        bindings = self.bindings + [
+            _binding("urn:term:anneal", SKOS_PREF, "退火炉（退火效应）"),
+        ]
+        service = AnswerabilityService(
+            ContextConfig(), _StubRegistry(), _StubGraph(bindings)
+        )
+        # "退火" is a prefix of the alias "退火效应", not an alias itself.
+        result = service.check("退火是什么")
+        self.assertEqual(result["matchedEntityCount"], 0, result)
+        self.assertTrue(result["entityDegraded"])
+        self.assertEqual(result["entityDegradeReason"], "no_ontology_entity")
+        for query, surface in (
+            ("退火炉是什么", "退火炉"),
+            ("退火效应是什么", "退火效应"),
+        ):
+            matched = service.check(query)
+            mentions = [
+                item for item in matched["entityMentions"] if item["kind"] == "ontology"
+            ]
+            self.assertEqual(len(mentions), 1, query)
+            self.assertEqual(mentions[0]["text"], surface, query)
+            self.assertEqual(mentions[0]["term"], "urn:term:anneal", query)
 
     def test_character_diagnostics_are_unchanged(self):
         result = self.service.check("产品包的价格")

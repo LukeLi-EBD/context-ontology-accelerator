@@ -1953,6 +1953,13 @@
                     "source": {
                         "type": "string",
                         "description": "Label source of the match: `skos` or `rdfs:label`."
+                    },
+                    "candidates": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Every concept that declares the matched surface when more than one\ndoes; `term` is the deterministic primary. Absent when unambiguous."
                     }
                 },
                 "required": [
@@ -2231,6 +2238,17 @@
                             "type": "number"
                         },
                         "description": "Inclusive-exclusive [start, end) character span in the normalized question."
+                    },
+                    "alias": {
+                        "type": "string",
+                        "description": "Surface that actually matched when it is an alias extracted from a\nbracketed label (\"保单\" from \"保险合同（保单）\"); absent when the whole\nlabel matched."
+                    },
+                    "candidates": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Every concept that declares the matched surface when more than one\ndoes. `term` is then the deterministic primary (a real label outranks a\nderived alias, ties by IRI order); the others are not dropped silently."
                     }
                 },
                 "required": [

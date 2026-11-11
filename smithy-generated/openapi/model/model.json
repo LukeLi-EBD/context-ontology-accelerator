@@ -4030,6 +4030,12 @@
                     "traits": {
                         "smithy.api#documentation": "Label source of the match: `skos` or `rdfs:label`."
                     }
+                },
+                "candidates": {
+                    "target": "com.amazon.semanticcontext.common#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Every concept that declares the matched surface when more than one\ndoes; `term` is the deterministic primary. Absent when unambiguous."
+                    }
                 }
             },
             "traits": {
@@ -4509,6 +4515,18 @@
                     "traits": {
                         "smithy.api#documentation": "Inclusive-exclusive [start, end) character span in the normalized question.",
                         "smithy.api#required": {}
+                    }
+                },
+                "alias": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Surface that actually matched when it is an alias extracted from a\nbracketed label (\"保单\" from \"保险合同（保单）\"); absent when the whole\nlabel matched."
+                    }
+                },
+                "candidates": {
+                    "target": "com.amazon.semanticcontext.common#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Every concept that declares the matched surface when more than one\ndoes. `term` is then the deterministic primary (a real label outranks a\nderived alias, ties by IRI order); the others are not dropped silently."
                     }
                 }
             },

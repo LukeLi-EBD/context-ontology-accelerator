@@ -87,6 +87,15 @@ _SEGMENT_CONNECTORS_SORTED = tuple(
     sorted(SEGMENT_CONNECTORS, key=len, reverse=True)
 )
 
+# A label may declare an abbreviation or a list of aliases in brackets:
+# "保险合同（保单）", "投保人(保单持有人、要保人)". Both bracket widths are
+# indexed, and the outer text plus every delimiter-separated inner alias
+# becomes its own matchable surface. Only whole fragments are indexed: the
+# alias "退火效应" does not make "退火" matchable.
+BRACKET_OPEN = ("（", "(")
+BRACKET_CLOSE = ("）", ")")
+ALIAS_SEPARATORS = re.compile(r"[、，,;；/|]")
+
 
 
 
@@ -173,6 +182,10 @@ class AnswerabilityService:
         coverage = covered / content_count
 
         entities = self._entities(normalized, mask, matched, taken, terms)
+        matched_terms = [
+            {key: value for key, value in item.items() if key != "surface"}
+            for item in matched
+        ]
         missing = self._missing(normalized, mask, taken, terms)
         answerable = (
             entities["coverage"] >= threshold and entities["matched"] > 0
@@ -193,7 +206,7 @@ class AnswerabilityService:
             "ontologyGraph": version["graph"],
             "termSource": self._term_source(terms),
             "termCount": len({t["iri"] for t in terms}),
-            "matchedTerms": matched,
+            "matchedTerms": matched_terms,
             "missing": missing,
             "reasonCode": None if answerable else "E_ANSWER_NOT_COVERED",
             "hint": None
@@ -306,39 +319,107 @@ class AnswerabilityService:
         return mask, sum(1 for flag in mask if flag)
 
     @staticmethod
+    def _label_variants(key: str) -> list[str]:
+        """Matchable surfaces declared by one normalized label.
+
+        "保险合同（保单）" declares "保险合同（保单）", "保险合同" and "保单";
+        "投保人(保单持有人、要保人)" declares the outer text and both inner
+        aliases. Only whole fragments are returned (an alias is never cut into
+        a shorter string), so this widens recall without letting a prefix of a
+        real alias match by itself.
+        """
+        variants = [key]
+        opens = [key.find(symbol) for symbol in BRACKET_OPEN]
+        first_open = min((position for position in opens if position >= 0), default=-1)
+        if first_open < 0:
+            return variants
+        outer = key[:first_open]
+        if len(outer) >= MIN_TERM_CHARS:
+            variants.append(outer)
+        cursor = 0
+        while cursor < len(key):
+            open_at = -1
+            for symbol in BRACKET_OPEN:
+                position = key.find(symbol, cursor)
+                if position >= 0 and (open_at < 0 or position < open_at):
+                    open_at = position
+            if open_at < 0:
+                break
+            close_at = -1
+            for symbol in BRACKET_CLOSE:
+                position = key.find(symbol, open_at + 1)
+                if position >= 0 and (close_at < 0 or position < close_at):
+                    close_at = position
+            if close_at < 0:
+                break
+            for part in ALIAS_SEPARATORS.split(key[open_at + 1 : close_at]):
+                part = part.strip()
+                if len(part) >= MIN_TERM_CHARS:
+                    variants.append(part)
+            cursor = close_at + 1
+        return list(dict.fromkeys(variants))
+
+    @staticmethod
+    def _lexicon(terms: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+        """Surface -> every concept that declares it.
+
+        A surface can come from a primary label or from a bracket alias; a
+        real label always outranks a derived alias, and ties (including two
+        aliases that collide) stay visible in the candidate list instead of
+        being silently dropped.
+        """
+        index: dict[str, list[dict[str, Any]]] = {}
+        for term in terms:
+            key = re.sub(r"\s+", "", term["label"].lower())
+            if not key:
+                continue
+            for surface in AnswerabilityService._label_variants(key):
+                if len(surface) < MIN_TERM_CHARS:
+                    continue
+                bucket = index.setdefault(surface, [])
+                exact = surface == key
+                for candidate in bucket:
+                    if candidate["iri"] == term["iri"]:
+                        candidate["exact"] = candidate["exact"] or exact
+                        break
+                else:
+                    bucket.append(
+                        {"iri": term["iri"], "label": term["label"], "exact": exact}
+                    )
+        return index
+
+    @staticmethod
     def _match(
         normalized: str, terms: list[dict[str, Any]]
     ) -> tuple[list[dict[str, Any]], list[bool]]:
         taken = [False] * len(normalized)
         matched: list[dict[str, Any]] = []
         seen: set[tuple[str, int]] = set()
-        labeled = sorted(
-            (
-                (term["iri"], term["label"], re.sub(r"\s+", "", term["label"].lower()))
-                for term in terms
-            ),
-            key=lambda item: len(item[2]),
-            reverse=True,
-        )
-        for iri, label, key in labeled:
-            if len(key) < MIN_TERM_CHARS or not key:
-                continue
-            start = normalized.find(key)
+        index = AnswerabilityService._lexicon(terms)
+        for surface in sorted(index, key=lambda item: (-len(item), item)):
+            bucket = index[surface]
+            primary = sorted(bucket, key=lambda item: (not item["exact"], item["iri"]))[0]
+            candidates = sorted({item["iri"] for item in bucket})
+            start = normalized.find(surface)
             while start != -1:
-                end = start + len(key)
+                end = start + len(surface)
                 if not any(taken[start:end]):
-                    for index in range(start, end):
-                        taken[index] = True
-                    if (iri, start) not in seen:
-                        seen.add((iri, start))
-                        matched.append(
-                            {
-                                "term": iri,
-                                "label": label,
-                                "span": [start, end],
-                            }
-                        )
-                start = normalized.find(key, start + 1)
+                    for position in range(start, end):
+                        taken[position] = True
+                    if (primary["iri"], start) not in seen:
+                        seen.add((primary["iri"], start))
+                        record: dict[str, Any] = {
+                            "term": primary["iri"],
+                            "label": primary["label"],
+                            "span": [start, end],
+                            "surface": surface,
+                        }
+                        if surface != re.sub(r"\s+", "", primary["label"].lower()):
+                            record["alias"] = surface
+                        if len(candidates) > 1:
+                            record["candidates"] = candidates
+                        matched.append(record)
+                start = normalized.find(surface, start + 1)
         return matched, taken
 
     @staticmethod
@@ -442,7 +523,7 @@ class AnswerabilityService:
             if iri in known:
                 continue
             known[iri] = {
-                "text": item["label"],
+                "text": item.get("surface") or item["label"],
                 "span": list(item["span"]),
                 "kind": "ontology",
                 "term": iri,
@@ -451,6 +532,8 @@ class AnswerabilityService:
                 if predicates.get(iri, set()) & set(SKOS_PREDICATES)
                 else "rdfs:label",
             }
+            if item.get("candidates"):
+                known[iri]["candidates"] = list(item["candidates"])
 
         unknown: dict[str, dict[str, Any]] = {}
         for begin, end in AnswerabilityService._fragments(mask, taken):

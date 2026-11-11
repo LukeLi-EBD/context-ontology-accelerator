@@ -80,6 +80,9 @@ export interface CheckAnswerableCommandOutput extends CheckAnswerableOutput, __M
  * //       term: "STRING_VALUE",
  * //       label: "STRING_VALUE",
  * //       source: "STRING_VALUE",
+ * //       candidates: [ // StringList
+ * //         "STRING_VALUE",
+ * //       ],
  * //     },
  * //   ],
  * //   entityDegraded: true || false,
@@ -94,6 +97,10 @@ export interface CheckAnswerableCommandOutput extends CheckAnswerableOutput, __M
  * //       label: "STRING_VALUE", // required
  * //       span: [ // required
  * //         Number("int"),
+ * //       ],
+ * //       alias: "STRING_VALUE",
+ * //       candidates: [
+ * //         "STRING_VALUE",
  * //       ],
  * //     },
  * //   ],
@@ -116,7 +123,7 @@ export interface CheckAnswerableCommandOutput extends CheckAnswerableOutput, __M
  * //           factFunction: "STRING_VALUE",
  * //         },
  * //       ],
- * //       missing: [ // StringList // required
+ * //       missing: [ // required
  * //         "STRING_VALUE",
  * //       ],
  * //     },

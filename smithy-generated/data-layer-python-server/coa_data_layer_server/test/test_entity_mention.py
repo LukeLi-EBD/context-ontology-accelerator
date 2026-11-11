@@ -42,7 +42,10 @@ class TestEntityMention(unittest.TestCase):
                 kind = '',
                 term = '',
                 label = '',
-                source = ''
+                source = '',
+                candidates = [
+                    ''
+                    ]
             )
         else:
             return EntityMention(

@@ -39,6 +39,10 @@ class TestMatchedTerm(unittest.TestCase):
                 label = '',
                 span = [
                     1.337
+                    ],
+                alias = '',
+                candidates = [
+                    ''
                     ]
             )
         else:

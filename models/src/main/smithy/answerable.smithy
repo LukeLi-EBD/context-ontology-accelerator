@@ -400,6 +400,16 @@ structure MatchedTerm {
     /// Inclusive-exclusive [start, end) character span in the normalized question.
     @required
     span: Span
+
+    /// Surface that actually matched when it is an alias extracted from a
+    /// bracketed label ("保单" from "保险合同（保单）"); absent when the whole
+    /// label matched.
+    alias: String
+
+    /// Every concept that declares the matched surface when more than one
+    /// does. `term` is then the deterministic primary (a real label outranks a
+    /// derived alias, ties by IRI order); the others are not dropped silently.
+    candidates: StringList
 }
 
 /// Terms that matched the question.
@@ -431,6 +441,10 @@ structure EntityMention {
 
     /// Label source of the match: `skos` or `rdfs:label`.
     source: String
+
+    /// Every concept that declares the matched surface when more than one
+    /// does; `term` is the deterministic primary. Absent when unambiguous.
+    candidates: StringList
 }
 
 /// Entity mentions in question order.
