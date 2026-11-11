@@ -219,6 +219,27 @@ jobs:
           IMPORT_GATE_USE_UV: "1"
         run: ./scripts/ci/import-idempotency.sh
 
+  # Schema gate: applies the real migration registry twice on a throwaway empty
+  # database and asserts one-shot completeness, a no-op second run, no gaps, the
+  # nine V52 ownership columns (nullable, no default) and the V53 pointer index.
+  migration-idempotency-gate:
+    needs: smithy-generate
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: smithy-generated
+          path: smithy-generated
+      - uses: ./.github/actions/setup-build
+
+      - name: Run migration idempotency gate
+        env:
+          MIGRATION_GATE_USE_UV: "1"
+        run: ./scripts/ci/migration-idempotency.sh
+
   cdk-synth:
     needs: smithy-generate
     runs-on: ubuntu-latest
