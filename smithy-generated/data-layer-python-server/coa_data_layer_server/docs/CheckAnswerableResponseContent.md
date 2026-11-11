@@ -7,7 +7,7 @@ Result of an answerability pre-check.
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **query** | **str** | Echo of the checked question. | 
-**answerable** | **bool** | True when the question can be answered: term coverage meets the threshold, or an exact metric match supports a definition answer even when no fact rows are available. | 
+**answerable** | **bool** | True when the question can be answered: entity coverage meets the threshold, or an exact metric match supports a definition answer even when no fact rows are available. | 
 **value_answerable** | **bool** | True when a concrete numeric value can be produced (facts layer covered). | 
 **answer_mode** | **str** | How the question can be answered: &#x60;value&#x60;, &#x60;definition&#x60; or &#x60;none&#x60;. | 
 **intent** | **str** | Detected question intent: &#x60;value&#x60; or &#x60;definition&#x60;. | 
@@ -15,6 +15,12 @@ Name | Type | Description | Notes
 **coverage** | **float** | Character coverage of the ontology/term layer (0..1). | 
 **threshold** | **float** | Threshold used to decide &#x60;answerable&#x60;. | 
 **coverage_chars** | [**CoverageChars**](CoverageChars.md) |  | 
+**entity_coverage** | **float** | Entity-level coverage (0..1): distinct matched ontology entities divided by distinct entity mentions in the question (1/n semantics). This drives &#x60;answerable&#x60;; &#x60;coverage&#x60; above remains the character-level diagnostic. | [optional] 
+**entity_count** | **float** | Number of distinct entity mentions the question involves (matched plus unresolved). Question meta words such as 口径/处理 are not entities. | [optional] 
+**matched_entity_count** | **float** | Number of distinct ontology entities among &#x60;entityCount&#x60;. | [optional] 
+**entity_mentions** | [**List[EntityMention]**](EntityMention.md) | Entity mentions in question order, both matched and unresolved. | [optional] 
+**entity_degraded** | **bool** | True when entity coverage could not be evaluated against the ontology (no entity recognised). &#x60;entityCoverage&#x60; is then 0, never 1. | [optional] 
+**entity_degrade_reason** | **str** | Why entity coverage degraded: &#x60;no_ontology_entity&#x60; (content exists but nothing matched) or &#x60;no_entity_mention&#x60; (only meta words). | [optional] 
 **ontology_version** | **str** | Ontology version the check ran against. | 
 **ontology_graph** | **str** | Named graph URI of that version. | 
 **term_source** | **str** | Human-readable description of the term source used. | 

@@ -23,6 +23,8 @@ const _DSO = "DescribeSchemaOutput";
 const _DSUE = "DataSourceUnavailableError";
 const _E = "Entity";
 const _EL = "EntityList";
+const _EM = "EntityMention";
+const _EML = "EntityMentionList";
 const _GC = "GapCandidate";
 const _GCL = "GapCandidateList";
 const _GCr = "GraphContext";
@@ -108,9 +110,14 @@ const _di = "direction";
 const _dim = "dimensions";
 const _e = "error";
 const _eA = "entityAnnotations";
+const _eC = "entityCoverage";
+const _eCn = "entityCount";
+const _eD = "entityDegraded";
+const _eDR = "entityDegradeReason";
 const _eF = "entityFilter";
-const _eM = "executionMode";
+const _eM = "entityMentions";
 const _eMl = "elapsedMs";
+const _eMx = "executionMode";
 const _en = "entities";
 const _ex = "execute";
 const _f = "form";
@@ -129,12 +136,14 @@ const _iDI = "includeDebugInfo";
 const _iP = "includeProperties";
 const _iS = "includeSupporting";
 const _in = "intent";
+const _k = "kind";
 const _l = "layer";
 const _la = "label";
 const _lay = "layers";
 const _m = "message";
 const _mC = "minCoverage";
 const _mD = "maxDepth";
+const _mEC = "matchedEntityCount";
 const _mI = "metricId";
 const _mM = "metricMs";
 const _mR = "maxResults";
@@ -208,8 +217,8 @@ const _tO = "tierOverride";
 const _tS = "termSource";
 const _tU = "targetUri";
 const _tUo = "toolUsed";
-const _te = "term";
-const _tex = "text";
+const _te = "text";
+const _ter = "term";
 const _th = "threshold";
 const _ti = "timings";
 const _to = "total";
@@ -402,8 +411,8 @@ export var CheckAnswerableInput$: StaticStructureSchema = [3, n1, _CAI,
 ];
 export var CheckAnswerableOutput$: StaticStructureSchema = [3, n1, _CAO,
   0,
-  [_q, _a, _vA, _aM, _in, _d, _cov, _th, _cC, _oV, _oG, _tS, _tC, _mT, _lay, _mi, _ca, _re, _ti, _rC, _h],
-  [0, 2, 2, 0, 0, 2, 1, 1, () => CoverageChars$, 0, 0, 0, 1, () => MatchedTermList, () => CoverageLayerList, () => MissingGapList, () => AnswerCandidateList, 64 | 0, () => AnswerTimings$, 0, 0], 19
+  [_q, _a, _vA, _aM, _in, _d, _cov, _th, _cC, _oV, _oG, _tS, _tC, _mT, _lay, _mi, _ca, _re, _ti, _eC, _eCn, _mEC, _eM, _eD, _eDR, _rC, _h],
+  [0, 2, 2, 0, 0, 2, 1, 1, () => CoverageChars$, 0, 0, 0, 1, () => MatchedTermList, () => CoverageLayerList, () => MissingGapList, () => AnswerCandidateList, 64 | 0, () => AnswerTimings$, 1, 1, 1, () => EntityMentionList, 2, 0, 0, 0], 19
 ];
 export var ConfidenceScore$: StaticStructureSchema = [3, n1, _CS,
   0,
@@ -445,6 +454,11 @@ export var Entity$: StaticStructureSchema = [3, n1, _E,
   [_u, _la, _ty, _p],
   [0, 0, 0, 128 | 0], 2
 ];
+export var EntityMention$: StaticStructureSchema = [3, n1, _EM,
+  0,
+  [_te, _sp, _k, _ter, _la, _so],
+  [0, 64 | 1, 0, 0, 0, 0], 3
+];
 export var GapCandidate$: StaticStructureSchema = [3, n1, _GC,
   0,
   [_i, _la, _sc],
@@ -482,17 +496,17 @@ export var LayerMatch$: StaticStructureSchema = [3, n1, _LM,
 ];
 export var MatchedTerm$: StaticStructureSchema = [3, n1, _MT,
   0,
-  [_te, _la, _sp],
+  [_ter, _la, _sp],
   [0, 0, 64 | 1], 3
 ];
 export var MissingGap$: StaticStructureSchema = [3, n1, _MG,
   0,
-  [_l, _co, _tex, _sp, _w, _hTF, _mI, _nT, _ca],
+  [_l, _co, _te, _sp, _w, _hTF, _mI, _nT, _ca],
   [0, 0, 0, 64 | 1, 0, 0, 0, () => NearbyTermList, () => GapCandidateList], 2
 ];
 export var NearbyTerm$: StaticStructureSchema = [3, n1, _NT,
   0,
-  [_te, _la, _si],
+  [_ter, _la, _si],
   [0, 0, 1], 3
 ];
 export var QueryInput$: StaticStructureSchema = [3, n1, _QI,
@@ -507,7 +521,7 @@ export var QueryOutput$: StaticStructureSchema = [3, n1, _QO,
 ];
 export var QueryResult$: StaticStructureSchema = [3, n1, _QR,
   0,
-  [_t, _con, _tr, _rR, _sA, _qU, _sG, _sC, _gC, _oV, _dS, _pa, _eM],
+  [_t, _con, _tr, _rR, _sA, _qU, _sG, _sC, _gC, _oV, _dS, _pa, _eMx],
   [1, () => ConfidenceScore$, () => TraceStepList, [() => ResultRowList, 0], [() => CustomerData, 0], [() => CustomerData, 0], [() => CustomerData, 0], [() => SupportingContentList, 0], () => GraphContext$, 0, 64 | 0, 2, 0], 3
 ];
 export var Relationship$: StaticStructureSchema = [3, n1, _R,
@@ -537,7 +551,7 @@ export var SchemaProperty$: StaticStructureSchema = [3, n1, _SP,
 ];
 export var SupportingContent$: StaticStructureSchema = [3, n1, _SCu,
   0,
-  [_cI, _tex, _sDI, _sDN, _rS, _eA],
+  [_cI, _te, _sDI, _sDN, _rS, _eA],
   [0, [() => CustomerData, 0], 0, 0, 1, 64 | 0], 2
 ];
 export var TraceStep$: StaticStructureSchema = [3, n1, _TS,
@@ -581,6 +595,9 @@ var DimensionFilterList: StaticListSchema = [1, n1, _DFL,
 ];
 var EntityList: StaticListSchema = [1, n1, _EL,
   0, () => Entity$
+];
+var EntityMentionList: StaticListSchema = [1, n1, _EML,
+  0, () => EntityMention$
 ];
 var FilterValueList = 64 | 0;
 var GapCandidateList: StaticListSchema = [1, n1, _GCL,

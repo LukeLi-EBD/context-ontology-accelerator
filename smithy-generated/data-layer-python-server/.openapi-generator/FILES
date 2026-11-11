@@ -14,6 +14,7 @@ coa_data_layer_server/docs/DescribeSchemaResponseContent.md
 coa_data_layer_server/docs/DimensionFilter.md
 coa_data_layer_server/docs/DimensionOperator.md
 coa_data_layer_server/docs/Entity.md
+coa_data_layer_server/docs/EntityMention.md
 coa_data_layer_server/docs/GapCandidate.md
 coa_data_layer_server/docs/GraphContext.md
 coa_data_layer_server/docs/GraphTraverseRequestContent.md
@@ -66,6 +67,7 @@ coa_data_layer_server/models/describe_schema_response_content.py
 coa_data_layer_server/models/dimension_filter.py
 coa_data_layer_server/models/dimension_operator.py
 coa_data_layer_server/models/entity.py
+coa_data_layer_server/models/entity_mention.py
 coa_data_layer_server/models/gap_candidate.py
 coa_data_layer_server/models/graph_context.py
 coa_data_layer_server/models/graph_traverse_request_content.py
@@ -118,6 +120,7 @@ coa_data_layer_server/test/test_describe_schema_response_content.py
 coa_data_layer_server/test/test_dimension_filter.py
 coa_data_layer_server/test/test_dimension_operator.py
 coa_data_layer_server/test/test_entity.py
+coa_data_layer_server/test/test_entity_mention.py
 coa_data_layer_server/test/test_gap_candidate.py
 coa_data_layer_server/test/test_graph_context.py
 coa_data_layer_server/test/test_graph_traverse_request_content.py

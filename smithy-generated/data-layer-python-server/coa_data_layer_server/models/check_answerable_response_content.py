@@ -23,6 +23,7 @@ from coa_data_layer_server.models.answer_candidate import AnswerCandidate
 from coa_data_layer_server.models.answer_timings import AnswerTimings
 from coa_data_layer_server.models.coverage_chars import CoverageChars
 from coa_data_layer_server.models.coverage_layer import CoverageLayer
+from coa_data_layer_server.models.entity_mention import EntityMention
 from coa_data_layer_server.models.matched_term import MatchedTerm
 from coa_data_layer_server.models.missing_gap import MissingGap
 from typing import Optional, Set
@@ -33,7 +34,7 @@ class CheckAnswerableResponseContent(BaseModel):
     Result of an answerability pre-check.
     """ # noqa: E501
     query: StrictStr = Field(description="Echo of the checked question.")
-    answerable: StrictBool = Field(description="True when the question can be answered: term coverage meets the threshold, or an exact metric match supports a definition answer even when no fact rows are available.")
+    answerable: StrictBool = Field(description="True when the question can be answered: entity coverage meets the threshold, or an exact metric match supports a definition answer even when no fact rows are available.")
     value_answerable: StrictBool = Field(description="True when a concrete numeric value can be produced (facts layer covered).", alias="valueAnswerable")
     answer_mode: StrictStr = Field(description="How the question can be answered: `value`, `definition` or `none`.", alias="answerMode")
     intent: StrictStr = Field(description="Detected question intent: `value` or `definition`.")
@@ -41,6 +42,12 @@ class CheckAnswerableResponseContent(BaseModel):
     coverage: Union[StrictFloat, StrictInt] = Field(description="Character coverage of the ontology/term layer (0..1).")
     threshold: Union[StrictFloat, StrictInt] = Field(description="Threshold used to decide `answerable`.")
     coverage_chars: CoverageChars = Field(alias="coverageChars")
+    entity_coverage: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Entity-level coverage (0..1): distinct matched ontology entities divided by distinct entity mentions in the question (1/n semantics). This drives `answerable`; `coverage` above remains the character-level diagnostic.", alias="entityCoverage")
+    entity_count: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Number of distinct entity mentions the question involves (matched plus unresolved). Question meta words such as 口径/处理 are not entities.", alias="entityCount")
+    matched_entity_count: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="Number of distinct ontology entities among `entityCount`.", alias="matchedEntityCount")
+    entity_mentions: Optional[List[EntityMention]] = Field(default=None, description="Entity mentions in question order, both matched and unresolved.", alias="entityMentions")
+    entity_degraded: Optional[StrictBool] = Field(default=None, description="True when entity coverage could not be evaluated against the ontology (no entity recognised). `entityCoverage` is then 0, never 1.", alias="entityDegraded")
+    entity_degrade_reason: Optional[StrictStr] = Field(default=None, description="Why entity coverage degraded: `no_ontology_entity` (content exists but nothing matched) or `no_entity_mention` (only meta words).", alias="entityDegradeReason")
     ontology_version: StrictStr = Field(description="Ontology version the check ran against.", alias="ontologyVersion")
     ontology_graph: StrictStr = Field(description="Named graph URI of that version.", alias="ontologyGraph")
     term_source: StrictStr = Field(description="Human-readable description of the term source used.", alias="termSource")
@@ -53,7 +60,7 @@ class CheckAnswerableResponseContent(BaseModel):
     reason_code: Optional[StrictStr] = Field(default=None, description="Machine-readable reason when `answerable` is false.", alias="reasonCode")
     hint: Optional[StrictStr] = Field(default=None, description="Operator-facing next step when `answerable` is false.")
     timings: AnswerTimings
-    __properties: ClassVar[List[str]] = ["query", "answerable", "valueAnswerable", "answerMode", "intent", "degraded", "coverage", "threshold", "coverageChars", "ontologyVersion", "ontologyGraph", "termSource", "termCount", "matchedTerms", "layers", "missing", "candidates", "reasons", "reasonCode", "hint", "timings"]
+    __properties: ClassVar[List[str]] = ["query", "answerable", "valueAnswerable", "answerMode", "intent", "degraded", "coverage", "threshold", "coverageChars", "entityCoverage", "entityCount", "matchedEntityCount", "entityMentions", "entityDegraded", "entityDegradeReason", "ontologyVersion", "ontologyGraph", "termSource", "termCount", "matchedTerms", "layers", "missing", "candidates", "reasons", "reasonCode", "hint", "timings"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -97,6 +104,13 @@ class CheckAnswerableResponseContent(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of coverage_chars
         if self.coverage_chars:
             _dict['coverageChars'] = self.coverage_chars.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of each item in entity_mentions (list)
+        _items = []
+        if self.entity_mentions:
+            for _item_entity_mentions in self.entity_mentions:
+                if _item_entity_mentions:
+                    _items.append(_item_entity_mentions.to_dict())
+            _dict['entityMentions'] = _items
         # override the default output from pydantic by calling `to_dict()` of each item in matched_terms (list)
         _items = []
         if self.matched_terms:
@@ -149,6 +163,12 @@ class CheckAnswerableResponseContent(BaseModel):
             "coverage": obj.get("coverage"),
             "threshold": obj.get("threshold"),
             "coverageChars": CoverageChars.from_dict(obj["coverageChars"]) if obj.get("coverageChars") is not None else None,
+            "entityCoverage": obj.get("entityCoverage"),
+            "entityCount": obj.get("entityCount"),
+            "matchedEntityCount": obj.get("matchedEntityCount"),
+            "entityMentions": [EntityMention.from_dict(_item) for _item in obj["entityMentions"]] if obj.get("entityMentions") is not None else None,
+            "entityDegraded": obj.get("entityDegraded"),
+            "entityDegradeReason": obj.get("entityDegradeReason"),
             "ontologyVersion": obj.get("ontologyVersion"),
             "ontologyGraph": obj.get("ontologyGraph"),
             "termSource": obj.get("termSource"),

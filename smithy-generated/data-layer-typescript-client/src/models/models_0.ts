@@ -110,6 +110,50 @@ export interface CoverageChars {
 }
 
 /**
+ * One entity mention in the question: a matched ontology entity or an
+ * unresolved content fragment counted as one missing entity.
+ * @public
+ */
+export interface EntityMention {
+  /**
+   * Surface text as it appears in the normalized question (known entities
+   * use the matched label).
+   * @public
+   */
+  text: string | undefined;
+
+  /**
+   * Inclusive-exclusive [start, end) character span in the normalized question.
+   * @public
+   */
+  span: number[] | undefined;
+
+  /**
+   * `ontology` when the mention matched a term, `unknown` otherwise.
+   * @public
+   */
+  kind: string | undefined;
+
+  /**
+   * Matched term IRI (ontology mentions only).
+   * @public
+   */
+  term?: string | undefined;
+
+  /**
+   * Matched label (ontology mentions only).
+   * @public
+   */
+  label?: string | undefined;
+
+  /**
+   * Label source of the match: `skos` or `rdfs:label`.
+   * @public
+   */
+  source?: string | undefined;
+}
+
+/**
  * Layer-specific evidence for one match.
  * @public
  */
@@ -358,7 +402,7 @@ export interface CheckAnswerableOutput {
   query: string | undefined;
 
   /**
-   * True when the question can be answered: term coverage meets the
+   * True when the question can be answered: entity coverage meets the
    * threshold, or an exact metric match supports a definition answer even
    * when no fact rows are available.
    * @public
@@ -406,6 +450,47 @@ export interface CheckAnswerableOutput {
    * @public
    */
   coverageChars: CoverageChars | undefined;
+
+  /**
+   * Entity-level coverage (0..1): distinct matched ontology entities divided
+   * by distinct entity mentions in the question (1/n semantics). This drives
+   * `answerable`; `coverage` above remains the character-level diagnostic.
+   * @public
+   */
+  entityCoverage?: number | undefined;
+
+  /**
+   * Number of distinct entity mentions the question involves (matched plus
+   * unresolved). Question meta words such as 口径/处理 are not entities.
+   * @public
+   */
+  entityCount?: number | undefined;
+
+  /**
+   * Number of distinct ontology entities among `entityCount`.
+   * @public
+   */
+  matchedEntityCount?: number | undefined;
+
+  /**
+   * Entity mentions in question order, both matched and unresolved.
+   * @public
+   */
+  entityMentions?: EntityMention[] | undefined;
+
+  /**
+   * True when entity coverage could not be evaluated against the ontology
+   * (no entity recognised). `entityCoverage` is then 0, never 1.
+   * @public
+   */
+  entityDegraded?: boolean | undefined;
+
+  /**
+   * Why entity coverage degraded: `no_ontology_entity` (content exists but
+   * nothing matched) or `no_entity_mention` (only meta words).
+   * @public
+   */
+  entityDegradeReason?: string | undefined;
 
   /**
    * Ontology version the check ran against.

@@ -16,9 +16,10 @@ Name | Type | Description | Notes
 **indexed** | **float** | Items indexed successfully. | 
 **failed** | **float** | Items that ended in failure. | 
 **degraded** | **float** | Items indexed with degraded quality (for example missing embeddings). | 
-**created_at** | **float** | When the batch row was created. | 
-**updated_at** | **float** | When the batch row last changed. | 
-**finished_at** | **float** | When the batch finished; absent while running. | [optional] 
+**created_at** | **datetime** | When the batch row was created. | 
+**updated_at** | **datetime** | When the batch row last changed. | 
+**finished_at** | **datetime** | When the batch finished; absent while running. | [optional] 
+**last_run** | [**IngestionRunAttempt**](IngestionRunAttempt.md) |  | [optional] 
 
 ## Example
 

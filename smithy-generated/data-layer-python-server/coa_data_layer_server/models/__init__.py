@@ -28,6 +28,7 @@ from coa_data_layer_server.models.describe_schema_response_content import Descri
 from coa_data_layer_server.models.dimension_filter import DimensionFilter
 from coa_data_layer_server.models.dimension_operator import DimensionOperator
 from coa_data_layer_server.models.entity import Entity
+from coa_data_layer_server.models.entity_mention import EntityMention
 from coa_data_layer_server.models.gap_candidate import GapCandidate
 from coa_data_layer_server.models.graph_context import GraphContext
 from coa_data_layer_server.models.graph_traverse_request_content import GraphTraverseRequestContent

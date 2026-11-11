@@ -67,6 +67,23 @@ export interface CheckAnswerableCommandOutput extends CheckAnswerableOutput, __M
  * //     covered: Number("int"), // required
  * //     total: Number("int"), // required
  * //   },
+ * //   entityCoverage: Number("float"),
+ * //   entityCount: Number("int"),
+ * //   matchedEntityCount: Number("int"),
+ * //   entityMentions: [ // EntityMentionList
+ * //     { // EntityMention
+ * //       text: "STRING_VALUE", // required
+ * //       span: [ // Span // required
+ * //         Number("int"),
+ * //       ],
+ * //       kind: "STRING_VALUE", // required
+ * //       term: "STRING_VALUE",
+ * //       label: "STRING_VALUE",
+ * //       source: "STRING_VALUE",
+ * //     },
+ * //   ],
+ * //   entityDegraded: true || false,
+ * //   entityDegradeReason: "STRING_VALUE",
  * //   ontologyVersion: "STRING_VALUE", // required
  * //   ontologyGraph: "STRING_VALUE", // required
  * //   termSource: "STRING_VALUE", // required
@@ -75,7 +92,7 @@ export interface CheckAnswerableCommandOutput extends CheckAnswerableOutput, __M
  * //     { // MatchedTerm
  * //       term: "STRING_VALUE", // required
  * //       label: "STRING_VALUE", // required
- * //       span: [ // Span // required
+ * //       span: [ // required
  * //         Number("int"),
  * //       ],
  * //     },

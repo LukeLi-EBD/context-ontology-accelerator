@@ -1583,7 +1583,7 @@
                     },
                     "answerable": {
                         "type": "boolean",
-                        "description": "True when the question can be answered: term coverage meets the\nthreshold, or an exact metric match supports a definition answer even\nwhen no fact rows are available."
+                        "description": "True when the question can be answered: entity coverage meets the\nthreshold, or an exact metric match supports a definition answer even\nwhen no fact rows are available."
                     },
                     "valueAnswerable": {
                         "type": "boolean",
@@ -1613,6 +1613,34 @@
                     },
                     "coverageChars": {
                         "$ref": "#/components/schemas/CoverageChars"
+                    },
+                    "entityCoverage": {
+                        "type": "number",
+                        "description": "Entity-level coverage (0..1): distinct matched ontology entities divided\nby distinct entity mentions in the question (1/n semantics). This drives\n`answerable`; `coverage` above remains the character-level diagnostic.",
+                        "format": "float"
+                    },
+                    "entityCount": {
+                        "type": "number",
+                        "description": "Number of distinct entity mentions the question involves (matched plus\nunresolved). Question meta words such as 口径/处理 are not entities."
+                    },
+                    "matchedEntityCount": {
+                        "type": "number",
+                        "description": "Number of distinct ontology entities among `entityCount`."
+                    },
+                    "entityMentions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/EntityMention"
+                        },
+                        "description": "Entity mentions in question order, both matched and unresolved."
+                    },
+                    "entityDegraded": {
+                        "type": "boolean",
+                        "description": "True when entity coverage could not be evaluated against the ontology\n(no entity recognised). `entityCoverage` is then 0, never 1."
+                    },
+                    "entityDegradeReason": {
+                        "type": "string",
+                        "description": "Why entity coverage degraded: `no_ontology_entity` (content exists but\nnothing matched) or `no_entity_mention` (only meta words)."
                     },
                     "ontologyVersion": {
                         "type": "string",
@@ -1893,6 +1921,44 @@
                 "required": [
                     "label",
                     "uri"
+                ]
+            },
+            "EntityMention": {
+                "type": "object",
+                "description": "One entity mention in the question: a matched ontology entity or an\nunresolved content fragment counted as one missing entity.",
+                "properties": {
+                    "text": {
+                        "type": "string",
+                        "description": "Surface text as it appears in the normalized question (known entities\nuse the matched label)."
+                    },
+                    "span": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        },
+                        "description": "Inclusive-exclusive [start, end) character span in the normalized question."
+                    },
+                    "kind": {
+                        "type": "string",
+                        "description": "`ontology` when the mention matched a term, `unknown` otherwise."
+                    },
+                    "term": {
+                        "type": "string",
+                        "description": "Matched term IRI (ontology mentions only)."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Matched label (ontology mentions only)."
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Label source of the match: `skos` or `rdfs:label`."
+                    }
+                },
+                "required": [
+                    "kind",
+                    "span",
+                    "text"
                 ]
             },
             "GapCandidate": {

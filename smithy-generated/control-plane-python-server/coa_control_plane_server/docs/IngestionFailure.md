@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **attempts** | **float** | Number of processing attempts so far. | 
 **code** | **str** | Machine-readable failure code, when the importer recorded one. | [optional] 
 **message** | **str** | Human-readable failure message, when the importer recorded one. | [optional] 
-**updated_at** | **float** | When the item last changed. | 
+**updated_at** | **datetime** | When the item last changed. | 
 
 ## Example
 

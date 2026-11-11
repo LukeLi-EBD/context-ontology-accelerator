@@ -1872,7 +1872,7 @@
                 "answerable": {
                     "target": "smithy.api#Boolean",
                     "traits": {
-                        "smithy.api#documentation": "True when the question can be answered: term coverage meets the\nthreshold, or an exact metric match supports a definition answer even\nwhen no fact rows are available.",
+                        "smithy.api#documentation": "True when the question can be answered: entity coverage meets the\nthreshold, or an exact metric match supports a definition answer even\nwhen no fact rows are available.",
                         "smithy.api#required": {}
                     }
                 },
@@ -1923,6 +1923,42 @@
                     "traits": {
                         "smithy.api#documentation": "Covered / total content characters behind `coverage`.",
                         "smithy.api#required": {}
+                    }
+                },
+                "entityCoverage": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#documentation": "Entity-level coverage (0..1): distinct matched ontology entities divided\nby distinct entity mentions in the question (1/n semantics). This drives\n`answerable`; `coverage` above remains the character-level diagnostic."
+                    }
+                },
+                "entityCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of distinct entity mentions the question involves (matched plus\nunresolved). Question meta words such as 口径/处理 are not entities."
+                    }
+                },
+                "matchedEntityCount": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#documentation": "Number of distinct ontology entities among `entityCount`."
+                    }
+                },
+                "entityMentions": {
+                    "target": "com.amazon.semanticcontext.datalayer#EntityMentionList",
+                    "traits": {
+                        "smithy.api#documentation": "Entity mentions in question order, both matched and unresolved."
+                    }
+                },
+                "entityDegraded": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#documentation": "True when entity coverage could not be evaluated against the ontology\n(no entity recognised). `entityCoverage` is then 0, never 1."
+                    }
+                },
+                "entityDegradeReason": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Why entity coverage degraded: `no_ontology_entity` (content exists but\nnothing matched) or `no_entity_mention` (only meta words)."
                     }
                 },
                 "ontologyVersion": {
@@ -2436,6 +2472,62 @@
             "type": "list",
             "member": {
                 "target": "com.amazon.semanticcontext.datalayer#Entity"
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#EntityMention": {
+            "type": "structure",
+            "members": {
+                "text": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Surface text as it appears in the normalized question (known entities\nuse the matched label).",
+                        "smithy.api#required": {}
+                    }
+                },
+                "span": {
+                    "target": "com.amazon.semanticcontext.datalayer#Span",
+                    "traits": {
+                        "smithy.api#documentation": "Inclusive-exclusive [start, end) character span in the normalized question.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "kind": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "`ontology` when the mention matched a term, `unknown` otherwise.",
+                        "smithy.api#required": {}
+                    }
+                },
+                "term": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Matched term IRI (ontology mentions only)."
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Matched label (ontology mentions only)."
+                    }
+                },
+                "source": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "Label source of the match: `skos` or `rdfs:label`."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "One entity mention in the question: a matched ontology entity or an\nunresolved content fragment counted as one missing entity."
+            }
+        },
+        "com.amazon.semanticcontext.datalayer#EntityMentionList": {
+            "type": "list",
+            "member": {
+                "target": "com.amazon.semanticcontext.datalayer#EntityMention"
+            },
+            "traits": {
+                "smithy.api#documentation": "Entity mentions in question order."
             }
         },
         "com.amazon.semanticcontext.datalayer#FilterValue": {

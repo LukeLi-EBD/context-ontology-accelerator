@@ -46,6 +46,22 @@ class TestCheckAnswerableResponseContent(unittest.TestCase):
                 coverage_chars = coa_data_layer_server.models.coverage_chars.CoverageChars(
                     covered = 1.337, 
                     total = 1.337, ),
+                entity_coverage = 1.337,
+                entity_count = 1.337,
+                matched_entity_count = 1.337,
+                entity_mentions = [
+                    coa_data_layer_server.models.entity_mention.EntityMention(
+                        text = '', 
+                        span = [
+                            1.337
+                            ], 
+                        kind = '', 
+                        term = '', 
+                        label = '', 
+                        source = '', )
+                    ],
+                entity_degraded = True,
+                entity_degrade_reason = '',
                 ontology_version = '',
                 ontology_graph = '',
                 term_source = '',

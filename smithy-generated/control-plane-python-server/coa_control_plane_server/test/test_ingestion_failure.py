@@ -40,14 +40,14 @@ class TestIngestionFailure(unittest.TestCase):
                 attempts = 1.337,
                 code = '',
                 message = '',
-                updated_at = 1.337
+                updated_at = datetime.datetime.strptime('2013-10-20 19:20:30.00', '%Y-%m-%d %H:%M:%S.%f')
             )
         else:
             return IngestionFailure(
                 run_id = 'bf325375-e030-4fcc-aa00-917317c5747701234567891011121314151617181920212223242526272829303132333435',
                 rel_path = '',
                 attempts = 1.337,
-                updated_at = 1.337,
+                updated_at = datetime.datetime.strptime('2013-10-20 19:20:30.00', '%Y-%m-%d %H:%M:%S.%f'),
         )
         """
 

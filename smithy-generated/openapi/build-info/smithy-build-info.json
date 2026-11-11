@@ -445,258 +445,6 @@
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactObjectKind$iri",
-            "message": "The name `iri` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 57,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactObjectKind$literal",
-            "message": "The name `literal` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 60,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImportFormat$turtle",
-            "message": "The name `turtle` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 105,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImportFormat$nt",
-            "message": "The name `nt` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 108,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$document",
-            "message": "The name `document` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 66,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$table",
-            "message": "The name `table` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 69,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$manual",
-            "message": "The name `manual` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 72,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$merge",
-            "message": "The name `merge` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 75,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactState$active",
-            "message": "The name `active` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 21,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactState$retracted",
-            "message": "The name `retracted` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 24,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactState$superseded",
-            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 27,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyExportFormat$turtle",
-            "message": "The name `turtle` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 96,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyExportFormat$nquads",
-            "message": "The name `nquads` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 99,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$proposed",
-            "message": "The name `proposed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 58,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$review",
-            "message": "The name `review` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 61,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$approved",
-            "message": "The name `approved` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 64,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$published",
-            "message": "The name `published` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 67,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$rejected",
-            "message": "The name `rejected` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 72,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$lexical",
-            "message": "The name `lexical` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/answer-quality.smithy",
-            "line": 19,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$vector",
-            "message": "The name `vector` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/answer-quality.smithy",
-            "line": 22,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$hybrid",
-            "message": "The name `hybrid` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/answer-quality.smithy",
-            "line": 25,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$active",
-            "message": "The name `active` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 33,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$retracted",
-            "message": "The name `retracted` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 36,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$superseded",
-            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 39,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$all",
-            "message": "The name `all` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 42,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$added",
-            "message": "The name `added` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 496,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$removed",
-            "message": "The name `removed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 499,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$modified",
-            "message": "The name `modified` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
-            "line": 502,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyVersionStatus$draft",
             "message": "The name `draft` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
             "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
@@ -769,46 +517,28 @@
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier$tier1_blocking",
-            "message": "The name `tier1_blocking` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity$error",
+            "message": "The name `error` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
             "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
-            "line": 23,
+            "line": 50,
             "column": 5
         },
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier$tier2_scoring",
-            "message": "The name `tier2_scoring` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity$warning",
+            "message": "The name `warning` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
             "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
-            "line": 26,
+            "line": 53,
             "column": 5
         },
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier$tier3_review",
-            "message": "The name `tier3_review` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity$info",
+            "message": "The name `info` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
             "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
-            "line": 29,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactEventFormat$full",
-            "message": "The name `full` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 48,
-            "column": 5
-        },
-        {
-            "id": "EnumShape",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.facts#FactEventFormat$summary",
-            "message": "The name `summary` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
-            "line": 51,
+            "line": 56,
             "column": 5
         },
         {
@@ -850,6 +580,222 @@
         {
             "id": "EnumShape",
             "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$active",
+            "message": "The name `active` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 33,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$retracted",
+            "message": "The name `retracted` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 36,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$superseded",
+            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 39,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactStateFilter$all",
+            "message": "The name `all` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 42,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImportFormat$turtle",
+            "message": "The name `turtle` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 105,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImportFormat$nt",
+            "message": "The name `nt` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 108,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactEventFormat$full",
+            "message": "The name `full` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 48,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactEventFormat$summary",
+            "message": "The name `summary` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 51,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier$tier1_blocking",
+            "message": "The name `tier1_blocking` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
+            "line": 23,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier$tier2_scoring",
+            "message": "The name `tier2_scoring` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
+            "line": 26,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationTier$tier3_review",
+            "message": "The name `tier3_review` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
+            "line": 29,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$lexical",
+            "message": "The name `lexical` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/answer-quality.smithy",
+            "line": 19,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$vector",
+            "message": "The name `vector` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/answer-quality.smithy",
+            "line": 22,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.quality#AnswerQualityStrategy$hybrid",
+            "message": "The name `hybrid` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/answer-quality.smithy",
+            "line": 25,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyExportFormat$turtle",
+            "message": "The name `turtle` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 96,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyExportFormat$nquads",
+            "message": "The name `nquads` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 99,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactState$active",
+            "message": "The name `active` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 21,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactState$retracted",
+            "message": "The name `retracted` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 24,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactState$superseded",
+            "message": "The name `superseded` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 27,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$proposed",
+            "message": "The name `proposed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 58,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$review",
+            "message": "The name `review` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 61,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$approved",
+            "message": "The name `approved` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 64,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$published",
+            "message": "The name `published` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 67,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyProposalStatus$rejected",
+            "message": "The name `rejected` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 72,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
             "shapeId": "com.amazon.semanticcontext.facts#FactConflictAction$keep",
             "message": "The name `keep` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
             "filename": "/work/models/src/main/smithy/facts.smithy",
@@ -886,29 +832,92 @@
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity$error",
-            "message": "The name `error` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
-            "line": 50,
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$document",
+            "message": "The name `document` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 66,
             "column": 5
         },
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity$warning",
-            "message": "The name `warning` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
-            "line": 53,
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$table",
+            "message": "The name `table` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 69,
             "column": 5
         },
         {
             "id": "EnumShape",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.ontologyvalidation#OntologyValidationSeverity$info",
-            "message": "The name `info` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
-            "filename": "/work/models/src/main/smithy/ontology-validation.smithy",
-            "line": 56,
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$manual",
+            "message": "The name `manual` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 72,
             "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactSourceKind$merge",
+            "message": "The name `merge` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 75,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactObjectKind$iri",
+            "message": "The name `iri` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 57,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.facts#FactObjectKind$literal",
+            "message": "The name `literal` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/fact-ledger.smithy",
+            "line": 60,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$added",
+            "message": "The name `added` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 496,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$removed",
+            "message": "The name `removed` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 499,
+            "column": 5
+        },
+        {
+            "id": "EnumShape",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.ontologylifecycle#OntologyImpactChange$modified",
+            "message": "The name `modified` does not match the recommended enum name format of beginning with an uppercase letter, followed by any number of uppercase letters, numbers, or underscores.",
+            "filename": "/work/models/src/main/smithy/ontology-lifecycle.smithy",
+            "line": 502,
+            "column": 5
+        },
+        {
+            "id": "HttpMethodSemantics.MissingIdempotentTrait",
+            "severity": "WARNING",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#DeleteSource",
+            "message": "This operation uses the `DELETE` method in the `http` trait, but is not marked with the idempotent trait",
+            "filename": "/work/models/src/main/smithy/unified-sources.smithy",
+            "line": 1672,
+            "column": 1
         },
         {
             "id": "HttpMethodSemantics.UnnecessaryReadonlyTrait",
@@ -929,13 +938,13 @@
             "column": 1
         },
         {
-            "id": "HttpMethodSemantics.MissingIdempotentTrait",
-            "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#DeleteSource",
-            "message": "This operation uses the `DELETE` method in the `http` trait, but is not marked with the idempotent trait",
+            "id": "IdempotencyTokenIgnored",
+            "severity": "SUPPRESSED",
+            "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
+            "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
             "filename": "/work/models/src/main/smithy/unified-sources.smithy",
-            "line": 1672,
-            "column": 1
+            "line": 1292,
+            "column": 5
         },
         {
             "id": "IdempotencyTokenIgnored",
@@ -944,15 +953,6 @@
             "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.grant#CreatePlatformGrantInput$body]}",
             "filename": "/work/models/src/main/smithy/grant.smithy",
             "line": 229,
-            "column": 5
-        },
-        {
-            "id": "IdempotencyTokenIgnored",
-            "severity": "SUPPRESSED",
-            "shapeId": "com.amazon.semanticcontext.unifiedsources#CreateSourceInput$clientToken",
-            "message": "The `idempotencyToken` trait only has an effect when applied to a top-level operation input member, but it was applied and ignored in the following contexts: {member target: [com.amazon.semanticcontext.unifiedsources#CreateSourceOperationInput$body]}",
-            "filename": "/work/models/src/main/smithy/unified-sources.smithy",
-            "line": 1292,
             "column": 5
         },
         {
@@ -967,10 +967,10 @@
         {
             "id": "OperationNameAmbiguity",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.grant#CreatePlatformGrantRequest",
-            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreatePlatformGrant, but that operation uses com.amazon.semanticcontext.grant#CreatePlatformGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
+            "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest",
+            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
             "filename": "/work/models/src/main/smithy/grant.smithy",
-            "line": 207,
+            "line": 98,
             "column": 1
         },
         {
@@ -985,10 +985,10 @@
         {
             "id": "OperationNameAmbiguity",
             "severity": "WARNING",
-            "shapeId": "com.amazon.semanticcontext.grant#CreateGrantRequest",
-            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreateGrant, but that operation uses com.amazon.semanticcontext.grant#CreateGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
+            "shapeId": "com.amazon.semanticcontext.grant#CreatePlatformGrantRequest",
+            "message": "The name of this shape implies that it is the input of com.amazon.semanticcontext.grant#CreatePlatformGrant, but that operation uses com.amazon.semanticcontext.grant#CreatePlatformGrantInput for input. This kind of ambiguity can confuse developers calling this operation and can cause issues in code generators that use similar naming conventions to generate input types.",
             "filename": "/work/models/src/main/smithy/grant.smithy",
-            "line": 98,
+            "line": 207,
             "column": 1
         },
         {
