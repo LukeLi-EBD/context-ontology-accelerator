@@ -171,13 +171,17 @@ def make_canvas(triples, *, whitelist=(PRED,), labels=None, types=None, **config
     return SimpleCanvas(cfg, graph, FakeOntology(), FakeReasoning()), graph, cfg
 
 
-def make_runtime(canvas, cfg, graph, ontology=None, reasoning=None):
+def make_runtime(canvas, cfg, graph, ontology=None, reasoning=None, metadata=None):
+    # create_app() mounts the dictionary routes, which construct
+    # DictionaryPg(runtime.metadata) while the app is built. These canvas tests
+    # never touch those routes, so a stub whose query returns no rows is enough.
     return SimpleNamespace(
         config=cfg,
         graph=graph,
         ontology=ontology or FakeOntology(),
         reasoning=reasoning or FakeReasoning(),
         canvas=canvas,
+        metadata=metadata or SimpleNamespace(query=lambda *args, **kwargs: []),
     )
 
 
