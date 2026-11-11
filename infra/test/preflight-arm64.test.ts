@@ -21,21 +21,100 @@ const SCRIPT = path.join(
   "preflight-deploy.sh",
 );
 
+const IS_WINDOWS = process.platform === "win32";
+
+/**
+ * Which bash is on PATH, if any: "wsl" (Windows, but a Linux kernel),
+ * "posix" (Linux CI, macOS, Git Bash) or null (no usable bash).
+ */
+function bashFlavor(): "wsl" | "posix" | null {
+  try {
+    const kernel = execFileSync("bash", ["-c", "uname -s"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return IS_WINDOWS && kernel === "Linux" ? "wsl" : "posix";
+  } catch {
+    return null;
+  }
+}
+
+const BASH = bashFlavor();
+
+/**
+ * WSL reaches Windows drives through /mnt/<letter>; without this translation
+ * every fixture path is "no such file or directory" inside WSL.
+ */
+function toBashPath(p: string): string {
+  if (BASH !== "wsl") return p;
+  const m = /^([A-Za-z]):[\\/](.*)$/.exec(p);
+  return m ? `/mnt/${m[1].toLowerCase()}/${m[2].replace(/\\/g, "/")}` : p;
+}
+
+// Read once, and normalise line endings: a checkout made with
+// core.autocrlf=true used to reach bash as `function() {\r`, which does not
+// parse. `.gitattributes` now pins *.sh to LF; this keeps stale checkouts green.
+const SCRIPT_SOURCE = fs.readFileSync(SCRIPT, "utf8").replace(/\r\n/g, "\n");
+
+/** The body of a bash function, lifted verbatim from the real script. */
+function bashFunctionSource(fn: string): string {
+  const match = new RegExp(`^${fn}\\(\\)[\\s\\S]*?^\\}`, "m").exec(SCRIPT_SOURCE);
+  if (!match) {
+    throw new Error(`preflight-arm64: ${fn}() not found in ${SCRIPT}`);
+  }
+  return match[0];
+}
+
+/**
+ * WSL's bash.exe drops everything after the `-c` string (arguments, "$@"), so
+ * the function cannot receive a fixture path on its command line. Run it from a
+ * temporary script file instead: argv and stdin then behave as on Linux, where
+ * CI runs this suite.
+ */
+function bashRunsScript(): boolean {
+  if (BASH === null) return false;
+  const probe = path.join(os.tmpdir(), `coa-preflight-probe-${process.pid}.sh`);
+  try {
+    fs.writeFileSync(probe, "#!/usr/bin/env bash\necho ok\n", "utf8");
+    const out = execFileSync("bash", [toBashPath(probe)], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return out.trim() === "ok";
+  } catch {
+    return false;
+  } finally {
+    fs.rmSync(probe, { force: true });
+  }
+}
+
+const BASH_USABLE = bashRunsScript();
+if (!BASH_USABLE) {
+  console.warn(
+    `[preflight-arm64] no usable POSIX bash on PATH${BASH ? ` (${BASH})` : ""}. ` +
+      "Install Git Bash or WSL to run this suite locally; CI runs it on " +
+      "ubuntu-latest.",
+  );
+}
+// Only skip where the suite is not expected to run (a developer Windows box).
+// On Linux a missing bash is a real failure and must stay red.
+const describeBash = BASH_USABLE || !IS_WINDOWS ? describe : describe.skip;
+
+let callSeq = 0;
+
 /** Exit status of a preflight bash function (0 = detected). */
 function callBash(fn: string, args: string[], stdin = ""): number {
+  const program = `#!/usr/bin/env bash\n${bashFunctionSource(fn)}\n${fn} "$@"\n`;
+  const tmp = path.join(
+    os.tmpdir(),
+    `coa-preflight-${process.pid}-${callSeq++}.sh`,
+  );
+  fs.writeFileSync(tmp, program, "utf8");
   try {
-    execFileSync(
-      "bash",
-      [
-        "-c",
-        // eval rather than `source <(...)`: macOS ships bash 3.2, where
-        // sourcing a process substitution does not define the function.
-        `eval "$(sed -n "/^${fn}()/,/^}/p" "$0")"; ${fn} "$@"`,
-        SCRIPT,
-        ...args,
-      ],
-      { input: stdin, stdio: ["pipe", "pipe", "pipe"] },
-    );
+    execFileSync("bash", [toBashPath(tmp), ...args.map(toBashPath)], {
+      input: stdin,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     return 0;
   } catch (e: unknown) {
     // Not `instanceof Error`: child_process errors come from a different realm
@@ -49,10 +128,12 @@ function callBash(fn: string, args: string[], stdin = ""): number {
       return e.status;
     }
     throw e;
+  } finally {
+    fs.rmSync(tmp, { force: true });
   }
 }
 
-describe("_buildx_lists_runnable_arm64", () => {
+describeBash("_buildx_lists_runnable_arm64", () => {
   const header =
     "NAME/NODE       DRIVER/ENDPOINT             STATUS  BUILDKIT    PLATFORMS\n";
 
@@ -87,7 +168,7 @@ describe("_buildx_lists_runnable_arm64", () => {
   });
 });
 
-describe("_arm64_binfmt_registered", () => {
+describeBash("_arm64_binfmt_registered", () => {
   let dir: string;
   beforeEach(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "binfmt-"));

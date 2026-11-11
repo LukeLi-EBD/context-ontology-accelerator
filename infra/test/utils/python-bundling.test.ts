@@ -14,6 +14,35 @@ import {
 } from "../../lib/utils/python-bundling";
 
 /**
+ * The symlink cases exercise `cp` dereferencing a link. Creating a symlink on
+ * Windows needs Developer Mode or SeCreateSymbolicLinkPrivilege; without it
+ * `fs.symlinkSync` throws EPERM before the code under test runs. Probe once and
+ * report the skip, rather than failing a suite for a host capability.
+ */
+function canCreateSymlinks(): boolean {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "coa-symlink-probe-"));
+  try {
+    fs.writeFileSync(path.join(dir, "target"), "x");
+    fs.symlinkSync(path.join(dir, "target"), path.join(dir, "link"));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const symlinksSupported = canCreateSymlinks();
+if (!symlinksSupported) {
+  console.warn(
+    "[python-bundling] skipping symlink cases: this host cannot create symlinks " +
+      "(Windows requires Developer Mode or SeCreateSymbolicLinkPrivilege). " +
+      "CI runs them on ubuntu-latest.",
+  );
+}
+const itSymlink = symlinksSupported ? it : it.skip;
+
+/**
  * The asset hash is what CDK uses to decide whether to re-bundle. Any input that
  * changes the produced bundle but NOT the hash means a stale cached asset is
  * silently reused — the Lambda keeps running old code or old dependencies with no
@@ -95,7 +124,7 @@ describe("bundlePython asset hash", () => {
       expect(_computeSourceHash({ srcDirs: [dir] })).toEqual(before);
     });
 
-    it("tracks a symlinked file's target content", () => {
+    itSymlink("tracks a symlinked file's target content", () => {
       // `cp -r ${d}/*` expands the glob, so a top-level symlink is a command-line
       // argument and cp DEREFERENCES it: the target content ships in the bundle.
       // isFile() is false for symlinks, so that content was previously unhashed.
@@ -110,7 +139,7 @@ describe("bundlePython asset hash", () => {
       expect(_computeSourceHash({ srcDirs: [dir] })).not.toEqual(before);
     });
 
-    it("does not throw on a dangling symlink", () => {
+    itSymlink("does not throw on a dangling symlink", () => {
       const dir = srcDir("a", { "mod.py": "x = 1" });
       fs.symlinkSync(path.join(root, "nope.txt"), path.join(dir, "dead.txt"));
 
@@ -334,6 +363,10 @@ describe("Lambda runtime constraints", () => {
   const CONSTRAINTS = fromRoot(
     "infra/lib/utils/lambda-runtime-constraints.txt",
   );
+  // These commands run in bash (locally) and inside the Docker bundling image,
+  // so the module emits forward slashes even on Windows. Compare against that
+  // form: the native `fromRoot` path uses backslashes there and never matches.
+  const CONSTRAINTS_POSIX = CONSTRAINTS.replace(/\\/g, "/");
   let root: string;
 
   beforeEach(() => {
@@ -360,7 +393,7 @@ describe("Lambda runtime constraints", () => {
         srcDirs: [],
         requirementsFile: "/repo/pkg/requirements.txt",
       }),
-    ).toContain(`--constraint ${CONSTRAINTS}`);
+    ).toContain(`--constraint ${CONSTRAINTS_POSIX}`);
   });
 
   it("passes the constraints to the Docker fallback's pip install", () => {
@@ -371,7 +404,7 @@ describe("Lambda runtime constraints", () => {
         srcDirs: [],
         requirementsFile: "/repo/pkg/requirements.txt",
       }),
-    ).toContain(`-c ${CONSTRAINTS}`);
+    ).toContain(`-c ${CONSTRAINTS_POSIX}`);
   });
 
   it("installs a hash-pinned lock without the range constraints, which hash mode rejects", () => {
@@ -384,8 +417,8 @@ describe("Lambda runtime constraints", () => {
     const pip = bundling._pipInstallCommand(opts);
     expect(uv).toContain("--require-hashes");
     expect(pip).toContain("--require-hashes");
-    expect(uv).not.toContain(CONSTRAINTS);
-    expect(pip).not.toContain(CONSTRAINTS);
+    expect(uv).not.toContain(CONSTRAINTS_POSIX);
+    expect(pip).not.toContain(CONSTRAINTS_POSIX);
   });
 
   it.each([
