@@ -534,14 +534,7 @@ class ImportGateTests(unittest.TestCase):
         self.assertEqual(run_rows[1]["status"], "completed")
         self.assertEqual(int(run_rows[1]["exitCode"]), 0)
 
-    @unittest.expectedFailure
     def test_retry_clears_the_item_degraded_flag(self) -> None:
-        # KNOWN GAP (P1-15, branch p1/degraded-flag @ 5c2fc137): the successful
-        # `_mark(..., "indexed")` still copies the stale `group.degraded` left
-        # by the failed embedding attempt, so the item stays degraded=true even
-        # though its chunks now all have vectors. When that branch lands this
-        # assertion starts passing, unittest turns it into an "unexpected
-        # success" and the gate goes red until the marker is removed.
         self.assertEqual(
             [item["degraded"] for item in self.retry_items], [False, False, False]
         )
