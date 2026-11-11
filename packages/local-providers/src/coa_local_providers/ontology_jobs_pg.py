@@ -23,6 +23,11 @@ Configuration (no default provider — startup fails closed):
 
     COA_PROVIDER_ONTOLOGY_JOBS   postgres | dynamodb   (required)
     COA_CONTROL_PLANE_PG_DSN     PostgreSQL DSN        (required for postgres)
+    COA_ONTOLOGY_PROPOSALS_PG_DSN
+                                 platform-database DSN for the read-only
+                                 proposal view (falls back to
+                                 PLATFORM__DATABASE__URL); a different database
+                                 from COA_CONTROL_PLANE_PG_DSN
     DYNAMODB_TABLE               logical table name    (default ``ontology-engine``)
 
 ``dynamodb`` leaves the upstream AWS implementation untouched.
@@ -68,4 +73,11 @@ def install_ontology_jobs() -> str:
     table = PgTable(dao)
     dynamo_store._get_table = lambda: table  # type: ignore[assignment]
     dynamo_store._get_dao = lambda: dao  # type: ignore[assignment]
+
+    # Proposals are NOT stored in the item table: the platform database is the
+    # single source of truth. Replace the two read seams with a read-only view
+    # over platform.ontology_proposal instead of copying those rows in.
+    from coa_local_providers.ontology_proposals_pg import install_ontology_proposals_readonly
+
+    install_ontology_proposals_readonly()
     return provider

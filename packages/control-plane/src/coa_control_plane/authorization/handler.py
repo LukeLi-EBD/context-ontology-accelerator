@@ -550,6 +550,9 @@ _PATH_MAPPING: dict[str, dict[str, tuple[str, str]]] = {
     "/namespaces/{namespaceId}/ingestion-runs": {
         "GET": ("viewNamespace", "Namespace"),
     },
+    "/namespaces/{namespaceId}/ingestion-runs/{runId}": {
+        "GET": ("viewNamespace", "Namespace"),
+    },
     # ── Metric service ─────────────────────────────────────────────────
     # Reads → readMetric; authoring/writes → manageMetric.
     "/namespaces/{namespaceId}/metrics": {

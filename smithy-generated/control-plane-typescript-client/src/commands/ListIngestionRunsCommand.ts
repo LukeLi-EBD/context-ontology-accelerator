@@ -67,6 +67,36 @@ export interface ListIngestionRunsCommandOutput extends ListIngestionRunsOutput,
  * //       createdAt: new Date("TIMESTAMP"), // required
  * //       updatedAt: new Date("TIMESTAMP"), // required
  * //       finishedAt: new Date("TIMESTAMP"),
+ * //       lastRun: { // IngestionRunAttempt
+ * //         runId: "STRING_VALUE", // required
+ * //         status: "RUNNING" || "COMPLETED" || "INTERRUPTED" || "FAILED", // required
+ * //         startedAt: new Date("TIMESTAMP"), // required
+ * //         finishedAt: new Date("TIMESTAMP"),
+ * //         exitCode: Number("int"),
+ * //         errorCode: "STRING_VALUE",
+ * //         errorMessage: "STRING_VALUE",
+ * //         counters: { // IngestionRunCounters
+ * //           total: Number("long"), // required
+ * //           alreadyDone: Number("long"), // required
+ * //           processed: Number("long"), // required
+ * //           parsed: Number("long"), // required
+ * //           resumedChunked: Number("long"), // required
+ * //           indexed: Number("long"), // required
+ * //           documentsAdded: Number("long"), // required
+ * //           failedThisRun: Number("long"), // required
+ * //           failedTotal: Number("long"), // required
+ * //           remainingFiles: Number("long"), // required
+ * //           interrupted: true || false, // required
+ * //           skipped: { // IngestionRunSkipped
+ * //             hidden: Number("long"), // required
+ * //             unsupported: Number("long"), // required
+ * //             empty: Number("long"), // required
+ * //             tooLarge: Number("long"), // required
+ * //             unreadable: Number("long"), // required
+ * //           },
+ * //           elapsedSeconds: Number("double"), // required
+ * //         },
+ * //       },
  * //     },
  * //   ],
  * //   totalCount: Number("long"), // required
@@ -127,23 +157,23 @@ export interface ListIngestionRunsCommandOutput extends ListIngestionRunsOutput,
  *       message: "unsupported legacy document format",
  *       relPath: "appendix/legacy.docx",
  *       runId: "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c",
- *       updatedAt: 1762819200
+ *       updatedAt: "2025-11-11T00:00:00Z"
  *     }
  *   ],
  *   items: [
  *     {
  *       completed: 120,
- *       createdAt: 1762732800,
+ *       createdAt: "2025-11-10T00:00:00Z",
  *       degraded: 1,
  *       failed: 2,
- *       finishedAt: 1762819200,
+ *       finishedAt: "2025-11-11T00:00:00Z",
  *       indexed: 118,
  *       root: "/data/corpus/handbook",
  *       runId: "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c",
  *       stale: false,
  *       status: "COMPLETED",
  *       total: 120,
- *       updatedAt: 1762819200
+ *       updatedAt: "2025-11-11T00:00:00Z"
  *     }
  *   ],
  *   totalCount: 1

@@ -6,12 +6,14 @@
 // 1) In models/src/main/smithy/control-plane.smithy, add one line to the
 //    `use com.amazon.semanticcontext.common#...` block:
 //
+//        use com.amazon.semanticcontext.ingestion#GetIngestionRun
 //        use com.amazon.semanticcontext.ingestion#ListIngestionRuns
 //
 // 2) In the same file, inside `service ControlPlaneService { operations: [ ... ] }`,
 //    add one line immediately after `ListDocumentChunks`:
 //
 //        ListIngestionRuns
+//        GetIngestionRun
 //
 // Nothing else in control-plane.smithy changes. The operation, its IO shapes,
 // and the enums all live in this file under their own namespace.
@@ -27,6 +29,7 @@ $version: "2"
 
 namespace com.amazon.semanticcontext.ingestion
 
+use com.amazon.semanticcontext.common#NotFoundError
 use com.amazon.semanticcontext.common#PaginatedOutput
 use com.amazon.semanticcontext.common#PaginationToken
 use com.amazon.semanticcontext.common#Uuid
@@ -96,13 +99,16 @@ structure IngestionRun {
 
     /// When the batch row was created.
     @required
+    @timestampFormat("date-time")
     createdAt: Timestamp
 
     /// When the batch row last changed.
     @required
+    @timestampFormat("date-time")
     updatedAt: Timestamp
 
     /// When the batch finished; absent while running.
+    @timestampFormat("date-time")
     finishedAt: Timestamp
 
     /// Most recent invocation of `platform import` for this batch
@@ -214,9 +220,11 @@ structure IngestionRunAttempt {
 
     /// When the invocation opened its ledger row.
     @required
+    @timestampFormat("date-time")
     startedAt: Timestamp
 
     /// When the invocation closed its ledger row; absent while running.
+    @timestampFormat("date-time")
     finishedAt: Timestamp
 
     /// Process exit code reported by the CLI.
@@ -260,6 +268,7 @@ structure IngestionFailure {
 
     /// When the item last changed.
     @required
+    @timestampFormat("date-time")
     updatedAt: Timestamp
 }
 
@@ -290,9 +299,9 @@ list IngestionFailureList {
                     indexed: 118
                     failed: 2
                     degraded: 1
-                    createdAt: 1762732800
-                    updatedAt: 1762819200
-                    finishedAt: 1762819200
+                    createdAt: "2025-11-10T00:00:00Z"
+                    updatedAt: "2025-11-11T00:00:00Z"
+                    finishedAt: "2025-11-11T00:00:00Z"
                 }
             ]
             totalCount: 1
@@ -303,7 +312,7 @@ list IngestionFailureList {
                     attempts: 3
                     code: "E_PARSE_UNSUPPORTED"
                     message: "unsupported legacy document format"
-                    updatedAt: 1762819200
+                    updatedAt: "2025-11-11T00:00:00Z"
                 }
             ]
         }
@@ -350,5 +359,169 @@ operation ListIngestionRuns {
 
     errors: [
         ValidationError
+    ]
+}
+
+/// One discovered file inside an import batch (platform.import_item).
+structure IngestionRunItem {
+    /// Path relative to the batch root.
+    @required
+    relPath: String
+
+    /// Item lifecycle state exactly as stored by the importer
+    /// (pending / parsing / chunked / indexed / failed).
+    @required
+    status: String
+
+    /// Number of processing attempts so far.
+    @required
+    attempts: Integer
+
+    /// Machine-readable failure code; absent unless the item failed.
+    failureCode: String
+
+    /// Human-readable failure message; absent unless the item failed.
+    failureMessage: String
+
+    /// When the item last changed.
+    @required
+    @timestampFormat("date-time")
+    updatedAt: Timestamp
+}
+
+/// Items discovered in one run, ordered by relative path.
+list IngestionRunItemList {
+    /// One discovered file.
+    member: IngestionRunItem
+}
+
+/// One import batch with its latest invocation and its per-item rows.
+structure IngestionRunDetail {
+    /// Stable batch identifier (platform.import_batch.batch_id).
+    @required
+    runId: Uuid
+
+    /// Filesystem root that was imported.
+    @required
+    root: String
+
+    /// Current lifecycle state.
+    @required
+    status: IngestionRunStatus
+
+    /// True when status is STALE.
+    @required
+    stale: Boolean
+
+    /// Machine-readable stale reason; present only when stale is true.
+    staleReason: String
+
+    /// Discovered items in this batch.
+    @required
+    total: Long
+
+    /// Items that reached a terminal state (indexed or failed).
+    @required
+    completed: Long
+
+    /// Items indexed successfully.
+    @required
+    indexed: Long
+
+    /// Items that ended in failure.
+    @required
+    failed: Long
+
+    /// Items indexed with degraded quality (for example missing embeddings).
+    @required
+    degraded: Long
+
+    /// When the batch row was created.
+    @required
+    @timestampFormat("date-time")
+    createdAt: Timestamp
+
+    /// When the batch row last changed.
+    @required
+    @timestampFormat("date-time")
+    updatedAt: Timestamp
+
+    /// When the batch finished; absent while running.
+    @timestampFormat("date-time")
+    finishedAt: Timestamp
+
+    /// Most recent invocation of `platform import` for this batch
+    /// (platform.import_run). Absent for batches imported before the ledger.
+    lastRun: IngestionRunAttempt
+
+    /// Per-file rows of this batch, ordered by relative path (at most 1000).
+    @required
+    items: IngestionRunItemList
+}
+
+/// Read one namespace-scoped ingestion run (F17) with its latest attempt and
+/// its per-item rows.
+@http(method: "GET", uri: "/namespaces/{namespaceId}/ingestion-runs/{runId}")
+@readonly
+@examples([
+    {
+        title: "Read one import batch"
+        input: { namespaceId: "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11", runId: "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c" }
+        output: {
+            run: {
+                runId: "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c"
+                root: "/data/corpus/handbook"
+                status: "COMPLETED"
+                stale: false
+                total: 2
+                completed: 2
+                indexed: 1
+                failed: 1
+                degraded: 0
+                createdAt: "2025-11-10T00:00:00Z"
+                updatedAt: "2025-11-11T00:00:00Z"
+                finishedAt: "2025-11-11T00:00:00Z"
+                items: [
+                    {
+                        relPath: "appendix/legacy.docx"
+                        status: "failed"
+                        attempts: 3
+                        failureCode: "E_PARSE_UNSUPPORTED"
+                        failureMessage: "unsupported legacy document format"
+                        updatedAt: "2025-11-11T00:00:00Z"
+                    }
+                    {
+                        relPath: "chapter-1.md"
+                        status: "indexed"
+                        attempts: 1
+                        updatedAt: "2025-11-11T00:00:00Z"
+                    }
+                ]
+            }
+        }
+    }
+])
+operation GetIngestionRun {
+    input := {
+        /// Namespace that owns the run.
+        @required
+        @httpLabel
+        namespaceId: Uuid
+
+        /// Batch identifier as returned by ListIngestionRuns.runId.
+        @required
+        @httpLabel
+        runId: Uuid
+    }
+
+    output := {
+        /// The run, its latest invocation and its per-item rows.
+        @required
+        run: IngestionRunDetail
+    }
+
+    errors: [
+        ValidationError
+        NotFoundError
     ]
 }

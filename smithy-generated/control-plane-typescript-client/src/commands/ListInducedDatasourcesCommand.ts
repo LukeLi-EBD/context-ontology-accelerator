@@ -9,7 +9,8 @@ import type {
   ServiceOutputTypes,
 } from "../ControlPlaneServiceClient";
 import { commonParams } from "../endpoint/EndpointParameters";
-import type { ListInducedDatasourcesInput, ListInducedDatasourcesOutput } from "../models/models_0";
+import type { ListInducedDatasourcesInput } from "../models/models_0";
+import type { ListInducedDatasourcesOutput } from "../models/models_1";
 import { ListInducedDatasources$ } from "../schemas/schemas_0";
 
 /**

@@ -207,6 +207,11 @@ import {
   GetInferConstraintsJobCommand,
 } from "./commands/GetInferConstraintsJobCommand";
 import {
+  type GetIngestionRunCommandInput,
+  type GetIngestionRunCommandOutput,
+  GetIngestionRunCommand,
+} from "./commands/GetIngestionRunCommand";
+import {
   type GetIngestStatusCommandInput,
   type GetIngestStatusCommandOutput,
   GetIngestStatusCommand,
@@ -753,6 +758,7 @@ const commands = {
   ListNamespaceGrantsCommand,
   ListPlatformGrantsCommand,
   ListPrincipalGrantsCommand,
+  GetIngestionRunCommand,
   ListIngestionRunsCommand,
   BulkDeleteMetricsCommand,
   CreateMetricCommand,
@@ -1530,6 +1536,23 @@ export interface ControlPlaneService {
     args: ListPrincipalGrantsCommandInput,
     options: __HttpHandlerOptions,
     cb: (err: any, data?: ListPrincipalGrantsCommandOutput) => void
+  ): void;
+
+  /**
+   * @see {@link GetIngestionRunCommand}
+   */
+  getIngestionRun(
+    args: GetIngestionRunCommandInput,
+    options?: __HttpHandlerOptions
+  ): Promise<GetIngestionRunCommandOutput>;
+  getIngestionRun(
+    args: GetIngestionRunCommandInput,
+    cb: (err: any, data?: GetIngestionRunCommandOutput) => void
+  ): void;
+  getIngestionRun(
+    args: GetIngestionRunCommandInput,
+    options: __HttpHandlerOptions,
+    cb: (err: any, data?: GetIngestionRunCommandOutput) => void
   ): void;
 
   /**

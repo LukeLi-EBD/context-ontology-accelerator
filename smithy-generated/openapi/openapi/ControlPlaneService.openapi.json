@@ -17967,9 +17967,9 @@
                                                     "indexed": 118,
                                                     "failed": 2,
                                                     "degraded": 1,
-                                                    "createdAt": 1762732800,
-                                                    "updatedAt": 1762819200,
-                                                    "finishedAt": 1762819200
+                                                    "createdAt": "2025-11-10T00:00:00Z",
+                                                    "updatedAt": "2025-11-11T00:00:00Z",
+                                                    "finishedAt": "2025-11-11T00:00:00Z"
                                                 }
                                             ],
                                             "totalCount": 1,
@@ -17980,7 +17980,7 @@
                                                     "attempts": 3,
                                                     "code": "E_PARSE_UNSUPPORTED",
                                                     "message": "unsupported legacy document format",
-                                                    "updatedAt": 1762819200
+                                                    "updatedAt": "2025-11-11T00:00:00Z"
                                                 }
                                             ]
                                         }
@@ -18078,6 +18078,300 @@
                                 "summary": "List one namespace's import batches",
                                 "description": "",
                                 "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Canned response for CORS-preflight requests",
+                        "headers": {
+                            "Access-Control-Allow-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Methods": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Max-Age": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [],
+                "tags": [
+                    "CORS"
+                ],
+                "x-amazon-apigateway-integration": {
+                    "contentHandling": "CONVERT_TO_TEXT",
+                    "requestTemplates": {
+                        "application/json": "{\"statusCode\":200}"
+                    },
+                    "responses": {
+                        "default": {
+                            "responseParameters": {
+                                "method.response.header.Access-Control-Allow-Headers": "'Amz-Sdk-Invocation-Id,Amz-Sdk-Request,Authorization,Content-Type,x-amz-content-sha256,X-Amz-User-Agent,X-Amzn-Trace-Id'",
+                                "method.response.header.Access-Control-Allow-Methods": "'GET'",
+                                "method.response.header.Access-Control-Allow-Origin": "'${CorsOrigin}'",
+                                "method.response.header.Access-Control-Max-Age": "'3600'"
+                            },
+                            "statusCode": "200"
+                        }
+                    },
+                    "type": "mock",
+                    "passthroughBehavior": "when_no_match"
+                }
+            }
+        },
+        "/namespaces/{namespaceId}/ingestion-runs/{runId}": {
+            "get": {
+                "description": "Read one namespace-scoped ingestion run (F17) with its latest attempt and\nits per-item rows.",
+                "operationId": "GetIngestionRun",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace that owns the run.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace that owns the run."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetIngestionRun_example1": {
+                                "summary": "Read one import batch",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "runId",
+                        "in": "path",
+                        "description": "Batch identifier as returned by ListIngestionRuns.runId.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Batch identifier as returned by ListIngestionRuns.runId."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetIngestionRun_example1": {
+                                "summary": "Read one import batch",
+                                "description": "",
+                                "value": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "GetIngestionRun 200 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/GetIngestionRunResponseContent"
+                                },
+                                "examples": {
+                                    "GetIngestionRun_example1": {
+                                        "summary": "Read one import batch",
+                                        "description": "",
+                                        "value": {
+                                            "run": {
+                                                "runId": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c",
+                                                "root": "/data/corpus/handbook",
+                                                "status": "COMPLETED",
+                                                "stale": false,
+                                                "total": 2,
+                                                "completed": 2,
+                                                "indexed": 1,
+                                                "failed": 1,
+                                                "degraded": 0,
+                                                "createdAt": "2025-11-10T00:00:00Z",
+                                                "updatedAt": "2025-11-11T00:00:00Z",
+                                                "finishedAt": "2025-11-11T00:00:00Z",
+                                                "items": [
+                                                    {
+                                                        "relPath": "appendix/legacy.docx",
+                                                        "status": "failed",
+                                                        "attempts": 3,
+                                                        "failureCode": "E_PARSE_UNSUPPORTED",
+                                                        "failureMessage": "unsupported legacy document format",
+                                                        "updatedAt": "2025-11-11T00:00:00Z"
+                                                    },
+                                                    {
+                                                        "relPath": "chapter-1.md",
+                                                        "status": "indexed",
+                                                        "attempts": 1,
+                                                        "updatedAt": "2025-11-11T00:00:00Z"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "ValidationError 400 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NotFoundError 404 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "InternalServerError 500 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InternalServerErrorResponseContent"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "ServiceUnavailableError 503 response",
+                        "headers": {
+                            "Access-Control-Allow-Origin": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "Access-Control-Expose-Headers": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ServiceUnavailableErrorResponseContent"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "options": {
+                "description": "Handles CORS-preflight requests",
+                "operationId": "CorsNamespacesNamespaceidIngestion_runsRunid",
+                "parameters": [
+                    {
+                        "name": "namespaceId",
+                        "in": "path",
+                        "description": "Namespace that owns the run.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Namespace that owns the run."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetIngestionRun_example1": {
+                                "summary": "Read one import batch",
+                                "description": "",
+                                "value": "2f1c3a8e-4b56-4f0a-9c3d-1e7b8a9f0c11"
+                            }
+                        }
+                    },
+                    {
+                        "name": "runId",
+                        "in": "path",
+                        "description": "Batch identifier as returned by ListIngestionRuns.runId.",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 36,
+                            "minLength": 36,
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                            "description": "Batch identifier as returned by ListIngestionRuns.runId."
+                        },
+                        "required": true,
+                        "examples": {
+                            "GetIngestionRun_example1": {
+                                "summary": "Read one import batch",
+                                "description": "",
+                                "value": "9a7c2b40-6d1e-4b9f-8a3c-2f4d5e6a7b8c"
                             }
                         }
                     }
@@ -45361,6 +45655,17 @@
                     "result"
                 ]
             },
+            "GetIngestionRunResponseContent": {
+                "type": "object",
+                "properties": {
+                    "run": {
+                        "$ref": "#/components/schemas/IngestionRunDetail"
+                    }
+                },
+                "required": [
+                    "run"
+                ]
+            },
             "GetMetricCardResponseContent": {
                 "type": "object",
                 "description": "One governed metric definition with bindings and external-evidence status.",
@@ -47489,6 +47794,16 @@
                     "result"
                 ]
             },
+            "IngestionAttemptStatus": {
+                "type": "string",
+                "description": "Final state of one import invocation.",
+                "enum": [
+                    "RUNNING",
+                    "COMPLETED",
+                    "INTERRUPTED",
+                    "FAILED"
+                ]
+            },
             "IngestionFailure": {
                 "type": "object",
                 "description": "One failed item surfaced in the inline failure feed.",
@@ -47517,9 +47832,9 @@
                         "description": "Human-readable failure message, when the importer recorded one."
                     },
                     "updatedAt": {
-                        "type": "number",
+                        "type": "string",
                         "description": "When the item last changed.",
-                        "format": "double"
+                        "format": "date-time"
                     }
                 },
                 "required": [
@@ -47576,19 +47891,22 @@
                         "description": "Items indexed with degraded quality (for example missing embeddings)."
                     },
                     "createdAt": {
-                        "type": "number",
+                        "type": "string",
                         "description": "When the batch row was created.",
-                        "format": "double"
+                        "format": "date-time"
                     },
                     "updatedAt": {
-                        "type": "number",
+                        "type": "string",
                         "description": "When the batch row last changed.",
-                        "format": "double"
+                        "format": "date-time"
                     },
                     "finishedAt": {
-                        "type": "number",
+                        "type": "string",
                         "description": "When the batch finished; absent while running.",
-                        "format": "double"
+                        "format": "date-time"
+                    },
+                    "lastRun": {
+                        "$ref": "#/components/schemas/IngestionRunAttempt"
                     }
                 },
                 "required": [
@@ -47605,11 +47923,287 @@
                     "updatedAt"
                 ]
             },
+            "IngestionRunAttempt": {
+                "type": "object",
+                "description": "One invocation of `platform import` (platform.import_run).",
+                "properties": {
+                    "runId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Invocation identifier (platform.import_run.run_id), not the batch id."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/IngestionAttemptStatus"
+                    },
+                    "startedAt": {
+                        "type": "string",
+                        "description": "When the invocation opened its ledger row.",
+                        "format": "date-time"
+                    },
+                    "finishedAt": {
+                        "type": "string",
+                        "description": "When the invocation closed its ledger row; absent while running.",
+                        "format": "date-time"
+                    },
+                    "exitCode": {
+                        "type": "number",
+                        "description": "Process exit code reported by the CLI."
+                    },
+                    "errorCode": {
+                        "type": "string",
+                        "description": "Machine-readable failure code when status is FAILED."
+                    },
+                    "errorMessage": {
+                        "type": "string",
+                        "description": "Human-readable failure message when status is FAILED."
+                    },
+                    "counters": {
+                        "$ref": "#/components/schemas/IngestionRunCounters"
+                    }
+                },
+                "required": [
+                    "runId",
+                    "startedAt",
+                    "status"
+                ]
+            },
+            "IngestionRunCounters": {
+                "type": "object",
+                "description": "Counters exactly as reported by one invocation.",
+                "properties": {
+                    "total": {
+                        "type": "number",
+                        "description": "Items discovered by this scan."
+                    },
+                    "alreadyDone": {
+                        "type": "number",
+                        "description": "Items that were already embedded before this invocation."
+                    },
+                    "processed": {
+                        "type": "number",
+                        "description": "Items this invocation reached a terminal state for."
+                    },
+                    "parsed": {
+                        "type": "number",
+                        "description": "Items successfully parsed."
+                    },
+                    "resumedChunked": {
+                        "type": "number",
+                        "description": "Items that resumed from a previous chunking step."
+                    },
+                    "indexed": {
+                        "type": "number",
+                        "description": "Items indexed with vectors in the active model partition."
+                    },
+                    "documentsAdded": {
+                        "type": "number",
+                        "description": "Document rows created by this invocation."
+                    },
+                    "failedThisRun": {
+                        "type": "number",
+                        "description": "Items that failed during this invocation."
+                    },
+                    "failedTotal": {
+                        "type": "number",
+                        "description": "Items still marked failed at the end of this invocation."
+                    },
+                    "remainingFiles": {
+                        "type": "number",
+                        "description": "Items left pending, parsing or chunked when the invocation stopped."
+                    },
+                    "interrupted": {
+                        "type": "boolean",
+                        "description": "True when the invocation stopped at a segment boundary and can resume."
+                    },
+                    "skipped": {
+                        "$ref": "#/components/schemas/IngestionRunSkipped"
+                    },
+                    "elapsedSeconds": {
+                        "type": "number",
+                        "description": "Wall-clock duration of the invocation.",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "alreadyDone",
+                    "documentsAdded",
+                    "elapsedSeconds",
+                    "failedThisRun",
+                    "failedTotal",
+                    "indexed",
+                    "interrupted",
+                    "parsed",
+                    "processed",
+                    "remainingFiles",
+                    "resumedChunked",
+                    "skipped",
+                    "total"
+                ]
+            },
+            "IngestionRunDetail": {
+                "type": "object",
+                "description": "One import batch with its latest invocation and its per-item rows.",
+                "properties": {
+                    "runId": {
+                        "type": "string",
+                        "maxLength": 36,
+                        "minLength": 36,
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                        "description": "Stable batch identifier (platform.import_batch.batch_id)."
+                    },
+                    "root": {
+                        "type": "string",
+                        "description": "Filesystem root that was imported."
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/IngestionRunStatus"
+                    },
+                    "stale": {
+                        "type": "boolean",
+                        "description": "True when status is STALE."
+                    },
+                    "staleReason": {
+                        "type": "string",
+                        "description": "Machine-readable stale reason; present only when stale is true."
+                    },
+                    "total": {
+                        "type": "number",
+                        "description": "Discovered items in this batch."
+                    },
+                    "completed": {
+                        "type": "number",
+                        "description": "Items that reached a terminal state (indexed or failed)."
+                    },
+                    "indexed": {
+                        "type": "number",
+                        "description": "Items indexed successfully."
+                    },
+                    "failed": {
+                        "type": "number",
+                        "description": "Items that ended in failure."
+                    },
+                    "degraded": {
+                        "type": "number",
+                        "description": "Items indexed with degraded quality (for example missing embeddings)."
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "description": "When the batch row was created.",
+                        "format": "date-time"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "description": "When the batch row last changed.",
+                        "format": "date-time"
+                    },
+                    "finishedAt": {
+                        "type": "string",
+                        "description": "When the batch finished; absent while running.",
+                        "format": "date-time"
+                    },
+                    "lastRun": {
+                        "$ref": "#/components/schemas/IngestionRunAttempt"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/IngestionRunItem"
+                        },
+                        "description": "Per-file rows of this batch, ordered by relative path (at most 1000)."
+                    }
+                },
+                "required": [
+                    "completed",
+                    "createdAt",
+                    "degraded",
+                    "failed",
+                    "indexed",
+                    "items",
+                    "root",
+                    "runId",
+                    "stale",
+                    "status",
+                    "total",
+                    "updatedAt"
+                ]
+            },
+            "IngestionRunItem": {
+                "type": "object",
+                "description": "One discovered file inside an import batch (platform.import_item).",
+                "properties": {
+                    "relPath": {
+                        "type": "string",
+                        "description": "Path relative to the batch root."
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Item lifecycle state exactly as stored by the importer\n(pending / parsing / chunked / indexed / failed)."
+                    },
+                    "attempts": {
+                        "type": "number",
+                        "description": "Number of processing attempts so far."
+                    },
+                    "failureCode": {
+                        "type": "string",
+                        "description": "Machine-readable failure code; absent unless the item failed."
+                    },
+                    "failureMessage": {
+                        "type": "string",
+                        "description": "Human-readable failure message; absent unless the item failed."
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "description": "When the item last changed.",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "attempts",
+                    "relPath",
+                    "status",
+                    "updatedAt"
+                ]
+            },
             "IngestionRunKind": {
                 "type": "string",
                 "description": "Which ingestion run family to list.",
                 "enum": [
                     "BATCH"
+                ]
+            },
+            "IngestionRunSkipped": {
+                "type": "object",
+                "description": "Scan buckets that never became import items.",
+                "properties": {
+                    "hidden": {
+                        "type": "number",
+                        "description": "Dotfiles and other paths ignored by the scanner."
+                    },
+                    "unsupported": {
+                        "type": "number",
+                        "description": "Files whose extension is outside ALLOWED_EXTENSIONS."
+                    },
+                    "empty": {
+                        "type": "number",
+                        "description": "Zero-byte files."
+                    },
+                    "tooLarge": {
+                        "type": "number",
+                        "description": "Files above documents.max_upload_bytes."
+                    },
+                    "unreadable": {
+                        "type": "number",
+                        "description": "Files that could not be stat'ed or hashed."
+                    }
+                },
+                "required": [
+                    "empty",
+                    "hidden",
+                    "tooLarge",
+                    "unreadable",
+                    "unsupported"
                 ]
             },
             "IngestionRunStatus": {

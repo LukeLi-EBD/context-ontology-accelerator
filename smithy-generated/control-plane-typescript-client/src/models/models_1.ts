@@ -7,6 +7,8 @@ import type {
   ExtractionMode,
   GlueExecutionEngine,
   GroundingMode,
+  InductionJobStatus,
+  InductionSourceType,
   InductionStrategy,
   OntologyExportFormat,
   OntologyImpactChange,
@@ -42,8 +44,286 @@ import type {
   OntologyClassRef,
   OntologyPointer,
   OntologyPropertyRef,
-  ProposalSummary,
+  ProposalMetadata,
 } from "./models_0";
+
+/**
+ * Summary of an inducted data source.
+ * @public
+ */
+export interface InducedDatasource {
+  /**
+   * Data source identifier reference.
+   * @public
+   */
+  datasourceId: string | undefined;
+
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  proposalId?: string | undefined;
+
+  /**
+   * Ontology ID produced for this data source.
+   * @public
+   */
+  ontologyId?: string | undefined;
+
+  /**
+   * Human-readable label for the induction run.
+   * @public
+   */
+  label?: string | undefined;
+
+  /**
+   * Number of tables processed during induction.
+   * @public
+   */
+  tablesProcessed?: number | undefined;
+
+  /**
+   * Number of columns processed during induction.
+   * @public
+   */
+  columnsProcessed?: number | undefined;
+
+  /**
+   * Number of novel classes created (not grounded to existing concepts).
+   * @public
+   */
+  novelClassesCreated?: number | undefined;
+}
+
+/**
+ * Standard pagination output
+ * @public
+ */
+export interface ListInducedDatasourcesOutput {
+  /**
+   * Opaque token for fetching the next page; absent when there are no more results.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Data sources that have been successfully inducted.
+   * @public
+   */
+  datasources: InducedDatasource[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListInductionJobsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Filter by job status. Also accepts `ingested` (the job's proposal
+   * was accepted) and `cancelled`, which the service stores but this
+   * enum does not list. Any other value returns 400 listing the allowed
+   * values.
+   * @public
+   */
+  status?: InductionJobStatus | undefined;
+
+  /**
+   * Pagination token from a previous response.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Maximum number of jobs to return in one page (default 50).
+   * @public
+   */
+  maxResults?: number | undefined;
+}
+
+/**
+ * Summary of an induction job (for list views).
+ * @public
+ */
+export interface InductionJobSummary {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  jobId: string | undefined;
+
+  /**
+   * Induction job status.
+   *
+   * The first group of stages (PENDING through FAILED) covers the structured
+   * induction pipeline (induce_catalog). The second group covers the
+   * unstructured induction pipeline stage progression
+   * (querying_neptune → sampling → generating_descriptions → resolving_iris →
+   * applying_rules → entailment → serializing → storing → completed | failed).
+   * @public
+   */
+  status: InductionJobStatus | undefined;
+
+  /**
+   * Timestamp when the induction job was created.
+   * @public
+   */
+  createdAt: Date | undefined;
+
+  /**
+   * Origin of this induction run — STRUCTURED for table-to-ontology runs,
+   * UNSTRUCTURED for knowledge-graph-to-ontology runs. Items lacking this
+   * attribute on read SHALL be treated as STRUCTURED for backward compatibility.
+   * @public
+   */
+  sourceType?: InductionSourceType | undefined;
+
+  /**
+   * Number of tables processed (populated after completion).
+   * @public
+   */
+  tablesProcessed?: number | undefined;
+
+  /**
+   * Number of novel classes created.
+   * @public
+   */
+  novelClassesCreated?: number | undefined;
+
+  /**
+   * Error message if failed.
+   * @public
+   */
+  error?: string | undefined;
+}
+
+/**
+ * Standard pagination output
+ * @public
+ */
+export interface ListInductionJobsOutput {
+  /**
+   * Opaque token for fetching the next page; absent when there are no more results.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Induction jobs matching the query.
+   * @public
+   */
+  jobs: InductionJobSummary[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface ListProposalsInput {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Filter by proposal status.
+   * @public
+   */
+  status?: ProposalStatus | undefined;
+
+  /**
+   * Filter by target ontology ID. The server also accepts the legacy
+   * spelling `ontology_id`; this one wins when both are sent.
+   * @public
+   */
+  ontologyId?: string | undefined;
+
+  /**
+   * Filter by induction origin. `STRUCTURED` also matches proposals
+   * recorded before the attribute existed.
+   * @public
+   */
+  sourceType?: InductionSourceType | undefined;
+
+  /**
+   * Filter by proposal type (e.g. `induction`), exact match.
+   * @public
+   */
+  proposalType?: string | undefined;
+
+  /**
+   * Pagination token from a previous response.
+   * @public
+   */
+  nextToken?: string | undefined;
+
+  /**
+   * Maximum number of proposals to return in one page (default 50). The
+   * server also accepts the legacy spelling `limit`; this one wins.
+   * @public
+   */
+  maxResults?: number | undefined;
+}
+
+/**
+ * Summary of a proposal (for list views).
+ * @public
+ */
+export interface ProposalSummary {
+  /**
+   * UUID v4 identifier.
+   * @public
+   */
+  proposalId: string | undefined;
+
+  /**
+   * Proposal status.
+   *
+   * ``inducing`` is the FIRST in-flight state: the induction was triggered and
+   * a background worker is building the ontology. A stub proposal row is written
+   * at trigger time (so the run is visible in the proposals list immediately and
+   * survives a browser refresh); the same row is upserted to ``pending`` when the
+   * worker finishes, or to ``failed`` if it errors. Clients poll ``ListProposals``
+   * to observe the transition.
+   *
+   * ``accepting`` is a later in-flight state: the user submitted ``AcceptProposal``
+   * and a background worker is merging the ontology. It is followed by
+   * ``embeddingsSync`` while the just-written embeddings become searchable in the
+   * (eventually-consistent) vector index. The status then flips to ``accepted``
+   * on success, or to ``acceptFailed`` with ``acceptError`` naming the pipeline
+   * step that failed. An ``acceptFailed`` proposal is re-acceptable — the accept
+   * pipeline is idempotent on re-run — so the client may submit
+   * ``AcceptProposal`` again once the cause is resolved. Clients poll
+   * ``GetProposal`` to observe the transitions.
+   * @public
+   */
+  status: ProposalStatus | undefined;
+
+  /**
+   * Ontology ID this proposal targets.
+   * @public
+   */
+  ontologyId: string | undefined;
+
+  /**
+   * Origin of this proposal — STRUCTURED for table-to-ontology induction,
+   * UNSTRUCTURED for knowledge-graph-to-ontology induction. Items lacking
+   * this attribute on read SHALL be treated as STRUCTURED for backward
+   * compatibility.
+   * @public
+   */
+  sourceType?: InductionSourceType | undefined;
+
+  /**
+   * Proposal metadata.
+   * @public
+   */
+  metadata?: ProposalMetadata | undefined;
+}
 
 /**
  * Standard pagination output

@@ -47,6 +47,7 @@ use com.amazon.semanticcontext.grant#DeletePlatformGrant
 use com.amazon.semanticcontext.grant#ListNamespaceGrants
 use com.amazon.semanticcontext.grant#ListPlatformGrants
 use com.amazon.semanticcontext.grant#ListPrincipalGrants
+use com.amazon.semanticcontext.ingestion#GetIngestionRun
 use com.amazon.semanticcontext.ingestion#ListIngestionRuns
 use com.amazon.semanticcontext.metric#BulkDeleteMetrics
 use com.amazon.semanticcontext.metric#CreateMetric
@@ -240,6 +241,7 @@ service ControlPlaneService {
         ListDocuments
         ListDocumentChunks
         ListIngestionRuns
+        GetIngestionRun
         ListAnswerQualityRuns
         // ── Fact candidates (extraction review) ─────────────────────────
         ListFactCandidates

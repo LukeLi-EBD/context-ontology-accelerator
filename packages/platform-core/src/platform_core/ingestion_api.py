@@ -1,4 +1,4 @@
-"""Contract-shaped route for P8 ingestion runs (F17/F18).
+"""Contract-shaped routes for P8 ingestion runs (F17/F18).
 
 Lives outside ``api.py`` so the P8 branch adds one registration line and one
 router module, mirroring how P4 mounted ``term_api`` / ``dictionary_api``.
@@ -10,11 +10,11 @@ from typing import Any
 
 from fastapi import FastAPI, Query
 
-from .importer import ingestion_runs
+from .importer import get_ingestion_run, ingestion_runs
 
 
 def register_ingestion_routes(app: FastAPI, runtime: Any) -> None:
-    """Mount ``GET /namespaces/{namespaceId}/ingestion-runs`` on the app."""
+    """Mount the readonly ingestion-run routes on the app."""
 
     @app.get("/namespaces/{namespace_id}/ingestion-runs")
     def list_ingestion_runs(
@@ -32,3 +32,7 @@ def register_ingestion_routes(app: FastAPI, runtime: Any) -> None:
             max_results=max_results,
             next_token=next_token,
         )
+
+    @app.get("/namespaces/{namespace_id}/ingestion-runs/{run_id}")
+    def read_ingestion_run(namespace_id: str, run_id: str) -> dict[str, Any]:
+        return {"run": get_ingestion_run(runtime, namespace_id, run_id)}

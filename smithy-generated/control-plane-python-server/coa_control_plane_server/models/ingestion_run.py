@@ -17,9 +17,11 @@ import pprint
 import re  # noqa: F401
 import json
 
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional, Union
 from typing_extensions import Annotated
+from coa_control_plane_server.models.ingestion_run_attempt import IngestionRunAttempt
 from coa_control_plane_server.models.ingestion_run_status import IngestionRunStatus
 from typing import Optional, Set
 from typing_extensions import Self
@@ -38,10 +40,11 @@ class IngestionRun(BaseModel):
     indexed: Union[StrictFloat, StrictInt] = Field(description="Items indexed successfully.")
     failed: Union[StrictFloat, StrictInt] = Field(description="Items that ended in failure.")
     degraded: Union[StrictFloat, StrictInt] = Field(description="Items indexed with degraded quality (for example missing embeddings).")
-    created_at: Union[StrictFloat, StrictInt] = Field(description="When the batch row was created.", alias="createdAt")
-    updated_at: Union[StrictFloat, StrictInt] = Field(description="When the batch row last changed.", alias="updatedAt")
-    finished_at: Optional[Union[StrictFloat, StrictInt]] = Field(default=None, description="When the batch finished; absent while running.", alias="finishedAt")
-    __properties: ClassVar[List[str]] = ["runId", "root", "status", "stale", "staleReason", "total", "completed", "indexed", "failed", "degraded", "createdAt", "updatedAt", "finishedAt"]
+    created_at: datetime = Field(description="When the batch row was created.", alias="createdAt")
+    updated_at: datetime = Field(description="When the batch row last changed.", alias="updatedAt")
+    finished_at: Optional[datetime] = Field(default=None, description="When the batch finished; absent while running.", alias="finishedAt")
+    last_run: Optional[IngestionRunAttempt] = Field(default=None, alias="lastRun")
+    __properties: ClassVar[List[str]] = ["runId", "root", "status", "stale", "staleReason", "total", "completed", "indexed", "failed", "degraded", "createdAt", "updatedAt", "finishedAt", "lastRun"]
 
     @field_validator('run_id')
     def run_id_validate_regular_expression(cls, value):
@@ -89,6 +92,9 @@ class IngestionRun(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of last_run
+        if self.last_run:
+            _dict['lastRun'] = self.last_run.to_dict()
         return _dict
 
     @classmethod
@@ -113,7 +119,8 @@ class IngestionRun(BaseModel):
             "degraded": obj.get("degraded"),
             "createdAt": obj.get("createdAt"),
             "updatedAt": obj.get("updatedAt"),
-            "finishedAt": obj.get("finishedAt")
+            "finishedAt": obj.get("finishedAt"),
+            "lastRun": IngestionRunAttempt.from_dict(obj["lastRun"]) if obj.get("lastRun") is not None else None
         })
         return _obj
 

@@ -16,6 +16,7 @@ import type {
   IncludeMode,
   InductionJobStatus,
   InductionSourceType,
+  IngestionAttemptStatus,
   IngestionRunKind,
   IngestionRunStatus,
   IngestJobState,
@@ -4682,6 +4683,348 @@ export interface ListPrincipalGrantsOutput {
 /**
  * @public
  */
+export interface GetIngestionRunInput {
+  /**
+   * Namespace that owns the run.
+   * @public
+   */
+  namespaceId: string | undefined;
+
+  /**
+   * Batch identifier as returned by ListIngestionRuns.runId.
+   * @public
+   */
+  runId: string | undefined;
+}
+
+/**
+ * One discovered file inside an import batch (platform.import_item).
+ * @public
+ */
+export interface IngestionRunItem {
+  /**
+   * Path relative to the batch root.
+   * @public
+   */
+  relPath: string | undefined;
+
+  /**
+   * Item lifecycle state exactly as stored by the importer
+   * (pending / parsing / chunked / indexed / failed).
+   * @public
+   */
+  status: string | undefined;
+
+  /**
+   * Number of processing attempts so far.
+   * @public
+   */
+  attempts: number | undefined;
+
+  /**
+   * Machine-readable failure code; absent unless the item failed.
+   * @public
+   */
+  failureCode?: string | undefined;
+
+  /**
+   * Human-readable failure message; absent unless the item failed.
+   * @public
+   */
+  failureMessage?: string | undefined;
+
+  /**
+   * When the item last changed.
+   * @public
+   */
+  updatedAt: Date | undefined;
+}
+
+/**
+ * Scan buckets that never became import items.
+ * @public
+ */
+export interface IngestionRunSkipped {
+  /**
+   * Dotfiles and other paths ignored by the scanner.
+   * @public
+   */
+  hidden: number | undefined;
+
+  /**
+   * Files whose extension is outside ALLOWED_EXTENSIONS.
+   * @public
+   */
+  unsupported: number | undefined;
+
+  /**
+   * Zero-byte files.
+   * @public
+   */
+  empty: number | undefined;
+
+  /**
+   * Files above documents.max_upload_bytes.
+   * @public
+   */
+  tooLarge: number | undefined;
+
+  /**
+   * Files that could not be stat'ed or hashed.
+   * @public
+   */
+  unreadable: number | undefined;
+}
+
+/**
+ * Counters exactly as reported by one invocation.
+ * @public
+ */
+export interface IngestionRunCounters {
+  /**
+   * Items discovered by this scan.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Items that were already embedded before this invocation.
+   * @public
+   */
+  alreadyDone: number | undefined;
+
+  /**
+   * Items this invocation reached a terminal state for.
+   * @public
+   */
+  processed: number | undefined;
+
+  /**
+   * Items successfully parsed.
+   * @public
+   */
+  parsed: number | undefined;
+
+  /**
+   * Items that resumed from a previous chunking step.
+   * @public
+   */
+  resumedChunked: number | undefined;
+
+  /**
+   * Items indexed with vectors in the active model partition.
+   * @public
+   */
+  indexed: number | undefined;
+
+  /**
+   * Document rows created by this invocation.
+   * @public
+   */
+  documentsAdded: number | undefined;
+
+  /**
+   * Items that failed during this invocation.
+   * @public
+   */
+  failedThisRun: number | undefined;
+
+  /**
+   * Items still marked failed at the end of this invocation.
+   * @public
+   */
+  failedTotal: number | undefined;
+
+  /**
+   * Items left pending, parsing or chunked when the invocation stopped.
+   * @public
+   */
+  remainingFiles: number | undefined;
+
+  /**
+   * True when the invocation stopped at a segment boundary and can resume.
+   * @public
+   */
+  interrupted: boolean | undefined;
+
+  /**
+   * Scan buckets that never became items.
+   * @public
+   */
+  skipped: IngestionRunSkipped | undefined;
+
+  /**
+   * Wall-clock duration of the invocation.
+   * @public
+   */
+  elapsedSeconds: number | undefined;
+}
+
+/**
+ * One invocation of `platform import` (platform.import_run).
+ * @public
+ */
+export interface IngestionRunAttempt {
+  /**
+   * Invocation identifier (platform.import_run.run_id), not the batch id.
+   * @public
+   */
+  runId: string | undefined;
+
+  /**
+   * Final state of one import invocation.
+   * @public
+   */
+  status: IngestionAttemptStatus | undefined;
+
+  /**
+   * When the invocation opened its ledger row.
+   * @public
+   */
+  startedAt: Date | undefined;
+
+  /**
+   * When the invocation closed its ledger row; absent while running.
+   * @public
+   */
+  finishedAt?: Date | undefined;
+
+  /**
+   * Process exit code reported by the CLI.
+   * @public
+   */
+  exitCode?: number | undefined;
+
+  /**
+   * Machine-readable failure code when status is FAILED.
+   * @public
+   */
+  errorCode?: string | undefined;
+
+  /**
+   * Human-readable failure message when status is FAILED.
+   * @public
+   */
+  errorMessage?: string | undefined;
+
+  /**
+   * Counters are absent when the invocation failed before counting.
+   * @public
+   */
+  counters?: IngestionRunCounters | undefined;
+}
+
+/**
+ * One import batch with its latest invocation and its per-item rows.
+ * @public
+ */
+export interface IngestionRunDetail {
+  /**
+   * Stable batch identifier (platform.import_batch.batch_id).
+   * @public
+   */
+  runId: string | undefined;
+
+  /**
+   * Filesystem root that was imported.
+   * @public
+   */
+  root: string | undefined;
+
+  /**
+   * Current lifecycle state.
+   * @public
+   */
+  status: IngestionRunStatus | undefined;
+
+  /**
+   * True when status is STALE.
+   * @public
+   */
+  stale: boolean | undefined;
+
+  /**
+   * Machine-readable stale reason; present only when stale is true.
+   * @public
+   */
+  staleReason?: string | undefined;
+
+  /**
+   * Discovered items in this batch.
+   * @public
+   */
+  total: number | undefined;
+
+  /**
+   * Items that reached a terminal state (indexed or failed).
+   * @public
+   */
+  completed: number | undefined;
+
+  /**
+   * Items indexed successfully.
+   * @public
+   */
+  indexed: number | undefined;
+
+  /**
+   * Items that ended in failure.
+   * @public
+   */
+  failed: number | undefined;
+
+  /**
+   * Items indexed with degraded quality (for example missing embeddings).
+   * @public
+   */
+  degraded: number | undefined;
+
+  /**
+   * When the batch row was created.
+   * @public
+   */
+  createdAt: Date | undefined;
+
+  /**
+   * When the batch row last changed.
+   * @public
+   */
+  updatedAt: Date | undefined;
+
+  /**
+   * When the batch finished; absent while running.
+   * @public
+   */
+  finishedAt?: Date | undefined;
+
+  /**
+   * Most recent invocation of `platform import` for this batch
+   * (platform.import_run). Absent for batches imported before the ledger.
+   * @public
+   */
+  lastRun?: IngestionRunAttempt | undefined;
+
+  /**
+   * Per-file rows of this batch, ordered by relative path (at most 1000).
+   * @public
+   */
+  items: IngestionRunItem[] | undefined;
+}
+
+/**
+ * @public
+ */
+export interface GetIngestionRunOutput {
+  /**
+   * The run, its latest invocation and its per-item rows.
+   * @public
+   */
+  run: IngestionRunDetail | undefined;
+}
+
+/**
+ * @public
+ */
 export interface ListIngestionRunsInput {
   /**
    * Namespace whose runs are listed.
@@ -4838,6 +5181,13 @@ export interface IngestionRun {
    * @public
    */
   finishedAt?: Date | undefined;
+
+  /**
+   * Most recent invocation of `platform import` for this batch
+   * (platform.import_run). Absent for batches imported before the ledger.
+   * @public
+   */
+  lastRun?: IngestionRunAttempt | undefined;
 }
 
 /**
@@ -10670,282 +11020,4 @@ export interface ListInducedDatasourcesInput {
    * @public
    */
   maxResults?: number | undefined;
-}
-
-/**
- * Summary of an inducted data source.
- * @public
- */
-export interface InducedDatasource {
-  /**
-   * Data source identifier reference.
-   * @public
-   */
-  datasourceId: string | undefined;
-
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  proposalId?: string | undefined;
-
-  /**
-   * Ontology ID produced for this data source.
-   * @public
-   */
-  ontologyId?: string | undefined;
-
-  /**
-   * Human-readable label for the induction run.
-   * @public
-   */
-  label?: string | undefined;
-
-  /**
-   * Number of tables processed during induction.
-   * @public
-   */
-  tablesProcessed?: number | undefined;
-
-  /**
-   * Number of columns processed during induction.
-   * @public
-   */
-  columnsProcessed?: number | undefined;
-
-  /**
-   * Number of novel classes created (not grounded to existing concepts).
-   * @public
-   */
-  novelClassesCreated?: number | undefined;
-}
-
-/**
- * Standard pagination output
- * @public
- */
-export interface ListInducedDatasourcesOutput {
-  /**
-   * Opaque token for fetching the next page; absent when there are no more results.
-   * @public
-   */
-  nextToken?: string | undefined;
-
-  /**
-   * Data sources that have been successfully inducted.
-   * @public
-   */
-  datasources: InducedDatasource[] | undefined;
-}
-
-/**
- * @public
- */
-export interface ListInductionJobsInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Filter by job status. Also accepts `ingested` (the job's proposal
-   * was accepted) and `cancelled`, which the service stores but this
-   * enum does not list. Any other value returns 400 listing the allowed
-   * values.
-   * @public
-   */
-  status?: InductionJobStatus | undefined;
-
-  /**
-   * Pagination token from a previous response.
-   * @public
-   */
-  nextToken?: string | undefined;
-
-  /**
-   * Maximum number of jobs to return in one page (default 50).
-   * @public
-   */
-  maxResults?: number | undefined;
-}
-
-/**
- * Summary of an induction job (for list views).
- * @public
- */
-export interface InductionJobSummary {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  jobId: string | undefined;
-
-  /**
-   * Induction job status.
-   *
-   * The first group of stages (PENDING through FAILED) covers the structured
-   * induction pipeline (induce_catalog). The second group covers the
-   * unstructured induction pipeline stage progression
-   * (querying_neptune → sampling → generating_descriptions → resolving_iris →
-   * applying_rules → entailment → serializing → storing → completed | failed).
-   * @public
-   */
-  status: InductionJobStatus | undefined;
-
-  /**
-   * Timestamp when the induction job was created.
-   * @public
-   */
-  createdAt: Date | undefined;
-
-  /**
-   * Origin of this induction run — STRUCTURED for table-to-ontology runs,
-   * UNSTRUCTURED for knowledge-graph-to-ontology runs. Items lacking this
-   * attribute on read SHALL be treated as STRUCTURED for backward compatibility.
-   * @public
-   */
-  sourceType?: InductionSourceType | undefined;
-
-  /**
-   * Number of tables processed (populated after completion).
-   * @public
-   */
-  tablesProcessed?: number | undefined;
-
-  /**
-   * Number of novel classes created.
-   * @public
-   */
-  novelClassesCreated?: number | undefined;
-
-  /**
-   * Error message if failed.
-   * @public
-   */
-  error?: string | undefined;
-}
-
-/**
- * Standard pagination output
- * @public
- */
-export interface ListInductionJobsOutput {
-  /**
-   * Opaque token for fetching the next page; absent when there are no more results.
-   * @public
-   */
-  nextToken?: string | undefined;
-
-  /**
-   * Induction jobs matching the query.
-   * @public
-   */
-  jobs: InductionJobSummary[] | undefined;
-}
-
-/**
- * @public
- */
-export interface ListProposalsInput {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  namespaceId: string | undefined;
-
-  /**
-   * Filter by proposal status.
-   * @public
-   */
-  status?: ProposalStatus | undefined;
-
-  /**
-   * Filter by target ontology ID. The server also accepts the legacy
-   * spelling `ontology_id`; this one wins when both are sent.
-   * @public
-   */
-  ontologyId?: string | undefined;
-
-  /**
-   * Filter by induction origin. `STRUCTURED` also matches proposals
-   * recorded before the attribute existed.
-   * @public
-   */
-  sourceType?: InductionSourceType | undefined;
-
-  /**
-   * Filter by proposal type (e.g. `induction`), exact match.
-   * @public
-   */
-  proposalType?: string | undefined;
-
-  /**
-   * Pagination token from a previous response.
-   * @public
-   */
-  nextToken?: string | undefined;
-
-  /**
-   * Maximum number of proposals to return in one page (default 50). The
-   * server also accepts the legacy spelling `limit`; this one wins.
-   * @public
-   */
-  maxResults?: number | undefined;
-}
-
-/**
- * Summary of a proposal (for list views).
- * @public
- */
-export interface ProposalSummary {
-  /**
-   * UUID v4 identifier.
-   * @public
-   */
-  proposalId: string | undefined;
-
-  /**
-   * Proposal status.
-   *
-   * ``inducing`` is the FIRST in-flight state: the induction was triggered and
-   * a background worker is building the ontology. A stub proposal row is written
-   * at trigger time (so the run is visible in the proposals list immediately and
-   * survives a browser refresh); the same row is upserted to ``pending`` when the
-   * worker finishes, or to ``failed`` if it errors. Clients poll ``ListProposals``
-   * to observe the transition.
-   *
-   * ``accepting`` is a later in-flight state: the user submitted ``AcceptProposal``
-   * and a background worker is merging the ontology. It is followed by
-   * ``embeddingsSync`` while the just-written embeddings become searchable in the
-   * (eventually-consistent) vector index. The status then flips to ``accepted``
-   * on success, or to ``acceptFailed`` with ``acceptError`` naming the pipeline
-   * step that failed. An ``acceptFailed`` proposal is re-acceptable — the accept
-   * pipeline is idempotent on re-run — so the client may submit
-   * ``AcceptProposal`` again once the cause is resolved. Clients poll
-   * ``GetProposal`` to observe the transitions.
-   * @public
-   */
-  status: ProposalStatus | undefined;
-
-  /**
-   * Ontology ID this proposal targets.
-   * @public
-   */
-  ontologyId: string | undefined;
-
-  /**
-   * Origin of this proposal — STRUCTURED for table-to-ontology induction,
-   * UNSTRUCTURED for knowledge-graph-to-ontology induction. Items lacking
-   * this attribute on read SHALL be treated as STRUCTURED for backward
-   * compatibility.
-   * @public
-   */
-  sourceType?: InductionSourceType | undefined;
-
-  /**
-   * Proposal metadata.
-   * @public
-   */
-  metadata?: ProposalMetadata | undefined;
 }

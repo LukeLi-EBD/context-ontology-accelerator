@@ -17,6 +17,7 @@ import pprint
 import re  # noqa: F401
 import json
 
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, StrictStr, field_validator
 from typing import Any, ClassVar, Dict, List, Optional, Union
 from typing_extensions import Annotated
@@ -32,7 +33,7 @@ class IngestionFailure(BaseModel):
     attempts: Union[StrictFloat, StrictInt] = Field(description="Number of processing attempts so far.")
     code: Optional[StrictStr] = Field(default=None, description="Machine-readable failure code, when the importer recorded one.")
     message: Optional[StrictStr] = Field(default=None, description="Human-readable failure message, when the importer recorded one.")
-    updated_at: Union[StrictFloat, StrictInt] = Field(description="When the item last changed.", alias="updatedAt")
+    updated_at: datetime = Field(description="When the item last changed.", alias="updatedAt")
     __properties: ClassVar[List[str]] = ["runId", "relPath", "attempts", "code", "message", "updatedAt"]
 
     @field_validator('run_id')

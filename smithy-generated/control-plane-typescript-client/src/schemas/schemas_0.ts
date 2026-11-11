@@ -247,6 +247,9 @@ const _GIJI = "GetImportJobInput";
 const _GIJIe = "GetInductionJobInput";
 const _GIJO = "GetInductionJobOutput";
 const _GIJe = "GetInductionJob";
+const _GIR = "GetIngestionRun";
+const _GIRI = "GetIngestionRunInput";
+const _GIRO = "GetIngestionRunOutput";
 const _GIS = "GetIngestStatus";
 const _GISI = "GetIngestStatusInput";
 const _GISO = "GetIngestStatusOutput";
@@ -362,7 +365,13 @@ const _IOIm = "ImportOntologyInput";
 const _IOO = "ImportOsiOutput";
 const _IOm = "ImportOntology";
 const _IR = "IngestionRun";
+const _IRA = "IngestionRunAttempt";
+const _IRC = "IngestionRunCounters";
+const _IRD = "IngestionRunDetail";
+const _IRI = "IngestionRunItem";
+const _IRIL = "IngestionRunItemList";
 const _IRL = "IngestionRunList";
+const _IRS = "IngestionRunSkipped";
 const _IRn = "InductionReport";
 const _ISE = "InternalServerError";
 const _JC = "JdbcConfiguration";
@@ -754,6 +763,7 @@ const _aCcc = "acceptedConflict";
 const _aCd = "addedClasses";
 const _aCi = "aiContext";
 const _aCx = "axiomCount";
+const _aD = "alreadyDone";
 const _aDCN = "athenaDataCatalogName";
 const _aE = "acceptError";
 const _aEn = "analysisError";
@@ -922,12 +932,14 @@ const _cons = "consistency";
 const _cont = "content";
 const _cou = "counts";
 const _coun = "count";
+const _count = "counters";
 const _cov = "coverage";
 const _cove = "covered";
 const _ct = "custom_turtle";
 const _cu = "current";
 const _d = "dynamodb";
-const _dA = "deleteAll";
+const _dA = "documentsAdded";
+const _dAe = "deleteAll";
 const _dB = "definedBy";
 const _dC = "definedColumns";
 const _dCa = "databricksCatalog";
@@ -1001,8 +1013,10 @@ const _eBv = "evidenceBasis";
 const _eC = "entityColumn";
 const _eCd = "edgeCount";
 const _eCm = "embeddingCount";
-const _eCx = "externalCandidates";
-const _eCxt = "extractionConfig";
+const _eCr = "errorCode";
+const _eCx = "exitCode";
+const _eCxt = "externalCandidates";
+const _eCxtr = "extractionConfig";
 const _eD = "effectiveDate";
 const _eE = "externalEligible";
 const _eEx = "executionEngine";
@@ -1025,11 +1039,11 @@ const _eRv = "eventRescan";
 const _eRx = "externalReason";
 const _eRxe = "executionReason";
 const _eRxp = "expectRefused";
-const _eS = "evidenceSource";
+const _eS = "elapsedSeconds";
 const _eSR = "externalScopeRule";
-const _eSl = "elapsedSeconds";
 const _eSn = "enrichmentSource";
-const _eSv = "evidenceStatus";
+const _eSv = "evidenceSource";
+const _eSvi = "evidenceStatus";
 const _eSx = "externalStatus";
 const _eT = "entityType";
 const _eTE = "enableTableExtraction";
@@ -1065,6 +1079,7 @@ const _exp = "exported";
 const _f = "filename";
 const _fA = "finishedAt";
 const _fB = "fieldBindings";
+const _fC = "failureCode";
 const _fD = "formulaDisabled";
 const _fE = "formulaExpr";
 const _fEi = "filesErrored";
@@ -1074,12 +1089,15 @@ const _fIa = "factIds";
 const _fIam = "familyId";
 const _fK = "foreignKeys";
 const _fLE = "firstLlmError";
+const _fM = "failureMessage";
 const _fO = "factOverrides";
 const _fS = "failedStep";
 const _fSi = "filterSql";
 const _fSil = "filesSkipped";
 const _fT = "factTable";
-const _fTa = "failedTables";
+const _fTR = "failedThisRun";
+const _fTa = "failedTotal";
+const _fTai = "failedTables";
 const _fTi = "filesTotal";
 const _fTo = "formulaText";
 const _fW = "filterWarnings";
@@ -1141,6 +1159,7 @@ const _hSR = "hasSourceRef";
 const _hT = "howTo";
 const _ha = "hash";
 const _hi = "history";
+const _hid = "hidden";
 const _hit = "hits";
 const _ho = "hops";
 const _hos = "host";
@@ -1189,6 +1208,7 @@ const _infe = "inference";
 const _inp = "inputs";
 const _ins = "instructions";
 const _inst = "instances";
+const _int = "interrupted";
 const _it = "items";
 const _j = "judge";
 const _jC = "jdbcConfiguration";
@@ -1362,6 +1382,7 @@ const _pVI = "previousVersionId";
 const _p_ = "p";
 const _pa = "parents";
 const _pag = "page";
+const _par = "parsed";
 const _pas = "passed";
 const _pass = "pass";
 const _pat = "path";
@@ -1405,13 +1426,15 @@ const _rBT = "refusalsByType";
 const _rBe = "resolvedBy";
 const _rBej = "rejectedBy";
 const _rBep = "replacedBoilerplate";
-const _rC = "removedClasses";
+const _rC = "resumedChunked";
 const _rCI = "removedClassInstances";
 const _rCa = "rangeChanges";
-const _rCe = "repairedCount";
+const _rCe = "removedClasses";
 const _rCea = "reasonCode";
+const _rCep = "repairedCount";
 const _rCes = "resolvableCitations";
 const _rD = "rescanDiff";
+const _rF = "remainingFiles";
 const _rFI = "retiredFactIds";
 const _rFIe = "restoredFactIds";
 const _rI = "runId";
@@ -1569,8 +1592,9 @@ const _tGa = "targetGraph";
 const _tGb = "tboxGraph";
 const _tI = "tableId";
 const _tK = "topK";
-const _tL = "tableLinks";
+const _tL = "tooLarge";
 const _tLPPT = "tboxLegacyProvPredicateTriples";
+const _tLa = "tableLinks";
 const _tM = "tablesModified";
 const _tMe = "technicalMetadata";
 const _tN = "tableName";
@@ -1627,6 +1651,8 @@ const _una = "unavailable";
 const _unb = "unbound";
 const _unc = "unclassified";
 const _uni = "unit";
+const _unr = "unreadable";
+const _uns = "unsupported";
 const _ur = "url";
 const _uri = "uri";
 const _us = "usable";
@@ -2389,15 +2415,50 @@ export var PlatformGrantSummary$: StaticStructureSchema = [3, n1, _PGS,
   [_gI, _pT, _pIr, _ro, _gB, _gA],
   [0, 0, [() => GrantPrincipal, 0], 0, [() => GrantPrincipal, 0], 0], 6
 ];
+export var GetIngestionRunInput$: StaticStructureSchema = [3, n11, _GIRI,
+  0,
+  [_nI, _rI],
+  [[0, 1], [0, 1]], 2
+];
+export var GetIngestionRunOutput$: StaticStructureSchema = [3, n11, _GIRO,
+  0,
+  [_ru],
+  [() => IngestionRunDetail$], 1
+];
 export var IngestionFailure$: StaticStructureSchema = [3, n11, _IF,
   0,
   [_rI, _rPe, _att, _uA, _cod, _m],
-  [0, 0, 1, 4, 0, 0], 4
+  [0, 0, 1, 5, 0, 0], 4
 ];
 export var IngestionRun$: StaticStructureSchema = [3, n11, _IR,
   0,
-  [_rI, _roo, _st, _stal, _t, _comp, _ind, _fai, _de, _cA, _uA, _sR, _fA],
-  [0, 0, 0, 2, 1, 1, 1, 1, 1, 4, 4, 0, 4], 11
+  [_rI, _roo, _st, _stal, _t, _comp, _ind, _fai, _de, _cA, _uA, _sR, _fA, _lR],
+  [0, 0, 0, 2, 1, 1, 1, 1, 1, 5, 5, 0, 5, () => IngestionRunAttempt$], 11
+];
+export var IngestionRunAttempt$: StaticStructureSchema = [3, n11, _IRA,
+  0,
+  [_rI, _st, _sA, _fA, _eCx, _eCr, _eM, _count],
+  [0, 0, 5, 5, 1, 0, 0, () => IngestionRunCounters$], 3
+];
+export var IngestionRunCounters$: StaticStructureSchema = [3, n11, _IRC,
+  0,
+  [_t, _aD, _pr, _par, _rC, _ind, _dA, _fTR, _fTa, _rF, _int, _sk, _eS],
+  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, () => IngestionRunSkipped$, 1], 13
+];
+export var IngestionRunDetail$: StaticStructureSchema = [3, n11, _IRD,
+  0,
+  [_rI, _roo, _st, _stal, _t, _comp, _ind, _fai, _de, _cA, _uA, _it, _sR, _fA, _lR],
+  [0, 0, 0, 2, 1, 1, 1, 1, 1, 5, 5, () => IngestionRunItemList, 0, 5, () => IngestionRunAttempt$], 12
+];
+export var IngestionRunItem$: StaticStructureSchema = [3, n11, _IRI,
+  0,
+  [_rPe, _st, _att, _uA, _fC, _fM],
+  [0, 0, 1, 5, 0, 0], 4
+];
+export var IngestionRunSkipped$: StaticStructureSchema = [3, n11, _IRS,
+  0,
+  [_hid, _uns, _emp, _tL, _unr],
+  [1, 1, 1, 1, 1], 5
 ];
 export var ListIngestionRunsInput$: StaticStructureSchema = [3, n11, _LIRI,
   0,
@@ -2416,7 +2477,7 @@ export var BulkDeleteFilter$: StaticStructureSchema = [3, n12, _BDF,
 ];
 export var BulkDeleteMetricsInput$: StaticStructureSchema = [3, n12, _BDMI,
   0,
-  [_nI, _na, _fil, _dA],
+  [_nI, _na, _fil, _dAe],
   [[0, 1], 64 | 0, () => BulkDeleteFilter$, 2], 1
 ];
 export var BulkDeleteMetricsOutput$: StaticStructureSchema = [3, n12, _BDMO,
@@ -2591,12 +2652,12 @@ export var MetricFamilyVariantWindow$: StaticStructureSchema = [3, n13, _MFVW,
 ];
 export var MetricReportCounts$: StaticStructureSchema = [3, n13, _MRC,
   0,
-  [_pTu, _indu, _reg, _eE, _eCx, _eN, _iEFE, _compu],
+  [_pTu, _indu, _reg, _eE, _eCxt, _eN, _iEFE, _compu],
   [1, 1, 1, 1, 1, 1, 1, 128 | 1]
 ];
 export var MetricReportExecution$: StaticStructureSchema = [3, n13, _MRE,
   0,
-  [_eCx, _eN, _rSO, _una, _bR, _ba, _not],
+  [_eCxt, _eN, _rSO, _una, _bR, _ba, _not],
   [1, 1, 1, 1, 128 | 1, 0, 0]
 ];
 export var MetricReportFilters$: StaticStructureSchema = [3, n13, _MRF,
@@ -2606,7 +2667,7 @@ export var MetricReportFilters$: StaticStructureSchema = [3, n13, _MRF,
 ];
 export var MetricReportItem$: StaticStructureSchema = [3, n13, _MRI,
   0,
-  [_mIe, _nZ, _dN, _do, _pu, _eBv, _eBL, _eS, _hRT, _iB, _iNn, _eBa, _for, _fE, _compu, _cLo, _cTo, _ga, _gCa, _mi, _eE, _eSx, _eL, _eRx, _eP, _exe, _eRxe, _eRC, _oCb, _aWD, _mWD, _wS, _wW, _vO, _oM, _fD, _infe, _eSv, _dVe],
+  [_mIe, _nZ, _dN, _do, _pu, _eBv, _eBL, _eSv, _hRT, _iB, _iNn, _eBa, _for, _fE, _compu, _cLo, _cTo, _ga, _gCa, _mi, _eE, _eSx, _eL, _eRx, _eP, _exe, _eRxe, _eRC, _oCb, _aWD, _mWD, _wS, _wW, _vO, _oM, _fD, _infe, _eSvi, _dVe],
   [0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 1, 1, 1, 2, 0, 0, 0, 2, 2, 0, 0], 1
 ];
 export var MetricReportMeta$: StaticStructureSchema = [3, n13, _MRM,
@@ -2846,7 +2907,7 @@ export var GetOntologyDiffInput$: StaticStructureSchema = [3, n15, _GODI,
 ];
 export var GetOntologyDiffOutput$: StaticStructureSchema = [3, n15, _GODO,
   0,
-  [_bG, _tGa, _cou, _aCd, _rC, _aP, _rPem, _exa, _tru, _so, _sAa],
+  [_bG, _tGa, _cou, _aCd, _rCe, _aP, _rPem, _exa, _tru, _so, _sAa],
   [0, 0, () => OntologyDiffCounts$, 64 | 0, 64 | 0, 64 | 0, 64 | 0, () => OntologyDiffExamples$, 2, 0, 0], 11
 ];
 export var GetOntologyInput$: StaticStructureSchema = [3, n15, _GOI,
@@ -3006,7 +3067,7 @@ export var OntologyCoverage$: StaticStructureSchema = [3, n15, _OC,
 ];
 export var OntologyDiffCounts$: StaticStructureSchema = [3, n15, _ODC,
   0,
-  [_aTd, _rTe, _aCd, _rC, _aP, _rPem],
+  [_aTd, _rTe, _aCd, _rCe, _aP, _rPem],
   [1, 1, 1, 1, 1, 1], 6
 ];
 export var OntologyDiffExamples$: StaticStructureSchema = [3, n15, _ODE,
@@ -3106,7 +3167,7 @@ export var BridgeOptions$: StaticStructureSchema = [3, n16, _BO,
 ];
 export var BridgeReport$: StaticStructureSchema = [3, n16, _BR,
   0,
-  [_oIn, _dR, _pIro, _tCa, _tWE, _tWEa, _tD, _cDo, _rBep, _rBR, _rBM, _rBMS, _aTE, _tL, _cLol, _dTef, _dC, _li, _lC, _lF, _fLE, _fTa, _note, _eSl],
+  [_oIn, _dR, _pIro, _tCa, _tWE, _tWEa, _tD, _cDo, _rBep, _rBR, _rBM, _rBMS, _aTE, _tLa, _cLol, _dTef, _dC, _li, _lC, _lF, _fLE, _fTai, _note, _eS],
   [0, 2, 0, 1, 1, 64 | 0, 1, 1, 1, 1, 1, 64 | 0, 1, 1, 1, 64 | 0, 64 | 0, 64 | 0, 1, 1, 0, 64 | 0, 64 | 0, 1]
 ];
 export var CancelProposalInput$: StaticStructureSchema = [3, n16, _CPI,
@@ -3311,7 +3372,7 @@ export var RepairProposalDatatypesInput$: StaticStructureSchema = [3, n16, _RPDI
 ];
 export var RepairProposalDatatypesOutput$: StaticStructureSchema = [3, n16, _RPDO,
   0,
-  [_pIro, _rCe, _chan, _dR],
+  [_pIro, _rCep, _chan, _dR],
   [0, 1, () => DatatypeRepairChangeList, 2], 3
 ];
 export var StartInductionInput$: StaticStructureSchema = [3, n16, _SII,
@@ -3406,7 +3467,7 @@ export var OntologyDiff$: StaticStructureSchema = [3, n17, _OD,
 ];
 export var OntologyDiffSummary$: StaticStructureSchema = [3, n17, _ODS,
   0,
-  [_aTd, _rTe, _aCd, _rC, _aP, _rPem, _dCo, _rCa, _rCI],
+  [_aTd, _rTe, _aCd, _rCe, _aP, _rPem, _dCo, _rCa, _rCI],
   [1, 1, 64 | 0, 64 | 0, 64 | 0, 64 | 0, () => OntologyDomainChangeList, () => OntologyDomainChangeList, () => OntologyClassInstanceList], 9
 ];
 export var OntologyDomainChange$: StaticStructureSchema = [3, n17, _ODCn,
@@ -3431,7 +3492,7 @@ export var OntologyEventPage$: StaticStructureSchema = [3, n17, _OEP,
 ];
 export var OntologyImpact$: StaticStructureSchema = [3, n17, _OI,
   0,
-  [_aTd, _rTe, _aCd, _rC, _aP, _rPem, _dCo, _rCa, _rCI, _bIr, _an, _aEn],
+  [_aTd, _rTe, _aCd, _rCe, _aP, _rPem, _dCo, _rCa, _rCI, _bIr, _an, _aEn],
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, () => OntologyImpactAnalysis$, () => OntologyImpactError$]
 ];
 export var OntologyImpactAffected$: StaticStructureSchema = [3, n17, _OIA,
@@ -3456,7 +3517,7 @@ export var OntologyImpactAnalysis$: StaticStructureSchema = [3, n17, _OIAnto,
 ];
 export var OntologyImpactChangeSet$: StaticStructureSchema = [3, n17, _OICS,
   0,
-  [_cou, _aCd, _rC, _aP, _rPem, _dCo, _rCa, _br, _bIr],
+  [_cou, _aCd, _rCe, _aP, _rPem, _dCo, _rCa, _br, _bIr],
   [() => OntologyImpactCounts$, 64 | 0, 64 | 0, 64 | 0, 64 | 0, () => OntologyDomainChangeList, () => OntologyDomainChangeList, 2, () => OntologyBreakingItemList], 9
 ];
 export var OntologyImpactClass$: StaticStructureSchema = [3, n17, _OIC,
@@ -3471,7 +3532,7 @@ export var OntologyImpactClassInstances$: StaticStructureSchema = [3, n17, _OICI
 ];
 export var OntologyImpactCounts$: StaticStructureSchema = [3, n17, _OICn,
   0,
-  [_aTd, _rTe, _aCd, _rC, _aP, _rPem, _dCo, _rCa],
+  [_aTd, _rTe, _aCd, _rCe, _aP, _rPem, _dCo, _rCa],
   [1, 1, 1, 1, 1, 1, 1, 1], 8
 ];
 export var OntologyImpactDependencies$: StaticStructureSchema = [3, n17, _OID,
@@ -3681,7 +3742,7 @@ export var GetMetricCardInput$: StaticStructureSchema = [3, n19, _GMCI,
 ];
 export var MetricCard$: StaticStructureSchema = [3, n19, _MC,
   0,
-  [_mIe, _bS, _fB, _vMI, _nam, _do, _eBv, _pu, _infe, _fD, _mi, _eSv, _not, _eD, _vO, _oM, _rSu, _def, _fTo, _dTe, _oPT, _gTr, _gr, _pLr, _uni, _dVe, _eE, _eSx, _eL, _eRx, _fIam],
+  [_mIe, _bS, _fB, _vMI, _nam, _do, _eBv, _pu, _infe, _fD, _mi, _eSvi, _not, _eD, _vO, _oM, _rSu, _def, _fTo, _dTe, _oPT, _gTr, _gr, _pLr, _uni, _dVe, _eE, _eSx, _eL, _eRx, _fIam],
   [0, 0, () => MetricFieldBindingList, 64 | 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0], 4
 ];
 export var MetricFieldBinding$: StaticStructureSchema = [3, n19, _MFB,
@@ -3821,7 +3882,7 @@ export var CreateDatabaseSourceInput$: StaticStructureSchema = [3, n3, _CDSI,
 ];
 export var CreateDocumentSourceInput$: StaticStructureSchema = [3, n3, _CDSIr,
   0,
-  [_nam, _sP, _uIp, _sBA, _rAo, _eCxt],
+  [_nam, _sP, _uIp, _sBA, _rAo, _eCxtr],
   [0, 64 | 0, 0, 0, 0, () => ExtractionConfig$], 1
 ];
 export var CreateSourceInput$: StaticStructureSchema = [3, n3, _CSI,
@@ -3871,7 +3932,7 @@ export var DeleteSourceOutput$: StaticStructureSchema = [3, n3, _DSO,
 ];
 export var DocumentSourceDetail$: StaticStructureSchema = [3, n3, _DSDo,
   0,
-  [_sP, _sBA, _rAo, _eCxt, _fTi, _fSil, _fEi, _eM, _pIre, _dPo, _cLLM, _cEh, _cG],
+  [_sP, _sBA, _rAo, _eCxtr, _fTi, _fSil, _fEi, _eM, _pIre, _dPo, _cLLM, _cEh, _cG],
   [64 | 0, 0, 0, () => ExtractionConfig$, 1, 1, 1, 0, () => PreprocessingIssueList, 1, 1, 1, 1]
 ];
 export var EventRescanConfig$: StaticStructureSchema = [3, n3, _ERC,
@@ -3916,7 +3977,7 @@ export var GetSourceScanJobInput$: StaticStructureSchema = [3, n3, _GSSJI,
 ];
 export var GetSourceScanJobOutput$: StaticStructureSchema = [3, n3, _GSSJO,
   0,
-  [_jI, _sI, _st, _sA, _tDa, _tPa, _tTab, _tAab, _tRa, _tM, _cAom, _eM, _tFa, _fTa, _fW],
+  [_jI, _sI, _st, _sA, _tDa, _tPa, _tTab, _tAab, _tRa, _tM, _cAom, _eM, _tFa, _fTai, _fW],
   [0, 0, 0, 4, 1, 1, 1, 1, 1, 1, 4, 0, 1, 64 | 0, 64 | 0], 4
 ];
 export var GetSourceTableInput$: StaticStructureSchema = [3, n3, _GSTI,
@@ -4293,6 +4354,9 @@ var TableAllowlist = 64 | 0;
 var IngestionFailureList: StaticListSchema = [1, n11, _IFL,
   0, () => IngestionFailure$
 ];
+var IngestionRunItemList: StaticListSchema = [1, n11, _IRIL,
+  0, () => IngestionRunItem$
+];
 var IngestionRunList: StaticListSchema = [1, n11, _IRL,
   0, () => IngestionRun$
 ];
@@ -4650,6 +4714,9 @@ export var ListPlatformGrants$: StaticOperationSchema = [9, n1, _LPG,
 ];
 export var ListPrincipalGrants$: StaticOperationSchema = [9, n1, _LPGi,
   { [_ht]: ["GET", "/principals/{principalId}/grants", 200] }, () => ListPrincipalGrantsInput$, () => ListPrincipalGrantsOutput$
+];
+export var GetIngestionRun$: StaticOperationSchema = [9, n11, _GIR,
+  { [_ht]: ["GET", "/namespaces/{namespaceId}/ingestion-runs/{runId}", 200] }, () => GetIngestionRunInput$, () => GetIngestionRunOutput$
 ];
 export var ListIngestionRuns$: StaticOperationSchema = [9, n11, _LIR,
   { [_ht]: ["GET", "/namespaces/{namespaceId}/ingestion-runs", 200] }, () => ListIngestionRunsInput$, () => ListIngestionRunsOutput$

@@ -62,6 +62,34 @@ class ScanResult:
     total_seen: int = 0
 
 
+def _ensure_storage_dirs(runtime: Runtime) -> None:
+    """Create the storage dirs `serve` makes in its IO self-check.
+
+    The import CLI deliberately skips the self-check (it only needs PG + CAS),
+    so on a fresh host every file used to fail with E_IMPORT_UNEXPECTED: the
+    staging write ``tmp_dir/ingest-*.part`` raised FileNotFoundError. Creating
+    the same four dirs here keeps the CLI usable before the first `serve` and
+    turns a permission problem into one clear error instead of N item failures.
+    """
+    cfg = runtime.config
+    for path in (
+        Path(cfg.data_dir),
+        Path(cfg.storage.root),
+        Path(cfg.storage.root) / "blobs",
+        Path(cfg.storage.tmp_dir),
+    ):
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise PortError(
+                code="Internal",
+                message=f"import storage directory is not writable: {path}: {exc}",
+                provider="platform",
+                provider_code="E_IO_PERM",
+                details={"path": str(path)},
+            ) from exc
+
+
 def _resolve_root(directory: str) -> Path:
     root = Path(directory).expanduser()
     if not root.is_dir():
@@ -693,6 +721,7 @@ class Importer:
     ) -> dict[str, Any]:
         root = _resolve_root(directory)
         namespace = _coerce_namespace_id(namespace_id)
+        _ensure_storage_dirs(self._runtime)
         started = time.monotonic()
         self._started = started
         options = {
@@ -893,6 +922,11 @@ class Importer:
             self._mark(
                 batch_id, group, "indexed",
                 degraded=group.degraded or bool(indexed.get("degraded")),
+                # A retried file that now succeeds must not keep the old
+                # failure reason: readers filter/export on failure_code and
+                # would report a healthy document as failed.
+                failure_code=None,
+                failure_message=None,
             )
             self._bump("embedded", int(indexed.get("embedded") or 0))
             self._bump("indexed", len(group.rows))
@@ -1017,6 +1051,12 @@ class Importer:
                 (batch_id,),
             )[0]["n"]
         )
+        if not interrupted and failed_total > 0:
+            # A batch that still holds failed files is not a successful
+            # invocation. Automation must be able to branch on the exit code
+            # instead of parsing the stdout JSON; the ledger records the same
+            # number below.
+            exit_code = 1
         with self._lock:
             counters = dict(self._counters)
         result = {
@@ -1054,6 +1094,17 @@ class Importer:
             "exitCode": exit_code,
         }
         return result
+
+
+def failure_code_counts(runtime: Runtime, batch_id: uuid.UUID) -> dict[str, int]:
+    """Exact failure-code histogram for one batch (unbounded by list limits)."""
+    rows = runtime.metadata.query(
+        "SELECT COALESCE(failure_code, 'E_UNKNOWN') AS code, COUNT(*) AS n "
+        "FROM platform.import_item WHERE batch_id = %s AND status = 'failed' "
+        "GROUP BY 1 ORDER BY n DESC, code",
+        (batch_id,),
+    )
+    return {str(row["code"]): int(row["n"]) for row in rows}
 
 
 def failure_items(
@@ -1425,4 +1476,108 @@ def ingestion_runs(
         "totalCount": total_count,
         "failures": failure_feed,
         "nextToken": _encode_offset(offset + max_results) if has_more else None,
+    }
+
+
+_INGESTION_RUN_ITEM_LIMIT = 1000
+
+
+def get_ingestion_run(
+    runtime: Runtime, namespace_id: str, run_id: str
+) -> dict[str, Any]:
+    """F17: one import batch with its latest invocation and per-item rows.
+
+    Read-only, with the same isolation rule as :func:`ingestion_runs`: stale
+    convergence stays with the import worker. ``runId`` is the batch id that
+    ``ListIngestionRuns`` returns in ``items[].runId``.
+    """
+    try:
+        ns = uuid.UUID(namespace_id)
+    except ValueError as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"namespaceId is not a UUID: {namespace_id!r}",
+            provider="platform",
+            provider_code="E_NAMESPACE_ID_INVALID",
+        ) from exc
+    try:
+        batch_id = uuid.UUID(run_id)
+    except ValueError as exc:
+        raise PortError(
+            code="InvalidArgument",
+            message=f"runId is not a UUID: {run_id!r}",
+            provider="platform",
+            provider_code="E_INGESTION_RUN_ID_INVALID",
+        ) from exc
+
+    rows = runtime.metadata.query(
+        """
+        SELECT b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+               b.finished_at,
+               COUNT(i.rel_path) AS total,
+               COUNT(i.rel_path) FILTER (
+                   WHERE i.status IN ('indexed', 'failed')) AS completed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'indexed') AS indexed,
+               COUNT(i.rel_path) FILTER (WHERE i.status = 'failed') AS failed,
+               COUNT(i.rel_path) FILTER (WHERE i.degraded) AS degraded
+          FROM platform.import_batch b
+          LEFT JOIN platform.import_item i ON i.batch_id = b.batch_id
+         WHERE b.batch_id = %s AND b.namespace_id = %s
+         GROUP BY b.batch_id, b.root_path, b.status, b.created_at, b.updated_at,
+                  b.finished_at
+        """,
+        (batch_id, ns),
+    )
+    if not rows:
+        raise PortError(
+            code="NotFound",
+            message=(
+                f"ingestion run {run_id} was not found in namespace {namespace_id}"
+            ),
+            provider="platform",
+            provider_code="E_INGESTION_RUN_NOT_FOUND",
+        )
+    row = rows[0]
+
+    item_rows = runtime.metadata.query(
+        """
+        SELECT rel_path, status, attempts, failure_code, failure_message,
+               updated_at
+          FROM platform.import_item
+         WHERE batch_id = %s
+         ORDER BY rel_path
+         LIMIT %s
+        """,
+        (batch_id, _INGESTION_RUN_ITEM_LIMIT),
+    )
+    last_run = _last_runs(runtime, [row["batch_id"]]).get(row["batch_id"])
+
+    return {
+        "runId": str(row["batch_id"]),
+        "root": row["root_path"],
+        "status": row["status"].upper(),
+        "stale": row["status"] == "stale",
+        "staleReason": "E_BATCH_TIMEOUT" if row["status"] == "stale" else None,
+        "total": int(row["total"]),
+        "completed": int(row["completed"]),
+        "indexed": int(row["indexed"]),
+        "failed": int(row["failed"]),
+        "degraded": int(row["degraded"]),
+        "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
+        "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
+        "finishedAt": row["finished_at"].isoformat() if row["finished_at"] else None,
+        "lastRun": _run_view(last_run),
+        "items": [
+            {
+                "relPath": item["rel_path"],
+                "status": item["status"],
+                "attempts": int(item["attempts"]),
+                "failureCode": item["failure_code"],
+                "failureMessage": item["failure_message"],
+                "updatedAt": (
+                    item["updated_at"].isoformat() if item["updated_at"] else None
+                ),
+            }
+            for item in item_rows
+        ],
     }
