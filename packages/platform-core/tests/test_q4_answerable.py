@@ -168,6 +168,11 @@ class EntityCoverageTests(unittest.TestCase):
             _binding("urn:term:amount", SKOS_PREF, "事件金额"),
             _binding("urn:term:number", SKOS_PREF, "事件编号"),
             _binding("urn:term:collateral", SKOS_PREF, "抵押物"),
+            _binding(
+                "urn:term:persistency",
+                SKOS_PREF,
+                "13个月继续率（有效保单件数）",
+            ),
         ]
         self.service = AnswerabilityService(
             ContextConfig(), _StubRegistry(), _StubGraph(self.bindings)
@@ -220,6 +225,41 @@ class EntityCoverageTests(unittest.TestCase):
             [item["text"] for item in result["entityMentions"]],
             ["产品包", "价格"],
         )
+
+    def test_missing_concept_refuses_however_high_character_coverage(self):
+        """缺概念必须拒答，不能靠调松覆盖率阈值变绿。
+
+        旧口径（字符覆盖 >= 0.6）会放行这条问句：标签覆盖 12/16 个内容字，
+        覆盖率 0.75。但本体没有「价格」「库存」两个概念，实体覆盖只有
+        1/3，默认阈值下必须拒答；把 min_coverage 调松到 0.5 也仍然拒答
+        （1/3 < 0.5）。若有人为了让类似问句变绿而下调阈值或退回字符口径，
+        这条用例会失败。
+        """
+        query = "13个月继续率（有效保单件数）的价格与库存"
+        result = self.service.check(query)
+        self.assertGreaterEqual(result["coverage"], 0.75)
+        self.assertGreater(result["coverage"], result["threshold"])
+        self.assertEqual(result["entityCount"], 3)
+        self.assertEqual(result["matchedEntityCount"], 1)
+        self.assertAlmostEqual(result["entityCoverage"], 0.3333, places=4)
+        self.assertFalse(result["answerable"], result)
+        self.assertEqual(result["reasonCode"], "E_ANSWER_NOT_COVERED")
+        unknown = [
+            item["text"]
+            for item in result["entityMentions"]
+            if item["kind"] == "unknown"
+        ]
+        self.assertEqual(unknown, ["价格", "库存"])
+
+        loose = self.service.check(query, min_coverage=0.5)
+        self.assertEqual(loose["threshold"], 0.5)
+        self.assertFalse(loose["answerable"], loose)
+
+        # 一个本体实体都没命中的问句，阈值即使调到 0 也必须拒答。
+        nothing = self.service.check("量子计算机的制冷功率是多少", min_coverage=0.0)
+        self.assertEqual(nothing["threshold"], 0.0)
+        self.assertEqual(nothing["matchedEntityCount"], 0)
+        self.assertFalse(nothing["answerable"], nothing)
 
     def test_repeated_entity_counts_once_and_meta_words_excluded(self):
         result = self.service.check("产品包和产品包的口径是什么")

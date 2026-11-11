@@ -5316,8 +5316,11 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         {"id": "C6", "group": "C", "query": "今年退保率是多少？", "expectedClasses": ("https://w3id.org/fsldm/agreement#Policy", "https://w3id.org/fsldm/core#Metric")},
         {"id": "C7", "group": "C", "query": "本年客户AUM是多少？", "expectedClasses": ("https://w3id.org/fsldm/core#Party", "https://w3id.org/fsldm/core#Metric")},
     )
-    # Ten golden cases: six already regression-tested in tests/test_answer_layers.py,
-    # four refusal cases built from concepts absent in the published T-Box.
+    # Ten golden cases. G01-G04 are answerable against the published T-Box;
+    # G05-G10 name concepts the T-Box does not declare (retention period,
+    # 重大变化后的处置规则, and the four off-domain questions) and must refuse.
+    # Annotations were checked against the live term list, not inferred from
+    # what the answer pipeline happened to do.
     _G4_GOLDEN_SET = (
         {
             "id": "G01",
@@ -5352,15 +5355,20 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             "id": "G05",
             "query": "当事人关系历史记录保留多久",
             "type": "definition",
-            "expectRefused": False,
-            "requiredCitationKinds": ("ontology-version",),
+            # 当事人关系 exists, but the T-Box declares no retention concept:
+            # 保留/保留期/多久 have zero label hits (821 labels, 524 terms).
+            # "how long is it kept" is not answerable from the ontology.
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology",),
         },
         {
             "id": "G06",
             "query": "抵押物价值发生巨大变化时银行如何处理",
             "type": "definition",
-            "expectRefused": False,
-            "requiredCitationKinds": ("ontology-version",),
+            # 抵押物 exists, but 变化/重大/巨大/处理 have zero label hits and
+            # 价值 only appears in 在险价值. No revaluation/处置 rule is declared.
+            "expectRefused": True,
+            "expectedMissingLayers": ("ontology",),
         },
         {
             "id": "G07",
