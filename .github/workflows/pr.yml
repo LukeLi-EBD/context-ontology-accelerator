@@ -195,6 +195,30 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # P1-02: repeatable import. The three-run idempotency and the
+  # outage/--retry-failed pair were manual evidence before this job existed, so
+  # nothing noticed when a change broke them. Runs the real CLI against a
+  # throwaway PostgreSQL (docker container, removed on exit) and a fixed
+  # three-file corpus; see scripts/ci/import-idempotency.sh and
+  # packages/platform-core/tests/test_import_gate.py.
+  import-idempotency-gate:
+    needs: smithy-generate
+    if: github.event_name != 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: smithy-generated
+          path: smithy-generated
+      - uses: ./.github/actions/setup-build
+
+      - name: Run three-run and retry gate
+        env:
+          IMPORT_GATE_USE_UV: "1"
+        run: ./scripts/ci/import-idempotency.sh
+
   cdk-synth:
     needs: smithy-generate
     runs-on: ubuntu-latest

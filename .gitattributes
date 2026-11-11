@@ -1,1 +1,5 @@
 ﻿.githooks/* text eol=lf
+# CI shell scripts are run inside Linux containers; a CRLF shebang there fails
+# with "bad interpreter". Pin the checkout format so it does not depend on the
+# developer's core.autocrlf.
+scripts/ci/*.sh text eol=lf
