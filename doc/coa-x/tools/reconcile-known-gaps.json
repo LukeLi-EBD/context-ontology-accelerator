@@ -1,0 +1,41 @@
+{
+  "comment": "Accepted, named differences for reconcile_control_plane_ops.py. Every entry needs an owner and a due (no later than the next tag). Removing an entry is how a debt gets burned down; do not add one without a named owner.",
+  "entries": [
+    {
+      "match": "op:UploadOntology",
+      "owner": "bridge",
+      "due": "coa-x-m1",
+      "reason": "契约有 op、生成有命令，但本地桥走 presign + /_local/objects，直传 op 未接；生产由 ontology-engine / data-layer 承接"
+    },
+    {
+      "match": "http:? /namespaces/{namespaceId}/embeddings",
+      "owner": "bridge",
+      "due": "coa-x-m1",
+      "reason": "本地兜底鉴权路由，未契约化（31 号文 §B 已登记 5 条之一）"
+    },
+    {
+      "match": "http:? /namespaces/{namespaceId}/embeddings/batch",
+      "owner": "bridge",
+      "due": "coa-x-m1",
+      "reason": "本地兜底鉴权路由，未契约化（31 号文 §B 已登记 5 条之一）"
+    },
+    {
+      "match": "http:? /namespaces/{namespaceId}/embeddings/by-ontology/{ontologyId}",
+      "owner": "bridge",
+      "due": "coa-x-m1",
+      "reason": "本地兜底鉴权路由，未契约化（31 号文 §B 已登记 5 条之一）"
+    },
+    {
+      "match": "http:? /namespaces/{namespaceId}/induce/datasources",
+      "owner": "bridge",
+      "due": "coa-x-m1",
+      "reason": "本地兜底鉴权路由，未契约化（31 号文 §B 已登记 5 条之一）"
+    },
+    {
+      "match": "http:? /namespaces/{namespaceId}/validate/jobs",
+      "owner": "bridge",
+      "due": "coa-x-m1",
+      "reason": "本地兜底鉴权路由，未契约化（31 号文 §B 已登记 5 条之一）"
+    }
+  ]
+}
