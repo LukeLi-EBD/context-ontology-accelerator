@@ -1280,3 +1280,41 @@ describe("Ontology page — re-scanned-source warning", () => {
     await screen.findByText(/Orders DB/);
   });
 });
+
+describe("Proposals tab — empty is not the same as unreadable (D-T5-5)", () => {
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("shows an error instead of 'No proposals yet.' when every source fails", async () => {
+    listAllProposals.mockRejectedValue(
+      new Error("HTTP 503: temporarily unavailable"),
+    );
+    mockApiGet.mockRejectedValue(new Error("lifecycle unavailable"));
+    const view = within(renderPage().container);
+    expect(await view.findByText("Could not load proposals")).toBeTruthy();
+    // The critical assertion: a failed read must never render as an empty queue.
+    expect(view.queryByText("No proposals yet.")).toBeNull();
+  });
+
+  it("keeps rows from the source that answered and warns about the one that failed", async () => {
+    listAllProposals.mockRejectedValue(
+      new Error("HTTP 503: temporarily unavailable"),
+    );
+    mockApiGet.mockImplementation((url: string) =>
+      String(url).includes("/proposals")
+        ? Promise.resolve({
+            items: [
+              { proposalId: "prop-1", versionId: "v1", status: "proposed" },
+            ],
+          })
+        : Promise.resolve({ items: [] }),
+    );
+    const view = within(renderPage().container);
+    expect(await view.findByText("prop-1")).toBeTruthy();
+    expect(
+      await view.findByText("Some proposal sources are unavailable"),
+    ).toBeTruthy();
+  });
+});

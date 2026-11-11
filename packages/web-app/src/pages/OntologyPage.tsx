@@ -9,7 +9,7 @@
  * Datasource list comes from `/namespaces/{ns}/sources` (SourcesStack).
  */
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useBreadcrumbTrail } from "@api-hooks/use-breadcrumb-trail";
 import { useNamespace } from "@api-hooks/use-namespace";
 import Alert from "@cloudscape-design/components/alert";
@@ -50,6 +50,10 @@ import {
   type ListedOntology,
   type Proposal,
 } from "../services/ontology-engine";
+import {
+  kernelOntologyIdFromSearch,
+  listKernelProposalsForDisplay,
+} from "../services/ontology-lifecycle";
 import {
   useApiClient,
   type ApiClient,
@@ -1917,6 +1921,29 @@ function OntologiesTab({
   );
 }
 
+/** A Proposals-tab row: an engine induction proposal OR a kernel version
+ *  proposal read through the version-scoped lifecycle route (P0 read fix). */
+type ProposalRow = {
+  proposal_id: string;
+  status: string;
+  source_type?: string;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  origin: "induction" | "version";
+};
+
+/** A proposal source whose read failed — kept distinct from "returned no rows". */
+type ProposalSourceError = {
+  source: "engine" | "version";
+  message: string;
+};
+
+/** Render a failed read so a 5xx is visibly an error, never a bare empty state. */
+function proposalReadErrorMessage(e: unknown): string {
+  if (e instanceof ApiError) return `HTTP ${e.status}: ${e.message}`;
+  return e instanceof Error ? e.message : String(e);
+}
+
 function ProposalsTab({
   apiClient,
   namespace,
@@ -1925,18 +1952,90 @@ function ProposalsTab({
   namespace?: string;
 }) {
   const { t } = useAppI18n();
-  const [items, setItems] = useState<Proposal[]>([]);
+  const location = useLocation();
+  const [items, setItems] = useState<ProposalRow[]>([]);
+  const [readErrors, setReadErrors] = useState<ProposalSourceError[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!namespace) return;
+    let cancelled = false;
     setLoading(true);
-    listAllProposals(apiClient, namespace)
-      .then(setItems)
-      .finally(() => setLoading(false));
-  }, [apiClient, namespace, refreshKey]);
+    setReadErrors([]);
+    // Two read paths, one table: engine/Dynamo carries induced proposals, the
+    // kernel lifecycle carries version-scoped ones. Each is optional — a down
+    // source must not blank rows the other one returned.
+    Promise.allSettled([
+      listAllProposals(apiClient, namespace),
+      listKernelProposalsForDisplay(
+        apiClient,
+        namespace,
+        kernelOntologyIdFromSearch(location.search),
+      ),
+    ])
+      .then(([engine, kernel]) => {
+        if (cancelled) return;
+        const failures: ProposalSourceError[] = [];
+        if (engine.status === "rejected") {
+          console.warn("Failed to list engine proposals", engine.reason);
+          failures.push({
+            source: "engine",
+            message: proposalReadErrorMessage(engine.reason),
+          });
+        }
+        if (kernel.status === "rejected") {
+          console.warn("Failed to list version proposals", kernel.reason);
+          failures.push({
+            source: "version",
+            message: proposalReadErrorMessage(kernel.reason),
+          });
+        }
+        // A failed read is NOT "no proposals": the banner (and the empty state
+        // below) must say so, otherwise a 503 would render as an empty queue.
+        setReadErrors(failures);
+        const rows: ProposalRow[] = [];
+        // Engine rows win on an id collision: they carry the induction metadata
+        // that the Type/Scope columns and the induction lock depend on.
+        const seen = new Set<string>();
+        if (engine.status === "fulfilled") {
+          for (const p of engine.value) {
+            if (seen.has(p.proposal_id)) continue;
+            seen.add(p.proposal_id);
+            rows.push({
+              proposal_id: p.proposal_id,
+              status: p.status,
+              source_type: p.source_type,
+              metadata: p.metadata,
+              created_at: p.created_at,
+              origin: "induction",
+            });
+          }
+        }
+        if (kernel.status === "fulfilled") {
+          for (const p of kernel.value) {
+            if (seen.has(p.proposal_id)) continue;
+            seen.add(p.proposal_id);
+            rows.push({
+              proposal_id: p.proposal_id,
+              status: p.status,
+              // The kernel carries no source_type/metadata; leave them unset so
+              // the columns render "—" instead of a fabricated value.
+              created_at: p.created_at,
+              origin: "version",
+            });
+          }
+        }
+        setItems(rows);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiClient, namespace, refreshKey, location.search]);
 
   // Poll while any proposal is still being induced so the in-progress stub row
   // (written at induction trigger time, status "inducing") flips to the real
@@ -1983,6 +2082,17 @@ function ProposalsTab({
           ),
         },
         {
+          id: "origin",
+          header: "Proposal source",
+          sortingField: "origin",
+          cell: (e) =>
+            e.origin === "version" ? (
+              <Badge color="blue">Version proposal</Badge>
+            ) : (
+              <Badge color="grey">Induction proposal</Badge>
+            ),
+        },
+        {
           id: "status",
           header: t("Status"),
           sortingField: "status",
@@ -2004,10 +2114,14 @@ function ProposalsTab({
             proposalSourceTypeLabel(a.source_type).localeCompare(
               proposalSourceTypeLabel(b.source_type),
             ),
-          cell: (e) =>
-            e.source_type === "UNSTRUCTURED"
+          cell: (e) => {
+            // Version proposals have no induction source type; an unknown one
+            // must read as "—", never as a guessed "Structured".
+            if (e.source_type == null) return "—";
+            return e.source_type === "UNSTRUCTURED"
               ? t("Unstructured")
-              : t("Structured"),
+              : t("Structured");
+          },
         },
         {
           id: "scope",
@@ -2042,22 +2156,64 @@ function ProposalsTab({
           cell: (e) => formatTimestamp(e.created_at),
         },
       ]}
-      empty={<Box textAlign="center">{t("No proposals yet.")}</Box>}
+      empty={
+        <Box textAlign="center">
+          {readErrors.length > 0
+            ? t(
+                "Proposals could not be read; this is not the same as having no proposals.",
+              )
+            : t("No proposals yet.")}
+        </Box>
+      }
       header={
-        <Header
-          counter={`(${items.length})`}
-          actions={
-            <Button
-              iconName="refresh"
-              loading={loading}
-              onClick={() => setRefreshKey((k) => k + 1)}
+        <SpaceBetween size="xs">
+          {readErrors.length > 0 && (
+            <Alert
+              type={items.length === 0 ? "error" : "warning"}
+              header={
+                items.length === 0
+                  ? t("Could not load proposals")
+                  : t("Some proposal sources are unavailable")
+              }
             >
-              {t("Refresh")}
-            </Button>
-          }
-        >
-          {t("Proposals")}
-        </Header>
+              <SpaceBetween size="xs">
+                <span>
+                  {items.length === 0
+                    ? t(
+                        "Proposals could not be read; this is not the same as having no proposals.",
+                      )
+                    : t(
+                        "Only the sources that responded are shown; the rest could not be read.",
+                      )}
+                </span>
+                <ul style={{ margin: 0 }}>
+                  {readErrors.map((e) => (
+                    <li key={e.source}>
+                      {e.source === "engine"
+                        ? t("Induction proposals")
+                        : t("Version proposals")}
+                      : {e.message}
+                    </li>
+                  ))}
+                </ul>
+              </SpaceBetween>
+            </Alert>
+          )}
+          <Header
+            counter={`(${items.length})`}
+            actions={
+              <Button
+                iconName="refresh"
+                loading={loading}
+                onClick={() => setRefreshKey((k) => k + 1)}
+              >
+                {t("Refresh")}
+              </Button>
+            }
+          >
+            {t("Proposals")}
+          </Header>
+        </SpaceBetween>
       }
     />
   );
