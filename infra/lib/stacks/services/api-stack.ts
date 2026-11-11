@@ -60,6 +60,62 @@ export const INTENTIONALLY_STUBBED = new Set([
   // is removed. Backlog (separate estimate): restore the AWS path by
   // implementing the handler in the sources Lambda and adding the app.ts mapping.
   "/namespaces/{namespaceId}/ingestion-runs",
+  // ── Control-plane kernel surface: 44 ops, no AWS backend ────────────────
+  // Every path below is in the Smithy model and in the committed OpenAPI spec
+  // (model=spec, 0 drift), and every one is served by platform_core.api — but
+  // that ASGI app is composed only by the local bridge (coa_api_local.py). No
+  // deployed Lambda implements these handlers, so wiring them in app.ts would
+  // forward the request to a function that 404s. Declaring them as stubs is the
+  // truthful state, not cover-up: the guard keeps this list pinned, and the
+  // mirror-image test fails if a path here later gets a real handler.
+  //
+  // Owner: control-plane backend (see doc/coa-x/evidence/p0-unwired-paths.md).
+  // Due: coa-x-m1. Closure: implement the handler in an AWS Lambda, add the
+  // app.ts mapping, delete the line here — synth fails until the entry is gone.
+  "/answer/quality",
+  "/answer/quality/runs",
+  "/browse/ontology/instances",
+  "/browse/ontology/tree",
+  "/entities/{entityId}",
+  "/entities/{entityId}/provenance",
+  "/metrics/{metricId}",
+  "/namespaces/{namespaceId}/answerable",
+  "/namespaces/{namespaceId}/dictionaries",
+  "/namespaces/{namespaceId}/dictionaries/{sourceId}",
+  "/namespaces/{namespaceId}/dictionaries/{sourceId}/comment-coverage",
+  "/namespaces/{namespaceId}/dictionaries/{sourceId}/refresh",
+  "/namespaces/{namespaceId}/dictionaries/{sourceId}/view",
+  "/namespaces/{namespaceId}/documents/{documentId}/content",
+  "/namespaces/{namespaceId}/facts",
+  "/namespaces/{namespaceId}/facts/conflicts",
+  "/namespaces/{namespaceId}/facts/conflicts/batch",
+  "/namespaces/{namespaceId}/facts/conflicts/resolve",
+  "/namespaces/{namespaceId}/facts/conflicts/undo",
+  "/namespaces/{namespaceId}/facts/retract",
+  "/namespaces/{namespaceId}/facts/{factId}",
+  "/namespaces/{namespaceId}/facts/{factId}/events",
+  "/namespaces/{namespaceId}/facts/{factId}/restore",
+  "/namespaces/{namespaceId}/facts/{factId}/retract",
+  "/namespaces/{namespaceId}/graph/reasoning/materialize",
+  "/namespaces/{namespaceId}/ingestion-runs/{runId}",
+  "/namespaces/{namespaceId}/metrics/families/{familyId}",
+  "/namespaces/{namespaceId}/metrics/report/manifest",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/export",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/import",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/bundles/inspect",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/events",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/import",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/proposals/{proposalId}/review",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/publish",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/rollback",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/verify",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/diff",
+  "/namespaces/{namespaceId}/ontologies/{ontologyId}/versions/{versionId}/export",
+  "/namespaces/{namespaceId}/terms",
 ]);
 
 export interface ApiStackProps extends cdk.StackProps {

@@ -388,6 +388,17 @@ async function deploy(): Promise<void> {
       "/namespaces/{namespaceId}/graph/object-property": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/graph/datatype-property": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/graph/statements": `/${prefix}/ontology-engine/api-fn-arn`,
+      // Canvas / path / diff / reasoning: implemented by the ontology-engine
+      // api-fn (see coa_ontology.api_proxy_handler._PATH_MAP and the authorizer's
+      // _PATH_MAPPING). Missing here meant these ready routes returned 501.
+      "/namespaces/{namespaceId}/graph/canvas": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/canvas/manifest": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/path": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/links": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/snapshot": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/validate": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/diff": `/${prefix}/ontology-engine/api-fn-arn`,
+      "/namespaces/{namespaceId}/graph/reasoning": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/ontologies": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/ontologies/{ontologyId}": `/${prefix}/ontology-engine/api-fn-arn`,
       "/namespaces/{namespaceId}/ontologies/{ontologyId}/download": `/${prefix}/ontology-engine/api-fn-arn`,
@@ -410,6 +421,8 @@ async function deploy(): Promise<void> {
       "/namespaces/{namespaceId}/translate": `/${prefix}/data-layer/api-fn-arn`,
       "/namespaces/{namespaceId}/kb/search": `/${prefix}/data-layer/api-fn-arn`,
       "/namespaces/{namespaceId}/graph/traverse": `/${prefix}/data-layer/api-fn-arn`,
+      // RunSparql is in coa_data_layer.handler._ROUTE_MAP; the entry was missing.
+      "/namespaces/{namespaceId}/sparql": `/${prefix}/data-layer/api-fn-arn`,
       // DescribeSchema — data-layer proxies to the ontology-engine api-fn.
       "/namespaces/{namespaceId}/schema": `/${prefix}/data-layer/api-fn-arn`,
     },
