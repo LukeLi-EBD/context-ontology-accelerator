@@ -3605,6 +3605,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             abox_graphs=runtime.config.reasoning.abox_graphs,
             publish_existing=bool(payload.get("publishExisting", False)),
             expected_version_id=payload.get("expectedVersionId"),
+            # V52 ownership: the staging record carries no namespace uuid, so the
+            # publisher has to name it. Absent stays NULL (never derived from
+            # `targetNamespace`, which is an ontology id, not a namespace uuid).
+            namespace_id=payload.get("namespaceId"),
             # 同上：`purpose=smoke` 必须带内部 token，未配置/错 token 一律按伪造
             # 记录并照常阻断（零术语判定本身不变）。
             purpose=payload.get("purpose"),
