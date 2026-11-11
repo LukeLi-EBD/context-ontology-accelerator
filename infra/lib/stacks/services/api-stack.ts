@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as cdk from "aws-cdk-lib";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import * as apigw from "aws-cdk-lib/aws-apigateway";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -156,6 +159,13 @@ export interface ApiStackProps extends cdk.StackProps {
  */
 export class ApiStack extends SCLStack {
   public readonly api: apigw.SpecRestApi;
+
+  /**
+   * The enriched OpenAPI document this stack hands to API Gateway. The stack
+   * ships it as an S3 asset (see `apiDefinition` below), so it is not readable
+   * from the synthesized template; tests assert on this snapshot instead.
+   */
+  public readonly apiSpec: Record<string, any>;
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -523,6 +533,15 @@ export class ApiStack extends SCLStack {
     });
 
     // ── SpecRestApi from the enriched OpenAPI spec ─────────────────
+    // The merged spec is ~1.1 MB of JSON. Inlining it (ApiDefinition.fromInline)
+    // pushes the synthesized template past CloudFormation's 1 MB limit once the
+    // generated integrations are added. Ship it as an S3 object instead: the
+    // template then carries only a BodyS3Location pointer, and the spec size no
+    // longer counts against the template limit at all.
+    const specDir = fs.mkdtempSync(path.join(os.tmpdir(), "coa-api-spec-"));
+    const specFile = path.join(specDir, "openapi.json");
+    fs.writeFileSync(specFile, JSON.stringify(spec));
+    this.apiSpec = spec;
     // When a custom domain + certificate are configured, the API is served
     // over a REGIONAL custom domain with a TLS 1.2 security policy and the
     // raw execute-api endpoint is disabled. Without one, the default
@@ -563,7 +582,7 @@ export class ApiStack extends SCLStack {
     this.api = new apigw.SpecRestApi(this, "RestApi", {
       restApiName: this.prefixed("api"),
       description: "Context Ontology Accelerator REST API",
-      apiDefinition: apigw.ApiDefinition.fromInline(spec),
+      apiDefinition: apigw.ApiDefinition.fromAsset(specFile),
       cloudWatchRole: true,
       ...(apiCustomDomain && {
         disableExecuteApiEndpoint: true,
