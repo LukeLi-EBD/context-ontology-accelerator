@@ -224,7 +224,9 @@ function Resolve-Python {
 
     foreach ($candidate in $candidates) {
         if ($candidate -and (Test-Path -LiteralPath $candidate)) {
-            return (Resolve-Path -LiteralPath $candidate).Path
+            $resolved = (Resolve-Path -LiteralPath $candidate).Path
+            $script:ResolvedPython = $resolved
+            return $resolved
         }
     }
     throw "no python interpreter found; run 'uv sync' in the repo root or pass -Python <path>"
@@ -345,6 +347,7 @@ function Invoke-SmithyCheck {
     if (-not $javaHome) {
         throw 'no JDK 17+ found (Smithy Gradle does not run on Java 8); pass -JavaHome <jdk17+>'
     }
+    $script:ResolvedJavaHome = $javaHome
     Write-Host "  java: $javaHome"
 
     $work = Join-Path $script:RunTemp 'smithy'
@@ -681,7 +684,9 @@ function Write-Evidence {
     [void]$lines.Add("- Commit: $Commit")
     [void]$lines.Add("- Script: scripts/ci/pre-land-gate.ps1 v$script:Version")
     [void]$lines.Add("- Result: $Overall (exit $ExitCode)")
-    [void]$lines.Add("- Total time: $(Format-Seconds $TotalSeconds)")
+    [void]$lines.Add("- Total time: $((Format-Seconds $TotalSeconds).Trim())")
+    [void]$lines.Add("- Python: $(if ($script:ResolvedPython) { $script:ResolvedPython } else { 'not resolved' })")
+    [void]$lines.Add("- JavaHome: $(if ($script:ResolvedJavaHome) { $script:ResolvedJavaHome } else { 'not resolved' })")
     if ($DirtyPaths.Count -gt 0) {
         [void]$lines.Add("- Working tree: dirty ($($DirtyPaths.Count) paths). The smithy check signs off HEAD, not these edits.")
         foreach ($item in ($DirtyPaths | Select-Object -First 10)) { [void]$lines.Add("  - $item") }
@@ -697,7 +702,7 @@ function Write-Evidence {
     $index = 1
     foreach ($result in $Results) {
         $detail = $result.Detail -replace '\|', '\|'
-        [void]$lines.Add("| $index | $($result.Id) | $($result.Status) | $detail | $(Format-Seconds $result.Seconds) |")
+        [void]$lines.Add("| $index | $($result.Id) | $($result.Status) | $detail | $((Format-Seconds $result.Seconds).Trim()) |")
         $index++
     }
     [void]$lines.Add('')
@@ -732,7 +737,15 @@ function Write-Evidence {
     [void]$lines.Add('## How to reproduce')
     [void]$lines.Add('')
     [void]$lines.Add('```')
-    [void]$lines.Add('powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ci/pre-land-gate.ps1')
+    $reproduce = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $script:Root 'scripts\ci\pre-land-gate.ps1') + '"'
+    if ($Skipped.Count -gt 0) {
+        $pairs = @()
+        foreach ($key in $script:CheckOrder) {
+            if ($Skipped.ContainsKey($key)) { $pairs += "$key=$($Skipped[$key])" }
+        }
+        $reproduce += ' -Skip "' + ($pairs -join ',') + '"'
+    }
+    [void]$lines.Add($reproduce)
     [void]$lines.Add('```')
 
     [IO.File]::WriteAllText($path, (($lines -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
