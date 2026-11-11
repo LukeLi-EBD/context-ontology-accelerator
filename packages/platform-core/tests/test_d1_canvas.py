@@ -175,6 +175,11 @@ def make_runtime(canvas, cfg, graph, ontology=None, reasoning=None, metadata=Non
     # create_app() mounts the dictionary routes, which construct
     # DictionaryPg(runtime.metadata) while the app is built. These canvas tests
     # never touch those routes, so a stub whose query returns no rows is enough.
+    if not hasattr(cfg, "storage"):
+        # create_app() also builds the read-only guard, which reads
+        # config.storage.root. Real runtimes always carry that block; this
+        # fixture only describes canvas/reasoning, so give it a throwaway root.
+        cfg.storage = SimpleNamespace(root=tempfile.mkdtemp(prefix="coa-canvas-"))
     return SimpleNamespace(
         config=cfg,
         graph=graph,
