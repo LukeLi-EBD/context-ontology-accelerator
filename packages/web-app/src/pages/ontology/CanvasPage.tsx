@@ -15,7 +15,7 @@
  *
  * Everything here is read-only; the canvas never writes to the graph.
  */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import Alert from "@cloudscape-design/components/alert";
 import Badge from "@cloudscape-design/components/badge";
@@ -253,6 +253,15 @@ export function CanvasPage() {
     },
     [apiClient, namespaceId, kindFilter, graphUri, pageSize, nextOffset],
   );
+
+  // 首屏加载：每个命名空间只在挂载后自动取第一页，避免画布永远停在空态。
+  // 用 ref 记住已加载的 namespace，只跑一次；后续分页仍由「Load more」按钮触发。
+  const initialLoadFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!namespaceId || initialLoadFor.current === namespaceId) return;
+    initialLoadFor.current = namespaceId;
+    void load(true);
+  }, [namespaceId, load]);
 
   const clearCanvas = () => {
     setNodes([]);
