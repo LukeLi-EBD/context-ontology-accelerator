@@ -3068,6 +3068,48 @@ class OntologyRegistry:
             **evidence,
         }
 
+    def claim_namespace(self, version_id: str, namespace_id: str) -> dict[str, Any]:
+        """Attach the publisher's namespace to a version that has no owner yet.
+
+        Rows written before V52 (and drafts registered by callers that could not
+        name a namespace) carry NULL. Publishing is the moment the caller states
+        which namespace the version belongs to, so the claim is recorded there.
+        An existing owner is never overwritten: a different one is a conflict.
+        """
+        owner = _owner_namespace_id(namespace_id)
+        if owner is None:
+            raise PortError(
+                code="InvalidArgument",
+                message="namespaceId is required to claim a version",
+                provider="platform",
+                provider_code="E_ONTOLOGY_BAD_NAMESPACE_ID",
+            )
+        row = self._require(version_id)
+        current = row.get("namespace_id")
+        if current is not None:
+            if str(current) != owner:
+                raise PortError(
+                    code="Conflict",
+                    message=(
+                        f"version {version_id} already belongs to namespace {current}; "
+                        f"refusing to reassign it to {owner}"
+                    ),
+                    provider="platform",
+                    provider_code="E_ONTOLOGY_NAMESPACE_CONFLICT",
+                    details={"namespaceId": str(current), "requested": owner},
+                )
+            return {"versionId": version_id, "namespaceId": str(current), "claimed": False}
+        with self._meta.tx() as tx:
+            tx.execute(
+                """
+                UPDATE platform.ontology_version
+                   SET namespace_id = %s, attribution_source = %s
+                 WHERE version_id = %s AND namespace_id IS NULL
+                """,
+                (owner, OWNER_SOURCE_PLATFORM, version_id),
+            )
+        return {"versionId": version_id, "namespaceId": owner, "claimed": True}
+
     def publish(
         self,
         version_id: str,

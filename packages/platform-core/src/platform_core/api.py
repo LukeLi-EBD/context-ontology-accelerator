@@ -3336,10 +3336,19 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
             )
         acknowledge = bool(body.get("acknowledgeBreaking", False))
         publish_existing = bool(body.get("publishExisting", False))
+        namespace_id = body.get("namespaceId")
+        if namespace_id is not None and not isinstance(namespace_id, str):
+            raise _governance_rejection(
+                "E_GOVERNANCE_BAD_FIELD", "namespaceId must be a string", "namespaceId"
+            )
         if bool(body.get("dryRun", False)):
             return _governance_publish_dry_run(
                 runtime, version_id, proposal_id, acknowledge, publish_existing
             )
+        if namespace_id:
+            # V52 ownership: fill an unowned draft at publish time. A different
+            # existing owner is a conflict, not a silent reassignment.
+            runtime.ontology.claim_namespace(version_id, namespace_id)
         result = runtime.ontology.publish(
             version_id,
             proposal_id=proposal_id,

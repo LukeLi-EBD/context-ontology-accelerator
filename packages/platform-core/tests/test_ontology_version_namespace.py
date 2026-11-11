@@ -330,6 +330,25 @@ class OntologyVersionNamespaceTest(unittest.TestCase):
         row = self._row(payload["versionId"])
         self.assertIsNone(row["namespace_id"])
 
+    def test_publish_claims_unowned_version(self):
+        # Publishing an older draft is where a caller can state its namespace.
+        result = self._import_source()
+        claimed = self.registry.claim_namespace(result["versionId"], DEMO_NAMESPACE_ID)
+        self.assertTrue(claimed["claimed"])
+        row = self._row(result["versionId"])
+        self.assertEqual(str(row["namespace_id"]), DEMO_NAMESPACE_ID)
+        self.assertEqual(row["attribution_source"], "platform")
+        again = self.registry.claim_namespace(result["versionId"], DEMO_NAMESPACE_ID)
+        self.assertFalse(again["claimed"])
+
+    def test_claim_rejects_a_different_namespace(self):
+        result = self._import_source(DEMO_NAMESPACE_ID)
+        with self.assertRaises(PortError) as caught:
+            self.registry.claim_namespace(result["versionId"], OTHER_NAMESPACE_ID)
+        self.assertEqual(caught.exception.provider_code, "E_ONTOLOGY_NAMESPACE_CONFLICT")
+        row = self._row(result["versionId"])
+        self.assertEqual(str(row["namespace_id"]), DEMO_NAMESPACE_ID)
+
     def test_rollback_inherits_target_namespace(self):
         record = self._stage()
         published = self._publish(record["importId"], DEMO_NAMESPACE_ID)
