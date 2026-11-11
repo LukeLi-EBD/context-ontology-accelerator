@@ -1,4 +1,10 @@
 ﻿.githooks/* text eol=lf
+# Shell scripts are run by bash everywhere: Linux CI/containers, and locally via
+# Git Bash or WSL. A Windows checkout with core.autocrlf=true used to rewrite
+# them to CRLF, which makes bash fail with "bad interpreter" for a shebang and
+# with "syntax error near unexpected token `{\r'" for an extracted function.
+# Pin every script so the checkout format does not depend on core.autocrlf.
+*.sh text eol=lf
 # CI shell scripts are run inside Linux containers; a CRLF shebang there fails
 # with "bad interpreter". Pin the checkout format so it does not depend on the
 # developer's core.autocrlf.
