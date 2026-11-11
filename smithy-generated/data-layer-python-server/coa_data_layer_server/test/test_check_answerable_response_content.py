@@ -58,7 +58,10 @@ class TestCheckAnswerableResponseContent(unittest.TestCase):
                         kind = '', 
                         term = '', 
                         label = '', 
-                        source = '', )
+                        source = '', 
+                        candidates = [
+                            ''
+                            ], )
                     ],
                 entity_degraded = True,
                 entity_degrade_reason = '',
@@ -72,6 +75,10 @@ class TestCheckAnswerableResponseContent(unittest.TestCase):
                         label = '', 
                         span = [
                             1.337
+                            ], 
+                        alias = '', 
+                        candidates = [
+                            ''
                             ], )
                     ],
                 layers = [
@@ -161,6 +168,10 @@ class TestCheckAnswerableResponseContent(unittest.TestCase):
                         label = '', 
                         span = [
                             1.337
+                            ], 
+                        alias = '', 
+                        candidates = [
+                            ''
                             ], )
                     ],
                 layers = [
