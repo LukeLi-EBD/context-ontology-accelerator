@@ -60,7 +60,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$script:Version = '1.0.0'
+$script:Version = '1.0.1'
 $script:Root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 
 $script:CheckOrder = @('smithy', 'infra-tsc', 'web-tsc', 'web-build', 'infra-jest', 'canvas-pytest', 'migration')
@@ -738,6 +738,8 @@ function Write-Evidence {
     [void]$lines.Add('')
     [void]$lines.Add('```')
     $reproduce = 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $script:Root 'scripts\ci\pre-land-gate.ps1') + '"'
+    if ($JavaHome) { $reproduce += ' -JavaHome "' + $script:ResolvedJavaHome + '"' }
+    if ($Python) { $reproduce += ' -Python "' + $script:ResolvedPython + '"' }
     if ($Skipped.Count -gt 0) {
         $pairs = @()
         foreach ($key in $script:CheckOrder) {
