@@ -9,6 +9,19 @@ does not declare.
 
 The response shape is stable: adding the SKOS term layer only switches
 ``termSource``; callers keep reading ``answerable``/``coverage``/``missing``.
+
+Coverage basis: ``answerable`` is decided on entity coverage (matched entities /
+mentioned entities, 1/n), not on character overlap. ``coverage`` and
+``coverageChars`` are kept unchanged as the character-level diagnostic so
+existing callers and the published contract stay wire-compatible; the entity
+numbers live in the added ``entityCoverage``/``entityCount``/
+``matchedEntityCount``/``entityMentions`` fields.
+
+Entity extraction is lexicon-driven, not an NLP pipeline: known entities come
+from the same SKOS prefLabel/altLabel/rdfs:label longest-match used for char
+coverage; every remaining content fragment is one unresolved entity mention.
+No ontology entity recognised means coverage 0.0 with
+``entityDegraded``/``entityDegradeReason`` set, never a silent 100%.
 """
 
 from __future__ import annotations
@@ -41,6 +54,17 @@ STOPWORDS = (
     "呢", "啊", "请", "帮", "我", "你", "它", "都", "也", "还", "就", "很",
 )
 PUNCT = set(" \t\r\n，。？！、；：\"'“”‘’（）《》〈〉…—,.;:?!()[]{}<>-_/\\|@#$%^&*+=~`")
+
+# Question-meta words that are not entities on their own. They are removed from
+# the entity denominator only (the character mask keeps them), so "口径/处理"
+# do not turn a one-entity question into a 1/2 coverage miss. Kept deliberately
+# short: this is a stoplist, not a segmentation model.
+ENTITY_META_WORDS = (
+    "口径", "定义", "含义", "意思", "解释", "说明", "规则", "标准", "方法",
+    "流程", "处理", "怎么办", "多久", "多大", "多高", "多长",
+)
+ENTITY_META_CHARS = set("".join(ENTITY_META_WORDS))
+
 
 
 class AnswerabilityService:
@@ -125,14 +149,23 @@ class AnswerabilityService:
         covered = sum(1 for index, is_content in enumerate(mask) if is_content and taken[index])
         coverage = covered / content_count
 
+        entities = self._entities(normalized, mask, matched, taken, terms)
         missing = self._missing(normalized, mask, taken, terms)
-        answerable = coverage >= threshold and bool(matched)
+        answerable = (
+            entities["coverage"] >= threshold and entities["matched"] > 0
+        )
         result: dict[str, Any] = {
             "query": text,
             "answerable": answerable,
             "coverage": round(coverage, 4),
             "threshold": threshold,
             "coverageChars": {"covered": covered, "total": content_count},
+            "entityCoverage": round(entities["coverage"], 4),
+            "entityCount": entities["count"],
+            "matchedEntityCount": entities["matched"],
+            "entityMentions": entities["mentions"],
+            "entityDegraded": entities["degraded"],
+            "entityDegradeReason": entities["degradeReason"],
             "ontologyVersion": version["versionId"],
             "ontologyGraph": version["graph"],
             "termSource": self._term_source(terms),
@@ -286,15 +319,11 @@ class AnswerabilityService:
         return matched, taken
 
     @staticmethod
-    def _missing(
-        normalized: str,
-        mask: list[bool],
-        taken: list[bool],
-        terms: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
+    def _fragments(mask: list[bool], taken: list[bool]) -> list[tuple[int, int]]:
+        """Maximal content runs no ontology term covers, in question order."""
         fragments: list[tuple[int, int]] = []
         start: int | None = None
-        for index in range(len(normalized)):
+        for index in range(len(mask)):
             uncovered = mask[index] and not taken[index]
             if uncovered and start is None:
                 start = index
@@ -302,7 +331,87 @@ class AnswerabilityService:
                 fragments.append((start, index))
                 start = None
         if start is not None:
-            fragments.append((start, len(normalized)))
+            fragments.append((start, len(mask)))
+        return fragments
+
+    @staticmethod
+    def _entities(
+        normalized: str,
+        mask: list[bool],
+        matched: list[dict[str, Any]],
+        taken: list[bool],
+        terms: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """1/n entity coverage over lexicon hits plus unresolved fragments.
+
+        A known entity is one distinct ontology IRI hit by any of its labels
+        (prefLabel/altLabel/rdfs:label alike). An unresolved entity is one
+        maximal uncovered content fragment; fragments made only of question
+        meta words (口径/处理/多久 ...) are not entities and stay out of the
+        denominator. Same surface mentioned twice counts once.
+        """
+        predicates: dict[str, set[str]] = {}
+        for term in terms:
+            predicates.setdefault(term["iri"], set()).add(term["predicate"])
+
+        known: dict[str, dict[str, Any]] = {}
+        for item in sorted(matched, key=lambda row: row["span"][0]):
+            iri = str(item["term"])
+            if iri in known:
+                continue
+            known[iri] = {
+                "text": item["label"],
+                "span": list(item["span"]),
+                "kind": "ontology",
+                "term": iri,
+                "label": item["label"],
+                "source": "skos"
+                if predicates.get(iri, set()) & set(SKOS_PREDICATES)
+                else "rdfs:label",
+            }
+
+        unknown: dict[str, dict[str, Any]] = {}
+        for begin, end in AnswerabilityService._fragments(mask, taken):
+            text = normalized[begin:end]
+            if not text or all(char in ENTITY_META_CHARS for char in text):
+                continue
+            if text in unknown:
+                continue
+            unknown[text] = {
+                "text": text,
+                "span": [begin, end],
+                "kind": "unknown",
+            }
+
+        mentions = sorted(
+            list(known.values()) + list(unknown.values()),
+            key=lambda row: (row["span"][0], row["span"][1]),
+        )
+        count = len(known) + len(unknown)
+        matched_count = len(known)
+        if count == 0:
+            coverage, degraded, reason = 0.0, True, "no_entity_mention"
+        elif matched_count == 0:
+            coverage, degraded, reason = 0.0, True, "no_ontology_entity"
+        else:
+            coverage, degraded, reason = matched_count / count, False, None
+        return {
+            "coverage": coverage,
+            "count": count,
+            "matched": matched_count,
+            "mentions": mentions,
+            "degraded": degraded,
+            "degradeReason": reason,
+        }
+
+    @staticmethod
+    def _missing(
+        normalized: str,
+        mask: list[bool],
+        taken: list[bool],
+        terms: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        fragments = AnswerabilityService._fragments(mask, taken)
 
         missing: list[dict[str, Any]] = []
         labels = list(
