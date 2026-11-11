@@ -50,6 +50,7 @@ from .errors import PortError
 from .metrics import DRIVABLE_KINDS, _AGGREGATES
 from . import webui
 from . import prov as prov_module
+from . import readonly as readonly_guard
 from . import source_ref
 
 WEB_DIR = Path(__file__).resolve().parents[2] / "web"
@@ -1763,6 +1764,12 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
         version=__version__,
         description="S0-S2: health, readiness, status, document ingest.",
     )
+    # Read-only freeze (doc/coa-x/26). Registered before CORS so CORS stays
+    # outermost: blocked writes must still carry CORS headers for the file:// UI.
+    app.add_middleware(
+        readonly_guard.ReadOnlyGuard,
+        data_root=str(runtime.config.storage.root),
+    )
     # S7: the static UI also works when opened from disk (Origin: null). There
     # is no auth, so this is not a security boundary -- it only lets the
     # file:// entry point reach 127.0.0.1:8080.
@@ -1821,6 +1828,10 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:
         return {"status": "ok", "version": __version__}
+
+    @app.get("/readonly")
+    def readonly() -> dict[str, Any]:
+        return readonly_guard.readonly_status(runtime.config.storage.root)
 
     @app.get("/readyz")
     def readyz() -> JSONResponse:
