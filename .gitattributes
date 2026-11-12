@@ -9,3 +9,14 @@
 # with "bad interpreter". Pin the checkout format so it does not depend on the
 # developer's core.autocrlf.
 scripts/ci/*.sh text eol=lf
+# Python is the real implementation behind the PowerShell / POSIX launchers and
+# runs on Windows, WSL and Linux alike. LF keeps the shebang of the .sh wrapper
+# in sync and makes the checkout independent of core.autocrlf.
+# Every tracked .py is already stored as LF in the index, so this declaration
+# does not renormalise existing blobs; it only pins future checkouts.
+*.py text eol=lf
+# Windows PowerShell 5.1 is the only consumer of these files. CRLF is its native
+# line ending, and editor/tooling that rewrites LF to CRLF is a recurring source
+# of noisy diffs. The index already holds every tracked .ps1 as LF, so declaring
+# CRLF here changes checkout behaviour only - no committed blob is rewritten.
+*.ps1 text eol=crlf
