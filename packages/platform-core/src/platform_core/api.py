@@ -3043,17 +3043,41 @@ def create_app(runtime: Runtime, checks: list[CheckResult]) -> FastAPI:
     # ---- S11 T-Box change governance -------------------------------------
 
     @app.get("/ontology/versions")
-    def ontology_versions(includeDeprecated: bool = False) -> dict[str, Any]:
-        all_versions = runtime.ontology.list_versions()
-        versions = all_versions if includeDeprecated else [
-            item for item in all_versions if item["status"] != "deprecated"
+    def ontology_versions(
+        includeDeprecated: bool = False, namespaceId: str | None = None
+    ) -> dict[str, Any]:
+        if namespaceId is None:
+            all_versions = runtime.ontology.list_versions()
+            versions = all_versions if includeDeprecated else [
+                item for item in all_versions if item["status"] != "deprecated"
+            ]
+            return {
+                "items": versions,
+                "count": len(versions),
+                "total": len(all_versions),
+                "deprecated": len(all_versions) - len(versions),
+                "pointer": runtime.ontology.current(),
+            }
+        # Namespace-scoped read: only rows owned by this namespace are listed.
+        # Unattributed rows (V52 NULL) are not silently folded in -- they are
+        # reported as a separate, explicitly excluded bucket.
+        scoped = runtime.ontology.list_versions(namespace_id=namespaceId)
+        versions = scoped if includeDeprecated else [
+            item for item in scoped if item["status"] != "deprecated"
         ]
         return {
             "items": versions,
             "count": len(versions),
-            "total": len(all_versions),
-            "deprecated": len(all_versions) - len(versions),
+            "total": len(scoped),
+            "deprecated": len(scoped) - len(versions),
             "pointer": runtime.ontology.current(),
+            "namespaceId": str(uuid.UUID(str(namespaceId).strip())),
+            "unattributed": {
+                "count": runtime.ontology.count_unattributed_versions(
+                    include_deprecated=includeDeprecated
+                ),
+                "included": False,
+            },
         }
 
     @app.get("/ontology/versions/{version_id}")

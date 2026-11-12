@@ -4394,8 +4394,33 @@ class OntologyRegistry:
     def get(self, version_id: str) -> dict[str, Any]:
         return _row_to_version(self._require(version_id))
 
-    def list_versions(self, include_deprecated: bool = True) -> list[dict[str, Any]]:
-        where = "" if include_deprecated else "WHERE status <> 'deprecated'"
+    def list_versions(
+        self, include_deprecated: bool = True, namespace_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Versions, optionally scoped to one namespace.
+
+        Without ``namespace_id`` the legacy single-tenant view is preserved:
+        every row is returned, attributed or not. With it, only rows whose V52
+        owner is that namespace are returned; rows with NULL are never treated
+        as "this namespace" -- ``count_unattributed_versions`` reports them so
+        the caller can see the gap instead of silently getting a smaller list.
+        """
+        clauses: list[str] = []
+        params: list[Any] = []
+        if not include_deprecated:
+            clauses.append("status <> 'deprecated'")
+        if namespace_id is not None:
+            owner = _owner_namespace_id(namespace_id)
+            if owner is None:
+                raise PortError(
+                    code="InvalidArgument",
+                    message="namespaceId must be a non-empty UUID when filtering versions",
+                    provider="platform",
+                    provider_code="E_ONTOLOGY_BAD_NAMESPACE_ID",
+                )
+            clauses.append("namespace_id = %s")
+            params.append(owner)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         rows = self._meta.query(
             f"""
             SELECT version_id, semver, status, content_hash, triple_count, source_format,
@@ -4403,9 +4428,19 @@ class OntologyRegistry:
               FROM platform.ontology_version
               {where}
              ORDER BY created_at
-            """
+            """,
+            tuple(params),
         )
         return [_row_to_version(row) for row in rows]
+
+    def count_unattributed_versions(self, include_deprecated: bool = True) -> int:
+        """Rows that belong to no namespace yet (V52 NULL), same window as the list."""
+        clause = "" if include_deprecated else "AND status <> 'deprecated'"
+        rows = self._meta.query(
+            "SELECT count(*) AS n FROM platform.ontology_version "
+            f"WHERE namespace_id IS NULL {clause}"
+        )
+        return int(rows[0]["n"])
 
     def current(self) -> dict[str, Any] | None:
         return self._pointer()
