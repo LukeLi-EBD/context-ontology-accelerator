@@ -1216,6 +1216,219 @@ async def _kernel_call(method: str, path: str, body: bytes | None = None,
     return resp.status_code, resp.content, resp.headers.get("content-type", "application/json")
 
 
+# Local query engine for ``POST /namespaces/{id}/query``.
+#
+# The dev-up stack has no context-manager, so the data-layer path (which drives
+# ContextManagerPort) cannot answer. ``platform-core`` makes the in-process
+# answer engine serve that contract instead: it is the deterministic lexical
+# engine behind ``/answer/quality`` (ontology + terms + metric + fact layers),
+# so a demo answers with citations and refusals without any cloud dependency.
+# Empty (the default) keeps the AWS-parity behaviour of routing to data-layer.
+_LOCAL_QUERY_ENGINE = os.environ.get("COA_LOCAL_QUERY_ENGINE", "").strip().lower()
+
+
+_ANSWER_VERSION_CACHE: dict[str, str] = {}
+
+
+def _resolve_answer_version(namespace_id: str) -> str | None:
+    """Latest registered ontology version for the namespace.
+
+    ``/answer`` needs a T-Box and only auto-selects a *published* version. The
+    dev-up demo registers a draft (publishing runs SHACL/reasoner gates that this
+    stack does not provide), so the version id is resolved here and passed in.
+    """
+    if namespace_id in _ANSWER_VERSION_CACHE:
+        return _ANSWER_VERSION_CACHE[namespace_id]
+    dsn = os.environ.get("PLATFORM__DATABASE__URL", "").strip()
+    if not dsn:
+        return None
+    try:
+        import psycopg
+
+        with psycopg.connect(dsn, connect_timeout=5) as conn:
+            row = conn.execute(
+                "SELECT version_id FROM platform.ontology_version "
+                "WHERE namespace_id = %s ORDER BY created_at DESC LIMIT 1",
+                (namespace_id,),
+            ).fetchone()
+            if row is None:
+                row = conn.execute(
+                    "SELECT version_id FROM platform.ontology_version "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ).fetchone()
+    except Exception:
+        return None
+    if not row or not row[0]:
+        return None
+    _ANSWER_VERSION_CACHE[namespace_id] = str(row[0])
+    return _ANSWER_VERSION_CACHE[namespace_id]
+
+
+def _citation_source_name(item: dict[str, Any]) -> str:
+    """Readable evidence label for the console's citation panel."""
+    kind = str(item.get("kind") or "")
+    if item.get("name"):
+        metric_id = item.get("metricId")
+        version = item.get("definitionVersion")
+        suffix = f"（{metric_id}@{version}）" if metric_id else ""
+        return f"{item['name']}{suffix}"
+    if kind == "ontology-version":
+        return f"本体版本 {item.get('versionId') or item.get('id') or ''}".strip()
+    if kind == "formula":
+        return "指标公式"
+    if kind == "fact-projection":
+        return f"事实表 {item.get('ref') or ''}".strip()
+    if kind == "metric-definition":
+        return "指标口径"
+    if kind == "term":
+        return f"术语 {item.get('ref') or ''}".strip()
+    return kind or "引用"
+
+
+async def _platform_answer(
+    namespace_id: str, body: dict[str, Any], actor: str | None
+) -> dict[str, Any]:
+    """Answer one playground question through the embedded platform-core app."""
+    query = str(body.get("query") or body.get("q") or "").strip()
+    if not query:
+        raise ValueError("query is required")
+    strategy = str(body.get("strategy") or "lexical").strip().lower()
+    if strategy not in ("lexical", "vector", "hybrid"):
+        strategy = "lexical"
+    try:
+        top_k = max(1, min(20, int(body.get("topK") or 5)))
+    except (TypeError, ValueError):
+        top_k = 5
+    request_id = body.get("requestId")
+    payload: dict[str, Any] = {"q": query, "strategy": strategy, "topK": top_k}
+    ontology_version = body.get("ontologyVersion") or _resolve_answer_version(namespace_id)
+    if ontology_version:
+        payload["ontologyVersion"] = ontology_version
+    if request_id:
+        payload["requestId"] = request_id
+    status, content, _ = await _kernel_call(
+        "POST",
+        "/answer",
+        json.dumps(payload).encode("utf-8"),
+        actor=actor,
+        timeout=180.0,
+    )
+    if status >= 400:
+        detail = content[:300].decode("utf-8", "replace")
+        raise RuntimeError(f"/answer -> HTTP {status}: {detail}")
+    answer = json.loads(content)
+
+    citations = []
+    for item in answer.get("citations") or []:
+        if not isinstance(item, dict) or not item.get("id"):
+            continue
+        # The data-layer client only keeps its modelled fields, so the readable
+        # name has to travel as `sourceDocumentName` (the panel's first choice).
+        name = _citation_source_name(item)
+        citations.append(
+            {
+                "chunkId": str(item["id"]),
+                "sourceDocumentName": name,
+                "label": name,
+                "text": str(item.get("ref") or ""),
+                "kind": item.get("kind"),
+                "relevanceScore": 1.0,
+            }
+        )
+
+    steps = []
+    for step in answer.get("steps") or []:
+        if not isinstance(step, dict) or not step.get("step"):
+            continue
+        duration = step.get("durationMs")
+        steps.append(
+            {
+                "step": str(step["step"]),
+                "status": str(step.get("status") or "ok"),
+                "durationMs": int(duration) if isinstance(duration, (int, float)) else 0,
+            }
+        )
+
+    refused = bool(answer.get("refused"))
+    answer_mode = str(answer.get("answerMode") or "none")
+    score = 0.0 if refused else (0.9 if answer_mode == "value" else 0.7)
+    return {
+        "requestId": answer.get("requestId") or request_id,
+        "result": {
+            "tier": 3,
+            "confidence": {
+                "score": score,
+                "rationale": str(answer.get("reasonCode") or answer.get("answerType") or ""),
+            },
+            "trace": steps,
+            "partial": False,
+            "synthesizedAnswer": str(answer.get("answer") or ""),
+            "supportingContent": citations,
+            "ontologyVersion": answer.get("ontologyVersion") or "",
+            "executionMode": "standard",
+            "metadata": {
+                "namespace": namespace_id,
+                "answerType": answer.get("answerType"),
+                "answerMode": answer_mode,
+                "refused": refused,
+                "reasonCode": answer.get("reasonCode"),
+                "dataSource": answer.get("dataSource"),
+                "strategy": strategy,
+            },
+        },
+    }
+
+
+def _ensure_local_namespace(
+    namespace_id: str, name: str, display_name: str | None = None, language: str = "zh"
+) -> dict[str, Any]:
+    """Make the demo namespace listable without provisioning a DataZone project.
+
+    ``NamespaceService.create`` always mints a fresh UUID, but the seed graph is
+    keyed by a fixed namespace id. This local-only endpoint writes the same
+    ``NS#``/``NS_NAME#`` records that ``create`` writes, so the console can list
+    and open the seeded namespace. It is idempotent.
+    """
+    import uuid as _uuid
+    from datetime import UTC, datetime
+
+    from coa_common.dao.dynamodb import DynamoDBDAO
+
+    region = os.environ.get("AWS_REGION", "us-east-1")
+    ns_dao = DynamoDBDAO(os.environ["NAMESPACES_TABLE"], region=region)
+    existing = ns_dao.get({"PK": f"NS#{namespace_id}", "SK": "METADATA"})
+    if existing:
+        return {"namespaceId": namespace_id, "created": False, "item": existing}
+    now = datetime.now(UTC).isoformat()
+    item = {
+        "PK": f"NS#{namespace_id}",
+        "SK": "METADATA",
+        "namespaceId": namespace_id,
+        "name": name,
+        "displayName": display_name or name,
+        "owner": "local-dev@example.invalid",
+        "status": "ACTIVE",
+        "language": language,
+        "description": "dev-up 演示命名空间（本地种子）",
+        "sourceCount": 0,
+        "dataZoneProjectId": f"local-{_uuid.uuid4()}",
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    ns_dao.put(item)
+    ns_dao.put(
+        {
+            "PK": f"NS_NAME#{name}",
+            "SK": "RESERVATION",
+            "namespaceId": namespace_id,
+            "status": "CONFIRMED",
+            "createdAt": now,
+            "updatedAt": now,
+        }
+    )
+    return {"namespaceId": namespace_id, "created": True, "item": item}
+
+
 _LIFECYCLE_APP: Any = None
 
 
@@ -2502,6 +2715,30 @@ def _make_app() -> Any:
 
         request_headers = {k.lower(): v for k, v in request.headers.items()}
 
+        # Local-only: register the seeded demo namespace so the console can list
+        # and open it. Namespace creation normally mints its own UUID through the
+        # control-plane service (plus a DataZone project); the demo graph is keyed
+        # by a fixed id, so this writes just the listing record. Idempotent.
+        if path == "/local/namespaces/ensure" and request.method == "POST":
+            try:
+                body = json.loads((await request.body()) or b"{}")
+            except ValueError:
+                return _cors(JSONResponse({"error": "body is not valid JSON"}, status_code=400), origin)
+            namespace_id = str((body or {}).get("namespaceId") or "").strip()
+            name = str((body or {}).get("name") or "").strip()
+            if not namespace_id or not name:
+                return _cors(
+                    JSONResponse({"error": "namespaceId and name are required"}, status_code=400),
+                    origin,
+                )
+            result = _ensure_local_namespace(
+                namespace_id,
+                name,
+                display_name=(body or {}).get("displayName"),
+                language=str((body or {}).get("language") or "zh"),
+            )
+            return _cors(JSONResponse(result), origin)
+
         # Local-only fixture endpoint, explicitly outside the Smithy contract.
         # It writes a source, so it is authorized as one (manageSource).
         if path == "/local/seed-catalog" and request.method == "POST":
@@ -2603,6 +2840,29 @@ def _make_app() -> Any:
                 ),
                 origin,
             )
+        if (
+            _LOCAL_QUERY_ENGINE == "platform-core"
+            and request.method == "POST"
+            and template == "/namespaces/{namespaceId}/query"
+        ):
+            try:
+                query_body = json.loads((await request.body()) or b"{}")
+            except ValueError:
+                return _cors(JSONResponse({"error": "body is not valid JSON"}, status_code=400), origin)
+            print(f"[api] POST {path} -> platform-core /answer as {actor}")
+            try:
+                payload = await _platform_answer(
+                    decoded_params.get("namespaceId") or "", query_body or {}, actor
+                )
+            except ValueError as exc:
+                return _cors(JSONResponse({"error": str(exc)}, status_code=400), origin)
+            except Exception as exc:
+                import traceback
+
+                traceback.print_exc()
+                return _cors(JSONResponse({"error": str(exc)}, status_code=502), origin)
+            return _cors(JSONResponse(payload), origin)
+
         if module == KERNEL:
             print(f"[api] {request.method} {path} -> kernel ({template}) as {actor}")
             return _cors(
