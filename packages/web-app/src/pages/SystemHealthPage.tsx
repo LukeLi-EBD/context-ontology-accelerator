@@ -43,7 +43,8 @@ interface SystemHealthResponse {
   opensearch?: string;
   /**
    * Local stack answers GetSystemHealth with real probes (PG / Oxigraph /
-   * 8101 / 8091 / object store) instead of the AWS service names above.
+   * ontology service / context manager / object store) instead of the AWS
+   * service names above. Each component carries the URL it actually probed.
    */
   components?: HealthComponent[];
   pointer?: {
@@ -351,6 +352,16 @@ export function SystemHealthPage() {
 
   // Local stack reports probed components; AWS deployments report fixed names.
   const localComponents = health?.components ?? [];
+  // The F131 table used to spell out 8099/8101/8091. Those are per-machine
+  // ports: once the stack is shifted they are wrong, and pointing at another
+  // worktree's process is exactly the bug this line must not reintroduce.
+  // Read the endpoints the bridge actually probed instead.
+  const componentProbeSource =
+    localComponents.length === 0
+      ? "GetSystemHealth：未返回逐项探活结果"
+      : `GetSystemHealth：${localComponents
+          .map((item) => (item.url ? `${item.name} ${item.url}` : item.name))
+          .join(" / ")}`;
 
   return (
     <SpaceBetween size="l">
@@ -841,7 +852,7 @@ export function SystemHealthPage() {
       >
         <Table
           items={[
-            { block: "组件探活", source: "GetSystemHealth：8099 逐项探活（PG / Oxigraph / 8101 / 8091 / 对象存储）" },
+            { block: "组件探活", source: componentProbeSource },
             { block: "覆盖率", source: snapshot?.source ?? "—" },
             {
               block: "质量与推理",
