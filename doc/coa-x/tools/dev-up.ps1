@@ -77,6 +77,7 @@ param(
     [string]$PgDsn = "",
     [string]$OxigraphUrl = "",
     [string]$Namespace = "ed70a15c-2d42-4dc9-8c61-33b2584f05fd",
+    [string]$NamespaceName = "fsldm-demo",
     [string]$EmbeddingEndpoint = "http://127.0.0.1:8081/v1",
     [switch]$Seed,
     [switch]$NoSeed,
@@ -662,6 +663,9 @@ $env:COA_LOCAL_OBJECT_ROOT = (Join-Path $RunRoot "objects")
 $env:COA_LOCAL_OBJECT_BASE = "http://127.0.0.1:$BridgePort/_local/objects"
 $env:BUCKET_NAME = "coa-local-documents"
 $env:COA_PROVIDER_CONTEXT_MANAGER = "local-http"
+# 本栈不起上下文服务，问答改由进程内 platform-core 答案引擎直接回答
+# （确定性词法检索，带引用/拒答），因此 /query 不再走 data-layer→ContextManagerPort。
+$env:COA_LOCAL_QUERY_ENGINE = "platform-core"
 
 $apiOut = Join-Path $LogDir "bridge.log"
 $apiErr = Join-Path $LogDir "bridge.err.log"
@@ -689,6 +693,24 @@ if ($token) {
     }
 } else {
     Write-Host ("  [warn] 取不到本地 dev token（HTTP {0}）：{1}" -f $tokenResp.Status, $tokenResp.Text)
+}
+
+# 演示命名空间记录：种子图按固定 namespace id 写入，但只有图、没有命名空间记录，
+# 控制台就列不出来、点不进去（按 id 查还会 404）。这里补写 NS# 记录，幂等。
+if ($token) {
+    $nsEnsure = Invoke-Json -Method POST -Url "http://127.0.0.1:$BridgePort/local/namespaces/ensure" `
+        -Body @{
+            namespaceId = $Namespace
+            name        = $NamespaceName
+            displayName = "FSLDM 演示"
+            language    = "zh"
+        } -TimeoutSec 60
+    if ($nsEnsure.Status -ne 200) {
+        Write-Host ("  [warn] 补建演示命名空间失败（HTTP {0}）：{1}" -f $nsEnsure.Status, $nsEnsure.Text)
+    } else {
+        $state = if ($nsEnsure.Json.created) { "新建" } else { "复用" }
+        Write-Step "演示命名空间" 0 ("{0} {1}（{2}）" -f $state, $NamespaceName, $Namespace)
+    }
 }
 
 # ---------------------------------------------------------------------------
